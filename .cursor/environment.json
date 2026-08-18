@@ -1,0 +1,4 @@
+{
+  "name": "Kala-Agent",
+  "install": "bash .cursor/install.sh"
+}
