@@ -7,3 +7,9 @@ __pycache__/
 .mypy_cache/
 uv.lock
 outputs/
+
+# Web directory
+web/node_modules/
+web/dist/
+web/.astro/
+web/.vercel/

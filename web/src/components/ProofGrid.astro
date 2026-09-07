@@ -1,0 +1,91 @@
+---
+const pillars = [
+  {
+    title: 'Brief → tool-calling FreeCAD → STEP',
+    description: 'Real tool path through FreeCAD APIs. No script dumping, no guessing — just structured commands that produce valid geometry.'
+  },
+  {
+    title: 'Mounts / brackets / flanges / pins / housings',
+    description: 'Built for mechanical components that need to fit, mate, and manufacture. Common engineering parts, done right.'
+  },
+  {
+    title: 'Honest — no fake benchmarks',
+    description: 'No metric headlines until Founder unlocks. Qualitative proof only. We ship when it works, not when the slides look good.'
+  }
+];
+---
+
+<section class="proof-section">
+  <div class="container">
+    <h2>Why Kala</h2>
+    <div class="proof-grid">
+      {pillars.map((pillar) => (
+        <article class="pillar">
+          <h3>{pillar.title}</h3>
+          <p>{pillar.description}</p>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .proof-section {
+    padding: var(--section-padding-desktop) 0;
+    background: var(--bg-elevated);
+  }
+
+  h2 {
+    text-align: center;
+    margin-bottom: var(--space-16);
+  }
+
+  .proof-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+    gap: var(--space-8);
+  }
+
+  .pillar {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: var(--space-8);
+    transition: all 0.3s;
+  }
+
+  .pillar:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+  }
+
+  .pillar h3 {
+    color: var(--accent);
+    margin-bottom: var(--space-4);
+    font-size: 1.125rem;
+  }
+
+  .pillar p {
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+    line-height: 1.7;
+  }
+
+  @media (max-width: 768px) {
+    .proof-section {
+      padding: var(--section-padding-mobile) 0;
+    }
+
+    h2 {
+      margin-bottom: var(--space-12);
+    }
+
+    .proof-grid {
+      gap: var(--space-6);
+    }
+
+    .pillar {
+      padding: var(--space-6);
+    }
+  }
+</style>

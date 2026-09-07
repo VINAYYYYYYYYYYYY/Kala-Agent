@@ -1,0 +1,92 @@
+---
+const currentPath = Astro.url.pathname;
+---
+
+<nav class="site-nav">
+  <div class="container nav-container">
+    <a href="/" class="logo">
+      <span class="logo-text">Kala</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="/" class:list={[{ active: currentPath === '/' }]}>Product</a></li>
+      <li><a href="/docs" class:list={[{ active: currentPath === '/docs' }]}>Docs</a></li>
+      <li><a href="#pilot" class="cta-link">Request a pilot</a></li>
+    </ul>
+  </div>
+</nav>
+
+<style>
+  .site-nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    height: var(--nav-height);
+    backdrop-filter: blur(8px);
+    background: rgba(11, 13, 16, 0.85);
+  }
+
+  .nav-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+  }
+
+  .logo {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text);
+    transition: color 0.2s;
+  }
+
+  .logo:hover {
+    color: var(--accent-hover);
+  }
+
+  .logo-text {
+    font-family: var(--font-mono);
+  }
+
+  .nav-links {
+    display: flex;
+    gap: var(--space-8);
+    list-style: none;
+    align-items: center;
+  }
+
+  .nav-links a {
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    transition: color 0.2s;
+    padding: var(--space-2) 0;
+  }
+
+  .nav-links a:hover {
+    color: var(--text);
+  }
+
+  .nav-links a.active {
+    color: var(--text);
+  }
+
+  .cta-link {
+    color: var(--accent) !important;
+  }
+
+  .cta-link:hover {
+    color: var(--accent-hover) !important;
+  }
+
+  @media (max-width: 640px) {
+    .nav-links {
+      gap: var(--space-4);
+    }
+
+    .nav-links a {
+      font-size: 0.875rem;
+    }
+  }
+</style>

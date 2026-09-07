@@ -1,0 +1,163 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SkipLink from '../../components/SkipLink.astro';
+import SiteNav from '../../components/SiteNav.astro';
+import Footer from '../../components/Footer.astro';
+---
+
+<BaseLayout
+  title="What we say publicly — Kala docs"
+  description="Our public messaging guidelines. Metrics stay internal until Founder approval."
+>
+  <SkipLink />
+  <SiteNav />
+  <main id="main-content" class="doc-page">
+    <div class="container">
+      <article class="prose">
+        <nav class="breadcrumb">
+          <a href="/docs">Docs</a> / What we say publicly
+        </nav>
+        <h1>What we say publicly</h1>
+        
+        <p>
+          Kala's public messaging focuses on technical approach and qualitative proof points.
+          Quantitative metrics remain internal until approved by the Founder.
+        </p>
+        
+        <h2>Approved messaging</h2>
+        
+        <h3>Core positioning</h3>
+        <ul>
+          <li>Kala is a CAD agent that ships valid STEP — not a chat that dumps scripts</li>
+          <li>Brief in, STEP out</li>
+          <li>Reliability you can open in CAD — STEP first</li>
+        </ul>
+        
+        <h3>Technical approach</h3>
+        <ul>
+          <li>Real tool-calling path through FreeCAD APIs</li>
+          <li>Structured commands that produce valid geometry</li>
+          <li>Quality gates before delivery: geometry validation, constraint satisfaction, STEP compliance</li>
+        </ul>
+        
+        <h3>Target use cases</h3>
+        <ul>
+          <li>Mechanical components that need to fit, mate, and manufacture</li>
+          <li>Mounts, brackets, flanges, pins, housings</li>
+          <li>Hardware engineers, mechanical designers, product teams</li>
+        </ul>
+        
+        <h3>Honest positioning</h3>
+        <ul>
+          <li>Mid-September 2026 target</li>
+          <li>Product still shipping</li>
+          <li>No fake benchmarks or competitor comparisons</li>
+          <li>No metric headlines until Founder unlocks</li>
+        </ul>
+        
+        <h2>Banned content</h2>
+        <p>
+          Do <strong>NOT</strong> include in public-facing content:
+        </p>
+        <ul>
+          <li>Quantitative benchmarks or pass rates (e.g., "150/150", "95% success")</li>
+          <li>Average scores or performance metrics</li>
+          <li>Leaderboards or competitor comparisons</li>
+          <li>Pricing tables or cost information</li>
+          <li>Fake dashboards or invented data</li>
+          <li>Live product demos (until product ships)</li>
+        </ul>
+        
+        <h2>Internal vs. external</h2>
+        <p>
+          Metrics, benchmarks, and quantitative performance data are tracked internally for development purposes.
+          These remain confidential until:
+        </p>
+        <ol>
+          <li>Product reaches production stability</li>
+          <li>Metrics are validated and reproducible</li>
+          <li>Founder explicitly approves public disclosure</li>
+        </ol>
+        
+        <h2>Pilot communications</h2>
+        <p>
+          When communicating with pilot users:
+        </p>
+        <ul>
+          <li>Be honest about development status and limitations</li>
+          <li>Share qualitative feedback and learnings</li>
+          <li>Request permission before sharing any pilot results publicly</li>
+          <li>Keep quantitative results confidential unless approved</li>
+        </ul>
+      </article>
+    </div>
+  </main>
+  <Footer />
+</BaseLayout>
+
+<style>
+  .doc-page {
+    padding: var(--section-padding-desktop) 0;
+    min-height: calc(100vh - var(--nav-height) - 20rem);
+  }
+
+  .breadcrumb {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-bottom: var(--space-6);
+    display: block;
+  }
+
+  .breadcrumb a {
+    color: var(--accent);
+    transition: color 0.2s;
+  }
+
+  .breadcrumb a:hover {
+    color: var(--accent-hover);
+  }
+
+  .prose {
+    margin: 0 auto;
+  }
+
+  .prose h1 {
+    margin-bottom: var(--space-8);
+  }
+
+  .prose h2 {
+    margin-top: var(--space-12);
+    margin-bottom: var(--space-4);
+  }
+
+  .prose h3 {
+    margin-top: var(--space-8);
+    margin-bottom: var(--space-3);
+  }
+
+  .prose p {
+    margin-bottom: var(--space-6);
+    color: var(--text-muted);
+  }
+
+  .prose ul, .prose ol {
+    margin-bottom: var(--space-6);
+    padding-left: var(--space-6);
+  }
+
+  .prose li {
+    margin-bottom: var(--space-2);
+    color: var(--text-muted);
+  }
+
+  .prose strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  @media (max-width: 768px) {
+    .doc-page {
+      padding: var(--section-padding-mobile) 0;
+    }
+  }
+</style>

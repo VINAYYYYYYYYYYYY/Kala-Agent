@@ -1,0 +1,113 @@
+---
+const steps = [
+  {
+    number: '01',
+    title: 'Brief',
+    description: 'Describe the part you need. Dimensions, constraints, mounting requirements. Plain language.'
+  },
+  {
+    number: '02',
+    title: 'Build',
+    description: 'Kala calls FreeCAD APIs to construct the geometry. Tool-by-tool, feature-by-feature. No script generation.'
+  },
+  {
+    number: '03',
+    title: 'Export STEP',
+    description: 'Valid STEP file output. Ready to open in your CAD system, inspect, modify, or send to manufacturing.'
+  },
+  {
+    number: '04',
+    title: 'QA gate',
+    description: 'Quality checks before delivery. Geometry validation, constraint satisfaction, file format compliance.'
+  }
+];
+---
+
+<section class="how-it-works">
+  <div class="container">
+    <h2>How it works</h2>
+    <div class="steps">
+      {steps.map((step) => (
+        <div class="step">
+          <div class="step-number">{step.number}</div>
+          <div class="step-content">
+            <h3>{step.title}</h3>
+            <p>{step.description}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .how-it-works {
+    padding: var(--section-padding-desktop) 0;
+  }
+
+  h2 {
+    text-align: center;
+    margin-bottom: var(--space-16);
+  }
+
+  .steps {
+    max-width: 52rem;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+
+  .step {
+    display: flex;
+    gap: var(--space-6);
+    padding: var(--space-8);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    transition: border-color 0.3s;
+  }
+
+  .step:hover {
+    border-color: var(--accent);
+  }
+
+  .step-number {
+    font-family: var(--font-mono);
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--accent);
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .step-content h3 {
+    margin-bottom: var(--space-3);
+    font-size: 1.25rem;
+  }
+
+  .step-content p {
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+    line-height: 1.7;
+  }
+
+  @media (max-width: 768px) {
+    .how-it-works {
+      padding: var(--section-padding-mobile) 0;
+    }
+
+    h2 {
+      margin-bottom: var(--space-12);
+    }
+
+    .step {
+      padding: var(--space-6);
+      gap: var(--space-4);
+    }
+
+    .step-number {
+      font-size: 1.5rem;
+    }
+  }
+</style>

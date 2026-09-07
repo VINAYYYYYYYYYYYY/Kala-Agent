@@ -1,0 +1,166 @@
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+:root {
+  /* Colors */
+  --bg: #0B0D10;
+  --bg-elevated: #12151A;
+  --bg-muted: #1A1F27;
+  --border: #2A313C;
+  --border-strong: #3D4654;
+  
+  --text: #E8ECF1;
+  --text-muted: #9AA3B2;
+  --text-faint: #6B7380;
+  
+  --accent: #5B9FD4;
+  --accent-hover: #7EB3DE;
+  --accent-muted: rgba(91, 159, 212, 0.14);
+  
+  --cta-bg: #E8ECF1;
+  --cta-text: #0B0D10;
+  --cta-hover: #FFFFFF;
+  
+  --ok: #6FBF8A;
+  --warn: #D4A85B;
+  --danger: #D47B7B;
+  
+  /* Spacing (4px scale) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+  
+  /* Layout */
+  --nav-height: 4rem;
+  --content-max-width: 70rem;
+  --prose-max-width: 45rem;
+  --section-padding-desktop: 6rem;
+  --section-padding-mobile: 4rem;
+  --card-radius: 0.5rem;
+  
+  /* Typography */
+  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  letter-spacing: -0.015em;
+}
+
+h3 {
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+}
+
+p {
+  max-width: 65ch;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: var(--space-4);
+  z-index: 100;
+  padding: var(--space-3) var(--space-4);
+  background: var(--cta-bg);
+  color: var(--cta-text);
+  border-radius: var(--card-radius);
+  font-weight: 500;
+}
+
+.skip-link:focus {
+  top: var(--space-4);
+}
+
+.container {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 var(--space-4);
+  }
+}
+
+.prose {
+  max-width: var(--prose-max-width);
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--bg-muted);
+  padding: 0.125em 0.375em;
+  border-radius: 0.25rem;
+  border: 1px solid var(--border);
+}
