@@ -1,0 +1,85 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SkipLink from '../components/SkipLink.astro';
+import SiteNav from '../components/SiteNav.astro';
+import DocsCard from '../components/DocsCard.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<BaseLayout
+  title="Docs — Kala CAD agent"
+  description="Documentation for Kala CAD agent. Get started, learn the definition of done, and understand what we say publicly."
+>
+  <SkipLink />
+  <SiteNav />
+  <main id="main-content" class="docs-page">
+    <div class="container">
+      <header class="docs-header">
+        <h1>Documentation</h1>
+        <p>Everything you need to know about Kala CAD agent</p>
+      </header>
+      <div class="docs-grid">
+        <DocsCard
+          title="Get started"
+          description="Learn how to request pilot access and what to expect from Kala's CAD generation workflow."
+          href="/docs/get-started"
+        />
+        <DocsCard
+          title="Definition of done"
+          description="Understand Kala's quality gates, STEP validation, and what 'done' means for a CAD part."
+          href="/docs/definition-of-done"
+        />
+        <DocsCard
+          title="What we say publicly"
+          description="Our public messaging guidelines. Metrics stay internal until Founder approval."
+          href="/docs/public-messaging"
+        />
+      </div>
+    </div>
+  </main>
+  <Footer />
+</BaseLayout>
+
+<style>
+  .docs-page {
+    padding: var(--section-padding-desktop) 0;
+    min-height: calc(100vh - var(--nav-height) - 20rem);
+  }
+
+  .docs-header {
+    text-align: center;
+    margin-bottom: var(--space-16);
+  }
+
+  .docs-header h1 {
+    margin-bottom: var(--space-4);
+  }
+
+  .docs-header p {
+    color: var(--text-muted);
+    font-size: 1.125rem;
+    max-width: none;
+  }
+
+  .docs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+    gap: var(--space-8);
+    max-width: 64rem;
+    margin: 0 auto;
+  }
+
+  @media (max-width: 768px) {
+    .docs-page {
+      padding: var(--section-padding-mobile) 0;
+    }
+
+    .docs-header {
+      margin-bottom: var(--space-12);
+    }
+
+    .docs-grid {
+      gap: var(--space-6);
+    }
+  }
+</style>

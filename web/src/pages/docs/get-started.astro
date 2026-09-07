@@ -1,0 +1,132 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SkipLink from '../../components/SkipLink.astro';
+import SiteNav from '../../components/SiteNav.astro';
+import Footer from '../../components/Footer.astro';
+---
+
+<BaseLayout
+  title="Get started — Kala docs"
+  description="Learn how to request pilot access and what to expect from Kala's CAD generation workflow."
+>
+  <SkipLink />
+  <SiteNav />
+  <main id="main-content" class="doc-page">
+    <div class="container">
+      <article class="prose">
+        <nav class="breadcrumb">
+          <a href="/docs">Docs</a> / Get started
+        </nav>
+        <h1>Get started</h1>
+        
+        <h2>Request pilot access</h2>
+        <p>
+          Kala is currently in early development with a target launch of mid-September 2026.
+          To request pilot access:
+        </p>
+        <ol>
+          <li>Email us at <code>pilot@kala.example</code> (placeholder address)</li>
+          <li>Describe your use case: what types of parts do you need?</li>
+          <li>Share your timeline and volume expectations</li>
+        </ol>
+        
+        <h2>What to expect</h2>
+        <p>
+          Kala generates CAD parts through a structured FreeCAD tool-calling path, not script generation.
+          You provide a brief describing the part, and Kala outputs a valid STEP file ready to open in your CAD system.
+        </p>
+        
+        <h3>Supported part types</h3>
+        <p>
+          Initial focus areas include:
+        </p>
+        <ul>
+          <li>Mounts and brackets</li>
+          <li>Flanges and adapters</li>
+          <li>Pins and fasteners</li>
+          <li>Simple housings and enclosures</li>
+        </ul>
+        
+        <h3>Workflow</h3>
+        <ol>
+          <li><strong>Brief:</strong> Describe dimensions, constraints, mounting requirements</li>
+          <li><strong>Build:</strong> Kala calls FreeCAD APIs to construct geometry</li>
+          <li><strong>Export:</strong> Receive valid STEP file output</li>
+          <li><strong>QA:</strong> Geometry validation and constraint checks</li>
+        </ol>
+        
+        <p>
+          <strong>Note:</strong> Product is still shipping. Availability is limited during pilot phase.
+        </p>
+      </article>
+    </div>
+  </main>
+  <Footer />
+</BaseLayout>
+
+<style>
+  .doc-page {
+    padding: var(--section-padding-desktop) 0;
+    min-height: calc(100vh - var(--nav-height) - 20rem);
+  }
+
+  .breadcrumb {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-bottom: var(--space-6);
+    display: block;
+  }
+
+  .breadcrumb a {
+    color: var(--accent);
+    transition: color 0.2s;
+  }
+
+  .breadcrumb a:hover {
+    color: var(--accent-hover);
+  }
+
+  .prose {
+    margin: 0 auto;
+  }
+
+  .prose h1 {
+    margin-bottom: var(--space-8);
+  }
+
+  .prose h2 {
+    margin-top: var(--space-12);
+    margin-bottom: var(--space-4);
+  }
+
+  .prose h3 {
+    margin-top: var(--space-8);
+    margin-bottom: var(--space-3);
+  }
+
+  .prose p {
+    margin-bottom: var(--space-6);
+    color: var(--text-muted);
+  }
+
+  .prose ul, .prose ol {
+    margin-bottom: var(--space-6);
+    padding-left: var(--space-6);
+  }
+
+  .prose li {
+    margin-bottom: var(--space-2);
+    color: var(--text-muted);
+  }
+
+  .prose strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  @media (max-width: 768px) {
+    .doc-page {
+      padding: var(--section-padding-mobile) 0;
+    }
+  }
+</style>

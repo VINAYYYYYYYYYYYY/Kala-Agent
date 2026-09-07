@@ -1,0 +1,112 @@
+---
+---
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <span class="logo">Kala</span>
+        <p>CAD agent that ships valid STEP</p>
+      </div>
+      <nav class="footer-nav">
+        <div class="footer-section">
+          <h4>Product</h4>
+          <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/docs">Docs</a></li>
+            <li><a href="#pilot">Request pilot</a></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h4>Resources</h4>
+          <ul>
+            <li><a href="/docs">Get started</a></li>
+            <li><a href="https://github.com/VINAYYYYYYYYYYYY/Kala-Agent">GitHub</a></li>
+          </ul>
+        </div>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 Kala. Product in development.</p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    border-top: 1px solid var(--border);
+    padding: var(--space-16) 0 var(--space-8);
+    background: var(--bg-elevated);
+  }
+
+  .footer-content {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: var(--space-12);
+    margin-bottom: var(--space-12);
+  }
+
+  .footer-brand .logo {
+    font-size: 1.25rem;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    display: block;
+    margin-bottom: var(--space-2);
+  }
+
+  .footer-brand p {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+  }
+
+  .footer-nav {
+    display: flex;
+    gap: var(--space-12);
+  }
+
+  .footer-section h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: var(--space-3);
+    color: var(--text);
+  }
+
+  .footer-section ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .footer-section a {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    transition: color 0.2s;
+  }
+
+  .footer-section a:hover {
+    color: var(--accent);
+  }
+
+  .footer-bottom {
+    padding-top: var(--space-8);
+    border-top: 1px solid var(--border);
+    text-align: center;
+  }
+
+  .footer-bottom p {
+    color: var(--text-faint);
+    font-size: 0.8125rem;
+  }
+
+  @media (max-width: 768px) {
+    .footer-content {
+      grid-template-columns: 1fr;
+      gap: var(--space-8);
+    }
+
+    .footer-nav {
+      gap: var(--space-8);
+    }
+  }
+</style>

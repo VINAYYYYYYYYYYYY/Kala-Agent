@@ -1,0 +1,27 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SkipLink from '../components/SkipLink.astro';
+import SiteNav from '../components/SiteNav.astro';
+import Hero from '../components/Hero.astro';
+import ProofGrid from '../components/ProofGrid.astro';
+import HowItWorks from '../components/HowItWorks.astro';
+import Audience from '../components/Audience.astro';
+import CtaBand from '../components/CtaBand.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<BaseLayout
+  title="Kala — CAD agent that ships valid STEP"
+  description="Kala ships valid STEP via a real FreeCAD tool path — not a chat that dumps scripts. Request a pilot. Mid-Sep 2026 target."
+>
+  <SkipLink />
+  <SiteNav />
+  <main id="main-content">
+    <Hero />
+    <ProofGrid />
+    <HowItWorks />
+    <Audience />
+    <CtaBand />
+  </main>
+  <Footer />
+</BaseLayout>

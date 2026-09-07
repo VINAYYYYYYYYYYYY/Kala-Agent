@@ -1,0 +1,87 @@
+---
+import Button from './Button.astro';
+---
+
+<section class="hero">
+  <div class="container">
+    <div class="hero-content">
+      <p class="eyebrow">Reliability you can open in CAD — STEP first.</p>
+      <h1>
+        Kala is a CAD agent that ships valid STEP — not a chat that dumps scripts.
+      </h1>
+      <p class="subheading">
+        Brief in, STEP out.
+      </p>
+      <div class="hero-actions">
+        <Button href="#pilot">Request a pilot — brief in, STEP out</Button>
+        <Button href="/docs" variant="secondary">Read the docs</Button>
+      </div>
+      <p class="micro-warning">
+        Mid-Sep 2026 target · product still shipping
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    padding: var(--section-padding-desktop) 0;
+    min-height: calc(100vh - var(--nav-height));
+    display: flex;
+    align-items: center;
+  }
+
+  .hero-content {
+    max-width: 48rem;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .eyebrow {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+    margin-bottom: var(--space-6);
+  }
+
+  h1 {
+    margin-bottom: var(--space-6);
+    background: linear-gradient(135deg, var(--text) 0%, var(--text-muted) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subheading {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    margin-bottom: var(--space-10);
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: var(--space-4);
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: var(--space-6);
+  }
+
+  .micro-warning {
+    font-size: 0.8125rem;
+    color: var(--warn);
+    font-family: var(--font-mono);
+  }
+
+  @media (max-width: 768px) {
+    .hero {
+      padding: var(--section-padding-mobile) 0;
+      min-height: calc(100vh - var(--nav-height) - 4rem);
+    }
+
+    .subheading {
+      font-size: 1.125rem;
+    }
+  }
+</style>

@@ -1,0 +1,70 @@
+---
+import Button from './Button.astro';
+---
+
+<section class="cta-band" id="pilot">
+  <div class="container">
+    <div class="cta-content">
+      <h2>Request a pilot</h2>
+      <p>
+        Early access for engineering teams. We're targeting mid-September 2026 for initial pilots.
+        Share your use case and we'll follow up.
+      </p>
+      <div class="cta-actions">
+        <Button href="mailto:pilot@kala.example">Email us for pilot access</Button>
+        <p class="cta-note">
+          Product still shipping. Availability limited.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .cta-band {
+    padding: var(--section-padding-desktop) 0;
+    background: linear-gradient(135deg, var(--bg-elevated) 0%, var(--bg) 100%);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .cta-content {
+    max-width: var(--prose-max-width);
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  h2 {
+    margin-bottom: var(--space-4);
+  }
+
+  .cta-content > p {
+    color: var(--text-muted);
+    margin-bottom: var(--space-10);
+    font-size: 1.0625rem;
+    line-height: 1.7;
+  }
+
+  .cta-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .cta-note {
+    font-size: 0.8125rem;
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+  }
+
+  @media (max-width: 768px) {
+    .cta-band {
+      padding: var(--section-padding-mobile) 0;
+    }
+
+    .cta-content > p {
+      font-size: 1rem;
+    }
+  }
+</style>

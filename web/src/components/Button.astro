@@ -1,0 +1,60 @@
+---
+interface Props {
+  href?: string;
+  variant?: 'primary' | 'secondary';
+  type?: 'button' | 'submit';
+}
+
+const { href, variant = 'primary', type = 'button' } = Astro.props;
+const Element = href ? 'a' : 'button';
+---
+
+<Element
+  href={href}
+  type={!href ? type : undefined}
+  class:list={['button', variant]}
+>
+  <slot />
+</Element>
+
+<style>
+  .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-6);
+    border: none;
+    border-radius: var(--card-radius);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .button.primary {
+    background: var(--cta-bg);
+    color: var(--cta-text);
+  }
+
+  .button.primary:hover {
+    background: var(--cta-hover);
+    transform: translateY(-1px);
+  }
+
+  .button.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+
+  .button.secondary:hover {
+    background: var(--accent-muted);
+    border-color: var(--accent-hover);
+    color: var(--accent-hover);
+  }
+
+  .button:active {
+    transform: translateY(0);
+  }
+</style>
