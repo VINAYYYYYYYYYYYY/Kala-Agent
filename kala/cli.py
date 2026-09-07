@@ -1,8 +1,9 @@
-"""CLI entry point for Kala-Agent."""
+"""CLI entry point (stub — grow this as the agent takes shape)."""
+
 
 def main() -> None:
-    """Main CLI entry point."""
-    print("Kala-Agent v0.1.0")
+    print("kala-agent — ready. Put your logic under kala/")
+
 
 if __name__ == "__main__":
     main()
