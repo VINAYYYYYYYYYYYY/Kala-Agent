@@ -9,6 +9,7 @@ description = "CAD design agent"
 requires-python = ">=3.12"
 dependencies = [
     "cadquery-ocp",
+    "PyQt6>=6.6.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -16,3 +17,4 @@ include = ["kala*"]
 
 [project.scripts]
 kala = "kala.cli:main"
+kala-ui = "kala.ui.desktop:main"
