@@ -108,8 +108,8 @@ def test_simple_geometry() -> tuple[bool, str]:
         if not result.ok:
             return False, f"export failed: {result.message}"
         
-        # Probe the exported file
-        metrics = probe_step_file(outpath)
+        # Probe the exported file (use remapped path from result)
+        metrics = probe_step_file(Path(result.data["path"]))
         if metrics.get("error"):
             return False, f"probe failed: {metrics['error']}"
         
@@ -161,8 +161,8 @@ def test_complex_geometry() -> tuple[bool, str]:
         if not r5.ok:
             return False, f"export failed: {r5.message}"
         
-        # Probe the exported file
-        metrics = probe_step_file(outpath)
+        # Probe the exported file (use remapped path from result)
+        metrics = probe_step_file(Path(r5.data["path"]))
         if metrics.get("error"):
             return False, f"probe failed: {metrics['error']}"
         
@@ -204,8 +204,8 @@ def test_assembly_export() -> tuple[bool, str]:
         if not r4.ok:
             return False, f"assembly export failed: {r4.message}"
         
-        # Probe the exported file
-        metrics = probe_step_file(outpath)
+        # Probe the exported file (use remapped path from result)
+        metrics = probe_step_file(Path(r4.data["path"]))
         if metrics.get("error"):
             return False, f"probe failed: {metrics['error']}"
         
@@ -247,8 +247,8 @@ def test_fillet_export() -> tuple[bool, str]:
         if not r3.ok:
             return False, f"export failed: {r3.message}"
         
-        # Probe the exported file
-        metrics = probe_step_file(outpath)
+        # Probe the exported file (use remapped path from result)
+        metrics = probe_step_file(Path(r3.data["path"]))
         if metrics.get("error"):
             return False, f"probe failed: {metrics['error']}"
         
