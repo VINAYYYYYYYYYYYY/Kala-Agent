@@ -22,6 +22,8 @@ class AnalysisReport:
     ok: bool
     message: str
     metrics: dict[str, Any] = field(default_factory=dict)
+    kind: str = "geometry_probe"
+    solver_status: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -29,6 +31,8 @@ class AnalysisReport:
             "ok": self.ok,
             "message": self.message,
             "metrics": self.metrics,
+            "kind": self.kind,
+            "solver_status": self.solver_status,
         }
 
 

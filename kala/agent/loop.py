@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from kala.analysis.base import AnalysisRequest
+from kala.analysis.freecad_fem import FreeCadFemCalculiXBackend
 from kala.analysis.geometry_probe import GeometryProbeBackend
 from kala.cad.factory import create_backend
 from kala.cad.registry import ToolRegistry, build_registry
@@ -250,12 +251,19 @@ class Agent:
                             "insert_part",
                         }:
                             try:
-                                probe = GeometryProbeBackend()
+                                # Select analysis backend via KALA_ANALYSIS env var (default: probe)
+                                analysis_mode = os.environ.get("KALA_ANALYSIS", "probe").lower()
+                                if analysis_mode == "fem":
+                                    backend_cls = FreeCadFemCalculiXBackend
+                                else:
+                                    backend_cls = GeometryProbeBackend
+                                
+                                analyzer = backend_cls()
                                 request = AnalysisRequest(
                                     body_id=str(new_id),
                                     backend_handle=self._backend,
                                 )
-                                report = probe.analyze(request)
+                                report = analyzer.analyze(request)
                                 state.analysis_by_body[str(new_id)] = report.to_dict()
                             except Exception:  # noqa: BLE001
                                 pass
