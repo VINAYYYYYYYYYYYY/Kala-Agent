@@ -78,8 +78,8 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.command is None:
         parser.print_help()
-        print('\nTry: kala ui --backend mock')
-        print('     kala run "80x50x8 bracket" --backend mock')
+        print('\nTry: kala ui')
+        print('     kala run "L-bracket base 60x40x4 and vertical wall 60x4x50 at origin, fuse, two Ø5 base holes at (12,20) and (48,20), export L_bracket.step" --backend freecad')
         return
 
     if args.command == "ui":
