@@ -6,6 +6,8 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
+from kala.analysis.base import AnalysisRequest
+from kala.analysis.geometry_probe import GeometryProbeBackend
 from kala.cad.factory import create_backend
 from kala.cad.registry import ToolRegistry, build_registry
 from kala.llm.base import PlannerProtocol
@@ -235,6 +237,28 @@ class Agent:
                                 id_aliases[str(old)] = str(new_id)
                         if result.data.get("live_document"):
                             state.live_document = str(result.data["live_document"])
+                        
+                        # Geometry probe hook: analyze new bodies from create/boolean/fillet/insert_part
+                        if new_id and call.name in {
+                            "create_box",
+                            "create_cylinder",
+                            "create_sphere",
+                            "create_cone",
+                            "boolean_fuse",
+                            "boolean_cut",
+                            "fillet",
+                            "insert_part",
+                        }:
+                            try:
+                                probe = GeometryProbeBackend()
+                                request = AnalysisRequest(
+                                    body_id=str(new_id),
+                                    backend_handle=self._backend,
+                                )
+                                report = probe.analyze(request)
+                                state.analysis_by_body[str(new_id)] = report.to_dict()
+                            except Exception:  # noqa: BLE001
+                                pass
                     if result.ok and call.name == "export":
                         state.last_export = str(result.data.get("path") or "")
                         exported_this_turn = True
