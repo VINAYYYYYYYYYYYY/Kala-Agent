@@ -36,6 +36,8 @@ class SessionState:
     total_tokens: int = 0
     llm_calls: int = 0
     analysis_by_body: dict[str, Any] = field(default_factory=dict)
+    # Persistent body_id aliases across planner turns
+    id_aliases: dict[str, str] = field(default_factory=dict)
 
     def add_usage(self, usage: dict[str, Any] | None) -> None:
         if not usage:
@@ -97,4 +99,5 @@ class SessionState:
                 for e in self.history
             ],
             "analysis_by_body": self.analysis_by_body,
+            "id_aliases": self.id_aliases,
         }
