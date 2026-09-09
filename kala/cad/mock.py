@@ -45,6 +45,18 @@ class MockBackend:
     def create_cylinder(
         self, radius: float, height: float, *, label: str = "Cylinder"
     ) -> ToolResult:
+        if not isinstance(radius, (int, float)) or radius <= 0:
+            return ToolResult(
+                ok=False,
+                message=f"[mock] create_cylinder: radius must be positive number, got {radius!r}",
+                data={"cad_software": "mock"},
+            )
+        if not isinstance(height, (int, float)) or height <= 0:
+            return ToolResult(
+                ok=False,
+                message=f"[mock] create_cylinder: height must be positive number, got {height!r}",
+                data={"cad_software": "mock"},
+            )
         body_id = self._next(label)
         self._bodies[body_id] = _Body(
             body_id, "cylinder", {"radius": radius, "height": height}
