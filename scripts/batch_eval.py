@@ -17,6 +17,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import shutil
@@ -57,6 +58,16 @@ def _load_designs(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
+def _compute_step_hash(path: Path) -> str | None:
+    """Compute SHA256 hash of STEP file for deduplication."""
+    try:
+        if not path.is_file():
+            return None
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _step_metrics(path: Path) -> dict[str, Any]:
     """Read STEP via freecadcmd (avoids Part.so SIGSEGV in plain python)."""
     if not path.is_file():
@@ -64,6 +75,11 @@ def _step_metrics(path: Path) -> dict[str, Any]:
     size = path.stat().st_size
     if size < 200:
         return {"error": "stub_or_empty_step", "bytes": size}
+    
+    # Add hash for deduplication tracking
+    file_hash = _compute_step_hash(path)
+    if not file_hash:
+        file_hash = "hash_error"
     # Escape path for FreeCAD -c string
     p = str(path).replace("\\", "\\\\").replace('"', '\\"')
     code = (
@@ -104,13 +120,15 @@ def _step_metrics(path: Path) -> dict[str, Any]:
         )
         for line in (proc.stdout or "").splitlines():
             if line.startswith("METRICS "):
-                return json.loads(line[len("METRICS ") :])
+                metrics = json.loads(line[len("METRICS ") :])
+                metrics["hash"] = file_hash
+                return metrics
         if proc.returncode != 0:
             err = (proc.stderr or proc.stdout or "")[-200:]
-            return {"error": f"freecadcmd_exit={proc.returncode}", "detail": err}
-        return {"error": "no_metrics_line", "bytes": size}
+            return {"error": f"freecadcmd_exit={proc.returncode}", "detail": err, "hash": file_hash}
+        return {"error": "no_metrics_line", "bytes": size, "hash": file_hash}
     except Exception as exc:  # noqa: BLE001
-        return {"error": str(exc)[:160]}
+        return {"error": str(exc)[:160], "hash": file_hash}
 
 
 def _resolve_export(export: Any) -> Path | None:
@@ -424,6 +442,8 @@ def _write_rectify_queue(out_dir: Path, rows: list[dict[str, Any]]) -> None:
     reason_counts: Counter[str] = Counter()
     fail_msg_counts: Counter[str] = Counter()
     weak_rubric: list[str] = []
+    hash_collisions: Counter[str] = Counter()
+    
     for row in rows:
         for r in row.get("score", {}).get("reasons") or []:
             key = r.split("=")[0].split("×")[0]
@@ -435,16 +455,45 @@ def _write_rectify_queue(out_dir: Path, rows: list[dict[str, Any]]) -> None:
         rh = row.get("rubric_heuristic") or {}
         if float(rh.get("hit_rate") or 1) < 0.4 and not row.get("score", {}).get("ok"):
             weak_rubric.append(row["id"])
+        
+        # Track STEP hash collisions (duplicate exports)
+        geo = row.get("score", {}).get("metrics", {}).get("geometry") or {}
+        step_hash = geo.get("hash")
+        if step_hash and step_hash != "hash_error":
+            hash_collisions[step_hash] += 1
 
+    # Detect high-frequency STEP hash collisions (stub/catalog reuse)
+    stub_hashes = [h for h, count in hash_collisions.items() if count >= 3]
+    duplicate_exports = {h: count for h, count in hash_collisions.items() if count > 1}
+    
     lines = [
         "# Rectify queue (auto)",
         "",
         f"Generated: {datetime.now(timezone.utc).isoformat()}",
         f"Designs scored: {len(rows)}",
+        f"Unique STEP hashes: {len(hash_collisions)}",
+        f"Duplicate exports (hash collisions): {len(duplicate_exports)}",
         "",
-        "## Top failure reasons",
+        "## STEP hash collisions (duplicate exports)",
         "",
     ]
+    if duplicate_exports:
+        for h, count in sorted(duplicate_exports.items(), key=lambda x: -x[1])[:10]:
+            # Find IDs with this hash
+            ids = [
+                row["id"]
+                for row in rows
+                if row.get("score", {}).get("metrics", {}).get("geometry", {}).get("hash") == h
+            ]
+            lines.append(f"- `{h[:16]}...` × {count} — {', '.join(ids[:5])}")
+        if stub_hashes:
+            lines += ["", "### High-frequency hashes (likely stubs/catalog):", ""]
+            for h in stub_hashes[:5]:
+                lines.append(f"- `{h}`")
+    else:
+        lines.append("- No duplicate STEP hashes detected ✓")
+    
+    lines += ["", "## Top failure reasons", ""]
     for k, n in reason_counts.most_common(20):
         lines.append(f"- **{k}** × {n}")
     lines += ["", "## Top tool failure messages", ""]
@@ -472,6 +521,18 @@ def _write_rectify_queue(out_dir: Path, rows: list[dict[str, Any]]) -> None:
         lines.append(f"- `{fid}`")
     (out_dir / "rectify_queue.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     (out_dir / "failed_ids.json").write_text(json.dumps(failed, indent=2) + "\n", encoding="utf-8")
+    
+    # Write stub hashes file for KALA_KNOWN_STUB_HASHES env var
+    if stub_hashes:
+        stub_data = {
+            "hashes": stub_hashes,
+            "threshold": "3+ collisions",
+            "updated": datetime.now(timezone.utc).isoformat(),
+            "env_var": "KALA_KNOWN_STUB_HASHES=" + ",".join(stub_hashes[:10]),
+        }
+        (out_dir / "stub_hashes.json").write_text(
+            json.dumps(stub_data, indent=2) + "\n", encoding="utf-8"
+        )
 
 
 def main() -> None:
