@@ -100,6 +100,13 @@ class FreeCADBackend:
             shape = getattr(obj, "Shape", None)
             if shape is None or shape.isNull():
                 continue
+            # Skip degenerate shapes
+            try:
+                vol = float(getattr(shape, "Volume", 0.0) or 0.0)
+                if vol < 1e-6:
+                    continue
+            except Exception:
+                pass
             name = (obj.Name or "").lower()
             label = (obj.Label or "").lower()
             # Prefer boolean results over raw cutters / duplicate stock
@@ -116,8 +123,16 @@ class FreeCADBackend:
         elif len(shapes) == 1:
             compound = shapes[0]
         else:
-            # Largest solid ≈ finished part when booleans produced one
-            compound = max(shapes, key=lambda s: float(getattr(s, "Volume", 0.0) or 0.0))
+            # Largest valid solid ≈ finished part when booleans produced one
+            valid_shapes = []
+            for s in shapes:
+                fixed = s if s.isValid() else self._try_fix(s)
+                if fixed.isValid():
+                    valid_shapes.append(fixed)
+            if valid_shapes:
+                compound = max(valid_shapes, key=lambda s: float(getattr(s, "Volume", 0.0) or 0.0))
+            else:
+                compound = max(shapes, key=lambda s: float(getattr(s, "Volume", 0.0) or 0.0))
         # Heal before export to ensure valid STEP files
         compound = self._heal_shape_for_export(compound)
         self._step_path.parent.mkdir(parents=True, exist_ok=True)
@@ -531,47 +546,121 @@ class FreeCADBackend:
         
         Matches the healing strategy used by batch_eval probe to ensure exported
         STEP files pass freecadcmd isValid() + volume>0 checks.
+        
+        Enhanced for complex multi-feature geometries (crankshafts, brackets, etc.)
+        with deeper validation, geometry cleanup, and tolerance-aware fusion.
         """
         if shape.isNull():
             return shape
         
-        # Fix invalid shapes
+        # Initial fix pass for invalid shapes
         if not shape.isValid():
             try:
                 shape.fix()
             except Exception:
                 pass
         
-        # Extract and fuse multiple solids into one when possible
+        # Remove degenerate elements that can cause STEP export crashes
+        try:
+            shape = shape.removeSplitter()
+        except Exception:
+            pass
+        
+        # Extract and process multiple solids
         solids = list(shape.Solids) if hasattr(shape, "Solids") else []
         if len(solids) == 1:
             shape = solids[0]
         elif len(solids) > 1:
-            # Fuse all solids into a single compound
+            # For parts (not assemblies): fuse multiple solids into one coherent solid
+            # Complex geometries with many features may produce multi-solid intermediates
             try:
-                fused = solids[0]
-                for s in solids[1:]:
-                    fused = fused.fuse(s)
-                # Validate and fix the fused result
-                if not fused.isValid():
+                # Filter out degenerate solids (zero volume, invalid)
+                valid_solids = []
+                for s in solids:
                     try:
-                        fused.fix()
+                        vol = float(getattr(s, "Volume", 0.0) or 0.0)
+                        if vol < 1e-6:
+                            continue
+                        fixed = s if s.isValid() else self._try_fix(s)
+                        if fixed.isValid():
+                            valid_solids.append(fixed)
                     except Exception:
-                        pass
-                # Only use fused shape if it's valid AND has volume
-                if fused.isValid() and float(getattr(fused, "Volume", 0.0) or 0.0) > 0:
-                    shape = fused
+                        continue
+                
+                if not valid_solids:
+                    # No valid solids found, keep original
+                    pass
+                elif len(valid_solids) == 1:
+                    shape = valid_solids[0]
+                else:
+                    # Progressive fusion with validation at each step
+                    fused = valid_solids[0]
+                    for s in valid_solids[1:]:
+                        try:
+                            next_fused = fused.fuse(s)
+                            # Validate fusion result before accepting
+                            if not next_fused.isValid():
+                                next_fused = self._try_fix(next_fused)
+                            # Check for volume collapse
+                            fused_vol = float(getattr(next_fused, "Volume", 0.0) or 0.0)
+                            if next_fused.isValid() and fused_vol > 1e-6:
+                                fused = next_fused
+                            # If fusion degrades, keep previous state and skip this solid
+                        except Exception:
+                            # Skip problematic solid and continue
+                            continue
+                    
+                    # Only use fused shape if it's valid AND has volume
+                    if fused.isValid() and float(getattr(fused, "Volume", 0.0) or 0.0) > 1e-6:
+                        shape = fused
             except Exception:
                 # Fall back to original shape if fusion fails
                 pass
         
-        # Final validation: fix one more time if still invalid
-        if not shape.isValid():
+        # Clean up edges and faces that may cause STEP writer issues
+        if not shape.isNull():
             try:
-                shape.fix()
+                # Refine shape to remove unnecessary edges/vertices
+                refined = shape.copy()
+                refined = refined.removeSplitter()
+                if refined.isValid() and float(getattr(refined, "Volume", 0.0) or 0.0) > 1e-6:
+                    shape = refined
             except Exception:
                 pass
         
+        # Final validation pass: fix one more time if still invalid
+        if not shape.isValid():
+            shape = self._try_fix(shape)
+        
+        # Last resort: if shape has solids but reports invalid, try extracting largest solid
+        if not shape.isValid() and hasattr(shape, "Solids"):
+            solids = list(shape.Solids)
+            if solids:
+                try:
+                    # Pick largest valid solid
+                    best = None
+                    best_vol = 0.0
+                    for s in solids:
+                        if s.isValid():
+                            vol = float(getattr(s, "Volume", 0.0) or 0.0)
+                            if vol > best_vol:
+                                best = s
+                                best_vol = vol
+                    if best is not None and best_vol > 1e-6:
+                        shape = best
+                except Exception:
+                    pass
+        
+        return shape
+    
+    def _try_fix(self, shape: Any) -> Any:
+        """Attempt to fix a shape, returning the shape (fixed or unchanged)."""
+        if shape.isNull() or shape.isValid():
+            return shape
+        try:
+            shape.fix()
+        except Exception:
+            pass
         return shape
 
     def export(self, body_id: str, path: str, fmt: str = "step") -> ToolResult:
@@ -590,22 +679,42 @@ class FreeCADBackend:
 
         # Assembly export: compound every remaining solid (multi-body)
         if str(body_id).upper() in {"*", "ALL", "__ALL__", "ASSEMBLY"}:
-            shapes = [
-                o.Shape
-                for o in self._doc.Objects
-                if getattr(o, "Shape", None) is not None and not o.Shape.isNull()
-            ]
+            shapes = []
+            for o in self._doc.Objects:
+                shape = getattr(o, "Shape", None)
+                if shape is None or shape.isNull():
+                    continue
+                # Filter out degenerate shapes
+                try:
+                    vol = float(getattr(shape, "Volume", 0.0) or 0.0)
+                    if vol < 1e-6:
+                        continue
+                    # Ensure each body is valid before adding to assembly
+                    if not shape.isValid():
+                        shape = self._try_fix(shape)
+                        if not shape.isValid():
+                            continue
+                except Exception:
+                    continue
+                shapes.append(shape)
+            
             if not shapes:
-                return ToolResult(ok=False, message="[FreeCAD] No shapes to export")
+                return ToolResult(ok=False, message="[FreeCAD] No valid shapes to export")
             
             # Use compound for assemblies (keeps separate bodies), not fuse
             if len(shapes) == 1:
                 shape = shapes[0]
+                # Apply healing to single shape
+                shape = self._heal_shape_for_export(shape)
             else:
+                # Create compound and apply light cleanup
                 shape = self._Part.makeCompound(shapes)
+                # Light validation for compound (no heavy fusion for assemblies)
+                if not shape.isValid():
+                    shape = self._try_fix(shape)
             
             n = len(shapes)
-            cad_api = f"Part.makeCompound({n} bodies) → exportStep"
+            cad_api = f"Part.makeCompound({n} bodies) → heal → exportStep"
             if fmt_l in {"step", "stp"}:
                 shape.exportStep(str(out))
             elif fmt_l == "stl":
