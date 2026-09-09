@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from typing import Any
 
@@ -10,6 +11,7 @@ from kala.cad.registry import ToolRegistry, build_registry
 from kala.llm.base import PlannerProtocol
 from kala.llm.openai_compat import resolve_planner
 from kala.ml.base import DesignContextModel, DynamicContext
+from kala.ml.learned import LearnedDesignContextModel
 from kala.ml.stub import StubDesignContextModel
 from kala.parts.catalog import PartsCatalog
 from kala.procedures.schema import load_default_procedure
@@ -28,6 +30,19 @@ class RunResult:
         }
 
 
+def resolve_context_model() -> DesignContextModel:
+    """Resolve the context model based on KALA_CONTEXT_MODEL environment variable.
+    
+    Returns:
+        StubDesignContextModel if KALA_CONTEXT_MODEL=stub or unset (default)
+        LearnedDesignContextModel if KALA_CONTEXT_MODEL=learned
+    """
+    model_type = os.environ.get("KALA_CONTEXT_MODEL", "stub").lower()
+    if model_type == "learned":
+        return LearnedDesignContextModel()
+    return StubDesignContextModel()
+
+
 class Agent:
     def __init__(
         self,
@@ -43,7 +58,7 @@ class Agent:
         self.standard_parts = standard_parts
         self.procedure_id = procedure_id
         self.planner = planner or resolve_planner()
-        self.context_model = context_model or StubDesignContextModel()
+        self.context_model = context_model or resolve_context_model()
         self.max_turns = max_turns
         self.catalog = PartsCatalog.default()
         self._backend: Any = None
