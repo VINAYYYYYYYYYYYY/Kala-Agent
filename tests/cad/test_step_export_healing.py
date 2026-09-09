@@ -144,3 +144,56 @@ def test_heal_shape_for_export_fusion_exception_fallback():
     
     # Should fall back to original shape on exception
     assert result == mock_shape
+
+
+def test_heal_shape_for_export_rejects_invalid_with_volume():
+    """Test that fused shape with volume but invalid is rejected (AND condition)."""
+    from kala.cad.freecad.backend import FreeCADBackend
+    
+    backend = FreeCADBackend.__new__(FreeCADBackend)
+    
+    mock_solid1 = Mock()
+    mock_solid2 = Mock()
+    mock_fused = Mock()
+    mock_fused.isValid.return_value = False  # Invalid
+    mock_fused.Volume = 100.0  # But has volume
+    mock_fused.fix = Mock()  # Fix doesn't help
+    
+    mock_solid1.fuse.return_value = mock_fused
+    
+    mock_shape = Mock()
+    mock_shape.isNull.return_value = False
+    mock_shape.isValid.return_value = True
+    mock_shape.Solids = [mock_solid1, mock_solid2]
+    
+    result = backend._heal_shape_for_export(mock_shape)
+    
+    # Should reject fused and fall back to original (invalid AND volume required)
+    assert result == mock_shape
+    assert result != mock_fused
+
+
+def test_heal_shape_for_export_rejects_valid_with_zero_volume():
+    """Test that fused shape that is valid but has zero volume is rejected (AND condition)."""
+    from kala.cad.freecad.backend import FreeCADBackend
+    
+    backend = FreeCADBackend.__new__(FreeCADBackend)
+    
+    mock_solid1 = Mock()
+    mock_solid2 = Mock()
+    mock_fused = Mock()
+    mock_fused.isValid.return_value = True  # Valid
+    mock_fused.Volume = 0.0  # But zero volume
+    
+    mock_solid1.fuse.return_value = mock_fused
+    
+    mock_shape = Mock()
+    mock_shape.isNull.return_value = False
+    mock_shape.isValid.return_value = True
+    mock_shape.Solids = [mock_solid1, mock_solid2]
+    
+    result = backend._heal_shape_for_export(mock_shape)
+    
+    # Should reject fused and fall back to original (valid AND volume>0 required)
+    assert result == mock_shape
+    assert result != mock_fused

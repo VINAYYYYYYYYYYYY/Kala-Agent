@@ -425,8 +425,8 @@ class FreeCADBackend:
                         fused.fix()
                     except Exception:
                         pass
-                # Only use fused shape if it's valid and has volume
-                if fused.isValid() or float(getattr(fused, "Volume", 0.0) or 0.0) > 0:
+                # Only use fused shape if it's valid AND has volume
+                if fused.isValid() and float(getattr(fused, "Volume", 0.0) or 0.0) > 0:
                     shape = fused
             except Exception:
                 # Fall back to original shape if fusion fails
