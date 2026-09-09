@@ -7,3 +7,11 @@ __pycache__/
 .mypy_cache/
 uv.lock
 outputs/
+dist/
+build/
+*.AppImage
+
+
+# CAD artifacts / local
+*.step
+.cursor/

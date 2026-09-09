@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "kala-freecad": {
+      "command": "uv",
+      "args": ["run", "--directory", "/home/v9i/Kala-Agent", "kala-mcp-freecad"],
+      "env": {}
+    }
+  }
+}

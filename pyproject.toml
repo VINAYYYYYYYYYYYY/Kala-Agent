@@ -8,11 +8,23 @@ version = "0.1.0"
 description = "CAD design agent"
 requires-python = ">=3.12"
 dependencies = [
-    "cadquery-ocp",
+    "PySide6>=6.7.0",
+    "mcp>=1.9.0",
 ]
+
+[project.optional-dependencies]
+ocp = ["cadquery-ocp"]
+packaging = ["pyinstaller>=6.0"]
 
 [tool.setuptools.packages.find]
 include = ["kala*"]
 
+[tool.setuptools.package-data]
+kala = [
+    "procedures/library/*.json",
+]
+
 [project.scripts]
 kala = "kala.cli:main"
+kala-gui = "kala.ui.desktop:main"
+kala-mcp-freecad = "kala.mcp_freecad.server:main"

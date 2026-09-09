@@ -1,0 +1,65 @@
+{
+  "id": "machine_assembly",
+  "name": "Multi-part machine assembly",
+  "description": "Keep parts as separate solids: place standard parts and custom envelopes, then export the assembly compound (do not fuse everything into one brick).",
+  "steps": [
+    {
+      "id": "envelope",
+      "goal": "Create primary housings / structural envelopes.",
+      "allowed_tools": [
+        "create_box",
+        "create_cylinder",
+        "create_sphere",
+        "create_cone",
+        "list_bodies",
+        "search_parts",
+        "insert_part"
+      ],
+      "exit_criteria": "At least one housing or motor envelope exists."
+    },
+    {
+      "id": "features",
+      "goal": "Place moving parts, cut pockets/bores, translate/rotate into assembly positions. Prefer keep-separate; fuse only when a single printable body is required.",
+      "allowed_tools": [
+        "create_box",
+        "create_cylinder",
+        "create_sphere",
+        "create_cone",
+        "boolean_cut",
+        "boolean_fuse",
+        "translate",
+        "rotate",
+        "fillet",
+        "list_bodies",
+        "search_parts",
+        "insert_part",
+        "export"
+      ],
+      "exit_criteria": "Parts positioned; bores cut where needed."
+    },
+    {
+      "id": "standard_parts",
+      "goal": "Insert catalog bearings, fasteners, gear blanks, motor.",
+      "allowed_tools": [
+        "search_parts",
+        "insert_part",
+        "list_bodies",
+        "translate",
+        "rotate",
+        "create_box",
+        "create_cylinder",
+        "boolean_cut",
+        "boolean_fuse",
+        "export"
+      ],
+      "exit_criteria": "Catalog parts inserted or skipped.",
+      "optional_parts": true
+    },
+    {
+      "id": "export",
+      "goal": "Export finished assembly (primary body or full compound).",
+      "allowed_tools": ["list_bodies", "export", "boolean_fuse", "translate"],
+      "exit_criteria": "An export path is produced."
+    }
+  ]
+}
