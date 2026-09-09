@@ -54,7 +54,7 @@ class LearnedDesignContextModel:
         
         # Apply learned rules to augment context
         try:
-            context = self._apply_rules(features, base_context)
+            context = self._apply_rules(features, base_context, state)
             return context
         except Exception:  # noqa: BLE001
             # On any error, fall back to stub
@@ -64,6 +64,7 @@ class LearnedDesignContextModel:
         self,
         features: dict[str, Any],
         base_context: DynamicContext,
+        state: SessionState,
     ) -> DynamicContext:
         """Apply learned rules to augment the base context."""
         if self._rules is None:
@@ -77,6 +78,18 @@ class LearnedDesignContextModel:
         candidate_parts = list(base_context.candidate_parts)
         warnings = list(base_context.warnings)
         snippets = list(base_context.snippets)
+        
+        # Fold in analysis warnings from geometry probe / FEM
+        # Note: stub already adds these, but we check here to ensure learned
+        # can independently handle analysis_by_body if rules need it
+        if state.analysis_by_body:
+            for body_id, report_dict in state.analysis_by_body.items():
+                if not report_dict.get("ok"):
+                    message = report_dict.get("message", "Analysis failed")
+                    warning_text = f"Geometry issue on {body_id}: {message}"
+                    # Avoid duplicating if stub already added it
+                    if warning_text not in warnings:
+                        warnings.append(warning_text)
         
         # Apply constraint rules
         constraint_rules = self._rules.get("constraints", {})
