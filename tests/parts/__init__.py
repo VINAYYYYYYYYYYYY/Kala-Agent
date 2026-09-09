@@ -1,0 +1,1 @@
+"""Parts catalog tests."""

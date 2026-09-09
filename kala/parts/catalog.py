@@ -142,36 +142,165 @@ def _default_parts() -> list[StandardPart]:
 class PartsCatalog:
     # Common LLM / human aliases → catalog ids
     ALIASES: dict[str, str] = {
+        # NEMA17 motor / stepper aliases
         "nema17": "nema17_body",
         "nema_17": "nema17_body",
         "nema-17": "nema17_body",
         "stepper": "nema17_body",
+        "stepper_motor": "nema17_body",
         "motor": "nema17_body",
+        "steppermotor": "nema17_body",
+        "nema17motor": "nema17_body",
+        "nema17_motor": "nema17_body",
+        
+        # Bearing 608 aliases (common skate bearing)
+        "608": "bearing_608",
+        "bearing_608": "bearing_608",
+        "608_2rs": "bearing_608",
+        "608zz": "bearing_608",
+        "skate_bearing": "bearing_608",
+        "skatebearing": "bearing_608",
+        
+        # Bearing MR128 aliases (planet bearing)
         "mr128": "bearing_mr128",
         "bearing_mr128": "bearing_mr128",
+        "mr_128": "bearing_mr128",
+        "mr128zz": "bearing_mr128",
+        "planet_bearing": "bearing_mr128",
+        
+        # Bearing 6709 aliases (thin section output bearing)
         "6709": "bearing_6709",
         "bearing_6709": "bearing_6709",
+        "6709zz": "bearing_6709",
+        "output_bearing": "bearing_6709",
+        "thin_bearing": "bearing_6709",
+        
+        # Bearing 6704 aliases
         "6704": "bearing_6704",
-        "608": "bearing_608",
+        "bearing_6704": "bearing_6704",
+        "6704zz": "bearing_6704",
+        
+        # M3 bolt variants (8mm length)
         "m3x8": "hex_m3x8",
+        "m3_x_8": "hex_m3x8",
+        "m3x8mm": "hex_m3x8",
+        "hex_m3_x_8": "hex_m3x8",
+        
+        # M3 bolt variants (12mm length)
         "m3x10": "hex_m3x12",
         "m3x12": "hex_m3x12",
+        "m3_x_12": "hex_m3x12",
+        "m3x12mm": "hex_m3x12",
+        "hex_m3_x_12": "hex_m3x12",
+        
+        # M3 bolt variants (16mm length)
         "m3x16": "hex_m3x16",
+        "m3_x_16": "hex_m3x16",
+        "m3x16mm": "hex_m3x16",
+        "hex_m3_x_16": "hex_m3x16",
+        
+        # Generic M3 fasteners (default to 8mm)
         "m3": "hex_m3x8",
         "m3bolt": "hex_m3x8",
         "m3_bolt": "hex_m3x8",
+        "m3screw": "hex_m3x8",
+        "m3_screw": "hex_m3x8",
+        "bolt_m3": "hex_m3x8",
+        "screw_m3": "hex_m3x8",
+        "hexbolt_m3": "hex_m3x8",
+        "hex_bolt_m3": "hex_m3x8",
+        
+        # M3 nut aliases
         "nut": "nut_m3",
         "m3nut": "nut_m3",
+        "m3_nut": "nut_m3",
+        "nut_m3": "nut_m3",
+        "hex_nut_m3": "nut_m3",
+        "hexnut_m3": "nut_m3",
+        "hexnut": "nut_m3",
+        
+        # M6 bolt aliases
+        "m6": "hex_m6x20",
+        "m6x20": "hex_m6x20",
+        "m6_x_20": "hex_m6x20",
+        "m6x20mm": "hex_m6x20",
+        "hex_m6_x_20": "hex_m6x20",
+        "m6bolt": "hex_m6x20",
+        "m6_bolt": "hex_m6x20",
+        "bolt_m6": "hex_m6x20",
+        
+        # M8 bolt aliases
+        "m8": "hex_m8x25",
+        "m8x25": "hex_m8x25",
+        "m8_x_25": "hex_m8x25",
+        "m8x25mm": "hex_m8x25",
+        "hex_m8_x_25": "hex_m8x25",
+        "m8bolt": "hex_m8x25",
+        "m8_bolt": "hex_m8x25",
+        "bolt_m8": "hex_m8x25",
+        
+        # Generic fastener aliases
+        "bolt": "hex_m3x8",
+        "screw": "hex_m3x8",
+        "fastener": "hex_m3x8",
+        "hex_bolt": "hex_m3x8",
+        "hexbolt": "hex_m3x8",
+        
+        # Sun gear aliases
         "sun": "gear_sun_nema17",
         "sun_gear": "gear_sun_nema17",
+        "sungear": "gear_sun_nema17",
+        "gear_sun": "gear_sun_nema17",
         "gear_blank_sun": "gear_sun_nema17",
+        "pinion": "gear_sun_nema17",
+        
+        # Planet gear aliases
         "planet": "gear_planet",
         "planet_gear": "gear_planet",
+        "planetgear": "gear_planet",
+        "gear_planet": "gear_planet",
         "gear_blank_planet": "gear_planet",
+        
+        # Ring gear aliases
         "ring": "gear_ring_internal",
         "ring_gear": "gear_ring_internal",
+        "ringgear": "gear_ring_internal",
+        "gear_ring": "gear_ring_internal",
         "gear_blank_ring": "gear_ring_internal",
+        "annulus": "gear_ring_internal",
+        "annulus_gear": "gear_ring_internal",
+        "internal_gear": "gear_ring_internal",
+        
+        # Generic gear aliases (default to planet)
+        "gear": "gear_planet",
+        "gear_blank": "gear_planet",
+        
+        # 2020 profile aliases
         "2020": "profile_2020",
+        "profile_2020": "profile_2020",
+        "2020_profile": "profile_2020",
+        "extrusion_2020": "profile_2020",
+        "2020_extrusion": "profile_2020",
+        "alu_profile_2020": "profile_2020",
+        "aluminum_2020": "profile_2020",
+        "vslot": "profile_2020",
+        "v_slot": "profile_2020",
+        "tslot": "profile_2020",
+        "t_slot": "profile_2020",
+        
+        # 2020 profile 300mm variant aliases
+        "profile_2020_300": "profile_2020_300",
+        "2020x300": "profile_2020_300",
+        "2020_x_300": "profile_2020_300",
+        "extrusion_2020_300": "profile_2020_300",
+        
+        # Generic profile/extrusion aliases (default to 2020)
+        "profile": "profile_2020",
+        "extrusion": "profile_2020",
+        "aluminum_extrusion": "profile_2020",
+        "alu_extrusion": "profile_2020",
+        "frame": "profile_2020",
+        "rail": "profile_2020",
     }
 
     def __init__(self, parts: list[StandardPart]) -> None:
