@@ -163,7 +163,9 @@ class FreeCadFemCalculiXBackend:
         # Create solver object (CalculiX)
         try:
             solver = ObjectsFem.makeSolverCalculix(doc, f"SolverCalculiX_{body_id}")
-            solver.WorkingDir = "outputs/fem"
+            output_dir = Path("outputs") / "fem" / body_id
+            output_dir.mkdir(parents=True, exist_ok=True)
+            solver.WorkingDir = str(output_dir)
             analysis.addObject(solver)
         except Exception as exc:  # noqa: BLE001
             return AnalysisReport(
@@ -179,7 +181,7 @@ class FreeCadFemCalculiXBackend:
         try:
             mesh_obj = ObjectsFem.makeMeshGmsh(doc, f"FemMesh_{body_id}")
             mesh_obj.Part = solid_obj
-            mesh_obj.CharacteristicLengthMax = "10.0 mm"  # Coarse mesh for speed
+            mesh_obj.CharacteristicLengthMax = "10.0 mm"
             analysis.addObject(mesh_obj)
             doc.recompute()
         except Exception as exc:  # noqa: BLE001
@@ -193,26 +195,18 @@ class FreeCadFemCalculiXBackend:
             )
 
         # Add minimal constraints (fixed constraint at base + self-weight load)
-        # This is a minimal setup - real analysis would need proper boundary conditions
         constraints_incomplete = True
         try:
-            # Try to add a fixed constraint (would need face selection in real scenario)
             fixed = ObjectsFem.makeConstraintFixed(doc, f"ConstraintFixed_{body_id}")
             analysis.addObject(fixed)
             
-            # Add self-weight
             gravity = ObjectsFem.makeConstraintSelfWeight(doc, f"ConstraintGravity_{body_id}")
             analysis.addObject(gravity)
             
             doc.recompute()
             constraints_incomplete = False
         except Exception:  # noqa: BLE001
-            # Constraints may fail without proper face references - continue with warning
             pass
-
-        # Create output directory
-        output_dir = Path("outputs") / "fem" / body_id
-        output_dir.mkdir(parents=True, exist_ok=True)
 
         # Write FEM report
         report_path = output_dir / "fem_report.json"
@@ -259,45 +253,47 @@ class FreeCadFemCalculiXBackend:
                 solver_status="skipped_no_wb",
             )
 
-        # Attempt to run solver (may fail without proper constraints)
+        # Attempt to run real CalculiX solver
         try:
-            # This would trigger the actual solve
-            # In practice, solver.Proxy.execute(solver) or similar would run
-            # For now, we acknowledge the setup is complete
-            doc.recompute()
+            from femtools import ccxtools
             
-            report_data["solver_available"] = True
-            report_data["note"] = "FEM analysis setup complete (no solver run)"
+            fea = ccxtools.FemToolsCcx(solver)
+            fea.update_objects()
             
-            if constraints_incomplete:
-                report_data["warning"] = "Constraints incomplete - analysis may not be meaningful"
+            check_msg = fea.check_prerequisites()
+            if check_msg:
+                report_data["solver_prerequisites_failed"] = check_msg
+                try:
+                    with open(report_path, "w") as f:
+                        json.dump(report_data, f, indent=2)
+                except Exception:  # noqa: BLE001
+                    pass
+                
+                status = "constraints_incomplete" if constraints_incomplete else "setup_only"
+                return AnalysisReport(
+                    body_id=body_id,
+                    ok=False,
+                    message=f"FEM prerequisites failed: {check_msg}",
+                    metrics=metrics,
+                    kind="freecad_fem_calculix",
+                    solver_status=status,
+                )
+            
+            fea.purge_results()
+            fea.write_inp_file()
+            fea.ccx_run()
+            fea.load_results()
+            
+            report_data["solver_run"] = "completed"
             
             try:
                 with open(report_path, "w") as f:
                     json.dump(report_data, f, indent=2)
             except Exception:  # noqa: BLE001
                 pass
-
-            # Setup complete but no real solver results extracted
-            message = f"FEM analysis setup complete for {body_id}"
-            if constraints_incomplete:
-                message += " (constraints incomplete - needs face selection)"
-            message += " - no solver run performed"
-
-            metrics["fem_report_path"] = str(report_path)
-            metrics["output_directory"] = str(output_dir)
-
-            # ok=False because no real solver metrics extracted
-            status = "constraints_incomplete" if constraints_incomplete else "setup_only"
-            return AnalysisReport(
-                body_id=body_id,
-                ok=False,
-                message=message,
-                metrics=metrics,
-                kind="freecad_fem_calculix",
-                solver_status=status,
-            )
-
+            
+            return self._extract_results(doc, analysis, body_id, metrics, report_path)
+            
         except Exception as exc:  # noqa: BLE001
             report_data["solver_run_error"] = str(exc)
             
@@ -307,13 +303,79 @@ class FreeCadFemCalculiXBackend:
             except Exception:  # noqa: BLE001
                 pass
 
+            status = "constraints_incomplete" if constraints_incomplete else "setup_only"
             return AnalysisReport(
                 body_id=body_id,
                 ok=False,
-                message=f"Solver run failed: {exc}",
+                message=f"Solver execution failed: {exc}",
                 metrics=metrics,
                 kind="freecad_fem_calculix",
-                solver_status="solver_run_failed",
+                solver_status=status,
+            )
+
+    def _extract_results(
+        self, doc: Any, analysis: Any, body_id: str, metrics: dict[str, Any], report_path: Path
+    ) -> AnalysisReport:
+        """Extract real post-process metrics from FEM result objects."""
+        result_objects = [obj for obj in analysis.Group if hasattr(obj, "Mesh") and hasattr(obj, "vonMises")]
+        
+        if not result_objects:
+            return AnalysisReport(
+                body_id=body_id,
+                ok=False,
+                message="No result objects found after solver run",
+                metrics=metrics,
+                kind="freecad_fem_calculix",
+                solver_status="no_results",
+            )
+        
+        result_obj = result_objects[0]
+        
+        try:
+            von_mises_values = result_obj.vonMises if hasattr(result_obj, "vonMises") else []
+            
+            if not von_mises_values or len(von_mises_values) == 0:
+                return AnalysisReport(
+                    body_id=body_id,
+                    ok=False,
+                    message="Result object has no von Mises stress data",
+                    metrics=metrics,
+                    kind="freecad_fem_calculix",
+                    solver_status="no_stress_data",
+                )
+            
+            max_von_mises = max(von_mises_values)
+            min_von_mises = min(von_mises_values)
+            avg_von_mises = sum(von_mises_values) / len(von_mises_values)
+            
+            metrics["max_von_mises_stress_mpa"] = float(max_von_mises)
+            metrics["min_von_mises_stress_mpa"] = float(min_von_mises)
+            metrics["avg_von_mises_stress_mpa"] = float(avg_von_mises)
+            metrics["num_nodes"] = len(von_mises_values)
+            metrics["fem_report_path"] = str(report_path)
+            
+            if hasattr(result_obj, "DisplacementLengths"):
+                disp_values = result_obj.DisplacementLengths
+                if disp_values and len(disp_values) > 0:
+                    metrics["max_displacement_mm"] = float(max(disp_values))
+            
+            return AnalysisReport(
+                body_id=body_id,
+                ok=True,
+                message=f"FEM analysis completed for {body_id}",
+                metrics=metrics,
+                kind="freecad_fem_calculix",
+                solver_status="completed",
+            )
+            
+        except Exception as exc:  # noqa: BLE001
+            return AnalysisReport(
+                body_id=body_id,
+                ok=False,
+                message=f"Failed to extract stress metrics: {exc}",
+                metrics=metrics,
+                kind="freecad_fem_calculix",
+                solver_status="result_parse_failed",
             )
 
     def _check_solver_available(self) -> bool:
@@ -321,7 +383,6 @@ class FreeCadFemCalculiXBackend:
         try:
             import subprocess
             
-            # Try to find ccx_static or ccx (CalculiX binary names)
             result = subprocess.run(
                 ["which", "ccx_static"],
                 capture_output=True,
