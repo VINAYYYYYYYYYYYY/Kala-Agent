@@ -427,6 +427,7 @@ class FreeCADBackend:
             f"Shape.makeFillet({radius}, edges) on '{body_id}' → Part::Feature '{name}'"
         )
         
+        all_edges_exc = None
         # Try filleting all edges first (typical case)
         try:
             filleted = obj.Shape.makeFillet(radius, edges)
@@ -440,73 +441,77 @@ class FreeCADBackend:
                     cad_api=cad_api,
                     data={"body_id": out.Name, "radius": radius, "removed": [body_id]},
                 )
-        except Exception as all_edges_exc:
-            # All-edges fillet failed — try selective edges (first half, then largest)
-            try:
-                # Strategy 1: First half of edges
-                half = len(edges) // 2
-                if half > 0:
-                    filleted = obj.Shape.makeFillet(radius, edges[:half])
-                    if filleted.isValid():
-                        out = self._doc.addObject("Part::Feature", name)
-                        out.Shape = filleted
-                        self._remove_body(body_id)
-                        self._doc.recompute()
-                        return self._ok(
-                            f"Filleted {body_id} → {out.Name} (r={radius}, {half}/{len(edges)} edges)",
-                            cad_api=cad_api + f" (partial: {half} edges)",
-                            data={
-                                "body_id": out.Name,
-                                "radius": radius,
-                                "removed": [body_id],
-                                "edges_filleted": half,
-                                "edges_total": len(edges),
-                            },
-                        )
-            except Exception:
-                pass
-            
-            # Strategy 2: Largest edges only
-            try:
-                sorted_edges = sorted(edges, key=lambda e: e.Length, reverse=True)
-                top_edges = sorted_edges[:min(4, len(sorted_edges))]
-                if top_edges:
-                    filleted = obj.Shape.makeFillet(radius, top_edges)
-                    if filleted.isValid():
-                        out = self._doc.addObject("Part::Feature", name)
-                        out.Shape = filleted
-                        self._remove_body(body_id)
-                        self._doc.recompute()
-                        return self._ok(
-                            f"Filleted {body_id} → {out.Name} (r={radius}, largest edges only)",
-                            cad_api=cad_api + f" (selective: {len(top_edges)} largest)",
-                            data={
-                                "body_id": out.Name,
-                                "radius": radius,
-                                "removed": [body_id],
-                                "edges_filleted": len(top_edges),
-                                "edges_total": len(edges),
-                            },
-                        )
-            except Exception:
-                pass
-            
-            # All strategies failed — keep original body and soft-fail
-            return ToolResult(
-                ok=False,
-                message=(
-                    f"[FreeCAD] Fillet failed on {body_id}: {all_edges_exc!s}. "
-                    f"Original body kept. Try smaller radius or skip fillet."
-                ),
-                data={
-                    "cad_software": "FreeCAD",
-                    "cad_api": "Shape.makeFillet",
-                    "body_id": body_id,
-                    "radius": radius,
-                    "edges_total": len(edges),
-                    "kept_original": True,
-                },
-            )
+            # If makeFillet succeeded but shape is invalid, continue to fallbacks
+            all_edges_exc = RuntimeError("makeFillet returned invalid shape")
+        except Exception as exc:
+            all_edges_exc = exc
+        
+        # All-edges fillet failed — try selective edges (first half, then largest)
+        try:
+            # Strategy 1: First half of edges
+            half = len(edges) // 2
+            if half > 0:
+                filleted = obj.Shape.makeFillet(radius, edges[:half])
+                if filleted.isValid():
+                    out = self._doc.addObject("Part::Feature", name)
+                    out.Shape = filleted
+                    self._remove_body(body_id)
+                    self._doc.recompute()
+                    return self._ok(
+                        f"Filleted {body_id} → {out.Name} (r={radius}, {half}/{len(edges)} edges)",
+                        cad_api=cad_api + f" (partial: {half} edges)",
+                        data={
+                            "body_id": out.Name,
+                            "radius": radius,
+                            "removed": [body_id],
+                            "edges_filleted": half,
+                            "edges_total": len(edges),
+                        },
+                    )
+        except Exception:
+            pass
+        
+        # Strategy 2: Largest edges only
+        try:
+            sorted_edges = sorted(edges, key=lambda e: e.Length, reverse=True)
+            top_edges = sorted_edges[:min(4, len(sorted_edges))]
+            if top_edges:
+                filleted = obj.Shape.makeFillet(radius, top_edges)
+                if filleted.isValid():
+                    out = self._doc.addObject("Part::Feature", name)
+                    out.Shape = filleted
+                    self._remove_body(body_id)
+                    self._doc.recompute()
+                    return self._ok(
+                        f"Filleted {body_id} → {out.Name} (r={radius}, largest edges only)",
+                        cad_api=cad_api + f" (selective: {len(top_edges)} largest)",
+                        data={
+                            "body_id": out.Name,
+                            "radius": radius,
+                            "removed": [body_id],
+                            "edges_filleted": len(top_edges),
+                            "edges_total": len(edges),
+                        },
+                    )
+        except Exception:
+            pass
+        
+        # All strategies failed — keep original body and soft-fail
+        return ToolResult(
+            ok=False,
+            message=(
+                f"[FreeCAD] Fillet failed on {body_id}: {all_edges_exc!s}. "
+                f"Original body kept. Try smaller radius or skip fillet."
+            ),
+            data={
+                "cad_software": "FreeCAD",
+                "cad_api": "Shape.makeFillet",
+                "body_id": body_id,
+                "radius": radius,
+                "edges_total": len(edges),
+                "kept_original": True,
+            },
+        )
 
     def list_bodies(self) -> ToolResult:
         bodies = [
