@@ -35,6 +35,7 @@ class SessionState:
     completion_tokens: int = 0
     total_tokens: int = 0
     llm_calls: int = 0
+    analysis_by_body: dict[str, Any] = field(default_factory=dict)
 
     def add_usage(self, usage: dict[str, Any] | None) -> None:
         if not usage:
@@ -95,4 +96,5 @@ class SessionState:
                 }
                 for e in self.history
             ],
+            "analysis_by_body": self.analysis_by_body,
         }

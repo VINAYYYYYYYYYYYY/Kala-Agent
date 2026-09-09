@@ -28,6 +28,13 @@ class StubDesignContextModel:
             f"Exit when: {step.exit_criteria}",
         ]
 
+        # Fold in analysis warnings from geometry probe
+        if state.analysis_by_body:
+            for body_id, report_dict in state.analysis_by_body.items():
+                if not report_dict.get("ok"):
+                    message = report_dict.get("message", "Analysis failed")
+                    warnings.append(f"Geometry issue on {body_id}: {message}")
+
         if step.optional_parts and not state.standard_parts:
             warnings.append("Standard-parts step active but toggle is OFF — skip insert_part.")
             snippets.append("Continue without catalog parts.")
