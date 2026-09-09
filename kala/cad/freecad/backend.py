@@ -575,8 +575,11 @@ class FreeCADBackend:
                 for s in solids:
                     try:
                         vol = float(getattr(s, "Volume", 0.0) or 0.0)
-                        if vol > 1e-6 and (s.isValid() or self._try_fix(s)):
-                            valid_solids.append(s)
+                        if vol < 1e-6:
+                            continue
+                        fixed = s if s.isValid() else self._try_fix(s)
+                        if fixed.isValid():
+                            valid_solids.append(fixed)
                     except Exception:
                         continue
                 
