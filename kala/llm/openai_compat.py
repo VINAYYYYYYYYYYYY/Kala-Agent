@@ -160,13 +160,16 @@ def _last_ok_search_parts(state: SessionState) -> list[dict] | None:
 
 
 def _has_insert_after_last_search(state: SessionState) -> bool:
-    """True if there's an ok insert_part after the most recent ok search_parts."""
+    """True if there's an ok insert_part after the most recent ok search_parts.
+    
+    Iterates history backwards (most recent first):
+    - If we find insert_part first → there's an insert after the last search
+    - If we find search_parts first → no insert after the last search
+    """
     for e in reversed(state.history):
         if e.ok and e.tool == "insert_part":
-            # Found insert before search → there's insert after last search
             return True
         if e.ok and e.tool == "search_parts":
-            # Found search before insert → no insert after last search
             return False
     return False
 
@@ -194,7 +197,8 @@ class OpenAICompatPlanner:
         # Max 1 ok list once bodies known; ≥2 consecutive ok lists → stub fallback
         consecutive_list = _count_consecutive_ok(state, "list_bodies")
         stalled_list = False
-        if bodies_known and consecutive_list >= 2:
+        if bodies_known and consecutive_list >= 1:
+            # Widen pre-LLM check: when bodies known, catch stall earlier
             stalled_list = True
         elif consecutive_list >= 2 and step and step.id == "features":
             # Also catch list-only turn while bodies known in features step
