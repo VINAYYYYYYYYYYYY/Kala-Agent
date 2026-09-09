@@ -118,6 +118,8 @@ class FreeCADBackend:
         else:
             # Largest solid ≈ finished part when booleans produced one
             compound = max(shapes, key=lambda s: float(getattr(s, "Volume", 0.0) or 0.0))
+        # Heal before export to ensure valid STEP files
+        compound = self._heal_shape_for_export(compound)
         self._step_path.parent.mkdir(parents=True, exist_ok=True)
         compound.exportStep(str(self._step_path))
 
@@ -391,6 +393,54 @@ class FreeCADBackend:
             sync=False,
         )
 
+    def _heal_shape_for_export(self, shape: Any) -> Any:
+        """Apply robust healing to ensure STEP export produces valid, readable files.
+        
+        Matches the healing strategy used by batch_eval probe to ensure exported
+        STEP files pass freecadcmd isValid() + volume>0 checks.
+        """
+        if shape.isNull():
+            return shape
+        
+        # Fix invalid shapes
+        if not shape.isValid():
+            try:
+                shape.fix()
+            except Exception:
+                pass
+        
+        # Extract and fuse multiple solids into one when possible
+        solids = list(shape.Solids) if hasattr(shape, "Solids") else []
+        if len(solids) == 1:
+            shape = solids[0]
+        elif len(solids) > 1:
+            # Fuse all solids into a single compound
+            try:
+                fused = solids[0]
+                for s in solids[1:]:
+                    fused = fused.fuse(s)
+                # Validate and fix the fused result
+                if not fused.isValid():
+                    try:
+                        fused.fix()
+                    except Exception:
+                        pass
+                # Only use fused shape if it's valid and has volume
+                if fused.isValid() or float(getattr(fused, "Volume", 0.0) or 0.0) > 0:
+                    shape = fused
+            except Exception:
+                # Fall back to original shape if fusion fails
+                pass
+        
+        # Final validation: fix one more time if still invalid
+        if not shape.isValid():
+            try:
+                shape.fix()
+            except Exception:
+                pass
+        
+        return shape
+
     def export(self, body_id: str, path: str, fmt: str = "step") -> ToolResult:
         out = Path(path)
         root_out = Path(__file__).resolve().parents[3] / "outputs"
@@ -417,9 +467,11 @@ class FreeCADBackend:
             shape = shapes[0]
             for extra in shapes[1:]:
                 shape = shape.fuse(extra)
+            # Heal the assembled shape before export
+            shape = self._heal_shape_for_export(shape)
             # fuse for export only — do not mutate document
             n = len(shapes)
-            cad_api = f"compound/fuse of {n} bodies → exportStep"
+            cad_api = f"compound/fuse of {n} bodies → heal → exportStep"
             if fmt_l in {"step", "stp"}:
                 shape.exportStep(str(out))
             elif fmt_l == "stl":
@@ -434,27 +486,16 @@ class FreeCADBackend:
 
         obj = self._get_object(body_id)
         shape = obj.Shape
-        # Heal before STEP write — invalid shells often fail later freecadcmd reads
-        try:
-            if shape.isNull():
-                return ToolResult(ok=False, message=f"[FreeCAD] Empty shape: {body_id}")
-            if not shape.isValid():
-                shape.fix()
-            # Prefer a single solid when possible
-            solids = list(shape.Solids) if hasattr(shape, "Solids") else []
-            if len(solids) == 1:
-                shape = solids[0]
-            elif len(solids) > 1:
-                fused = solids[0]
-                for s in solids[1:]:
-                    fused = fused.fuse(s)
-                if not fused.isValid():
-                    fused.fix()
-                shape = fused
-        except Exception:
-            pass
+        
+        # Early validation
+        if shape.isNull():
+            return ToolResult(ok=False, message=f"[FreeCAD] Empty shape: {body_id}")
+        
+        # Apply robust healing for single-body export
+        shape = self._heal_shape_for_export(shape)
+        
         if fmt_l in {"step", "stp"}:
-            cad_api = f"Shape.exportStep('{out}')"
+            cad_api = f"Shape → heal → exportStep('{out}')"
             shape.exportStep(str(out))
         elif fmt_l == "stl":
             cad_api = f"Shape.exportStl('{out}')"
