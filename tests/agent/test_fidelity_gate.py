@@ -327,5 +327,259 @@ class TestFidelityGateIntegration:
         # but we've tested _check_fidelity_gate separately
 
 
+class TestForceModelingProgress:
+    """Test _force_modeling_progress helper."""
+
+    def test_creates_bodies_when_too_few_tools(self, monkeypatch):
+        """Should create bodies when real tool count < min_tools."""
+        monkeypatch.setenv("KALA_MIN_TOOLS", "4")
+        
+        from kala.agent.loop import _force_modeling_progress
+        from kala.cad.registry import ToolRegistry, ToolResult
+        
+        # Mock registry with create tools
+        mock_registry = MagicMock(spec=ToolRegistry)
+        mock_registry.has.return_value = True
+        mock_registry.call.return_value = ToolResult(
+            ok=True,
+            message="created",
+            data={"body_id": "Body_1"},
+        )
+        
+        state = make_test_state(history=[])
+        
+        forced_events = _force_modeling_progress(state, mock_registry)
+        
+        # Should force some modeling tools
+        assert len(forced_events) > 0
+        assert any(e.tool in {"create_box", "create_cylinder"} for e in forced_events)
+
+    def test_stops_when_min_tools_met(self, monkeypatch):
+        """Should not force tools when threshold already met."""
+        monkeypatch.setenv("KALA_MIN_TOOLS", "2")
+        
+        from kala.agent.loop import _force_modeling_progress
+        from kala.cad.registry import ToolRegistry
+        
+        mock_registry = MagicMock(spec=ToolRegistry)
+        
+        # Already have 3 real tools (> min_tools=2)
+        state = make_test_state(
+            history=[
+                ToolEvent("create_box", {}, True, "ok", {"body_id": "Box_1"}),
+                ToolEvent("create_cylinder", {}, True, "ok", {"body_id": "Cyl_1"}),
+                ToolEvent("boolean_fuse", {}, True, "ok", {"body_id": "Fuse_1"}),
+            ],
+        )
+        
+        forced_events = _force_modeling_progress(state, mock_registry)
+        
+        # Should not force any tools when threshold met
+        assert len(forced_events) == 0
+
+    def test_caps_forced_calls_at_six(self, monkeypatch):
+        """Should cap forced calls at 6 per invocation."""
+        monkeypatch.setenv("KALA_MIN_TOOLS", "100")
+        
+        from kala.agent.loop import _force_modeling_progress
+        from kala.cad.registry import ToolRegistry, ToolResult
+        
+        mock_registry = MagicMock(spec=ToolRegistry)
+        mock_registry.has.return_value = True
+        mock_registry.call.return_value = ToolResult(
+            ok=True,
+            message="ok",
+            data={"body_id": "Body_X"},
+        )
+        
+        state = make_test_state(history=[])
+        
+        forced_events = _force_modeling_progress(state, mock_registry)
+        
+        # Should cap at 6 forced calls
+        assert len(forced_events) <= 6
+
+    def test_fuses_bodies_for_single_part(self, monkeypatch):
+        """Should fuse bodies together when making single part."""
+        monkeypatch.setenv("KALA_MIN_TOOLS", "5")
+        
+        from kala.agent.loop import _force_modeling_progress
+        from kala.cad.registry import ToolRegistry, ToolResult
+        
+        mock_registry = MagicMock(spec=ToolRegistry)
+        mock_registry.has.return_value = True
+        
+        # Return different body_ids for creates, fuse result for fuse
+        def call_side_effect(tool, **kwargs):
+            if tool == "boolean_fuse":
+                return ToolResult(
+                    ok=True,
+                    message="fused",
+                    data={"body_id": "Fuse_1", "removed": ["Box_1", "Cyl_1"]},
+                )
+            return ToolResult(
+                ok=True,
+                message="created",
+                data={"body_id": f"{tool}_result"},
+            )
+        
+        mock_registry.call.side_effect = call_side_effect
+        
+        state = make_test_state(
+            history=[
+                ToolEvent("create_box", {}, True, "ok", {"body_id": "Box_1"}),
+                ToolEvent("create_cylinder", {}, True, "ok", {"body_id": "Cyl_1"}),
+            ],
+        )
+        
+        forced_events = _force_modeling_progress(state, mock_registry)
+        
+        # Should include fuse operation
+        assert any(e.tool == "boolean_fuse" for e in forced_events)
+
+    def test_creates_and_cuts_when_needed(self, monkeypatch):
+        """Should create cutter and cut when still need more tools."""
+        monkeypatch.setenv("KALA_MIN_TOOLS", "6")
+        
+        from kala.agent.loop import _force_modeling_progress
+        from kala.cad.registry import ToolRegistry, ToolResult
+        
+        call_count = [0]
+        
+        def call_side_effect(tool, **kwargs):
+            call_count[0] += 1
+            if tool == "boolean_cut":
+                return ToolResult(
+                    ok=True,
+                    message="cut",
+                    data={"body_id": "Cut_1", "removed": ["Box_1"]},
+                )
+            return ToolResult(
+                ok=True,
+                message="created",
+                data={"body_id": f"Body_{call_count[0]}"},
+            )
+        
+        mock_registry = MagicMock(spec=ToolRegistry)
+        mock_registry.has.return_value = True
+        mock_registry.call.side_effect = call_side_effect
+        
+        state = make_test_state(
+            history=[
+                ToolEvent("create_box", {}, True, "ok", {"body_id": "Box_1"}),
+            ],
+        )
+        
+        forced_events = _force_modeling_progress(state, mock_registry)
+        
+        # Should include cut operation
+        assert any(e.tool == "boolean_cut" for e in forced_events)
+
+    def test_respects_min_tools_env_disabled(self, monkeypatch):
+        """Should not force tools when KALA_MIN_TOOLS=0."""
+        monkeypatch.setenv("KALA_MIN_TOOLS", "0")
+        
+        from kala.agent.loop import _force_modeling_progress
+        from kala.cad.registry import ToolRegistry
+        
+        mock_registry = MagicMock(spec=ToolRegistry)
+        state = make_test_state(history=[])
+        
+        forced_events = _force_modeling_progress(state, mock_registry)
+        
+        # Should not force any tools when min_tools disabled
+        assert len(forced_events) == 0
+
+
+class TestFidelityGateForceIntegration:
+    """Test that fidelity gate triggers forced progress in agent loop."""
+
+    def test_forces_progress_after_too_few_tools_block(self, monkeypatch):
+        """Should force modeling progress when gate blocks due to too few tools."""
+        monkeypatch.setenv("KALA_MIN_TOOLS", "5")
+        
+        from kala.agent.loop import Agent
+        from kala.llm.base import PlannerTurn, ToolCall
+        
+        # Mock planner that tries to finish early
+        mock_planner = MagicMock()
+        turn_count = [0]
+        
+        def propose_side_effect(state, context, schemas):
+            turn_count[0] += 1
+            if turn_count[0] == 1:
+                # First turn: try to export with only 1 tool
+                return PlannerTurn(
+                    thought="export early",
+                    calls=[
+                        ToolCall("create_box", {"length": 10, "width": 10, "height": 10}),
+                        ToolCall("export", {"body_id": "Box_1", "path": "test.step", "fmt": "step"}),
+                    ],
+                    done=True,
+                )
+            # Subsequent turns: try done again
+            return PlannerTurn(thought="try done again", calls=[], done=True)
+        
+        mock_planner.propose.side_effect = propose_side_effect
+        
+        agent = Agent(backend_name="mock", planner=mock_planner, max_turns=10)
+        
+        # Run with a simple goal
+        result = agent.run("Create a test part")
+        
+        # Should have forced some modeling tools
+        history = result.state.history
+        fidelity_events = [e for e in history if e.tool == "fidelity_gate"]
+        
+        # Should have at least one fidelity gate block
+        assert len(fidelity_events) >= 1
+        assert any("too few tools" in e.message for e in fidelity_events)
+        
+        # After forcing, should have more real tools
+        real_tools = [e for e in history if e.ok and e.tool not in {"list_bodies", "show_in_freecad", "search_parts", "export", "fidelity_gate"}]
+        
+        # With min_tools=5 and forced progress, should eventually reach threshold
+        assert len(real_tools) >= 3  # At least some forced progress
+
+    def test_does_not_force_for_stub_hash_block(self, monkeypatch, tmp_path):
+        """Should not force progress when gate blocks due to stub hash (not too_few_tools)."""
+        monkeypatch.setenv("KALA_MIN_TOOLS", "0")
+        
+        # Create stub export file
+        stub_file = tmp_path / "stub.step"
+        stub_file.write_text("stub content")
+        
+        from kala.agent.loop import Agent, _compute_step_hash
+        from kala.llm.base import PlannerTurn, ToolCall
+        
+        stub_hash = _compute_step_hash(stub_file)
+        monkeypatch.setenv("KALA_KNOWN_STUB_HASHES", stub_hash)
+        
+        mock_planner = MagicMock()
+        mock_planner.propose.return_value = PlannerTurn(
+            thought="export stub",
+            calls=[
+                ToolCall("create_box", {"length": 10, "width": 10, "height": 10}),
+                ToolCall("export", {"body_id": "Box_1", "path": str(stub_file), "fmt": "step"}),
+            ],
+            done=True,
+        )
+        
+        agent = Agent(backend_name="mock", planner=mock_planner, max_turns=5)
+        result = agent.run("Create a test part")
+        
+        history = result.state.history
+        fidelity_events = [e for e in history if e.tool == "fidelity_gate"]
+        
+        # Should have fidelity block but NOT due to too_few_tools
+        if fidelity_events:
+            assert all("too few tools" not in e.message for e in fidelity_events)
+        
+        # Should not have forced a bunch of extra modeling tools (since not too_few_tools block)
+        # Just the initial create_box from planner
+        real_tools = [e for e in history if e.ok and e.tool in {"create_box", "create_cylinder", "boolean_fuse", "boolean_cut"}]
+        assert len(real_tools) <= 2  # Initial create + maybe one more, but no extensive forcing
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
