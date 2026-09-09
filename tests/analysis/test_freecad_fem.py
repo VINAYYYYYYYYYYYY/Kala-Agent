@@ -222,11 +222,11 @@ def test_freecad_fem_no_fake_metrics():
 
 
 def test_freecad_fem_setup_only_returns_false():
-    """Test FEM backend returns ok=False when only setup completes (no real solver results)."""
-    backend = FreeCadFemCalculiXBackend()
+    """Test FEM backend returns ok=False when prerequisites fail (setup_only path)."""
+    from unittest.mock import MagicMock, patch
+    import sys
     
-    # This test verifies that without real solver execution and metric extraction,
-    # the backend correctly returns ok=False with status setup_only or constraints_incomplete
+    backend = FreeCadFemCalculiXBackend()
     
     mock_shape = Mock()
     mock_shape.isValid.return_value = True
@@ -235,22 +235,130 @@ def test_freecad_fem_setup_only_returns_false():
     mock_obj = Mock()
     mock_obj.Shape = mock_shape
     
-    mock_doc = Mock()
+    mock_doc = MagicMock()
     mock_doc.getObject.return_value = mock_obj
     
     mock_backend = Mock()
     mock_backend._doc = mock_doc
     
-    # Mock the Fem module to be available but not actually run solver
-    with patch.dict('sys.modules', {'Fem': Mock(), 'ObjectsFem': Mock()}):
-        # The backend will do setup but not extract real metrics
-        request = AnalysisRequest(body_id="Setup_1", backend_handle=mock_backend)
-        
-        # Since we can't easily mock the full FEM setup without real FreeCAD,
-        # we'll test the principle: setup without real results = ok=False
-        # This is verified in the actual implementation
+    mock_solver = MagicMock()
+    mock_mesh = MagicMock()
+    mock_material = MagicMock()
+    mock_analysis = MagicMock()
     
-    # The key assertion: no real solver results means ok=False
-    # This is enforced in the code at the "setup_only" / "constraints_incomplete" paths
-    # Verified by code review that those paths return ok=False
-    assert True  # Placeholder - actual behavior verified in implementation
+    mock_objects_fem = MagicMock()
+    mock_objects_fem.makeAnalysis.return_value = mock_analysis
+    mock_objects_fem.makeSolverCalculix.return_value = mock_solver
+    mock_objects_fem.makeMaterialSolid.return_value = mock_material
+    mock_objects_fem.makeMeshGmsh.return_value = mock_mesh
+    mock_objects_fem.makeConstraintFixed.return_value = MagicMock(References=[])
+    mock_objects_fem.makeConstraintSelfWeight.return_value = MagicMock()
+    
+    mock_fea = MagicMock()
+    mock_fea.check_prerequisites.return_value = "Missing prerequisite: test error"
+    
+    mock_ccxtools = MagicMock()
+    mock_ccxtools.FemToolsCcx.return_value = mock_fea
+    
+    mock_femtools = MagicMock()
+    mock_femtools.ccxtools = mock_ccxtools
+    
+    with patch.dict(sys.modules, {
+        'Fem': MagicMock(),
+        'ObjectsFem': mock_objects_fem,
+        'femtools': mock_femtools,
+        'femtools.ccxtools': mock_ccxtools,
+    }):
+        with patch("kala.analysis.freecad_fem.Path"):
+            backend._check_solver_available = lambda: True
+            
+            request = AnalysisRequest(body_id="Setup_1", backend_handle=mock_backend)
+            report = backend.analyze(request)
+            
+            assert report.ok is False
+            assert report.solver_status in ["setup_only", "constraints_incomplete"]
+            assert "prerequisite" in report.message.lower() or "incomplete" in report.message.lower()
+
+
+def test_freecad_fem_extract_results_with_stress_data():
+    """Test FEM backend extracts real von Mises stress from result objects."""
+    from unittest.mock import MagicMock
+    
+    backend = FreeCadFemCalculiXBackend()
+    
+    mock_result_obj = MagicMock()
+    mock_result_obj.vonMises = [100.5, 250.3, 150.0, 300.8, 200.1]
+    mock_result_obj.DisplacementLengths = [0.1, 0.2, 0.15, 0.25, 0.18]
+    mock_result_obj.Mesh = MagicMock()
+    
+    mock_analysis = MagicMock()
+    mock_analysis.Group = [mock_result_obj]
+    
+    mock_doc = MagicMock()
+    
+    mock_fea = MagicMock()
+    mock_fea.ccx_stdout = "CalculiX output"
+    
+    from pathlib import Path
+    report_path = Path("test_report.json")
+    metrics = {"is_valid": True, "volume": 1000.0}
+    
+    report = backend._extract_results(mock_doc, mock_analysis, "Test_1", metrics, report_path, mock_fea)
+    
+    assert report.ok is True
+    assert report.body_id == "Test_1"
+    assert report.solver_status == "completed"
+    assert "max_von_mises_stress_mpa" in report.metrics
+    assert report.metrics["max_von_mises_stress_mpa"] == 300.8
+    assert report.metrics["min_von_mises_stress_mpa"] == 100.5
+    assert report.metrics["num_nodes"] == 5
+    assert "max_displacement_mm" in report.metrics
+    assert report.metrics["ccx_stdout_available"] is True
+
+
+def test_freecad_fem_extract_results_no_stress_data():
+    """Test FEM backend returns ok=False when result object has no stress data."""
+    from unittest.mock import MagicMock
+    
+    backend = FreeCadFemCalculiXBackend()
+    
+    mock_result_obj = MagicMock()
+    mock_result_obj.vonMises = []
+    mock_result_obj.Mesh = MagicMock()
+    
+    mock_analysis = MagicMock()
+    mock_analysis.Group = [mock_result_obj]
+    
+    mock_doc = MagicMock()
+    
+    from pathlib import Path
+    report_path = Path("test_report.json")
+    metrics = {"is_valid": True, "volume": 1000.0}
+    
+    report = backend._extract_results(mock_doc, mock_analysis, "Test_1", metrics, report_path)
+    
+    assert report.ok is False
+    assert report.solver_status == "no_stress_data"
+    assert "von_mises" not in report.metrics
+    assert "max_stress" not in report.metrics
+
+
+def test_freecad_fem_extract_results_no_result_objects():
+    """Test FEM backend returns ok=False when no result objects are found."""
+    from unittest.mock import MagicMock
+    
+    backend = FreeCadFemCalculiXBackend()
+    
+    mock_analysis = MagicMock()
+    mock_analysis.Group = []
+    
+    mock_doc = MagicMock()
+    
+    from pathlib import Path
+    report_path = Path("test_report.json")
+    metrics = {"is_valid": True, "volume": 1000.0}
+    
+    report = backend._extract_results(mock_doc, mock_analysis, "Test_1", metrics, report_path)
+    
+    assert report.ok is False
+    assert report.solver_status == "no_results"
