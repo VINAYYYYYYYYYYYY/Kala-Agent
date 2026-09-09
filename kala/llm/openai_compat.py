@@ -222,7 +222,7 @@ class OpenAICompatPlanner:
         try:
             turn = self._propose_llm(state, context, tool_schemas)
             # Post-LLM sanitization
-            return self._sanitize_turn(turn, state, needs_cut, needs_fuse, bodies_known)
+            return self._sanitize_turn(turn, state, context)
         except Exception as exc:  # noqa: BLE001
             turn = self.fallback.propose(state, context, tool_schemas)
             turn.thought = f"LLM planner failed ({exc}); stub: {turn.thought}"
@@ -232,19 +232,18 @@ class OpenAICompatPlanner:
         self,
         turn: PlannerTurn,
         state: SessionState,
-        needs_cut: bool,
-        needs_fuse: bool,
-        bodies_known: bool,
+        context: DynamicContext,
     ) -> PlannerTurn:
         """Post-LLM sanitization: enforce stall-breaker policies on proposed calls."""
+        bodies = _known_body_ids(state)
+        bodies_known = len(bodies) > 0
+
         if not turn.calls:
             # Empty turn, check for list-only stall
             consecutive_list = _count_consecutive_ok(state, "list_bodies")
             if consecutive_list >= 2 and bodies_known:
                 # List-only turn while bodies known → stub fallback
-                stub_turn = self.fallback.propose(
-                    state, DynamicContext(focus="progress"), []
-                )
+                stub_turn = self.fallback.propose(state, context, [])
                 stub_turn.thought = f"List-only turn after {consecutive_list} lists; stub: {stub_turn.thought}"
                 stub_turn.done = False
                 return stub_turn
@@ -272,9 +271,7 @@ class OpenAICompatPlanner:
                     turn.calls = [c for c in turn.calls if c.name != "search_parts"]
                     if not turn.calls:
                         # Stub fallback
-                        stub_turn = self.fallback.propose(
-                            state, DynamicContext(goal_keywords=[], needs_cut=needs_cut, needs_fuse=needs_fuse), []
-                        )
+                        stub_turn = self.fallback.propose(state, context, [])
                         stub_turn.thought = f"Empty search fallback; stub: {stub_turn.thought}"
                         stub_turn.done = False
                         return stub_turn
@@ -290,9 +287,7 @@ class OpenAICompatPlanner:
                 # Already had 1 ok list with bodies known → this would be 2nd+ → stub fallback
                 turn.calls = [c for c in turn.calls if c.name != "list_bodies"]
                 if not turn.calls or is_list_only:
-                    stub_turn = self.fallback.propose(
-                        state, DynamicContext(focus="progress"), []
-                    )
+                    stub_turn = self.fallback.propose(state, context, [])
                     stub_turn.thought = f"List stall-breaker after {consecutive_list} lists; stub: {stub_turn.thought}"
                     stub_turn.done = False
                     return stub_turn
