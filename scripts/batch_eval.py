@@ -69,17 +69,20 @@ def _compute_step_hash(path: Path) -> str | None:
 
 
 def _step_metrics(path: Path) -> dict[str, Any]:
-    """Read STEP via freecadcmd (avoids Part.so SIGSEGV in plain python)."""
+    """Read STEP via freecadcmd (avoids Part.so SIGSEGV in plain python).
+    
+    Retries up to 3 times on crashes/timeouts to handle crashy freecadcmd.
+    """
     if not path.is_file():
         return {"error": "missing_file"}
     size = path.stat().st_size
     if size < 200:
         return {"error": "stub_or_empty_step", "bytes": size}
     
-    # Add hash for deduplication tracking
     file_hash = _compute_step_hash(path)
     if not file_hash:
         file_hash = "hash_error"
+    
     # Escape path for FreeCAD -c string
     p = str(path).replace("\\", "\\\\").replace('"', '\\"')
     code = (
@@ -110,25 +113,46 @@ def _step_metrics(path: Path) -> dict[str, Any]:
         "'valid': bool(shape.isValid())"
         "}))\n"
     )
-    try:
-        proc = subprocess.run(
-            ["freecadcmd", "-c", code],
-            capture_output=True,
-            text=True,
-            timeout=90,
-            check=False,
-        )
-        for line in (proc.stdout or "").splitlines():
-            if line.startswith("METRICS "):
-                metrics = json.loads(line[len("METRICS ") :])
-                metrics["hash"] = file_hash
-                return metrics
-        if proc.returncode != 0:
-            err = (proc.stderr or proc.stdout or "")[-200:]
-            return {"error": f"freecadcmd_exit={proc.returncode}", "detail": err, "hash": file_hash}
-        return {"error": "no_metrics_line", "bytes": size, "hash": file_hash}
-    except Exception as exc:  # noqa: BLE001
-        return {"error": str(exc)[:160], "hash": file_hash}
+    
+    # Retry up to 3 times on crashes/timeouts (freecadcmd can SIGSEGV on malformed STEP)
+    last_error = None
+    for attempt in range(3):
+        try:
+            proc = subprocess.run(
+                ["freecadcmd", "-c", code],
+                capture_output=True,
+                text=True,
+                timeout=90,
+                check=False,
+            )
+            for line in (proc.stdout or "").splitlines():
+                if line.startswith("METRICS "):
+                    metrics = json.loads(line[len("METRICS ") :])
+                    metrics["hash"] = file_hash
+                    return metrics
+            if proc.returncode != 0:
+                err = (proc.stderr or proc.stdout or "")[-200:]
+                last_error = f"freecadcmd_exit={proc.returncode}"
+                # Retry on crashes (negative returncodes = signal, e.g. -11=SIGSEGV)
+                if proc.returncode < 0 and attempt < 2:
+                    time.sleep(0.5)
+                    continue
+                return {"error": last_error, "detail": err, "hash": file_hash}
+            last_error = "no_metrics_line"
+            return {"error": last_error, "bytes": size, "hash": file_hash}
+        except subprocess.TimeoutExpired:
+            last_error = "timeout_90s"
+            if attempt < 2:
+                time.sleep(0.5)
+                continue
+            return {"error": last_error, "hash": file_hash}
+        except Exception as exc:  # noqa: BLE001
+            last_error = str(exc)[:160]
+            if attempt < 2:
+                time.sleep(0.5)
+                continue
+    
+    return {"error": last_error or "unknown", "hash": file_hash}
 
 
 def _resolve_export(export: Any) -> Path | None:
@@ -341,6 +365,7 @@ def _run_one(
     *,
     default_backend: str,
     run_dir: Path,
+    min_tools_override: int | None = None,
 ) -> dict[str, Any]:
     from kala.agent.loop import Agent
 
@@ -543,6 +568,7 @@ def main() -> None:
     ap.add_argument("--backend", default="freecad", choices=["freecad", "mock"])
     ap.add_argument("--out", type=Path, default=None, help="Output dir")
     ap.add_argument("--resume", action="store_true", help="Skip ids already in results.jsonl")
+    ap.add_argument("--min-tools", type=int, default=None, help="Override KALA_MIN_TOOLS (default 4)")
     args = ap.parse_args()
 
     designs = _load_designs(args.designs)
@@ -557,6 +583,29 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     runs_dir.mkdir(parents=True, exist_ok=True)
     results_path = out_dir / "results.jsonl"
+    
+    # Wire fidelity env vars for Eval Ops:
+    # - KALA_MIN_TOOLS: default 4, extreme batches use 8
+    # - KALA_KNOWN_STUB_HASHES: seed from stub_hashes.json when present
+    import os
+    if args.min_tools is not None:
+        os.environ["KALA_MIN_TOOLS"] = str(args.min_tools)
+        print(f"KALA_MIN_TOOLS override: {args.min_tools}", flush=True)
+    else:
+        min_tools_env = os.environ.get("KALA_MIN_TOOLS", "4")
+        print(f"KALA_MIN_TOOLS: {min_tools_env} (use --min-tools or KALA_MIN_TOOLS env to override)", flush=True)
+    
+    # Auto-load stub hashes from prior runs if stub_hashes.json exists
+    stub_hashes_path = out_dir / "stub_hashes.json"
+    if stub_hashes_path.is_file() and not os.environ.get("KALA_KNOWN_STUB_HASHES"):
+        try:
+            stub_data = json.loads(stub_hashes_path.read_text(encoding="utf-8"))
+            hashes = stub_data.get("hashes") or []
+            if hashes:
+                os.environ["KALA_KNOWN_STUB_HASHES"] = ",".join(hashes[:10])
+                print(f"KALA_KNOWN_STUB_HASHES seeded from {stub_hashes_path}: {len(hashes)} hashes", flush=True)
+        except Exception:
+            pass
 
     done_ids: set[str] = set()
     if args.resume and results_path.is_file():
@@ -583,7 +632,7 @@ def main() -> None:
                 continue
             print(f"[{i}/{len(designs)}] run {did} …", flush=True)
             run_dir = runs_dir / did
-            row = _run_one(design, default_backend=args.backend, run_dir=run_dir)
+            row = _run_one(design, default_backend=args.backend, run_dir=run_dir, min_tools_override=args.min_tools)
             fh.write(json.dumps(row, ensure_ascii=False) + "\n")
             fh.flush()
             rows.append(row)
