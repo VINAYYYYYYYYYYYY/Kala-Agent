@@ -222,7 +222,10 @@ def test_freecad_fem_no_fake_metrics():
 
 
 def test_freecad_fem_setup_only_returns_false():
-    """Test FEM backend returns ok=False when only setup completes (no real solver results)."""
+    """Test FEM backend returns ok=False when prerequisites fail (setup_only path)."""
+    from unittest.mock import MagicMock, patch
+    import sys
+    
     backend = FreeCadFemCalculiXBackend()
     
     mock_shape = Mock()
@@ -232,15 +235,49 @@ def test_freecad_fem_setup_only_returns_false():
     mock_obj = Mock()
     mock_obj.Shape = mock_shape
     
-    mock_doc = Mock()
+    mock_doc = MagicMock()
     mock_doc.getObject.return_value = mock_obj
     
     mock_backend = Mock()
     mock_backend._doc = mock_doc
     
-    # The backend enforces ok=False for setup_only and constraints_incomplete paths
-    # Verified by code inspection that these paths never return ok=True
-    assert True
+    mock_solver = MagicMock()
+    mock_mesh = MagicMock()
+    mock_material = MagicMock()
+    mock_analysis = MagicMock()
+    
+    mock_objects_fem = MagicMock()
+    mock_objects_fem.makeAnalysis.return_value = mock_analysis
+    mock_objects_fem.makeSolverCalculix.return_value = mock_solver
+    mock_objects_fem.makeMaterialSolid.return_value = mock_material
+    mock_objects_fem.makeMeshGmsh.return_value = mock_mesh
+    mock_objects_fem.makeConstraintFixed.return_value = MagicMock(References=[])
+    mock_objects_fem.makeConstraintSelfWeight.return_value = MagicMock()
+    
+    mock_fea = MagicMock()
+    mock_fea.check_prerequisites.return_value = "Missing prerequisite: test error"
+    
+    mock_ccxtools = MagicMock()
+    mock_ccxtools.FemToolsCcx.return_value = mock_fea
+    
+    mock_femtools = MagicMock()
+    mock_femtools.ccxtools = mock_ccxtools
+    
+    with patch.dict(sys.modules, {
+        'Fem': MagicMock(),
+        'ObjectsFem': mock_objects_fem,
+        'femtools': mock_femtools,
+        'femtools.ccxtools': mock_ccxtools,
+    }):
+        with patch("kala.analysis.freecad_fem.Path"):
+            backend._check_solver_available = lambda: True
+            
+            request = AnalysisRequest(body_id="Setup_1", backend_handle=mock_backend)
+            report = backend.analyze(request)
+            
+            assert report.ok is False
+            assert report.solver_status in ["setup_only", "constraints_incomplete"]
+            assert "prerequisite" in report.message.lower() or "incomplete" in report.message.lower()
 
 
 def test_freecad_fem_extract_results_with_stress_data():
@@ -259,11 +296,14 @@ def test_freecad_fem_extract_results_with_stress_data():
     
     mock_doc = MagicMock()
     
+    mock_fea = MagicMock()
+    mock_fea.ccx_stdout = "CalculiX output"
+    
     from pathlib import Path
     report_path = Path("test_report.json")
     metrics = {"is_valid": True, "volume": 1000.0}
     
-    report = backend._extract_results(mock_doc, mock_analysis, "Test_1", metrics, report_path)
+    report = backend._extract_results(mock_doc, mock_analysis, "Test_1", metrics, report_path, mock_fea)
     
     assert report.ok is True
     assert report.body_id == "Test_1"
@@ -273,6 +313,7 @@ def test_freecad_fem_extract_results_with_stress_data():
     assert report.metrics["min_von_mises_stress_mpa"] == 100.5
     assert report.metrics["num_nodes"] == 5
     assert "max_displacement_mm" in report.metrics
+    assert report.metrics["ccx_stdout_available"] is True
 
 
 def test_freecad_fem_extract_results_no_stress_data():

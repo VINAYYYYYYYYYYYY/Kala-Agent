@@ -177,6 +177,27 @@ class FreeCadFemCalculiXBackend:
                 solver_status="solver_creation_failed",
             )
 
+        # Add minimal default material (steel) required by CalculiX
+        try:
+            material = ObjectsFem.makeMaterialSolid(doc, f"Steel_{body_id}")
+            material_dict = {
+                "Name": "CalculiX-Steel",
+                "YoungsModulus": "210000 MPa",
+                "PoissonRatio": "0.30",
+                "Density": "7900 kg/m^3",
+            }
+            material.Material = material_dict
+            analysis.addObject(material)
+        except Exception as exc:  # noqa: BLE001
+            return AnalysisReport(
+                body_id=body_id,
+                ok=False,
+                message=f"Failed to create material: {exc}",
+                metrics=metrics,
+                kind="freecad_fem_calculix",
+                solver_status="material_creation_failed",
+            )
+
         # Create mesh
         try:
             mesh_obj = ObjectsFem.makeMeshGmsh(doc, f"FemMesh_{body_id}")
@@ -195,16 +216,19 @@ class FreeCadFemCalculiXBackend:
             )
 
         # Add minimal constraints (fixed constraint at base + self-weight load)
+        # Constraints remain incomplete without actual face References
         constraints_incomplete = True
         try:
             fixed = ObjectsFem.makeConstraintFixed(doc, f"ConstraintFixed_{body_id}")
             analysis.addObject(fixed)
             
+            if hasattr(fixed, "References") and fixed.References:
+                constraints_incomplete = False
+            
             gravity = ObjectsFem.makeConstraintSelfWeight(doc, f"ConstraintGravity_{body_id}")
             analysis.addObject(gravity)
             
             doc.recompute()
-            constraints_incomplete = False
         except Exception:  # noqa: BLE001
             pass
 
@@ -286,13 +310,16 @@ class FreeCadFemCalculiXBackend:
             
             report_data["solver_run"] = "completed"
             
+            if hasattr(fea, "ccx_stdout") and fea.ccx_stdout:
+                report_data["ccx_has_output"] = True
+            
             try:
                 with open(report_path, "w") as f:
                     json.dump(report_data, f, indent=2)
             except Exception:  # noqa: BLE001
                 pass
             
-            return self._extract_results(doc, analysis, body_id, metrics, report_path)
+            return self._extract_results(doc, analysis, body_id, metrics, report_path, fea)
             
         except Exception as exc:  # noqa: BLE001
             report_data["solver_run_error"] = str(exc)
@@ -314,9 +341,12 @@ class FreeCadFemCalculiXBackend:
             )
 
     def _extract_results(
-        self, doc: Any, analysis: Any, body_id: str, metrics: dict[str, Any], report_path: Path
+        self, doc: Any, analysis: Any, body_id: str, metrics: dict[str, Any], report_path: Path, fea: Any = None
     ) -> AnalysisReport:
-        """Extract real post-process metrics from FEM result objects."""
+        """Extract real post-process metrics from FEM result objects.
+        
+        vonMises values are in MPa (CalculiX default units, verified in FreeCAD FEM source).
+        """
         result_objects = [obj for obj in analysis.Group if hasattr(obj, "Mesh") and hasattr(obj, "vonMises")]
         
         if not result_objects:
@@ -358,6 +388,9 @@ class FreeCadFemCalculiXBackend:
                 disp_values = result_obj.DisplacementLengths
                 if disp_values and len(disp_values) > 0:
                     metrics["max_displacement_mm"] = float(max(disp_values))
+            
+            if fea and hasattr(fea, "ccx_stdout"):
+                metrics["ccx_stdout_available"] = bool(fea.ccx_stdout)
             
             return AnalysisReport(
                 body_id=body_id,
