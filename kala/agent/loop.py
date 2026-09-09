@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from kala.analysis.base import AnalysisRequest
@@ -44,6 +46,34 @@ def resolve_context_model() -> DesignContextModel:
     if model_type == "learned":
         return LearnedDesignContextModel()
     return StubDesignContextModel()
+
+
+def _compute_step_hash(path: str | Path) -> str | None:
+    """Compute SHA256 hash of STEP file content for deduplication.
+    
+    Returns:
+        Hex digest string if file exists and is readable, None otherwise.
+    """
+    try:
+        p = Path(path)
+        if not p.is_file():
+            return None
+        return hashlib.sha256(p.read_bytes()).hexdigest()
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _count_real_tools(history: list[ToolEvent]) -> int:
+    """Count substantive tool calls (exclude metadata/read-only tools).
+    
+    Args:
+        history: Full tool event history
+        
+    Returns:
+        Count of real modeling/assembly tools used
+    """
+    excluded = {"list_bodies", "show_in_freecad", "search_parts", "export"}
+    return sum(1 for e in history if e.ok and e.tool not in excluded)
 
 
 class Agent:
@@ -120,6 +150,58 @@ class Agent:
         )
         if result.ok:
             state.last_export = str(result.data.get("path") or "")
+
+    def _check_fidelity_gate(self, state: SessionState) -> tuple[bool, str]:
+        """Verify session meets minimum fidelity before allowing done.
+        
+        Prevents premature completion on stub/catalog exports.
+        
+        Returns:
+            (allowed, reason) tuple - allowed=True if session can mark done,
+            reason explains rejection when allowed=False
+        """
+        # Minimum tool threshold: default 4, set 0 to disable
+        # Eval Ops should use KALA_MIN_TOOLS=8 for extreme batches
+        min_tools_env = os.environ.get("KALA_MIN_TOOLS", "4")
+        try:
+            min_tools = int(min_tools_env)
+        except ValueError:
+            min_tools = 4
+        
+        if min_tools > 0:
+            real_count = _count_real_tools(state.history)
+            if real_count < min_tools:
+                return (
+                    False,
+                    f"Fidelity gate: too few tools ({real_count} < {min_tools} required)",
+                )
+        
+        # Export check: refuse if matches known stub/catalog
+        if state.last_export:
+            export_path = Path(state.last_export)
+            export_name = export_path.name.lower()
+            
+            # Basename check: common catalog stubs (before hashes exist)
+            catalog_patterns = ["hex_m6x20", "hex_m3x", "hex_m4x", "hex_m5x", "hex_m8x"]
+            if any(pattern in export_name for pattern in catalog_patterns):
+                return (
+                    False,
+                    f"Fidelity gate: export basename matches catalog stub pattern ({export_name})",
+                )
+            
+            # Hash check: refuse if export matches a known stub/catalog hash
+            export_hash = _compute_step_hash(state.last_export)
+            if export_hash:
+                known_stubs_env = os.environ.get("KALA_KNOWN_STUB_HASHES", "")
+                known_stubs = {h.strip() for h in known_stubs_env.split(",") if h.strip()}
+                
+                if export_hash in known_stubs:
+                    return (
+                        False,
+                        f"Fidelity gate: export matches known stub/catalog hash {export_hash[:16]}...",
+                    )
+        
+        return (True, "")
 
     def _finalize_gui(self, state: SessionState) -> None:
         """Force-open FreeCAD with the live document after a successful modeling run."""
@@ -276,11 +358,39 @@ class Agent:
                     # Never mark done on a blocked/failed export or unfinished model
                     if any(c.name == "export" for c in turn.calls):
                         if exported_this_turn or state.last_export:
+                            # Fidelity gate: check minimum tool count and export uniqueness
+                            allowed, gate_reason = self._check_fidelity_gate(state)
+                            if not allowed:
+                                state.history.append(
+                                    ToolEvent(
+                                        tool="fidelity_gate",
+                                        args={},
+                                        ok=False,
+                                        message=gate_reason,
+                                        data={},
+                                    )
+                                )
+                                # Keep running so the agent can add more work
+                                continue
                             state.status = "done"
                             break
                         # keep running so the agent can fuse/fix/export
                         continue
                     if state.last_export:
+                        # Fidelity gate: check minimum tool count and export uniqueness
+                        allowed, gate_reason = self._check_fidelity_gate(state)
+                        if not allowed:
+                            state.history.append(
+                                ToolEvent(
+                                    tool="fidelity_gate",
+                                    args={},
+                                    ok=False,
+                                    message=gate_reason,
+                                    data={},
+                                )
+                            )
+                            # Keep running so the agent can add more work
+                            continue
                         state.status = "done"
                         break
                     # Ignore premature done without an export
@@ -290,7 +400,21 @@ class Agent:
                 self._auto_export(state, registry)
                 # Exported model counts as finished even if the planner never said done
                 if state.last_export:
-                    state.status = "done"
+                    # Fidelity gate: check minimum tool count and export uniqueness
+                    allowed, gate_reason = self._check_fidelity_gate(state)
+                    if allowed:
+                        state.status = "done"
+                    else:
+                        # Stay at max_turns status (not done) if fidelity check fails
+                        state.history.append(
+                            ToolEvent(
+                                tool="fidelity_gate",
+                                args={},
+                                ok=False,
+                                message=f"{gate_reason} (at max_turns)",
+                                data={},
+                            )
+                        )
         except Exception as exc:  # noqa: BLE001
             state.status = "error"
             state.error = str(exc)
