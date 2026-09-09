@@ -204,6 +204,18 @@ class FreeCADBackend:
     def create_cylinder(
         self, radius: float, height: float, *, label: str = "Cylinder"
     ) -> ToolResult:
+        if not isinstance(radius, (int, float)) or radius <= 0:
+            return ToolResult(
+                ok=False,
+                message=f"[FreeCAD] create_cylinder: radius must be positive number, got {radius!r}",
+                data={"cad_software": "FreeCAD", "cad_api": "Part.makeCylinder"},
+            )
+        if not isinstance(height, (int, float)) or height <= 0:
+            return ToolResult(
+                ok=False,
+                message=f"[FreeCAD] create_cylinder: height must be positive number, got {height!r}",
+                data={"cad_software": "FreeCAD", "cad_api": "Part.makeCylinder"},
+            )
         name = self._next_label(label)
         cad_api = f"Part.makeCylinder({radius}, {height}) → Part::Feature '{name}'"
         cyl = self._Part.makeCylinder(radius, height)
@@ -258,51 +270,95 @@ class FreeCADBackend:
             self._doc.removeObject(body_id)
 
     def boolean_fuse(self, body_a: str, body_b: str) -> ToolResult:
-        a = self._get_object(body_a)
-        b = self._get_object(body_b)
+        try:
+            a = self._get_object(body_a)
+        except KeyError:
+            return ToolResult(
+                ok=False,
+                message=f"[FreeCAD] boolean_fuse: body_a '{body_a}' not found (may have been deleted by previous operation)",
+                data={"cad_software": "FreeCAD", "cad_api": "Shape.fuse", "missing": "body_a"},
+            )
+        try:
+            b = self._get_object(body_b)
+        except KeyError:
+            return ToolResult(
+                ok=False,
+                message=f"[FreeCAD] boolean_fuse: body_b '{body_b}' not found (may have been deleted by previous operation)",
+                data={"cad_software": "FreeCAD", "cad_api": "Shape.fuse", "missing": "body_b"},
+            )
+        
         name = self._next_label("Fuse")
         cad_api = f"Shape.fuse() on '{body_a}' + '{body_b}' → Part::Feature '{name}'"
-        fused = a.Shape.fuse(b.Shape)
-        # If parts only touched (no volume overlap), OCCT leaves multiple solids.
-        n_solids = len(getattr(fused, "Solids", []) or [])
-        obj = self._doc.addObject("Part::Feature", name)
-        obj.Shape = fused
-        # Remove donors — otherwise FreeCAD fills with every intermediate solid
-        self._remove_body(body_a)
-        self._remove_body(body_b)
-        self._doc.recompute()
-        warn = ""
-        if n_solids > 1:
-            warn = (
-                f" WARNING: fuse produced {n_solids} solids (parts likely only "
-                "touched — sink/overlap pieces so volumes intersect)."
+        try:
+            fused = a.Shape.fuse(b.Shape)
+            # If parts only touched (no volume overlap), OCCT leaves multiple solids.
+            n_solids = len(getattr(fused, "Solids", []) or [])
+            obj = self._doc.addObject("Part::Feature", name)
+            obj.Shape = fused
+            # Remove donors — otherwise FreeCAD fills with every intermediate solid
+            self._remove_body(body_a)
+            self._remove_body(body_b)
+            self._doc.recompute()
+            warn = ""
+            if n_solids > 1:
+                warn = (
+                    f" WARNING: fuse produced {n_solids} solids (parts likely only "
+                    "touched — sink/overlap pieces so volumes intersect)."
+                )
+            return self._ok(
+                f"Fused {body_a} + {body_b} → {obj.Name} (donors removed){warn}",
+                cad_api=cad_api,
+                data={
+                    "body_id": obj.Name,
+                    "removed": [body_a, body_b],
+                    "solid_count": n_solids,
+                },
             )
-        return self._ok(
-            f"Fused {body_a} + {body_b} → {obj.Name} (donors removed){warn}",
-            cad_api=cad_api,
-            data={
-                "body_id": obj.Name,
-                "removed": [body_a, body_b],
-                "solid_count": n_solids,
-            },
-        )
+        except Exception as exc:
+            return ToolResult(
+                ok=False,
+                message=f"[FreeCAD] boolean_fuse failed: {exc!s}",
+                data={"cad_software": "FreeCAD", "cad_api": "Shape.fuse"},
+            )
 
     def boolean_cut(self, body_a: str, body_b: str) -> ToolResult:
-        a = self._get_object(body_a)
-        b = self._get_object(body_b)
+        try:
+            a = self._get_object(body_a)
+        except KeyError:
+            return ToolResult(
+                ok=False,
+                message=f"[FreeCAD] boolean_cut: body_a '{body_a}' not found (may have been deleted by previous operation)",
+                data={"cad_software": "FreeCAD", "cad_api": "Shape.cut", "missing": "body_a"},
+            )
+        try:
+            b = self._get_object(body_b)
+        except KeyError:
+            return ToolResult(
+                ok=False,
+                message=f"[FreeCAD] boolean_cut: body_b '{body_b}' not found (may have been deleted by previous operation)",
+                data={"cad_software": "FreeCAD", "cad_api": "Shape.cut", "missing": "body_b"},
+            )
+        
         name = self._next_label("Cut")
         cad_api = f"Shape.cut() '{body_a}' - '{body_b}' → Part::Feature '{name}'"
-        cut = a.Shape.cut(b.Shape)
-        obj = self._doc.addObject("Part::Feature", name)
-        obj.Shape = cut
-        self._remove_body(body_a)
-        self._remove_body(body_b)
-        self._doc.recompute()
-        return self._ok(
-            f"Cut {body_b} from {body_a} → {obj.Name} (donors removed)",
-            cad_api=cad_api,
-            data={"body_id": obj.Name, "removed": [body_a, body_b]},
-        )
+        try:
+            cut = a.Shape.cut(b.Shape)
+            obj = self._doc.addObject("Part::Feature", name)
+            obj.Shape = cut
+            self._remove_body(body_a)
+            self._remove_body(body_b)
+            self._doc.recompute()
+            return self._ok(
+                f"Cut {body_b} from {body_a} → {obj.Name} (donors removed)",
+                cad_api=cad_api,
+                data={"body_id": obj.Name, "removed": [body_a, body_b]},
+            )
+        except Exception as exc:
+            return ToolResult(
+                ok=False,
+                message=f"[FreeCAD] boolean_cut failed: {exc!s}",
+                data={"cad_software": "FreeCAD", "cad_api": "Shape.cut"},
+            )
 
     def translate(self, body_id: str, x: float, y: float, z: float) -> ToolResult:
         obj = self._get_object(body_id)
@@ -365,19 +421,96 @@ class FreeCADBackend:
                 message=f"[FreeCAD] No edges to fillet on {body_id}",
                 data={"cad_software": "FreeCAD", "cad_api": "Shape.makeFillet"},
             )
+        
         name = self._next_label("Fillet")
         cad_api = (
             f"Shape.makeFillet({radius}, edges) on '{body_id}' → Part::Feature '{name}'"
         )
-        filleted = obj.Shape.makeFillet(radius, edges)
-        out = self._doc.addObject("Part::Feature", name)
-        out.Shape = filleted
-        self._remove_body(body_id)
-        self._doc.recompute()
-        return self._ok(
-            f"Filleted {body_id} → {out.Name} (r={radius})",
-            cad_api=cad_api,
-            data={"body_id": out.Name, "radius": radius, "removed": [body_id]},
+        
+        all_edges_exc = None
+        # Try filleting all edges first (typical case)
+        try:
+            filleted = obj.Shape.makeFillet(radius, edges)
+            if filleted.isValid():
+                out = self._doc.addObject("Part::Feature", name)
+                out.Shape = filleted
+                self._remove_body(body_id)
+                self._doc.recompute()
+                return self._ok(
+                    f"Filleted {body_id} → {out.Name} (r={radius})",
+                    cad_api=cad_api,
+                    data={"body_id": out.Name, "radius": radius, "removed": [body_id]},
+                )
+            # If makeFillet succeeded but shape is invalid, continue to fallbacks
+            all_edges_exc = RuntimeError("makeFillet returned invalid shape")
+        except Exception as exc:
+            all_edges_exc = exc
+        
+        # All-edges fillet failed — try selective edges (first half, then largest)
+        try:
+            # Strategy 1: First half of edges
+            half = len(edges) // 2
+            if half > 0:
+                filleted = obj.Shape.makeFillet(radius, edges[:half])
+                if filleted.isValid():
+                    out = self._doc.addObject("Part::Feature", name)
+                    out.Shape = filleted
+                    self._remove_body(body_id)
+                    self._doc.recompute()
+                    return self._ok(
+                        f"Filleted {body_id} → {out.Name} (r={radius}, {half}/{len(edges)} edges)",
+                        cad_api=cad_api + f" (partial: {half} edges)",
+                        data={
+                            "body_id": out.Name,
+                            "radius": radius,
+                            "removed": [body_id],
+                            "edges_filleted": half,
+                            "edges_total": len(edges),
+                        },
+                    )
+        except Exception:
+            pass
+        
+        # Strategy 2: Largest edges only
+        try:
+            sorted_edges = sorted(edges, key=lambda e: e.Length, reverse=True)
+            top_edges = sorted_edges[:min(4, len(sorted_edges))]
+            if top_edges:
+                filleted = obj.Shape.makeFillet(radius, top_edges)
+                if filleted.isValid():
+                    out = self._doc.addObject("Part::Feature", name)
+                    out.Shape = filleted
+                    self._remove_body(body_id)
+                    self._doc.recompute()
+                    return self._ok(
+                        f"Filleted {body_id} → {out.Name} (r={radius}, largest edges only)",
+                        cad_api=cad_api + f" (selective: {len(top_edges)} largest)",
+                        data={
+                            "body_id": out.Name,
+                            "radius": radius,
+                            "removed": [body_id],
+                            "edges_filleted": len(top_edges),
+                            "edges_total": len(edges),
+                        },
+                    )
+        except Exception:
+            pass
+        
+        # All strategies failed — keep original body and soft-fail
+        return ToolResult(
+            ok=False,
+            message=(
+                f"[FreeCAD] Fillet failed on {body_id}: {all_edges_exc!s}. "
+                f"Original body kept. Try smaller radius or skip fillet."
+            ),
+            data={
+                "cad_software": "FreeCAD",
+                "cad_api": "Shape.makeFillet",
+                "body_id": body_id,
+                "radius": radius,
+                "edges_total": len(edges),
+                "kept_original": True,
+            },
         )
 
     def list_bodies(self) -> ToolResult:
@@ -455,7 +588,7 @@ class FreeCADBackend:
         out.parent.mkdir(parents=True, exist_ok=True)
         fmt_l = fmt.lower()
 
-        # Assembly export: compound every remaining solid
+        # Assembly export: compound every remaining solid (multi-body)
         if str(body_id).upper() in {"*", "ALL", "__ALL__", "ASSEMBLY"}:
             shapes = [
                 o.Shape
@@ -464,14 +597,15 @@ class FreeCADBackend:
             ]
             if not shapes:
                 return ToolResult(ok=False, message="[FreeCAD] No shapes to export")
-            shape = shapes[0]
-            for extra in shapes[1:]:
-                shape = shape.fuse(extra)
-            # Heal the assembled shape before export
-            shape = self._heal_shape_for_export(shape)
-            # fuse for export only — do not mutate document
+            
+            # Use compound for assemblies (keeps separate bodies), not fuse
+            if len(shapes) == 1:
+                shape = shapes[0]
+            else:
+                shape = self._Part.makeCompound(shapes)
+            
             n = len(shapes)
-            cad_api = f"compound/fuse of {n} bodies → heal → exportStep"
+            cad_api = f"Part.makeCompound({n} bodies) → exportStep"
             if fmt_l in {"step", "stp"}:
                 shape.exportStep(str(out))
             elif fmt_l == "stl":
