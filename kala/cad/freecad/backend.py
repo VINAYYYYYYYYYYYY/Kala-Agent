@@ -124,7 +124,11 @@ class FreeCADBackend:
             compound = shapes[0]
         else:
             # Largest valid solid ≈ finished part when booleans produced one
-            valid_shapes = [s for s in shapes if s.isValid() or self._try_fix(s).isValid()]
+            valid_shapes = []
+            for s in shapes:
+                fixed = s if s.isValid() else self._try_fix(s)
+                if fixed.isValid():
+                    valid_shapes.append(fixed)
             if valid_shapes:
                 compound = max(valid_shapes, key=lambda s: float(getattr(s, "Volume", 0.0) or 0.0))
             else:
