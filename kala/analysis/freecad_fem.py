@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 from typing import Any
 
@@ -268,7 +267,7 @@ class FreeCadFemCalculiXBackend:
             doc.recompute()
             
             report_data["solver_available"] = True
-            report_data["note"] = "FEM analysis setup complete"
+            report_data["note"] = "FEM analysis setup complete (no solver run)"
             
             if constraints_incomplete:
                 report_data["warning"] = "Constraints incomplete - analysis may not be meaningful"
@@ -279,20 +278,24 @@ class FreeCadFemCalculiXBackend:
             except Exception:  # noqa: BLE001
                 pass
 
+            # Setup complete but no real solver results extracted
             message = f"FEM analysis setup complete for {body_id}"
             if constraints_incomplete:
                 message += " (constraints incomplete - needs face selection)"
+            message += " - no solver run performed"
 
             metrics["fem_report_path"] = str(report_path)
             metrics["output_directory"] = str(output_dir)
 
+            # ok=False because no real solver metrics extracted
+            status = "constraints_incomplete" if constraints_incomplete else "setup_only"
             return AnalysisReport(
                 body_id=body_id,
-                ok=True,
+                ok=False,
                 message=message,
                 metrics=metrics,
                 kind="freecad_fem_calculix",
-                solver_status="setup_complete",
+                solver_status=status,
             )
 
         except Exception as exc:  # noqa: BLE001
