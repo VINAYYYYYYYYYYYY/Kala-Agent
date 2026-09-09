@@ -30,6 +30,10 @@ PROCEDURE_STEPS = ("envelope", "features", "standard_parts", "export")
 
 STARTERS: list[tuple[str, str]] = [
     (
+        "L-bracket",
+        "L-bracket base 60x40x4 and vertical wall 60x4x50 at origin, fuse, two Ø5 base holes at (12,20) and (48,20), export L_bracket.step",
+    ),
+    (
         "Flanged bracket",
         "Flanged mounting bracket: vertical plate 120×80×10 mm fused to base flange "
         "160×100×12 mm, central bore Ø40 mm, four M10 clearance holes Ø11 mm inset 15 mm. Export STEP.",
@@ -37,10 +41,6 @@ STARTERS: list[tuple[str, str]] = [
     (
         "Shaft bushing",
         "Shaft bushing OD Ø34 mm, bore Ø28 mm, length 40 mm. Export STEP.",
-    ),
-    (
-        "Base plate",
-        "Base plate 100×60×6 mm with four corner M6 clearance holes Ø6.6 mm. Export STEP.",
     ),
 ]
 
@@ -789,7 +789,7 @@ class MainWindow(QMainWindow):
 
         a = load_store().active()
         if a is None or not looks_like_api_key(a.api_key, a.provider):
-            self.planner_lbl.setText("stub")
+            self.planner_lbl.setText("no API key")
             return
         m = a.model
         self.planner_lbl.setText(m if len(m) <= 36 else m[:33] + "…")
@@ -817,10 +817,21 @@ class MainWindow(QMainWindow):
             self._rail_set("running", export=self.rail_export.text(), tools="…", sync=self.rail_sync.text())
 
     def _send(self) -> None:
+        from kala.llm.providers import looks_like_api_key, load_store
+
         goal = self.composer.toPlainText().strip()
         if not goal:
             return
         if self._worker and self._worker.isRunning():
+            return
+
+        a = load_store().active()
+        if a is None or not looks_like_api_key(a.api_key, a.provider):
+            QMessageBox.warning(
+                self,
+                "Planner needs an API key",
+                "Open ··· → OpenRouter API… and paste a key from openrouter.ai/keys (sk-or-…)."
+            )
             return
 
         if self._empty:
@@ -893,11 +904,13 @@ class MainWindow(QMainWindow):
         self.status.setText("" if status == "done" else status)
 
     def _fail(self, message: str) -> None:
+        from kala.ui.error_copy import sanitize_error
+
         self._set_busy(False)
         self._drop(self._thinking)
         self._thinking = None
-        last = message.strip().splitlines()[-1][:300] if message.strip() else "failed"
-        self._add(self._agent_msg(last))
+        friendly = sanitize_error(message)
+        self._add(self._agent_msg(friendly))
         self.status.setText("error")
         self._rail_set("error", export=self.rail_export.text(), tools="—", sync=self.rail_sync.text())
 
