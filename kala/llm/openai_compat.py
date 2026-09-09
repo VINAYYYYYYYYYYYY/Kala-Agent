@@ -138,6 +138,42 @@ def _did_ok(state: SessionState, tool: str) -> bool:
     return any(e.tool == tool and e.ok for e in state.history)
 
 
+def _count_consecutive_ok(state: SessionState, tool: str, from_end: int = 0) -> int:
+    """Count consecutive ok calls of tool from history end (or from_end position back)."""
+    count = 0
+    start = len(state.history) - 1 - from_end
+    for i in range(start, -1, -1):
+        e = state.history[i]
+        if e.tool == tool and e.ok:
+            count += 1
+        else:
+            break
+    return count
+
+
+def _last_ok_search_parts(state: SessionState) -> list[dict] | None:
+    """Return parts list from the most recent ok search_parts, or None."""
+    for e in reversed(state.history):
+        if e.ok and e.tool == "search_parts":
+            return list((e.data or {}).get("parts") or [])
+    return None
+
+
+def _has_insert_after_last_search(state: SessionState) -> bool:
+    """True if there's an ok insert_part after the most recent ok search_parts.
+    
+    Iterates history backwards (most recent first):
+    - If we find insert_part first → there's an insert after the last search
+    - If we find search_parts first → no insert after the last search
+    """
+    for e in reversed(state.history):
+        if e.ok and e.tool == "insert_part":
+            return True
+        if e.ok and e.tool == "search_parts":
+            return False
+    return False
+
+
 class OpenAICompatPlanner:
     """Chat Completions + tools against an OpenAI-compatible endpoint."""
 
@@ -154,17 +190,20 @@ class OpenAICompatPlanner:
         step = state.current_step
         needs_cut = _goal_needs_cut(state.goal)
         needs_fuse = _goal_needs_fuse(state.goal, state)
-        recent = [e.tool for e in state.history[-4:] if e.ok]
-        stalled_list = (
-            step
-            and step.id == "features"
-            and len(recent) >= 3
-            and all(t == "list_bodies" for t in recent[-3:])
-        )
-        stalled_search = (
-            len(recent) >= 3
-            and all(t == "search_parts" for t in recent[-3:])
-        )
+        bodies = _known_body_ids(state)
+        bodies_known = len(bodies) > 0
+
+        # NEW POLICY: list_bodies stall-breaker
+        # Max 1 ok list once bodies known; ≥2 consecutive ok lists → stub fallback
+        consecutive_list = _count_consecutive_ok(state, "list_bodies")
+        stalled_list = False
+        if bodies_known and consecutive_list >= 1:
+            # Widen pre-LLM check: when bodies known, catch stall earlier
+            stalled_list = True
+        elif consecutive_list >= 2 and step and step.id == "features":
+            # Also catch list-only turn while bodies known in features step
+            stalled_list = True
+
         if stalled_list and (
             (needs_cut and not _did_ok(state, "boolean_cut"))
             or (needs_fuse and not _did_ok(state, "boolean_fuse"))
@@ -172,32 +211,92 @@ class OpenAICompatPlanner:
             turn = self.fallback.propose(state, context, tool_schemas)
             turn.thought = f"LLM stuck on list_bodies; stub: {turn.thought}"
             return turn
-        if stalled_search:
-            # After searching, force an insert of the last search's top hit
-            last_parts: list[dict] = []
-            for e in reversed(state.history):
-                if e.ok and e.tool == "search_parts":
-                    last_parts = list((e.data or {}).get("parts") or [])
-                    break
+
+        # NEW POLICY: search_parts stall-breaker
+        # Max 1 ok search per step without intervening ok insert_part using a hit from that search
+        # If LLM proposes another search after ≥1 ok search without insert → force insert_part
+        # This check will be done post-LLM in _sanitize_turn, but we still need pre-check for spam
+        if not _has_insert_after_last_search(state):
+            last_parts = _last_ok_search_parts(state)
             if last_parts:
-                pid = str(last_parts[0].get("part_id") or "")
-                if pid:
-                    return PlannerTurn(
-                        thought=f"Search spam — inserting top hit {pid}",
-                        calls=[ToolCall("insert_part", {"part_id": pid, "x": 0, "y": 0, "z": 0})],
-                        advance_step=False,
-                        done=False,
-                    )
-            turn = self.fallback.propose(state, context, tool_schemas)
-            turn.thought = f"LLM stuck on search_parts; stub: {turn.thought}"
-            return turn
+                # There's a search without insert — we're at risk of stall
+                # Let LLM propose, then sanitize in _sanitize_turn
+                pass
 
         try:
-            return self._propose_llm(state, context, tool_schemas)
+            turn = self._propose_llm(state, context, tool_schemas)
+            # Post-LLM sanitization
+            return self._sanitize_turn(turn, state, context)
         except Exception as exc:  # noqa: BLE001
             turn = self.fallback.propose(state, context, tool_schemas)
             turn.thought = f"LLM planner failed ({exc}); stub: {turn.thought}"
             return turn
+
+    def _sanitize_turn(
+        self,
+        turn: PlannerTurn,
+        state: SessionState,
+        context: DynamicContext,
+    ) -> PlannerTurn:
+        """Post-LLM sanitization: enforce stall-breaker policies on proposed calls."""
+        bodies = _known_body_ids(state)
+        bodies_known = len(bodies) > 0
+
+        if not turn.calls:
+            # Empty turn, check for list-only stall
+            consecutive_list = _count_consecutive_ok(state, "list_bodies")
+            if consecutive_list >= 2 and bodies_known:
+                # List-only turn while bodies known → stub fallback
+                stub_turn = self.fallback.propose(state, context, [])
+                stub_turn.thought = f"List-only turn after {consecutive_list} lists; stub: {stub_turn.thought}"
+                stub_turn.done = False
+                return stub_turn
+            return turn
+
+        names = {c.name for c in turn.calls}
+
+        # POLICY: search_parts rewrite
+        # If LLM proposes search_parts AND there's already ≥1 ok search without insert → force insert_part
+        if "search_parts" in names:
+            if not _has_insert_after_last_search(state):
+                last_parts = _last_ok_search_parts(state)
+                if last_parts and state.standard_parts:
+                    # Force insert with parts[0].part_id from most recent ok search at x=y=z=0
+                    pid = str(last_parts[0].get("part_id") or "")
+                    if pid:
+                        turn.calls = [ToolCall("insert_part", {"part_id": pid, "x": 0, "y": 0, "z": 0})]
+                        turn.thought = f"Search stall-breaker: inserting {pid} from prior search"
+                        turn.advance_step = False
+                        turn.done = False
+                        return turn
+                # Empty search or standard_parts=False → don't force insert
+                # Remove search_parts to avoid repeat empty search
+                if last_parts == [] or not state.standard_parts:
+                    turn.calls = [c for c in turn.calls if c.name != "search_parts"]
+                    if not turn.calls:
+                        # Stub fallback
+                        stub_turn = self.fallback.propose(state, context, [])
+                        stub_turn.thought = f"Empty search fallback; stub: {stub_turn.thought}"
+                        stub_turn.done = False
+                        return stub_turn
+
+        # POLICY: list_bodies rewrite
+        # If LLM proposes list_bodies AND ≥2 consecutive ok lists OR list-only while bodies known → stub
+        if "list_bodies" in names:
+            consecutive_list = _count_consecutive_ok(state, "list_bodies")
+            # Check if this is list-only turn
+            is_list_only = names == {"list_bodies"}
+            
+            if consecutive_list >= 1 and bodies_known:
+                # Already had 1 ok list with bodies known → this would be 2nd+ → stub fallback
+                turn.calls = [c for c in turn.calls if c.name != "list_bodies"]
+                if not turn.calls or is_list_only:
+                    stub_turn = self.fallback.propose(state, context, [])
+                    stub_turn.thought = f"List stall-breaker after {consecutive_list} lists; stub: {stub_turn.thought}"
+                    stub_turn.done = False
+                    return stub_turn
+
+        return turn
 
     def _propose_llm(
         self,
