@@ -188,14 +188,13 @@ class Agent:
                 # Fuse/cut delete donors — remap stale ids within the same turn so
                 # parallel LLM fuse chains (Fuse_10 + minaret2, Fuse_10 + minaret3)
                 # follow the live body instead of failing "Body not found".
-                id_aliases: dict[str, str] = {}
 
                 def _resolve(bid: str) -> str:
                     seen: set[str] = set()
                     cur = bid
-                    while cur in id_aliases and cur not in seen:
+                    while cur in state.id_aliases and cur not in seen:
                         seen.add(cur)
-                        cur = id_aliases[cur]
+                        cur = state.id_aliases[cur]
                     return cur
 
                 def _remap_args(args: dict) -> dict:
@@ -235,7 +234,7 @@ class Agent:
                         new_id = result.data.get("body_id")
                         for old in result.data.get("removed") or []:
                             if new_id:
-                                id_aliases[str(old)] = str(new_id)
+                                state.id_aliases[str(old)] = str(new_id)
                         if result.data.get("live_document"):
                             state.live_document = str(result.data["live_document"])
                         
