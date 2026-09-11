@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import Mock, call
 
 
@@ -354,3 +355,34 @@ def test_try_fix_calls_fix_on_invalid_shape():
     assert result == mock_shape
     mock_shape.fix.assert_called_once()
 
+
+def test_export_step_compound_all_invalid_raises():
+    """All-invalid shapes after fix loop must raise, not fall back to max(shapes)."""
+    from kala.cad.freecad.backend import FreeCADBackend
+    import pytest
+
+    backend = FreeCADBackend.__new__(FreeCADBackend)
+    backend._step_path = Path("/tmp/kala_test_never_written.step")
+
+    def _bad_shape():
+        s = Mock()
+        s.isNull.return_value = False
+        s.isValid.return_value = False
+        s.Volume = 10.0
+        return s
+
+    obj1 = Mock()
+    obj1.Name = "Box"
+    obj1.Label = "Box"
+    obj1.Shape = _bad_shape()
+    obj2 = Mock()
+    obj2.Name = "Cylinder"
+    obj2.Label = "Cylinder"
+    obj2.Shape = _bad_shape()
+
+    backend._doc = Mock()
+    backend._doc.Objects = [obj1, obj2]
+    backend._try_fix = Mock(side_effect=lambda s: s)
+
+    with pytest.raises(RuntimeError, match="No valid shapes"):
+        backend._export_step_compound()
