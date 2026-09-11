@@ -19,8 +19,8 @@ from kala.ml.base import DesignContextModel, DynamicContext
 from kala.ml.learned import LearnedDesignContextModel
 from kala.ml.stub import StubDesignContextModel
 from kala.parts.catalog import PartsCatalog
-from kala.procedures.gate import ClarifyNeeded, PartPlan, assess_goal
-from kala.procedures.schema import load_default_procedure
+from kala.procedures.gate import ClarifyNeeded, PartPlan, PartSpec, assess_goal
+from kala.procedures.schema import list_procedure_ids, load_default_procedure
 from kala.session.state import SessionState, ToolEvent
 
 
@@ -75,6 +75,41 @@ def _count_real_tools(history: list[ToolEvent]) -> int:
     """
     excluded = {"list_bodies", "show_in_freecad", "search_parts", "export"}
     return sum(1 for e in history if e.ok and e.tool not in excluded)
+
+
+def library_procedure_id(procedure_id: str | None) -> str | None:
+    """Return procedure_id only if it is already in the packaged library."""
+    if not procedure_id:
+        return None
+    return procedure_id if procedure_id in set(list_procedure_ids()) else None
+
+
+def _skip_silent_fuse(state: SessionState) -> bool:
+    """keep_separate parts and machine_assembly must not be fused into one brick."""
+    if state.procedure.id == "machine_assembly":
+        return True
+    plan = state.part_plan or {}
+    for raw in plan.get("parts") or []:
+        if isinstance(raw, dict) and raw.get("keep_separate"):
+            return True
+    return False
+
+
+def _procedure_step_context(state: SessionState) -> DynamicContext:
+    """Reuse procedure/step/allowed-tool ids — no DesignContextModel.enrich."""
+    step = state.current_step
+    if step is None:
+        return DynamicContext(focus=f"procedure={state.procedure.id} complete")
+    return DynamicContext(
+        focus=f"[{step.id}] {step.goal}",
+        constraints=[f"procedure_id={state.procedure.id}", f"step={step.id}"],
+        recommended_tools=list(step.allowed_tools),
+        snippets=[
+            f"procedure_id={state.procedure.id}",
+            f"step={step.id}",
+            f"exit_criteria={step.exit_criteria}",
+        ],
+    )
 
 
 def _force_modeling_progress(state: SessionState, registry: Any) -> list[ToolEvent]:
@@ -153,9 +188,8 @@ def _force_modeling_progress(state: SessionState, registry: Any) -> list[ToolEve
     # Check if still need more tools after creates
     real_count = _count_real_tools(state.history + forced_events)
     
-    # Fuse bodies together (parts → one solid), skip for machine_assembly
-    is_assembly = state.procedure.id == "machine_assembly"
-    if not is_assembly and len(bodies) >= 2 and real_count < min_tools and len(forced_events) < max_forced:
+    # Fuse bodies together (parts → one solid); skip when keep_separate / assembly
+    if not _skip_silent_fuse(state) and len(bodies) >= 2 and real_count < min_tools and len(forced_events) < max_forced:
         if registry.has("boolean_fuse"):
             body_a = bodies[-2]
             body_b = bodies[-1]
@@ -244,17 +278,20 @@ class Agent:
         self.catalog = PartsCatalog.default()
         self._backend: Any = None
 
-    def _build(self, goal: str) -> tuple[SessionState, ToolRegistry]:
+    def _open_registry(self) -> ToolRegistry:
         backend = create_backend(self.backend_name)
         self._backend = backend
-        registry = build_registry(
+        return build_registry(
             backend,
             standard_parts=self.standard_parts,
             catalog=self.catalog,
         )
+
+    def _build(self, goal: str) -> tuple[SessionState, ToolRegistry]:
+        registry = self._open_registry()
         state = SessionState(
             goal=goal,
-            backend_name=backend.name,
+            backend_name=self._backend.name,
             standard_parts=self.standard_parts,
             procedure=load_default_procedure(self.procedure_id),
             status="running",
@@ -385,51 +422,36 @@ class Agent:
         except Exception as exc:  # noqa: BLE001
             state.gui_note = f"GUI open failed: {exc}"
 
-    def run(self, goal: str) -> RunResult:
-        contexts: list[DynamicContext] = []
-        gate = assess_goal(goal)
-        if isinstance(gate, ClarifyNeeded):
-            procedure = load_default_procedure(self.procedure_id)
-            state = SessionState(
-                goal=goal,
-                backend_name=self.backend_name,
-                standard_parts=self.standard_parts,
-                procedure=procedure,
-                status="needs_clarify",
-                clarify=gate.to_dict(),
-                error=gate.reason,
-            )
-            return RunResult(state=state, contexts=contexts)
-        if isinstance(gate, PartPlan):
-            procedure = load_default_procedure(self.procedure_id)
-            state = SessionState(
-                goal=goal,
-                backend_name=self.backend_name,
-                standard_parts=self.standard_parts,
-                procedure=procedure,
-                status="part_plan",
-                part_plan=gate.to_dict(),
-                error=gate.notes or "Part plan required before binding procedures.",
-            )
-            return RunResult(state=state, contexts=contexts)
+    def _write_run_log(self, goal: str, state: SessionState, contexts: list[DynamicContext]) -> None:
         try:
-            state, registry = self._build(goal)
-        except Exception as exc:  # noqa: BLE001
-            procedure = load_default_procedure(self.procedure_id)
-            state = SessionState(
-                goal=goal,
-                backend_name=self.backend_name,
-                standard_parts=self.standard_parts,
-                procedure=procedure,
-                status="error",
-                error=str(exc),
-            )
-            return RunResult(state=state, contexts=contexts)
+            from kala.session.runlog import write_run_log
 
+            write_run_log(
+                {
+                    "goal": goal,
+                    "planner": type(self.planner).__name__,
+                    "state": state.to_dict(),
+                    "contexts": [c.to_dict() for c in contexts],
+                }
+            )
+        except Exception:
+            pass
+
+    def _execute_playbook(
+        self,
+        state: SessionState,
+        registry: ToolRegistry,
+        contexts: list[DynamicContext],
+        *,
+        enrich: bool = True,
+    ) -> None:
         try:
             for _ in range(self.max_turns):
-                context = self.context_model.enrich(state)
-                contexts.append(context)
+                if enrich:
+                    context = self.context_model.enrich(state)
+                    contexts.append(context)
+                else:
+                    context = _procedure_step_context(state)
                 turn = self.planner.propose(state, context, registry.schemas_for_planner())
 
                 if not turn.calls and turn.done:
@@ -620,18 +642,247 @@ class Agent:
             state.status = "error"
             state.error = str(exc)
 
-        self._finalize_gui(state)
-        try:
-            from kala.session.runlog import write_run_log
+    def _parent_procedure(self, plan: PartPlan, bindable: list[PartSpec]):
+        ids = set(list_procedure_ids())
+        if any(p.keep_separate for p in plan.parts) and "machine_assembly" in ids:
+            return load_default_procedure("machine_assembly")
+        if bindable:
+            return load_default_procedure(bindable[0].procedure_id or "simple_bracket")
+        return load_default_procedure(self.procedure_id)
 
-            write_run_log(
+    def _run_part_plan(
+        self,
+        goal: str,
+        plan: PartPlan,
+        contexts: list[DynamicContext],
+    ) -> RunResult:
+        bindable: list[PartSpec] = []
+        for part in plan.parts:
+            pid = library_procedure_id(part.procedure_id)
+            if pid is None:
+                continue
+            bindable.append(
+                PartSpec(
+                    local_name=part.local_name,
+                    brief=part.brief,
+                    procedure_id=pid,
+                    keep_separate=part.keep_separate,
+                )
+            )
+
+        if not bindable:
+            clarify = ClarifyNeeded(
+                reason=(
+                    "Part plan has no existing library procedure_id — "
+                    "will not invent playbooks or start modeling."
+                ),
+                questions=[
+                    f"Which packaged procedure should bind to '{p.local_name}'"
+                    f" ({p.brief or 'no brief'})?"
+                    for p in plan.parts
+                ]
+                or ["Name a packaged procedure id from the library."],
+            )
+            state = SessionState(
+                goal=goal,
+                backend_name=self.backend_name,
+                standard_parts=self.standard_parts,
+                procedure=self._parent_procedure(plan, bindable),
+                status="needs_clarify",
+                clarify=clarify.to_dict(),
+                part_plan=plan.to_dict(),
+                error=clarify.reason,
+                part_runs=[
+                    {
+                        "local_name": p.local_name,
+                        "brief": p.brief,
+                        "procedure_id": p.procedure_id,
+                        "status": "skipped",
+                        "reason": "no library procedure_id",
+                    }
+                    for p in plan.parts
+                ],
+            )
+            return RunResult(state=state, contexts=contexts)
+
+        try:
+            registry = self._open_registry()
+        except Exception as exc:  # noqa: BLE001
+            state = SessionState(
+                goal=goal,
+                backend_name=self.backend_name,
+                standard_parts=self.standard_parts,
+                procedure=self._parent_procedure(plan, bindable),
+                status="error",
+                part_plan=plan.to_dict(),
+                error=str(exc),
+            )
+            return RunResult(state=state, contexts=contexts)
+
+        state = SessionState(
+            goal=goal,
+            backend_name=self.backend_name,
+            standard_parts=self.standard_parts,
+            procedure=self._parent_procedure(plan, bindable),
+            status="running",
+            part_plan=plan.to_dict(),
+        )
+
+        for part in plan.parts:
+            pid = library_procedure_id(part.procedure_id)
+            if pid is None:
+                state.history.append(
+                    ToolEvent(
+                        tool="part_skip",
+                        args={
+                            "local_name": part.local_name,
+                            "procedure_id": part.procedure_id,
+                        },
+                        ok=True,
+                        message=(
+                            f"Skip part {part.local_name!r}: no existing library "
+                            "procedure_id (never invent)."
+                        ),
+                        data={
+                            "part": part.local_name,
+                            "procedure_id": part.procedure_id,
+                        },
+                    )
+                )
+                state.part_runs.append(
+                    {
+                        "local_name": part.local_name,
+                        "brief": part.brief,
+                        "procedure_id": part.procedure_id,
+                        "status": "skipped",
+                        "reason": "no library procedure_id",
+                    }
+                )
+                continue
+
+            state.history.append(
+                ToolEvent(
+                    tool="part_bind",
+                    args={"local_name": part.local_name, "procedure_id": pid},
+                    ok=True,
+                    message=f"Bind {pid} for part {part.local_name!r}: {part.brief}",
+                    data={"part": part.local_name, "procedure_id": pid},
+                )
+            )
+            part_state = SessionState(
+                goal=part.brief or part.local_name,
+                backend_name=self.backend_name,
+                standard_parts=self.standard_parts,
+                procedure=load_default_procedure(pid),
+                status="running",
+                part_plan={"kind": "part_plan", "parts": [part.to_dict()], "notes": ""},
+            )
+            # One Agent/session per PartSpec (sequential). Reuse planner; do not
+            # re-enter assess_goal (part briefs can contain "gearbox") and do not
+            # call DesignContextModel.enrich.
+            child = Agent(
+                backend_name=self.backend_name,
+                standard_parts=self.standard_parts,
+                procedure_id=pid,
+                planner=self.planner,
+                context_model=self.context_model,
+                max_turns=self.max_turns,
+            )
+            child._backend = self._backend
+            child._execute_playbook(part_state, registry, [], enrich=False)
+            for event in part_state.history:
+                event.data = {
+                    **event.data,
+                    "part": part.local_name,
+                    "procedure_id": pid,
+                }
+            state.history.extend(part_state.history)
+            state.id_aliases.update(part_state.id_aliases)
+            state.analysis_by_body.update(part_state.analysis_by_body)
+            if part_state.last_export:
+                state.last_export = part_state.last_export
+            if part_state.live_document:
+                state.live_document = part_state.live_document
+            state.part_runs.append(
                 {
-                    "goal": goal,
-                    "planner": type(self.planner).__name__,
-                    "state": state.to_dict(),
-                    "contexts": [c.to_dict() for c in contexts],
+                    "local_name": part.local_name,
+                    "brief": part.brief,
+                    "procedure_id": pid,
+                    "status": part_state.status,
+                    "last_export": part_state.last_export,
+                    "error": part_state.error,
                 }
             )
-        except Exception:
-            pass
+
+        keep_separate = any(p.keep_separate for p in plan.parts)
+        if keep_separate and registry.has("export"):
+            asm_path = "outputs/kala_keep_separate.step"
+            result = registry.call("export", body_id="ALL", path=asm_path, fmt="step")
+            state.history.append(
+                ToolEvent(
+                    tool="export",
+                    args={"body_id": "ALL", "path": asm_path, "fmt": "step"},
+                    ok=result.ok,
+                    message=result.message,
+                    data=dict(result.data),
+                )
+            )
+            if result.ok:
+                state.last_export = str(result.data.get("path") or asm_path)
+
+        modeled = any(
+            r.get("procedure_id") and r.get("status") in {"done", "max_turns"}
+            for r in state.part_runs
+        ) or any(e.ok and str(e.tool).startswith("create_") for e in state.history)
+        if modeled:
+            state.status = "done"
+            state.error = None
+        elif any(r.get("status") == "error" for r in state.part_runs):
+            state.status = "error"
+            state.error = next(
+                (str(r.get("error")) for r in state.part_runs if r.get("error")),
+                "Part playbook failed",
+            )
+        else:
+            state.status = "error"
+            state.error = "Part plan produced no modeled parts."
+
+        self._finalize_gui(state)
+        self._write_run_log(goal, state, contexts)
+        return RunResult(state=state, contexts=contexts)
+
+    def run(self, goal: str) -> RunResult:
+        contexts: list[DynamicContext] = []
+        gate = assess_goal(goal)
+        if isinstance(gate, ClarifyNeeded):
+            procedure = load_default_procedure(self.procedure_id)
+            state = SessionState(
+                goal=goal,
+                backend_name=self.backend_name,
+                standard_parts=self.standard_parts,
+                procedure=procedure,
+                status="needs_clarify",
+                clarify=gate.to_dict(),
+                error=gate.reason,
+            )
+            return RunResult(state=state, contexts=contexts)
+        if isinstance(gate, PartPlan):
+            return self._run_part_plan(goal, gate, contexts)
+        try:
+            state, registry = self._build(goal)
+        except Exception as exc:  # noqa: BLE001
+            procedure = load_default_procedure(self.procedure_id)
+            state = SessionState(
+                goal=goal,
+                backend_name=self.backend_name,
+                standard_parts=self.standard_parts,
+                procedure=procedure,
+                status="error",
+                error=str(exc),
+            )
+            return RunResult(state=state, contexts=contexts)
+
+        self._execute_playbook(state, registry, contexts)
+        self._finalize_gui(state)
+        self._write_run_log(goal, state, contexts)
         return RunResult(state=state, contexts=contexts)

@@ -2,7 +2,8 @@
 
 Product-like or multi-part briefs must emit ClarifyNeeded or a PartPlan BOM
 sketch — never silently map to simple_bracket and finish on envelope-only.
-Full per-part assembly runner is out of scope (next wave).
+The agent consumes PartPlan.parts sequentially: bind existing library
+procedure ids, skip null ids (never invent), honor keep_separate.
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ class ClarifyNeeded:
 
 @dataclass
 class PartSpec:
-    """One BOM line — bind a packaged procedure later (P1+)."""
+    """One BOM line — bind a packaged procedure when procedure_id is a library id."""
 
     local_name: str
     brief: str = ""
@@ -43,7 +44,7 @@ class PartSpec:
 
 @dataclass
 class PartPlan:
-    """BOM / part-list sketch only — bind procedures per part later (P1+)."""
+    """BOM / part-list sketch consumed by the per-part playbook runner."""
 
     parts: list[PartSpec]
     notes: str = ""
@@ -196,7 +197,10 @@ def assess_goal(goal: str) -> ClarifyNeeded | PartPlan | None:
     if strong_multi or (multipart and not single):
         return PartPlan(
             parts=_sketch_parts(g),
-            notes="BOM sketch only — bind procedures per part in a later wave.",
+            notes=(
+                "Consume PartPlan: bind packaged playbooks for library procedure_id; "
+                "skip null ids (never invent); keep_separate parts are not fused-all."
+            ),
         )
 
     return None

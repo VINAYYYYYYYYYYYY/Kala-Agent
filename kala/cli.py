@@ -151,21 +151,20 @@ def main(argv: list[str] | None = None) -> None:
     if args.command == "run":
         from kala.procedures import (
             ClarifyNeeded,
-            PartPlan,
             assess_goal,
             require_known_procedure,
             suggest_procedure,
         )
 
         gate = assess_goal(args.goal)
-        if isinstance(gate, (ClarifyNeeded, PartPlan)):
+        if isinstance(gate, ClarifyNeeded):
             payload = {
                 "state": {
                     "goal": args.goal,
-                    "status": "needs_clarify" if isinstance(gate, ClarifyNeeded) else "part_plan",
-                    "clarify": gate.to_dict() if isinstance(gate, ClarifyNeeded) else None,
-                    "part_plan": gate.to_dict() if isinstance(gate, PartPlan) else None,
-                    "error": gate.reason if isinstance(gate, ClarifyNeeded) else (gate.notes or "Part plan required"),
+                    "status": "needs_clarify",
+                    "clarify": gate.to_dict(),
+                    "part_plan": None,
+                    "error": gate.reason,
                 },
                 "contexts": [],
             }

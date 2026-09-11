@@ -32,6 +32,7 @@ from kala.procedures import (
     PartPlan,
     assess_goal,
     list_procedures,
+    list_procedure_ids,
     load_default_procedure,
     resolve_procedure_for_send,
 )
@@ -960,11 +961,13 @@ class MainWindow(QMainWindow):
                 bit = p.local_name
                 if p.procedure_id:
                     bit += f"→{p.procedure_id}"
+                else:
+                    bit += " (skip — no library procedure)"
                 if not p.keep_separate:
                     bit += " (merged)"
                 part_bits.append(bit)
             lines = [
-                "part_plan — BOM sketch only (per-part bind is next wave)",
+                "part_plan — binding packaged playbooks per part (skip null procedure_id)",
                 "parts: " + ", ".join(part_bits),
             ]
             for p in gate.parts:
@@ -973,18 +976,25 @@ class MainWindow(QMainWindow):
             if gate.notes:
                 lines.append(gate.notes)
             self._add(self._agent_msg("\n".join(lines)))
-            self._rail_set("part_plan", export="—", tools="—", sync="—")
-            return
+            # Determine procedure for the per-part runner: machine_assembly
+            # when keep_separate parts exist and it's a known library id,
+            # else fall back to the current/self._procedure_id.
+            if any(p.keep_separate for p in gate.parts) and "machine_assembly" in list_procedure_ids():
+                procedure_id = "machine_assembly"
+                self._set_procedure(procedure_id)
+            else:
+                procedure_id = self._procedure_id
+        else:
+            # Normal non-gated goals: resolve procedure normally.
+            procedure_id = resolve_procedure_for_send(
+                goal,
+                self._procedure_id,
+                user_picked=self._procedure_user_picked,
+            )
+            if procedure_id != self._procedure_id:
+                self._set_procedure(procedure_id)
 
-        # Gate first — explicit combo/starter pick must not bypass ClarifyNeeded/PartPlan.
         self._set_busy(True)
-        procedure_id = resolve_procedure_for_send(
-            goal,
-            self._procedure_id,
-            user_picked=self._procedure_user_picked,
-        )
-        if procedure_id != self._procedure_id:
-            self._set_procedure(procedure_id)
         first = next(iter(self._proc), "envelope")
         self._mark_proc(first, done=False)
 
@@ -1019,6 +1029,15 @@ class MainWindow(QMainWindow):
         lines = [f"{status} · {n} tools"]
         if fails:
             lines[0] += f" · {fails} failed"
+        runs = state.get("part_runs") or []
+        if runs:
+            bits = []
+            for r in runs:
+                name = r.get("local_name") or "?"
+                st = r.get("status") or "?"
+                pid = r.get("procedure_id")
+                bits.append(f"{name}:{st}" + (f"→{pid}" if pid else ""))
+            lines.append("parts: " + ", ".join(bits))
         if export:
             lines.append(Path(export).name)
         elif gui:
