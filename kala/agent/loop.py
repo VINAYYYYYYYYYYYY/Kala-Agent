@@ -198,6 +198,31 @@ def _force_modeling_progress(state: SessionState, registry: Any) -> list[ToolEve
     return forced_events
 
 
+
+def _exit_criteria_met(state: SessionState) -> bool:
+    """Heuristic gate for procedure step exit_criteria (no Protocol field changes)."""
+    step = state.current_step
+    if step is None:
+        return True
+    ok_tools = {e.tool for e in state.history if e.ok}
+    sid = step.id
+    if sid == "envelope":
+        return bool(ok_tools & {
+            "create_box", "create_cylinder", "create_sphere", "create_cone", "insert_part",
+        })
+    if sid == "features":
+        return bool(ok_tools & {
+            "boolean_fuse", "boolean_cut", "fillet", "translate", "rotate", "export",
+        }) or bool(state.last_export)
+    if sid == "standard_parts":
+        if step.optional_parts and not state.standard_parts:
+            return True
+        return bool(ok_tools & {"insert_part", "search_parts", "export"}) or bool(state.last_export)
+    if sid == "export":
+        return bool(state.last_export)
+    return True
+
+
 class Agent:
     def __init__(
         self,
@@ -475,7 +500,23 @@ class Agent:
                         exported_this_turn = True
 
                 if turn.advance_step:
-                    state.advance_step()
+                    if _exit_criteria_met(state):
+                        state.advance_step()
+                    else:
+                        step = state.current_step
+                        state.history.append(
+                            ToolEvent(
+                                tool="procedure_gate",
+                                args={},
+                                ok=False,
+                                message=(
+                                    f"exit_criteria not met for step {step.id}: {step.exit_criteria}"
+                                    if step
+                                    else "exit_criteria not met"
+                                ),
+                                data={},
+                            )
+                        )
                 if turn.done:
                     # Never mark done on a blocked/failed export or unfinished model
                     if any(c.name == "export" for c in turn.calls):

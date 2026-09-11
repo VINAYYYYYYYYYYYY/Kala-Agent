@@ -58,3 +58,17 @@ def load_default_procedure(procedure_id: str = "simple_bracket") -> Procedure:
     if not path.exists():
         raise FileNotFoundError(f"Procedure not found: {path}")
     return load_procedure(path)
+
+
+def list_procedures() -> list[Procedure]:
+    """Load every procedure JSON shipped under the package library."""
+    root = library_dir()
+    procs: list[Procedure] = []
+    for path in sorted(root.glob("*.json")):
+        procs.append(load_procedure(path))
+    return procs
+
+
+def list_procedure_ids() -> list[str]:
+    return [p.id for p in list_procedures()]
+

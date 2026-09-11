@@ -46,6 +46,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run the FreeCAD MCP server (stdio) for tool-calling CAD ops",
     )
 
+    procs = sub.add_parser(
+        "procedures",
+        help="List packaged procedure playbook ids",
+    )
+    procs.add_argument(
+        "--json",
+        action="store_true",
+        help="Print machine-readable procedure list",
+    )
+
     logs = sub.add_parser("logs", help="Show Kala agent + FreeCAD logs")
     logs.add_argument(
         "--tail",
@@ -121,7 +131,31 @@ def main(argv: list[str] | None = None) -> None:
         print(summarize_logs(agent_lines=max(1, args.tail)))
         return
 
+    if args.command == "procedures":
+        from kala.procedures import list_procedures
+
+        items = list_procedures()
+        if args.json:
+            print(json.dumps(
+                [{"id": p.id, "name": p.name, "description": p.description, "steps": len(p.steps)} for p in items],
+                indent=2,
+            ))
+            return
+        for p in items:
+            print(f"{p.id}\t{p.name}\t{p.description}")
+        return
+
     if args.command == "run":
+        from kala.procedures import list_procedure_ids, load_default_procedure
+
+        known = list_procedure_ids()
+        if args.procedure not in known:
+            print(
+                f"Unknown procedure {args.procedure!r}. Known: {', '.join(known)}",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+        load_default_procedure(args.procedure)  # package-path smoke
         agent = Agent(
             backend_name=args.backend,
             standard_parts=(args.standard_parts == "on"),
