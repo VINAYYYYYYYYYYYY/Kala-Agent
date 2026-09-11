@@ -26,6 +26,8 @@ hiddenimports = [
     "kala.llm.stub",
     "kala.ml.stub",
     "kala.parts.catalog",
+    "kala.procedures",
+    "kala.procedures.gate",  # PartSpec, PartPlan, ClarifyNeeded, assess_goal
     "kala.procedures.schema",
     "kala.session.state",
     "kala.ui.desktop",
