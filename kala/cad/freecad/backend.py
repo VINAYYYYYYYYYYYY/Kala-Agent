@@ -132,7 +132,7 @@ class FreeCADBackend:
             if valid_shapes:
                 compound = max(valid_shapes, key=lambda s: float(getattr(s, "Volume", 0.0) or 0.0))
             else:
-                compound = max(shapes, key=lambda s: float(getattr(s, "Volume", 0.0) or 0.0))
+                raise RuntimeError("No valid shapes to publish")
         # Heal before export to ensure valid STEP files
         compound = self._heal_shape_for_export(compound)
         self._step_path.parent.mkdir(parents=True, exist_ok=True)
