@@ -20,3 +20,19 @@ def test_l_bracket_still_runs():
     result = agent.run("L-bracket base 60x40x4 and vertical wall, fuse, export")
     assert result.state.status != "needs_clarify"
     assert result.state.status != "part_plan"
+
+
+def test_phone_does_not_complete_as_done():
+    agent = Agent(backend_name="mock", planner=StubPlanner(), max_turns=4)
+    result = agent.run("design a phone")
+    assert result.state.status == "needs_clarify"
+    assert result.state.status != "done"
+    assert result.state.clarify is not None
+    assert not result.state.history
+
+
+def test_car_does_not_complete_as_done():
+    agent = Agent(backend_name="mock", planner=StubPlanner(), max_turns=4)
+    result = agent.run("design a car body")
+    assert result.state.status == "needs_clarify"
+    assert result.state.clarify is not None
