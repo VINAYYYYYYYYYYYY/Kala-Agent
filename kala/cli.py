@@ -155,6 +155,7 @@ def main(argv: list[str] | None = None) -> None:
             require_known_procedure,
             suggest_procedure,
         )
+        from kala.session.export_view import format_export_human, format_part_body_lines
 
         gate = assess_goal(args.goal)
         if isinstance(gate, ClarifyNeeded):
@@ -204,8 +205,10 @@ def main(argv: list[str] | None = None) -> None:
         step = state.current_step
         if step:
             print(f"procedure step: [{step.id}] {step.goal}")
-        if state.last_export:
-            print(f"export: {state.last_export}")
+        for line in format_part_body_lines(state.part_body_map):
+            print(line)
+        for line in format_export_human(state.last_export):
+            print(line)
         if state.total_tokens or state.llm_calls:
             print(
                 f"tokens: prompt={state.prompt_tokens} "

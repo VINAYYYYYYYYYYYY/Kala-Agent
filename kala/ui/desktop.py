@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from kala.session.export_view import export_label, format_part_body_lines
 from kala.ui.providers_dialog import ProvidersDialog
 
 from kala.procedures import (
@@ -522,8 +523,11 @@ class MainWindow(QMainWindow):
         if len(tools) > 10:
             summary += f" · showing last {len(shown)}"
         export = state.get("last_export") or ""
+        body_lines = format_part_body_lines(state.get("part_body_map"))
+        if body_lines:
+            summary += "\n" + "\n".join(body_lines)
         if export:
-            summary += f"\n{Path(export).name}"
+            summary += f"\n{export_label(export)}"
         self._add(self._agent_msg(summary, tools=shown))
 
         step = (state.get("procedure") or {}).get("step")
@@ -534,7 +538,7 @@ class MainWindow(QMainWindow):
 
         self._rail_set(
             str(status),
-            export=Path(export).name if export else "—",
+            export=export_label(export) if export else "—",
             tools=f"{n}" + (f" · {fails} fail" if fails else ""),
             sync="—",
         )
@@ -1038,8 +1042,10 @@ class MainWindow(QMainWindow):
                 pid = r.get("procedure_id")
                 bits.append(f"{name}:{st}" + (f"→{pid}" if pid else ""))
             lines.append("parts: " + ", ".join(bits))
+        body_lines = format_part_body_lines(state.get("part_body_map"))
+        lines.extend(body_lines)
         if export:
-            lines.append(Path(export).name)
+            lines.append(export_label(export))
         elif gui:
             lines.append(gui.split(".")[0])
 
@@ -1056,7 +1062,7 @@ class MainWindow(QMainWindow):
         elif "heartbeat ok" in gui.lower():
             sync = "synced"
 
-        exp = Path(export).name if export else "—"
+        exp = export_label(export) if export else "—"
         self._rail_set(
             status,
             export=exp,
