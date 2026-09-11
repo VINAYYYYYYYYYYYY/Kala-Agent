@@ -205,19 +205,9 @@ def _step_metrics(path: Path) -> dict[str, Any]:
 
 
 def _resolve_export(export: Any) -> Path | None:
-    if not export:
-        return None
-    export_path = Path(str(export))
-    if export_path.is_file():
-        return export_path
-    cand = ROOT / "outputs" / export_path.name
-    if cand.is_file():
-        return cand
-    # Relative under project
-    cand2 = ROOT / export_path
-    if cand2.is_file():
-        return cand2
-    return export_path if export_path.exists() else None
+    from kala.session.export_view import resolve_step_export
+
+    return resolve_step_export(export, root=ROOT)
 
 
 def _score_run(
