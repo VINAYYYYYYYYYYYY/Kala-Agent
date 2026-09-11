@@ -43,6 +43,8 @@ class SessionState:
     part_plan: dict[str, Any] | None = None
     # Sequential per-part playbook results (session metadata, not CAD Protocol)
     part_runs: list[dict[str, Any]] = field(default_factory=list)
+    # local_name → resolved live body_id after each part playbook finishes
+    part_body_map: dict[str, str] = field(default_factory=dict)
 
     def add_usage(self, usage: dict[str, Any] | None) -> None:
         if not usage:
@@ -108,4 +110,5 @@ class SessionState:
             "clarify": self.clarify,
             "part_plan": self.part_plan,
             "part_runs": self.part_runs,
+            "part_body_map": self.part_body_map,
         }

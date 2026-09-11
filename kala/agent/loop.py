@@ -95,6 +95,49 @@ def _skip_silent_fuse(state: SessionState) -> bool:
     return False
 
 
+def _resolve_alias(state: SessionState, bid: str) -> str:
+    """Follow removed→new id_aliases chains to the live body id."""
+    seen: set[str] = set()
+    cur = bid
+    while cur in state.id_aliases and cur not in seen:
+        seen.add(cur)
+        cur = state.id_aliases[cur]
+    return cur
+
+
+def _pick_primary_body(history: list[ToolEvent]) -> str | None:
+    """Last substantive body_id from create/boolean/insert_part tool events."""
+    body_id: str | None = None
+    for event in reversed(history):
+        if not event.ok:
+            continue
+        bid = event.data.get("body_id")
+        if not bid:
+            continue
+        if event.tool in {"boolean_fuse", "boolean_cut", "fillet", "insert_part"}:
+            return str(bid)
+        if body_id is None and (
+            event.tool.startswith("create_") or event.tool == "insert_part"
+        ):
+            body_id = str(bid)
+    return body_id
+
+
+def freeze_part_alias(state: SessionState, local_name: str, body_id: str) -> None:
+    """Freeze part:<local_name> and part_body_map after a part playbook finishes."""
+    resolved = _resolve_alias(state, body_id)
+    state.part_body_map[local_name] = resolved
+    state.id_aliases[f"part:{local_name}"] = resolved
+
+
+def _refresh_frozen_part_aliases(state: SessionState) -> None:
+    """Re-resolve frozen part:<name> keys when child id_aliases gain remaps."""
+    for local_name, body_id in list(state.part_body_map.items()):
+        resolved = _resolve_alias(state, body_id)
+        state.part_body_map[local_name] = resolved
+        state.id_aliases[f"part:{local_name}"] = resolved
+
+
 def _procedure_step_context(state: SessionState) -> DynamicContext:
     """Reuse procedure/step/allowed-tool ids — no DesignContextModel.enrich."""
     step = state.current_step
@@ -798,11 +841,16 @@ class Agent:
                 }
             state.history.extend(part_state.history)
             state.id_aliases.update(part_state.id_aliases)
+            _refresh_frozen_part_aliases(state)
             state.analysis_by_body.update(part_state.analysis_by_body)
             if part_state.last_export:
                 state.last_export = part_state.last_export
             if part_state.live_document:
                 state.live_document = part_state.live_document
+            if part_state.status in {"done", "max_turns"}:
+                primary_body = _pick_primary_body(part_state.history)
+                if primary_body:
+                    freeze_part_alias(state, part.local_name, primary_body)
             state.part_runs.append(
                 {
                     "local_name": part.local_name,
