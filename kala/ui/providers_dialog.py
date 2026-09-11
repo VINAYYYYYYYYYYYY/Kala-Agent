@@ -1,4 +1,4 @@
-"""OpenRouter API provider dialog — fetches and lists available models."""
+"""OpenRouter API provider dialog: fetch and list available models."""
 
 from __future__ import annotations
 
@@ -170,9 +170,12 @@ class ProvidersDialog(QDialog):
         self.models_status.setText(f"{len(self._models)} models from OpenRouter")
 
     def _on_failed(self, err: str) -> None:
+        from kala.ui.error_copy import provider_fail_copy
+
         self.refresh_btn.setEnabled(True)
-        self.models_status.setText(f"Failed: {err}")
-        QMessageBox.warning(self, "OpenRouter", err)
+        friendly = provider_fail_copy(err)
+        self.models_status.setText(friendly)
+        QMessageBox.warning(self, "OpenRouter", friendly)
 
     def _repopulate_list(self, _text: str = "") -> None:
         needle = self.model_filter.text().strip().lower()
@@ -226,7 +229,7 @@ class ProvidersDialog(QDialog):
                 "That looks like a website URL, not an API key.\n\n"
                 "Paste your key from https://openrouter.ai/keys "
                 "(it usually starts with sk-or-…).\n"
-                "Base URL stays https://openrouter.ai/api/v1 — that is not the key.",
+                "Base URL stays https://openrouter.ai/api/v1; that is not the key.",
             )
             return
         if not key:
@@ -234,7 +237,7 @@ class ProvidersDialog(QDialog):
                 self,
                 "API key",
                 "Paste your OpenRouter API key (sk-or-…) to use the LLM planner.\n"
-                "Without it, Kala falls back to stub heuristics.",
+                "Without a key, Kala falls back to stub heuristics.",
             )
         updated = ProviderConfig(
             id=self._cfg.id,
