@@ -10,6 +10,7 @@ from kala.agent.loop import (
     _skip_silent_fuse,
     library_procedure_id,
 )
+from kala.llm.base import PlannerTurn, ToolCall
 from kala.llm.stub import StubPlanner
 from kala.ml.base import DynamicContext
 from kala.ml.stub import StubDesignContextModel
@@ -243,6 +244,101 @@ def test_ambiguous_bearing_still_skips_without_catalog_hit():
     assert bearing_runs
     assert bearing_runs[0].get("status") == "skipped"
     assert bearing_runs[0].get("catalog_part_id") is None
+
+
+class _FuseBracketPlanner:
+    """Deterministic simple_bracket run: two boxes → fuse → export."""
+
+    def propose(self, state: SessionState, context: DynamicContext, tool_schemas: list) -> PlannerTurn:
+        step = state.current_step
+        if step is None:
+            return PlannerTurn(thought="done", done=True)
+        allowed = {s["name"] for s in tool_schemas}
+        if step.id == "envelope":
+            if not any(e.ok and e.tool == "create_box" for e in state.history):
+                return PlannerTurn(
+                    thought="envelope box",
+                    calls=[ToolCall("create_box", {"length": 60.0, "width": 40.0, "height": 4.0})],
+                    advance_step=True,
+                )
+            return PlannerTurn(thought="envelope done", advance_step=True)
+        if step.id == "features":
+            creates = [e for e in state.history if e.ok and e.tool == "create_box"]
+            if len(creates) < 2 and "create_box" in allowed:
+                return PlannerTurn(
+                    thought="wall box",
+                    calls=[ToolCall("create_box", {"length": 60.0, "width": 4.0, "height": 50.0})],
+                )
+            if (
+                len(creates) >= 2
+                and "boolean_fuse" in allowed
+                and not any(e.ok and e.tool == "boolean_fuse" for e in state.history)
+            ):
+                a = str(creates[0].data["body_id"])
+                b = str(creates[1].data["body_id"])
+                return PlannerTurn(
+                    thought="fuse bracket",
+                    calls=[ToolCall("boolean_fuse", {"body_a": a, "body_b": b})],
+                    advance_step=True,
+                )
+            return PlannerTurn(thought="features done", advance_step=True)
+        if step.id == "standard_parts":
+            return PlannerTurn(thought="skip standards", advance_step=True)
+        if step.id == "export":
+            if any(e.ok and e.tool == "export" for e in state.history):
+                return PlannerTurn(thought="exported", done=True)
+            fuse = next(
+                (e for e in reversed(state.history) if e.ok and e.tool == "boolean_fuse"),
+                None,
+            )
+            bid = fuse.data.get("body_id") if fuse else None
+            if bid and "export" in allowed:
+                return PlannerTurn(
+                    thought="export fused bracket",
+                    calls=[
+                        ToolCall(
+                            "export",
+                            {"body_id": str(bid), "path": "outputs/bracket_fused.step", "fmt": "step"},
+                        )
+                    ],
+                    advance_step=True,
+                    done=True,
+                )
+            return PlannerTurn(thought="nothing to export", done=True)
+        return PlannerTurn(thought=f"skip {step.id}", advance_step=True)
+
+
+def test_keep_separate_false_bracket_alias_after_fuse():
+    """keep_separate=False + simple_bracket: part:bracket tracks live fused id."""
+    plan = PartPlan(
+        parts=[
+            PartSpec(
+                local_name="bracket",
+                brief="L-bracket fuse two boxes",
+                procedure_id="simple_bracket",
+                keep_separate=False,
+            ),
+        ]
+    )
+    agent = Agent(
+        backend_name="mock",
+        planner=_FuseBracketPlanner(),
+        max_turns=32,
+    )
+    result = agent._run_part_plan("fused bracket part", plan, [])
+    st = result.state
+    assert st.status == "done"
+
+    fuse_events = [e for e in st.history if e.ok and e.tool == "boolean_fuse"]
+    assert fuse_events, "simple_bracket part must fuse two solids"
+    fused_id = str(fuse_events[-1].data["body_id"])
+    removed = {str(r) for r in fuse_events[-1].data.get("removed") or []}
+
+    assert "bracket" in st.part_body_map
+    assert st.part_body_map["bracket"] == fused_id
+    assert st.part_body_map["bracket"] not in removed
+    assert st.id_aliases.get("part:bracket") == fused_id
+    assert _resolve_alias(st, "part:bracket") == fused_id
 
 
 def test_skip_silent_fuse_only_when_keep_separate():

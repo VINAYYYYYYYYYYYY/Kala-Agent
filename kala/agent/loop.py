@@ -194,22 +194,13 @@ def _force_modeling_progress(state: SessionState, registry: Any) -> list[ToolEve
     # Cap forced calls at 6 per trip
     max_forced = 6
     
-    # Resolve body_id through id_aliases (same as loop remap)
-    def _resolve(bid: str) -> str:
-        seen: set[str] = set()
-        cur = bid
-        while cur in state.id_aliases and cur not in seen:
-            seen.add(cur)
-            cur = state.id_aliases[cur]
-        return cur
-    
     # Get live bodies (resolve aliases, drop removed)
     all_body_ids = [
         str(e.data.get("body_id"))
         for e in state.history
         if e.ok and e.data.get("body_id")
     ]
-    resolved_bodies = [_resolve(bid) for bid in all_body_ids]
+    resolved_bodies = [_resolve_alias(state, bid) for bid in all_body_ids]
     # Keep only unique live bodies (last occurrence)
     bodies: list[str] = []
     seen_resolved: set[str] = set()
@@ -254,6 +245,7 @@ def _force_modeling_progress(state: SessionState, registry: Any) -> list[ToolEve
                 # Update id_aliases for removed bodies
                 for old in result.data.get("removed") or []:
                     state.id_aliases[str(old)] = str(result.data["body_id"])
+                _refresh_frozen_part_aliases(state)
                 # Drop removed from bodies list
                 removed_set = {str(r) for r in result.data.get("removed") or []}
                 bodies = [b for b in bodies if b not in removed_set]
@@ -282,6 +274,7 @@ def _force_modeling_progress(state: SessionState, registry: Any) -> list[ToolEve
             if result.ok and result.data.get("body_id"):
                 for old in result.data.get("removed") or []:
                     state.id_aliases[str(old)] = str(result.data["body_id"])
+                _refresh_frozen_part_aliases(state)
     
     return forced_events
 
@@ -519,19 +512,11 @@ class Agent:
                 # parallel LLM fuse chains (Fuse_10 + minaret2, Fuse_10 + minaret3)
                 # follow the live body instead of failing "Body not found".
 
-                def _resolve(bid: str) -> str:
-                    seen: set[str] = set()
-                    cur = bid
-                    while cur in state.id_aliases and cur not in seen:
-                        seen.add(cur)
-                        cur = state.id_aliases[cur]
-                    return cur
-
                 def _remap_args(args: dict) -> dict:
                     out = dict(args)
                     for key in ("body_id", "body_a", "body_b"):
                         if key in out and isinstance(out[key], str):
-                            out[key] = _resolve(out[key])
+                            out[key] = _resolve_alias(state, out[key])
                     return out
 
                 for call in turn.calls:
@@ -565,6 +550,8 @@ class Agent:
                         for old in result.data.get("removed") or []:
                             if new_id:
                                 state.id_aliases[str(old)] = str(new_id)
+                        if result.data.get("removed"):
+                            _refresh_frozen_part_aliases(state)
                         if result.data.get("live_document"):
                             state.live_document = str(result.data["live_document"])
                         
@@ -726,7 +713,7 @@ class Agent:
         if not _part_plan_has_bind(plan, self.catalog):
             clarify = ClarifyNeeded(
                 reason=(
-                    "Part plan has no existing library procedure_id — "
+                    "Part plan has no existing library procedure_id or catalog bind — "
                     "will not invent playbooks or start modeling."
                 ),
                 questions=[
@@ -751,7 +738,7 @@ class Agent:
                         "brief": p.brief,
                         "procedure_id": p.procedure_id,
                         "status": "skipped",
-                        "reason": "no library procedure_id",
+                        "reason": "no library procedure_id or catalog bind",
                     }
                     for p in plan.parts
                 ],
