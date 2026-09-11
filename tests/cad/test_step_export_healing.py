@@ -62,7 +62,11 @@ def test_heal_shape_for_export_multiple_solids_fuse():
     backend = FreeCADBackend.__new__(FreeCADBackend)
     
     mock_solid1 = Mock()
+    mock_solid1.isValid.return_value = True
+    mock_solid1.Volume = 40.0
     mock_solid2 = Mock()
+    mock_solid2.isValid.return_value = True
+    mock_solid2.Volume = 60.0
     mock_fused = Mock()
     mock_fused.isValid.return_value = True
     mock_fused.Volume = 100.0
@@ -73,6 +77,7 @@ def test_heal_shape_for_export_multiple_solids_fuse():
     mock_shape.isNull.return_value = False
     mock_shape.isValid.return_value = True
     mock_shape.Solids = [mock_solid1, mock_solid2]
+    mock_shape.removeSplitter.return_value = mock_shape
     
     result = backend._heal_shape_for_export(mock_shape)
     
@@ -87,8 +92,13 @@ def test_heal_shape_for_export_fused_invalid_triggers_fix():
     backend = FreeCADBackend.__new__(FreeCADBackend)
     
     mock_solid1 = Mock()
+    mock_solid1.isValid.return_value = True
+    mock_solid1.Volume = 40.0
     mock_solid2 = Mock()
+    mock_solid2.isValid.return_value = True
+    mock_solid2.Volume = 60.0
     mock_fused = Mock()
+    mock_fused.isNull.return_value = False
     mock_fused.isValid.return_value = False
     mock_fused.Volume = 100.0
     
@@ -98,6 +108,7 @@ def test_heal_shape_for_export_fused_invalid_triggers_fix():
     mock_shape.isNull.return_value = False
     mock_shape.isValid.return_value = True
     mock_shape.Solids = [mock_solid1, mock_solid2]
+    mock_shape.removeSplitter.return_value = mock_shape
     
     result = backend._heal_shape_for_export(mock_shape)
     
@@ -301,22 +312,24 @@ def test_heal_shape_for_export_extracts_largest_valid_solid_as_fallback():
     from kala.cad.freecad.backend import FreeCADBackend
     
     backend = FreeCADBackend.__new__(FreeCADBackend)
+    backend._try_fix = Mock(side_effect=lambda s: s)
     
-    # Shape is invalid but contains valid solids
+    # During fuse filtering solids stay invalid; fallback sees them as valid
     mock_small_solid = Mock()
-    mock_small_solid.isValid.return_value = True
+    mock_small_solid.isValid.side_effect = [False, False, True]
     mock_small_solid.Volume = 50.0
     
     mock_large_solid = Mock()
-    mock_large_solid.isValid.return_value = True
+    mock_large_solid.isValid.side_effect = [False, False, True]
     mock_large_solid.Volume = 200.0
     
     mock_shape = Mock()
     mock_shape.isNull.return_value = False
-    # Shape stays invalid throughout
+    # Shape stays invalid throughout so largest-solid fallback runs
     mock_shape.isValid.return_value = False
     mock_shape.Solids = [mock_small_solid, mock_large_solid]
-    mock_shape.fix = Mock()  # Fix doesn't help
+    mock_shape.fix = Mock()
+    mock_shape.removeSplitter.return_value = mock_shape
     
     result = backend._heal_shape_for_export(mock_shape)
     
@@ -386,3 +399,150 @@ def test_export_step_compound_all_invalid_raises():
 
     with pytest.raises(RuntimeError, match="No valid shapes"):
         backend._export_step_compound()
+
+
+def test_heal_shape_for_export_fuse_solids_false_skips_fuse():
+    """Soft assembly heal must Fix without fuse-all of compound solids."""
+    from kala.cad.freecad.backend import FreeCADBackend
+
+    backend = FreeCADBackend.__new__(FreeCADBackend)
+    backend._try_fix = Mock(side_effect=lambda s: s)
+
+    mock_solid1 = Mock()
+    mock_solid1.isValid.return_value = True
+    mock_solid1.Volume = 100.0
+    mock_solid2 = Mock()
+    mock_solid2.isValid.return_value = True
+    mock_solid2.Volume = 50.0
+
+    mock_shape = Mock()
+    mock_shape.isNull.return_value = False
+    mock_shape.isValid.return_value = True
+    mock_shape.Solids = [mock_solid1, mock_solid2]
+    # removeSplitter returns self so Solids stay readable
+    mock_shape.removeSplitter.return_value = mock_shape
+    mock_copy = Mock()
+    mock_copy.removeSplitter.return_value = mock_copy
+    mock_copy.isValid.return_value = True
+    mock_copy.Volume = 150.0
+    mock_shape.copy.return_value = mock_copy
+
+    result = backend._heal_shape_for_export(mock_shape, fuse_solids=False)
+
+    mock_solid1.fuse.assert_not_called()
+    mock_solid2.fuse.assert_not_called()
+    # Compound identity preserved (refinement may replace with copy)
+    assert result in (mock_shape, mock_copy)
+
+
+def test_export_step_compound_soft_assembly_uses_make_compound():
+    """Multi-body without preferred boolean → makeCompound + no fuse-all heal."""
+    from kala.cad.freecad.backend import FreeCADBackend
+
+    backend = FreeCADBackend.__new__(FreeCADBackend)
+    backend._step_path = Path("/tmp/kala_test_soft_assembly.step")
+    backend._try_fix = Mock(side_effect=lambda s: s)
+
+    compound = Mock()
+    compound.isNull.return_value = False
+    compound.isValid.return_value = True
+    compound.Solids = []
+    compound.removeSplitter.return_value = compound
+    compound.copy.return_value = compound
+    compound.Volume = 150.0
+    compound.exportStep = Mock()
+
+    part = Mock()
+    part.makeCompound.return_value = compound
+    backend._Part = part
+
+    def _ok_shape(vol: float):
+        s = Mock()
+        s.isNull.return_value = False
+        s.isValid.return_value = True
+        s.Volume = vol
+        s.Solids = [s]
+        s.removeSplitter.return_value = s
+        s.copy.return_value = s
+        return s
+
+    obj1 = Mock()
+    obj1.Name = "Box"
+    obj1.Label = "Box"
+    obj1.Shape = _ok_shape(10.0)
+    obj2 = Mock()
+    obj2.Name = "Cylinder"
+    obj2.Label = "Cylinder"
+    obj2.Shape = _ok_shape(20.0)
+
+    backend._doc = Mock()
+    backend._doc.Objects = [obj1, obj2]
+
+    backend._export_step_compound()
+
+    part.makeCompound.assert_called_once()
+    args, _kwargs = part.makeCompound.call_args
+    assert len(args[0]) == 2
+    compound.exportStep.assert_called_once()
+    # Soft path must not fuse the individual bodies together
+    obj1.Shape.fuse.assert_not_called()
+    obj2.Shape.fuse.assert_not_called()
+
+
+def test_export_assembly_heal_skips_fuse_all():
+    """export(ALL) multi-body path heals compound with fuse_solids=False."""
+    from kala.cad.freecad.backend import FreeCADBackend
+    from unittest.mock import patch
+
+    backend = FreeCADBackend.__new__(FreeCADBackend)
+    backend._try_fix = Mock(side_effect=lambda s: s)
+
+    compound = Mock()
+    compound.isNull.return_value = False
+    compound.isValid.return_value = True
+    compound.Solids = []
+    compound.removeSplitter.return_value = compound
+    compound.copy.return_value = compound
+    compound.Volume = 30.0
+    compound.exportStep = Mock()
+
+    part = Mock()
+    part.makeCompound.return_value = compound
+    backend._Part = part
+
+    def _ok_shape(vol: float):
+        s = Mock()
+        s.isNull.return_value = False
+        s.isValid.return_value = True
+        s.Volume = vol
+        return s
+
+    obj1 = Mock()
+    obj1.Shape = _ok_shape(10.0)
+    obj2 = Mock()
+    obj2.Shape = _ok_shape(20.0)
+    backend._doc = Mock()
+    backend._doc.Objects = [obj1, obj2]
+
+    calls = []
+
+    def _heal(shape, *, fuse_solids=True):
+        calls.append(fuse_solids)
+        return shape
+
+    backend._heal_shape_for_export = _heal  # type: ignore[method-assign]
+    backend._ok = lambda msg, cad_api="", data=None, sync=True: (  # type: ignore
+        __import__("kala.cad.protocol", fromlist=["ToolResult"]).ToolResult(
+            ok=True, message=msg, data=data or {}
+        )
+    )
+
+    root = Path(__file__).resolve().parents[2] / "outputs"
+    out = root / "test_soft_assembly_export.step"
+
+    result = backend.export(body_id="ALL", path=str(out), fmt="step")
+
+    assert result.ok
+    assert calls == [False]
+    part.makeCompound.assert_called_once()
+    compound.exportStep.assert_called_once()
