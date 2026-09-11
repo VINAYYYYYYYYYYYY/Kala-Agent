@@ -93,7 +93,12 @@ class FreeCADBackend:
         return obj
 
     def _export_step_compound(self) -> None:
-        """Write the best finished solid to STEP for FreeCAD GUI (not every leftover cutter)."""
+        """Publish live STEP for FreeCAD GUI.
+
+        Prefer a finished boolean/fillet result when present. Otherwise a single
+        body is healed as a part. Soft multi-body assemblies become a compound
+        with Fix (never fuse-all). Empty/invalid sets still raise.
+        """
         shapes = []
         preferred = None
         for obj in self._doc.Objects:
@@ -116,6 +121,7 @@ class FreeCADBackend:
             ):
                 preferred = shape
             shapes.append(shape)
+        fuse_solids = True
         if preferred is not None:
             compound = preferred
         elif not shapes:
@@ -123,18 +129,21 @@ class FreeCADBackend:
         elif len(shapes) == 1:
             compound = shapes[0]
         else:
-            # Largest valid solid ≈ finished part when booleans produced one
+            # Soft assembly: Fix each body, compound survivors — never fuse-all
             valid_shapes = []
             for s in shapes:
                 fixed = s if s.isValid() else self._try_fix(s)
                 if fixed.isValid():
                     valid_shapes.append(fixed)
-            if valid_shapes:
-                compound = max(valid_shapes, key=lambda s: float(getattr(s, "Volume", 0.0) or 0.0))
-            else:
+            if not valid_shapes:
                 raise RuntimeError("No valid shapes to publish")
-        # Heal before export to ensure valid STEP files
-        compound = self._heal_shape_for_export(compound)
+            if len(valid_shapes) == 1:
+                compound = valid_shapes[0]
+            else:
+                compound = self._Part.makeCompound(valid_shapes)
+                fuse_solids = False
+        # Heal before export; soft compounds skip fuse-all
+        compound = self._heal_shape_for_export(compound, fuse_solids=fuse_solids)
         self._step_path.parent.mkdir(parents=True, exist_ok=True)
         compound.exportStep(str(self._step_path))
 
@@ -541,37 +550,59 @@ class FreeCADBackend:
             sync=False,
         )
 
-    def _heal_shape_for_export(self, shape: Any) -> Any:
+    @staticmethod
+    def _solids_of(shape: Any) -> list[Any]:
+        """Return Solids as a list; tolerate mocks / non-iterable Solids."""
+        try:
+            raw = getattr(shape, "Solids", None)
+            if raw is None:
+                return []
+            return list(raw)
+        except TypeError:
+            return []
+
+    def _heal_shape_for_export(self, shape: Any, *, fuse_solids: bool = True) -> Any:
         """Apply robust healing to ensure STEP export produces valid, readable files.
-        
+
         Matches the healing strategy used by batch_eval probe to ensure exported
         STEP files pass freecadcmd isValid() + volume>0 checks.
-        
+
         Enhanced for complex multi-feature geometries (crankshafts, brackets, etc.)
         with deeper validation, geometry cleanup, and tolerance-aware fusion.
+
+        Soft assemblies / compounds must pass fuse_solids=False so Fix + cleanup
+        never collapse separate bodies via fuse-all.
         """
         if shape.isNull():
             return shape
-        
+
         # Initial fix pass for invalid shapes
         if not shape.isValid():
             try:
                 shape.fix()
             except Exception:
                 pass
-        
-        # Remove degenerate elements that can cause STEP export crashes
+
+        # Remove degenerate elements that can cause STEP export crashes.
+        # Keep prior shape if cleanup returns an unusable stand-in (e.g. bare Mock).
         try:
-            shape = shape.removeSplitter()
+            cleaned = shape.removeSplitter()
+            if cleaned is not None:
+                try:
+                    list(getattr(cleaned, "Solids", []) or [])
+                    shape = cleaned
+                except TypeError:
+                    if cleaned is shape:
+                        pass
         except Exception:
             pass
-        
+
         # Extract and process multiple solids
-        solids = list(shape.Solids) if hasattr(shape, "Solids") else []
+        solids = self._solids_of(shape)
         if len(solids) == 1:
             shape = solids[0]
-        elif len(solids) > 1:
-            # For parts (not assemblies): fuse multiple solids into one coherent solid
+        elif len(solids) > 1 and fuse_solids:
+            # For parts (not soft assemblies): fuse multiple solids into one coherent solid
             # Complex geometries with many features may produce multi-solid intermediates
             try:
                 # Filter out degenerate solids (zero volume, invalid)
@@ -586,7 +617,7 @@ class FreeCADBackend:
                             valid_solids.append(fixed)
                     except Exception:
                         continue
-                
+
                 if not valid_solids:
                     # No valid solids found, keep original
                     pass
@@ -609,14 +640,22 @@ class FreeCADBackend:
                         except Exception:
                             # Skip problematic solid and continue
                             continue
-                    
+
                     # Only use fused shape if it's valid AND has volume
                     if fused.isValid() and float(getattr(fused, "Volume", 0.0) or 0.0) > 1e-6:
                         shape = fused
             except Exception:
                 # Fall back to original shape if fusion fails
                 pass
-        
+        elif len(solids) > 1 and not fuse_solids:
+            # Soft assembly compound: Fix each solid in place, never fuse-all
+            for s in solids:
+                try:
+                    if not s.isValid():
+                        self._try_fix(s)
+                except Exception:
+                    continue
+
         # Clean up edges and faces that may cause STEP writer issues
         if not shape.isNull():
             try:
@@ -627,14 +666,15 @@ class FreeCADBackend:
                     shape = refined
             except Exception:
                 pass
-        
+
         # Final validation pass: fix one more time if still invalid
         if not shape.isValid():
             shape = self._try_fix(shape)
-        
-        # Last resort: if shape has solids but reports invalid, try extracting largest solid
-        if not shape.isValid() and hasattr(shape, "Solids"):
-            solids = list(shape.Solids)
+
+        # Last resort (parts only): if still invalid, extract largest valid solid.
+        # Soft compounds must keep all bodies — skip fuse-style collapse.
+        if not shape.isValid() and fuse_solids:
+            solids = self._solids_of(shape)
             if solids:
                 try:
                     # Pick largest valid solid
@@ -650,7 +690,7 @@ class FreeCADBackend:
                         shape = best
                 except Exception:
                     pass
-        
+
         return shape
     
     def _try_fix(self, shape: Any) -> Any:
@@ -701,17 +741,14 @@ class FreeCADBackend:
             if not shapes:
                 return ToolResult(ok=False, message="[FreeCAD] No valid shapes to export")
             
-            # Use compound for assemblies (keeps separate bodies), not fuse
+            # Soft assembly: compound keeps separate bodies — Fix without fuse-all
             if len(shapes) == 1:
                 shape = shapes[0]
-                # Apply healing to single shape
+                # Single remaining body: part-style heal (fuse multi-solid OK)
                 shape = self._heal_shape_for_export(shape)
             else:
-                # Create compound and apply light cleanup
                 shape = self._Part.makeCompound(shapes)
-                # Light validation for compound (no heavy fusion for assemblies)
-                if not shape.isValid():
-                    shape = self._try_fix(shape)
+                shape = self._heal_shape_for_export(shape, fuse_solids=False)
             
             n = len(shapes)
             cad_api = f"Part.makeCompound({n} bodies) → heal → exportStep"
