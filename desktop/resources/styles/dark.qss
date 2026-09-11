@@ -1,0 +1,69 @@
+/* Kala Drafting Board - Dark Theme */
+* {
+    selection-background-color: #5B9FD4;
+    selection-color: #0B0D10;
+}
+
+QMenu {
+    background-color: #161A20;
+    border: 1px solid #1E2329;
+    color: #A8B0BA;
+    padding: 4px;
+}
+
+QMenu::item {
+    padding: 6px 24px 6px 16px;
+}
+
+QMenu::item:selected {
+    background-color: #5B9FD4;
+    color: #0B0D10;
+}
+
+QMenu::separator {
+    height: 1px;
+    background: #1E2329;
+    margin: 4px 8px;
+}
+
+QMessageBox {
+    background-color: #12151A;
+}
+
+QMessageBox QLabel {
+    color: #E8EDF2;
+}
+
+QMessageBox QPushButton {
+    background-color: #161A20;
+    border: 1px solid #1E2329;
+    color: #A8B0BA;
+    padding: 6px 16px;
+    min-width: 80px;
+}
+
+QMessageBox QPushButton:hover {
+    border-color: #5B9FD4;
+    color: #5B9FD4;
+}
+
+QDialog {
+    background-color: #12151A;
+}
+
+QFileDialog {
+    background-color: #0B0D10;
+}
+
+QFileDialog QListView, QFileDialog QTreeView {
+    background-color: #12151A;
+    border: 1px solid #1E2329;
+    color: #A8B0BA;
+}
+
+QFileDialog QLineEdit {
+    background-color: #161A20;
+    border: 1px solid #1E2329;
+    color: #E8EDF2;
+    padding: 4px 8px;
+}
