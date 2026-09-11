@@ -359,6 +359,101 @@ def test_freecad_fem_extract_results_no_result_objects():
     metrics = {"is_valid": True, "volume": 1000.0}
     
     report = backend._extract_results(mock_doc, mock_analysis, "Test_1", metrics, report_path)
-    
+
     assert report.ok is False
     assert report.solver_status == "no_results"
+
+
+def test_freecad_fem_material_name_is_solids():
+    """Test FEM backend creates material with name 'Solids'."""
+    from unittest.mock import MagicMock, patch
+    import sys
+
+    backend = FreeCadFemCalculiXBackend()
+
+    mock_shape = Mock()
+    mock_shape.isValid.return_value = True
+    mock_shape.Volume = 1000.0
+    mock_shape.Solids = []
+
+    mock_obj = Mock()
+    mock_obj.Shape = mock_shape
+    mock_obj.Name = "Body_1"
+
+    mock_doc = MagicMock()
+    mock_doc.getObject.return_value = mock_obj
+
+    mock_backend = Mock()
+    mock_backend._doc = mock_doc
+
+    mock_material = MagicMock()
+    mock_material.Name = "Solids"
+
+    mock_objects_fem = MagicMock()
+    mock_objects_fem.makeAnalysis = MagicMock()
+    mock_objects_fem.makeSolverCalculix = MagicMock()
+    mock_objects_fem.makeMaterialSolid.return_value = mock_material
+    mock_objects_fem.makeMeshGmsh = MagicMock()
+    mock_objects_fem.makeConstraintFixed = MagicMock(References=[])
+    mock_objects_fem.makeConstraintSelfWeight = MagicMock()
+
+    mock_femtools = MagicMock()
+    mock_femtools.ccxtools = MagicMock()
+
+    with patch.dict(sys.modules, {
+        'Fem': MagicMock(),
+        'ObjectsFem': mock_objects_fem,
+        'femtools': mock_femtools,
+        'femtools.ccxtools': MagicMock(),
+    }):
+        with patch("kala.analysis.freecad_fem.Path"):
+            backend._check_solver_available = lambda: True
+
+            request = AnalysisRequest(body_id="Solids_1", backend_handle=mock_backend)
+            report = backend.analyze(request)
+
+            assert report.body_id == "Solids_1"
+            mock_objects_fem.makeMaterialSolid.assert_called_once()
+            call_args = mock_objects_fem.makeMaterialSolid.call_args
+            assert "Solids" in str(call_args)
+
+
+def test_freecad_fem_pick_lowest_z_face():
+    """Test _pick_fixed_face returns the face with lowest Z center of mass."""
+    from unittest.mock import MagicMock
+
+    backend = FreeCadFemCalculiXBackend()
+
+    face_low = MagicMock()
+    face_low.CenterOfMass.z = -5.0
+    face_mid = MagicMock()
+    face_mid.CenterOfMass.z = 0.0
+    face_high = MagicMock()
+    face_high.CenterOfMass.z = 10.0
+
+    mock_shape = MagicMock()
+    mock_shape.Faces = [face_high, face_mid, face_low]
+
+    mock_obj = MagicMock()
+    mock_obj.Shape = mock_shape
+
+    result = backend._pick_fixed_face(mock_obj)
+
+    assert result == "Face3"
+
+
+def test_freecad_fem_pick_fixed_face_no_faces():
+    """Test _pick_fixed_face returns None when no faces exist."""
+    from unittest.mock import MagicMock
+
+    backend = FreeCadFemCalculiXBackend()
+
+    mock_shape = MagicMock()
+    mock_shape.Faces = []
+
+    mock_obj = MagicMock()
+    mock_obj.Shape = mock_shape
+
+    result = backend._pick_fixed_face(mock_obj)
+
+    assert result is None
