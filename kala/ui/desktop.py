@@ -32,6 +32,7 @@ from kala.procedures import (
     PartPlan,
     assess_goal,
     list_procedures,
+    list_procedure_ids,
     load_default_procedure,
     resolve_procedure_for_send,
 )
@@ -975,18 +976,25 @@ class MainWindow(QMainWindow):
             if gate.notes:
                 lines.append(gate.notes)
             self._add(self._agent_msg("\n".join(lines)))
-            if any(p.keep_separate for p in gate.parts) and "machine_assembly" in _LIBRARY_IDS:
-                self._set_procedure("machine_assembly")
+            # Determine procedure for the per-part runner: machine_assembly
+            # when keep_separate parts exist and it's a known library id,
+            # else fall back to the current/self._procedure_id.
+            if any(p.keep_separate for p in gate.parts) and "machine_assembly" in list_procedure_ids():
+                procedure_id = "machine_assembly"
+                self._set_procedure(procedure_id)
+            else:
+                procedure_id = self._procedure_id
+        else:
+            # Normal non-gated goals: resolve procedure normally.
+            procedure_id = resolve_procedure_for_send(
+                goal,
+                self._procedure_id,
+                user_picked=self._procedure_user_picked,
+            )
+            if procedure_id != self._procedure_id:
+                self._set_procedure(procedure_id)
 
-        # Gate first — explicit combo/starter pick must not bypass ClarifyNeeded/PartPlan.
         self._set_busy(True)
-        procedure_id = resolve_procedure_for_send(
-            goal,
-            self._procedure_id,
-            user_picked=self._procedure_user_picked,
-        )
-        if procedure_id != self._procedure_id:
-            self._set_procedure(procedure_id)
         first = next(iter(self._proc), "envelope")
         self._mark_proc(first, done=False)
 
