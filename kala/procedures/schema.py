@@ -86,7 +86,19 @@ def resolve_procedure_for_send(
     *,
     user_picked: bool,
 ) -> str:
-    """Return procedure id for a run; keyword suggest only when user has not chosen one."""
+    """Return procedure id for a run after the goal gate has passed.
+
+    Callers must handle ``assess_goal`` first (``ClarifyNeeded`` / ``PartPlan``).
+    Re-checks the gate so an explicit procedure pick cannot override it.
+    Keyword suggest applies only when the user has not chosen a procedure.
+    """
+    from kala.procedures.gate import assess_goal
+
+    if assess_goal(goal) is not None:
+        raise ValueError(
+            "resolve_procedure_for_send called on a gated goal; "
+            "handle ClarifyNeeded/PartPlan before binding a procedure"
+        )
     if user_picked:
         return procedure_id
     suggested = suggest_procedure(goal)

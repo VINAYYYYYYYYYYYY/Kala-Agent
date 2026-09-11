@@ -976,6 +976,7 @@ class MainWindow(QMainWindow):
             self._rail_set("part_plan", export="—", tools="—", sync="—")
             return
 
+        # Gate first — explicit combo/starter pick must not bypass ClarifyNeeded/PartPlan.
         self._set_busy(True)
         procedure_id = resolve_procedure_for_send(
             goal,
