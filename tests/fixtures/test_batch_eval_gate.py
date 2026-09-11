@@ -37,7 +37,15 @@ def _load_fixture_designs() -> list[dict]:
 def test_gate_outcome_taxonomy_helpers():
     be = _load_batch_eval()
     assert be._row_outcome(state_status="needs_clarify", score_ok=True, err=None) == "needs_clarify"
-    assert be._row_outcome(state_status="part_plan", score_ok=True, err=None) == "part_plan"
+    assert (
+        be._row_outcome(
+            state_status="needs_clarify",
+            score_ok=True,
+            err=None,
+            part_plan={"kind": "part_plan", "parts": []},
+        )
+        == "part_plan"
+    )
     assert be._row_outcome(state_status="done", score_ok=True, err=None) == "done"
     assert be._row_outcome(state_status="max_turns", score_ok=False, err=None) == "failed"
     assert be._row_outcome(state_status="done", score_ok=False, err="traceback") == "error"
@@ -60,11 +68,11 @@ def test_gearbox_part_plan_row():
     design = next(d for d in _load_fixture_designs() if d["id"] == "gate-gearbox")
     with tempfile.TemporaryDirectory() as tmp:
         row = be._run_one(design, default_backend="mock", run_dir=Path(tmp) / "gate-gearbox")
-    assert row["state_status"] == "part_plan"
+    assert row["state_status"] == "needs_clarify"
     assert row["outcome"] == "part_plan"
     assert row["score"]["ok"] is True
     assert row["error"] is None
-    assert row["score"]["metrics"].get("status") == "part_plan"
+    assert "gate=part_plan" in row["score"]["reasons"]
 
 
 def test_l_bracket_still_runs():
@@ -72,7 +80,7 @@ def test_l_bracket_still_runs():
     design = next(d for d in _load_fixture_designs() if d["id"] == "gate-l-bracket")
     with tempfile.TemporaryDirectory() as tmp:
         row = be._run_one(design, default_backend="mock", run_dir=Path(tmp) / "gate-l-bracket")
-    assert row["state_status"] not in be.GATE_OUTCOMES
+    assert row["state_status"] not in {"needs_clarify"}
     assert row["outcome"] != "needs_clarify"
     assert row["outcome"] != "part_plan"
     assert row["error"] is None

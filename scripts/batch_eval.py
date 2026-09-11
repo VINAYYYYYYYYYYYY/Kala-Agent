@@ -32,7 +32,9 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# First-class gate exits from assess_goal / Agent.run — not crashes or eval failures.
+# First-class gate exits — row outcome taxonomy, not hard Agent errors.
+# Post #29: part_plan is executed via _run_part_plan; terminal status is
+# needs_clarify (no bindable playbooks) or done/max_turns, with part_plan set.
 GATE_OUTCOMES = frozenset({"needs_clarify", "part_plan"})
 
 
@@ -42,28 +44,41 @@ def _row_outcome(
     score_ok: bool,
     err: str | None,
     expect: dict[str, Any] | None = None,
+    part_plan: dict[str, Any] | None = None,
 ) -> str:
     """Exit taxonomy for one batch_eval row."""
     if err:
         return "error"
+    if part_plan is not None:
+        return "part_plan"
     status = state_status or ""
-    if status in GATE_OUTCOMES:
-        return status
-    expected_gate = (expect or {}).get("gate")
-    if expected_gate in GATE_OUTCOMES and status == expected_gate:
-        return expected_gate
+    if status == "needs_clarify":
+        return "needs_clarify"
     if status == "done" and score_ok:
         return "done"
     return "failed"
 
 
-def _is_gate_success(status: str, expect: dict[str, Any] | None) -> bool:
-    """True when the agent exited on the expected (or any valid) gate."""
-    if status not in GATE_OUTCOMES:
-        return False
+def _is_gate_success(
+    status: str,
+    expect: dict[str, Any] | None,
+    *,
+    part_plan: dict[str, Any] | None = None,
+) -> bool:
+    """True when the agent exited on the expected (or any valid) gate route."""
     expected = (expect or {}).get("gate")
-    if expected in GATE_OUTCOMES:
-        return status == expected
+    if part_plan is not None:
+        if expected == "part_plan":
+            return status in {"needs_clarify", "done", "max_turns"}
+        if expected == "needs_clarify":
+            return False
+        return status in {"needs_clarify", "done", "max_turns"}
+    if status != "needs_clarify":
+        return False
+    if expected == "needs_clarify":
+        return True
+    if expected == "part_plan":
+        return False
     return True
 
 
@@ -226,18 +241,22 @@ def _score_run(
     )
     export = state.get("last_export")
     status = state.get("status") or ""
-    is_gate = status in GATE_OUTCOMES
-    gate_ok = _is_gate_success(status, expect)
+    part_plan = state.get("part_plan")
+    is_clarify_gate = status == "needs_clarify" and not part_plan
+    is_part_plan_route = bool(part_plan)
+    is_gate = is_clarify_gate or is_part_plan_route
+    gate_ok = _is_gate_success(status, expect, part_plan=part_plan)
 
     reasons: list[str] = []
     points = 1.0
 
     if is_gate:
+        gate_label = "part_plan" if is_part_plan_route else "needs_clarify"
         if gate_ok:
-            reasons.append(f"gate={status}")
+            reasons.append(f"gate={gate_label}")
         else:
             points -= 0.35
-            reasons.append(f"unexpected_gate={status}")
+            reasons.append(f"unexpected_gate={gate_label}")
     elif status != "done":
         points -= 0.35
         reasons.append(f"status={status}")
@@ -281,7 +300,8 @@ def _score_run(
 
     points = max(0.0, min(1.0, points))
     has_export = bool(path and path.is_file()) or bool(export)
-    if is_gate and gate_ok:
+    auto_ok = is_gate and gate_ok and (is_clarify_gate or (is_part_plan_route and status == "needs_clarify"))
+    if auto_ok:
         ok = True
         score_val = 1.0
     else:
@@ -505,6 +525,7 @@ def _run_one(
             score_ok=score.ok,
             err=err,
             expect=design.get("expect"),
+            part_plan=state.get("part_plan"),
         ),
         "export": state.get("last_export"),
         "saved_export": saved_export,
