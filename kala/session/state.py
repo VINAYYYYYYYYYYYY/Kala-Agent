@@ -41,6 +41,8 @@ class SessionState:
     # Decompose-or-clarify gate (set when status is needs_clarify / part_plan)
     clarify: dict[str, Any] | None = None
     part_plan: dict[str, Any] | None = None
+    # Sequential per-part playbook results (session metadata, not CAD Protocol)
+    part_runs: list[dict[str, Any]] = field(default_factory=list)
 
     def add_usage(self, usage: dict[str, Any] | None) -> None:
         if not usage:
@@ -105,4 +107,5 @@ class SessionState:
             "id_aliases": self.id_aliases,
             "clarify": self.clarify,
             "part_plan": self.part_plan,
+            "part_runs": self.part_runs,
         }

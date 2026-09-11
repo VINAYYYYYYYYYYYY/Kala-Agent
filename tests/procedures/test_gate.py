@@ -52,6 +52,9 @@ def test_gearbox_part_plan():
     gear = next(p for p in g.parts if p.local_name == "gear")
     assert gear.procedure_id is None
     assert gear.keep_separate is True
+    bindable = [p for p in g.parts if p.procedure_id]
+    assert bindable, "gearbox-class plan must include ≥1 existing procedure_id"
+    assert all(p.procedure_id in _KNOWN for p in bindable)
     payload = g.to_dict()
     assert payload["kind"] == "part_plan"
     assert isinstance(payload["parts"], list)
