@@ -194,14 +194,14 @@ class OpenAICompatPlanner:
         bodies_known = len(bodies) > 0
 
         # NEW POLICY: list_bodies stall-breaker
+        # Soft note at consecutive_list >= 1 (bodies known); hard force only at >= 2.
         # Max 1 ok list once bodies known; ≥2 consecutive ok lists → stub fallback
         consecutive_list = _count_consecutive_ok(state, "list_bodies")
         stalled_list = False
-        if bodies_known and consecutive_list >= 1:
-            # Widen pre-LLM check: when bodies known, catch stall earlier
+        if bodies_known and consecutive_list >= 2:
             stalled_list = True
         elif consecutive_list >= 2 and step and step.id == "features":
-            # Also catch list-only turn while bodies known in features step
+            # Also catch list spam in features step
             stalled_list = True
 
         if stalled_list and (
@@ -281,14 +281,16 @@ class OpenAICompatPlanner:
                         return stub_turn
 
         # POLICY: list_bodies rewrite
-        # If LLM proposes list_bodies AND ≥2 consecutive ok lists OR list-only while bodies known → stub
+        # Soft path: after ≥1 ok list with bodies known, strip another list_bodies proposal
+        # (would-be 2nd list). Hard stub if that leaves an empty / list-only turn.
+        # Pre-LLM hard force remains at consecutive_list >= 2 only.
         if "list_bodies" in names:
             consecutive_list = _count_consecutive_ok(state, "list_bodies")
             # Check if this is list-only turn
             is_list_only = names == {"list_bodies"}
-            
+
             if consecutive_list >= 1 and bodies_known:
-                # Already had 1 ok list with bodies known → this would be 2nd+ → stub fallback
+                # Already had 1 ok list with bodies known → this would be 2nd+ → strip / stub
                 turn.calls = [c for c in turn.calls if c.name != "list_bodies"]
                 if not turn.calls or is_list_only:
                     stub_turn = self.fallback.propose(state, context, [])
@@ -383,6 +385,16 @@ class OpenAICompatPlanner:
             "- Never translate the same body twice to place copies; create a new solid per copy\n"
             "- Dimensions in the user goal are millimeters"
         )
+        # Eng soft note: warn once bodies known after ≥1 list, before hard force at ≥2
+        consecutive_list = _count_consecutive_ok(state, "list_bodies")
+        soft_note = ""
+        if bodies and consecutive_list >= 1 and consecutive_list < 2:
+            soft_note = (
+                "SOFT NOTE: You already listed bodies. Do NOT call list_bodies again. "
+                "Use the known body_ids above. Prefer required boolean_cut / boolean_fuse "
+                "or other progress tools instead of listing.\n"
+            )
+
         user = (
             f"Goal: {state.goal}\n"
             f"Backend: {state.backend_name}\n"
@@ -391,6 +403,7 @@ class OpenAICompatPlanner:
             f"Known body_ids (use these exact strings): {bodies_txt}\n"
             f"Design context: {json.dumps(context.to_dict())}\n"
             f"Recent tool results:\n{_history_brief(state)}\n"
+            f"{soft_note}"
             "Call the next tool(s) now. If multiple solids exist and fuse is REQUIRED, "
             "boolean_fuse next. If holes are required and not cut, boolean_cut next. "
             "If the model is one finished solid, export it."

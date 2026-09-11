@@ -402,3 +402,152 @@ class TestListBodiesStallBreaker:
         # Assert: list_bodies should be removed, but fillet should remain
         assert all(c.name != "list_bodies" for c in turn.calls)
         assert any(c.name == "fillet" for c in turn.calls)
+
+    def test_one_list_with_needs_cut_still_calls_llm_soft_note(self) -> None:
+        """consecutive_list==1 + needs_cut: soft note path — still call LLM, do not hard-force stub."""
+        history = [
+            ToolEvent(
+                tool="create_box",
+                args={"length": 10, "width": 10, "height": 10},
+                ok=True,
+                message="",
+                data={"body_id": "Box001"},
+            ),
+            ToolEvent(
+                tool="list_bodies",
+                args={},
+                ok=True,
+                message="",
+                data={"bodies": [{"body_id": "Box001"}]},
+            ),
+        ]
+        # Goal with hole → needs_cut True
+        state = make_test_state(step_index=1, history=history, goal="bracket with hole")
+
+        config = make_test_config()
+        fallback = StubPlanner()
+        planner = OpenAICompatPlanner(config, fallback=fallback)
+
+        llm_turn = PlannerTurn(
+            thought="Cutting hole",
+            calls=[ToolCall("boolean_cut", {"body_a": "Box001", "body_b": "Cyl001"})],
+            advance_step=False,
+            done=False,
+        )
+        mock_llm = Mock(return_value=llm_turn)
+        planner._propose_llm = mock_llm  # type: ignore
+
+        turn = planner.propose(state, DynamicContext(focus="test"), [])
+
+        mock_llm.assert_called_once()
+        assert turn.calls[0].name == "boolean_cut"
+        assert "LLM stuck on list_bodies" not in turn.thought
+
+    def test_two_lists_with_needs_cut_hard_forces_stub(self) -> None:
+        """consecutive_list>=2 + needs_cut: hard force stub before LLM."""
+        history = [
+            ToolEvent(
+                tool="create_box",
+                args={"length": 10, "width": 10, "height": 10},
+                ok=True,
+                message="",
+                data={"body_id": "Box001"},
+            ),
+            ToolEvent(
+                tool="list_bodies",
+                args={},
+                ok=True,
+                message="",
+                data={"bodies": [{"body_id": "Box001"}]},
+            ),
+            ToolEvent(
+                tool="list_bodies",
+                args={},
+                ok=True,
+                message="",
+                data={"bodies": [{"body_id": "Box001"}]},
+            ),
+        ]
+        state = make_test_state(step_index=1, history=history, goal="bracket with hole")
+
+        config = make_test_config()
+        fallback = StubPlanner()
+        planner = OpenAICompatPlanner(config, fallback=fallback)
+
+        mock_llm = Mock(
+            return_value=PlannerTurn(
+                thought="should not be used",
+                calls=[ToolCall("list_bodies", {})],
+                advance_step=False,
+                done=False,
+            )
+        )
+        planner._propose_llm = mock_llm  # type: ignore
+
+        turn = planner.propose(state, DynamicContext(focus="test"), [])
+
+        mock_llm.assert_not_called()
+        assert "LLM stuck on list_bodies" in turn.thought
+        assert turn.done is False
+
+    def test_soft_note_injected_into_user_prompt(self) -> None:
+        """At consecutive_list==1 with bodies known, user prompt includes Eng soft note."""
+        import json
+        import urllib.request
+        from unittest.mock import patch, MagicMock
+
+        history = [
+            ToolEvent(
+                tool="create_box",
+                args={"length": 10, "width": 10, "height": 10},
+                ok=True,
+                message="",
+                data={"body_id": "Box001"},
+            ),
+            ToolEvent(
+                tool="list_bodies",
+                args={},
+                ok=True,
+                message="",
+                data={"bodies": [{"body_id": "Box001"}]},
+            ),
+        ]
+        state = make_test_state(step_index=1, history=history, goal="simple plate")
+
+        config = make_test_config()
+        planner = OpenAICompatPlanner(config, fallback=StubPlanner())
+
+        captured: dict = {}
+
+        class FakeResp:
+            def __enter__(self):
+                return self
+            def __exit__(self, *a):
+                return False
+            def read(self):
+                return json.dumps({
+                    "choices": [{
+                        "message": {
+                            "content": "ok",
+                            "tool_calls": [{
+                                "function": {
+                                    "name": "fillet",
+                                    "arguments": json.dumps({"body_id": "Box001", "radius": 1}),
+                                }
+                            }],
+                        }
+                    }],
+                    "usage": {},
+                }).encode()
+
+        def fake_urlopen(req, timeout=90):
+            body = json.loads(req.data.decode())
+            captured["user"] = body["messages"][1]["content"]
+            return FakeResp()
+
+        with patch.object(urllib.request, "urlopen", side_effect=fake_urlopen):
+            turn = planner._propose_llm(state, DynamicContext(focus="test"), [])
+
+        assert "SOFT NOTE" in captured["user"]
+        assert "Do NOT call list_bodies again" in captured["user"]
+        assert turn.calls[0].name == "fillet"
