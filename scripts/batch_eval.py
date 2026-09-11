@@ -32,6 +32,40 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# First-class gate exits from assess_goal / Agent.run — not crashes or eval failures.
+GATE_OUTCOMES = frozenset({"needs_clarify", "part_plan"})
+
+
+def _row_outcome(
+    *,
+    state_status: str | None,
+    score_ok: bool,
+    err: str | None,
+    expect: dict[str, Any] | None = None,
+) -> str:
+    """Exit taxonomy for one batch_eval row."""
+    if err:
+        return "error"
+    status = state_status or ""
+    if status in GATE_OUTCOMES:
+        return status
+    expected_gate = (expect or {}).get("gate")
+    if expected_gate in GATE_OUTCOMES and status == expected_gate:
+        return expected_gate
+    if status == "done" and score_ok:
+        return "done"
+    return "failed"
+
+
+def _is_gate_success(status: str, expect: dict[str, Any] | None) -> bool:
+    """True when the agent exited on the expected (or any valid) gate."""
+    if status not in GATE_OUTCOMES:
+        return False
+    expected = (expect or {}).get("gate")
+    if expected in GATE_OUTCOMES:
+        return status == expected
+    return True
+
 
 @dataclass
 class Score:
@@ -192,14 +226,22 @@ def _score_run(
     )
     export = state.get("last_export")
     status = state.get("status") or ""
+    is_gate = status in GATE_OUTCOMES
+    gate_ok = _is_gate_success(status, expect)
 
     reasons: list[str] = []
     points = 1.0
 
-    if status != "done":
+    if is_gate:
+        if gate_ok:
+            reasons.append(f"gate={status}")
+        else:
+            points -= 0.35
+            reasons.append(f"unexpected_gate={status}")
+    elif status != "done":
         points -= 0.35
         reasons.append(f"status={status}")
-    if expect.get("require_export", True) and not (export_path or export):
+    if not is_gate and expect.get("require_export", True) and not (export_path or export):
         points -= 0.25
         reasons.append("missing_export")
     if fail_rate > 0.15:
@@ -220,7 +262,7 @@ def _score_run(
 
     geo: dict[str, Any] = {}
     path = export_path or _resolve_export(export)
-    if path and path.is_file() and str(path).lower().endswith((".step", ".stp")):
+    if not is_gate and path and path.is_file() and str(path).lower().endswith((".step", ".stp")):
         geo = _step_metrics(path)
         if geo.get("error"):
             reasons.append(f"step_read={geo['error']}")
@@ -239,9 +281,15 @@ def _score_run(
 
     points = max(0.0, min(1.0, points))
     has_export = bool(path and path.is_file()) or bool(export)
+    if is_gate and gate_ok:
+        ok = True
+        score_val = 1.0
+    else:
+        ok = points >= 0.7 and status == "done" and bool(has_export or not expect.get("require_export", True))
+        score_val = round(points, 3)
     return Score(
-        ok=points >= 0.7 and status == "done" and bool(has_export or not expect.get("require_export", True)),
-        score=round(points, 3),
+        ok=ok,
+        score=score_val,
         reasons=reasons,
         metrics={
             "status": status,
@@ -452,6 +500,12 @@ def _run_one(
         "elapsed_s": round(elapsed, 2),
         "score": asdict(score),
         "state_status": state.get("status"),
+        "outcome": _row_outcome(
+            state_status=state.get("status"),
+            score_ok=score.ok,
+            err=err,
+            expect=design.get("expect"),
+        ),
         "export": state.get("last_export"),
         "saved_export": saved_export,
         "run_dir": str(run_dir),
@@ -463,6 +517,37 @@ def _run_one(
     (run_dir / "score.json").write_text(json.dumps(row, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     _write_analysis(run_dir, design, row, state, rubric_info)
     return row
+
+
+def _batch_summary(rows: list[dict[str, Any]], *, name: str, out_dir: Path, done: bool = False) -> dict[str, Any]:
+    passed = sum(1 for r in rows if r.get("score", {}).get("ok"))
+    gate_needs_clarify = sum(1 for r in rows if r.get("outcome") == "needs_clarify")
+    gate_part_plan = sum(1 for r in rows if r.get("outcome") == "part_plan")
+    failed = sum(
+        1
+        for r in rows
+        if r.get("outcome") == "failed" or (not r.get("score", {}).get("ok") and r.get("outcome") not in GATE_OUTCOMES)
+    )
+    crashed = sum(1 for r in rows if r.get("outcome") == "error")
+    summary = {
+        "batch": name,
+        "n": len(rows),
+        "passed": passed,
+        "pass_rate": round(passed / max(len(rows), 1), 3),
+        "gate_needs_clarify": gate_needs_clarify,
+        "gate_part_plan": gate_part_plan,
+        "failed": failed,
+        "crashed": crashed,
+        "avg_score": round(
+            sum(float(r.get("score", {}).get("score") or 0) for r in rows) / max(len(rows), 1),
+            3,
+        ),
+        "out_dir": str(out_dir),
+        "updated": datetime.now(timezone.utc).isoformat(),
+    }
+    if done:
+        summary["done"] = True
+    return summary
 
 
 def _write_rectify_queue(out_dir: Path, rows: list[dict[str, Any]]) -> None:
@@ -481,7 +566,8 @@ def _write_rectify_queue(out_dir: Path, rows: list[dict[str, Any]]) -> None:
             ] += 1
         rh = row.get("rubric_heuristic") or {}
         if float(rh.get("hit_rate") or 1) < 0.4 and not row.get("score", {}).get("ok"):
-            weak_rubric.append(row["id"])
+            if row.get("outcome") not in GATE_OUTCOMES:
+                weak_rubric.append(row["id"])
         
         # Track STEP hash collisions (duplicate exports)
         geo = row.get("score", {}).get("metrics", {}).get("geometry") or {}
@@ -532,6 +618,17 @@ def _write_rectify_queue(out_dir: Path, rows: list[dict[str, Any]]) -> None:
             lines.append(f"- `{i}`")
     lines += [
         "",
+        "## Gate outcomes (expected non-crash exits)",
+        "",
+    ]
+    gate_rows = [r for r in rows if r.get("outcome") in GATE_OUTCOMES]
+    if gate_rows:
+        for r in gate_rows:
+            lines.append(f"- `{r['id']}` → **{r['outcome']}**")
+    else:
+        lines.append("- None")
+    lines += [
+        "",
         "## Suggested agent fixes (priority)",
         "",
         "1. Whatever tops **unknown_part_id** → extend `PartsCatalog.ALIASES` / `learned_aliases.json`",
@@ -543,7 +640,11 @@ def _write_rectify_queue(out_dir: Path, rows: list[dict[str, Any]]) -> None:
         "## Failed ids (re-run)",
         "",
     ]
-    failed = [r["id"] for r in rows if not r.get("score", {}).get("ok")]
+    failed = [
+        r["id"]
+        for r in rows
+        if not r.get("score", {}).get("ok") and r.get("outcome") not in GATE_OUTCOMES
+    ]
     for fid in failed:
         lines.append(f"- `{fid}`")
     (out_dir / "rectify_queue.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -641,42 +742,16 @@ def main() -> None:
             geo = row["score"]["metrics"].get("geometry") or {}
             print(
                 f"  → score={row['score']['score']} ok={row['score']['ok']} "
-                f"status={row['state_status']} geo={geo} "
+                f"outcome={row.get('outcome')} status={row['state_status']} geo={geo} "
                 f"saved={row.get('saved_export')} reasons={row['score']['reasons']}",
                 flush=True,
             )
             # Refresh summary after every design so overnight progress is visible
-            passed = sum(1 for r in rows if r.get("score", {}).get("ok"))
-            summary = {
-                "batch": name,
-                "n": len(rows),
-                "passed": passed,
-                "pass_rate": round(passed / max(len(rows), 1), 3),
-                "avg_score": round(
-                    sum(float(r.get("score", {}).get("score") or 0) for r in rows)
-                    / max(len(rows), 1),
-                    3,
-                ),
-                "out_dir": str(out_dir),
-                "updated": datetime.now(timezone.utc).isoformat(),
-            }
+            summary = _batch_summary(rows, name=name, out_dir=out_dir)
             (out_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
             _write_rectify_queue(out_dir, rows)
 
-    passed = sum(1 for r in rows if r.get("score", {}).get("ok"))
-    summary = {
-        "batch": name,
-        "n": len(rows),
-        "passed": passed,
-        "pass_rate": round(passed / max(len(rows), 1), 3),
-        "avg_score": round(
-            sum(float(r.get("score", {}).get("score") or 0) for r in rows) / max(len(rows), 1),
-            3,
-        ),
-        "out_dir": str(out_dir),
-        "updated": datetime.now(timezone.utc).isoformat(),
-        "done": True,
-    }
+    summary = _batch_summary(rows, name=name, out_dir=out_dir, done=True)
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     _write_rectify_queue(out_dir, rows)
     print(json.dumps(summary, indent=2), flush=True)
