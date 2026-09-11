@@ -212,8 +212,8 @@ def _exit_criteria_met(state: SessionState) -> bool:
         })
     if sid == "features":
         return bool(ok_tools & {
-            "boolean_fuse", "boolean_cut", "fillet", "translate", "rotate", "export",
-        }) or bool(state.last_export)
+            "boolean_fuse", "boolean_cut", "fillet", "translate", "rotate",
+        })
     if sid == "standard_parts":
         if step.optional_parts and not state.standard_parts:
             return True

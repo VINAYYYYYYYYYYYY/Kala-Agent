@@ -395,8 +395,10 @@ def _run_one(
     backend = str(design.get("backend") or default_backend)
     parts = bool(design.get("standard_parts", True))
     procedure = str(design.get("procedure") or "machine_assembly")
+    from kala.procedures import require_known_procedure
     t0 = time.time()
     try:
+        require_known_procedure(procedure)
         result = Agent(
             backend_name=backend,
             standard_parts=parts,

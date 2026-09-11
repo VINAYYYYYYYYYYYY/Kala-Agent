@@ -72,3 +72,10 @@ def list_procedures() -> list[Procedure]:
 def list_procedure_ids() -> list[str]:
     return [p.id for p in list_procedures()]
 
+
+def require_known_procedure(procedure_id: str) -> None:
+    """Raise ValueError if procedure_id is not in the packaged library."""
+    if procedure_id not in list_procedure_ids():
+        known = ", ".join(list_procedure_ids())
+        raise ValueError(f"Unknown procedure {procedure_id!r}. Known: {known}")
+
