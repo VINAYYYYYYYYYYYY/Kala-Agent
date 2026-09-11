@@ -1,4 +1,4 @@
-"""suggest_procedure keyword map."""
+"""suggest_procedure keyword map + product-like gate."""
 
 from __future__ import annotations
 
@@ -21,3 +21,11 @@ def test_suggest_default_bracket():
     pid = suggest_procedure("L-bracket base 60x40")
     assert pid in list_procedure_ids()
     assert pid == "simple_bracket"
+
+
+def test_suggest_laptop_not_simple_bracket():
+    assert suggest_procedure("16 inch laptop") is None
+
+
+def test_suggest_phone_not_simple_bracket():
+    assert suggest_procedure("design a phone enclosure") is None

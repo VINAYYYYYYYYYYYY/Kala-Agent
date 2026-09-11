@@ -149,17 +149,49 @@ def main(argv: list[str] | None = None) -> None:
         return
 
     if args.command == "run":
-        from kala.procedures import require_known_procedure
+        from kala.procedures import (
+            ClarifyNeeded,
+            PartPlan,
+            assess_goal,
+            require_known_procedure,
+            suggest_procedure,
+        )
+
+        gate = assess_goal(args.goal)
+        if isinstance(gate, (ClarifyNeeded, PartPlan)):
+            payload = {
+                "state": {
+                    "goal": args.goal,
+                    "status": "needs_clarify" if isinstance(gate, ClarifyNeeded) else "part_plan",
+                    "clarify": gate.to_dict() if isinstance(gate, ClarifyNeeded) else None,
+                    "part_plan": gate.to_dict() if isinstance(gate, PartPlan) else None,
+                    "error": gate.reason if isinstance(gate, ClarifyNeeded) else (gate.notes or "Part plan required"),
+                },
+                "contexts": [],
+            }
+            if args.json:
+                print(json.dumps(payload, indent=2))
+            else:
+                print(f"status: {payload['state']['status']}")
+                print(json.dumps(gate.to_dict(), indent=2))
+            raise SystemExit(3)
+
+        # Auto-suggest when caller left the default and brief maps cleanly
+        procedure_id = args.procedure
+        if procedure_id == "simple_bracket":
+            suggested = suggest_procedure(args.goal)
+            if suggested:
+                procedure_id = suggested
 
         try:
-            require_known_procedure(args.procedure)
+            require_known_procedure(procedure_id)
         except ValueError as exc:
             print(str(exc), file=sys.stderr)
             raise SystemExit(2)
         agent = Agent(
             backend_name=args.backend,
             standard_parts=(args.standard_parts == "on"),
-            procedure_id=args.procedure,
+            procedure_id=procedure_id,
         )
         result = agent.run(args.goal)
         if args.json:
