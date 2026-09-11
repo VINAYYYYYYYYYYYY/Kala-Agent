@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from kala.agent.loop import Agent, _skip_silent_fuse, library_procedure_id
+from kala.agent.loop import (
+    Agent,
+    _refresh_frozen_part_aliases,
+    _resolve_alias,
+    freeze_part_alias,
+    _skip_silent_fuse,
+    library_procedure_id,
+)
 from kala.llm.stub import StubPlanner
 from kala.ml.base import DynamicContext
 from kala.ml.stub import StubDesignContextModel
@@ -137,6 +144,37 @@ def test_l_bracket_still_enriches_single_playbook():
     assert result.state.part_plan is None
     assert result.state.part_runs == []
     assert ctx.calls > 0
+
+
+def test_freeze_part_alias_after_bindable_part():
+    agent = Agent(backend_name="mock", planner=StubPlanner(), max_turns=32)
+    result = agent.run(_GEARBOX_BINDABLE)
+    st = result.state
+    for r in st.part_runs:
+        if r.get("status") in {"done", "max_turns"} and r.get("procedure_id"):
+            name = r["local_name"]
+            assert name in st.part_body_map
+            assert st.id_aliases.get(f"part:{name}") == st.part_body_map[name]
+            assert _resolve_alias(st, f"part:{name}") == st.part_body_map[name]
+    data = st.to_dict()
+    assert "part_body_map" in data
+    assert data["part_body_map"] == st.part_body_map
+
+
+def test_frozen_part_alias_follows_child_id_alias_remaps():
+    proc = load_default_procedure("simple_bracket")
+    state = SessionState(
+        goal="t",
+        backend_name="mock",
+        standard_parts=False,
+        procedure=proc,
+    )
+    freeze_part_alias(state, "bracket", "Box_1")
+    state.id_aliases["Box_1"] = "Fuse_2"
+    _refresh_frozen_part_aliases(state)
+    assert state.part_body_map["bracket"] == "Fuse_2"
+    assert state.id_aliases["part:bracket"] == "Fuse_2"
+    assert _resolve_alias(state, "part:bracket") == "Fuse_2"
 
 
 def test_skip_silent_fuse_only_when_keep_separate():
