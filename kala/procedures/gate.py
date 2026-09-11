@@ -24,14 +24,36 @@ class ClarifyNeeded:
 
 
 @dataclass
+class PartSpec:
+    """One BOM line — bind a packaged procedure later (P1+)."""
+
+    local_name: str
+    brief: str = ""
+    procedure_id: str | None = None  # existing library id or null; never invent
+    keep_separate: bool = True
+
+    def to_dict(self) -> dict:
+        return {
+            "local_name": self.local_name,
+            "brief": self.brief,
+            "procedure_id": self.procedure_id,
+            "keep_separate": self.keep_separate,
+        }
+
+
+@dataclass
 class PartPlan:
     """BOM / part-list sketch only — bind procedures per part later (P1+)."""
 
-    parts: list[str]
+    parts: list[PartSpec]
     notes: str = ""
 
     def to_dict(self) -> dict:
-        return {"kind": "part_plan", "parts": list(self.parts), "notes": self.notes}
+        return {
+            "kind": "part_plan",
+            "parts": [p.to_dict() for p in self.parts],
+            "notes": self.notes,
+        }
 
 
 _PRODUCT_LIKE = (
@@ -77,29 +99,69 @@ _SINGLE_MECH = (
     "lid",
 )
 
+# Best-effort map from part label → existing packaged procedure id only.
+# Labels with no packaged playbook stay procedure_id=None (never invent).
+_PART_PROCEDURE_HINTS: dict[str, str] = {
+    "shaft": "stepped_shaft",
+    "housing": "housing_cover",
+    "cover": "housing_cover",
+    "plate": "plate_with_holes",
+    "bracket": "simple_bracket",
+}
 
-def _sketch_parts(g: str) -> list[str]:
+
+def _known_procedure_ids() -> set[str]:
+    from kala.procedures.schema import list_procedure_ids
+
+    return set(list_procedure_ids())
+
+
+def _suggest_part_procedure(local_name: str) -> str | None:
+    """Return an existing library procedure id for this part, or None."""
+    hint = _PART_PROCEDURE_HINTS.get(local_name)
+    if hint is None:
+        return None
+    known = _known_procedure_ids()
+    return hint if hint in known else None
+
+
+def _sketch_parts(g: str) -> list[PartSpec]:
     catalog = (
-        ("motor", "motor"),
-        ("nema", "motor"),
-        ("gear", "gear"),
-        ("bearing", "bearing"),
-        ("shaft", "shaft"),
-        ("housing", "housing"),
-        ("cover", "cover"),
-        ("plate", "plate"),
-        ("bracket", "bracket"),
-        ("bolt", "fastener"),
-        ("screw", "fastener"),
-        ("frame", "frame"),
-        ("base", "base"),
-        ("fixture", "fixture"),
+        ("motor", "motor", "drive motor"),
+        ("nema", "motor", "NEMA stepper / motor"),
+        ("gear", "gear", "gear / mesh"),
+        ("bearing", "bearing", "bearing"),
+        ("shaft", "shaft", "shaft"),
+        ("housing", "housing", "housing"),
+        ("cover", "cover", "cover / lid"),
+        ("plate", "plate", "plate"),
+        ("bracket", "bracket", "bracket / flange"),
+        ("bolt", "fastener", "fastener"),
+        ("screw", "fastener", "fastener"),
+        ("frame", "frame", "frame"),
+        ("base", "base", "base"),
+        ("fixture", "fixture", "fixture"),
     )
-    seen: list[str] = []
-    for key, label in catalog:
-        if key in g and label not in seen:
-            seen.append(label)
-    return seen or ["base", "features", "fasteners"]
+    seen: list[PartSpec] = []
+    names: set[str] = set()
+    for key, label, brief in catalog:
+        if key in g and label not in names:
+            names.add(label)
+            seen.append(
+                PartSpec(
+                    local_name=label,
+                    brief=brief,
+                    procedure_id=_suggest_part_procedure(label),
+                    keep_separate=True,
+                )
+            )
+    if seen:
+        return seen
+    return [
+        PartSpec(local_name="base", brief="primary body", procedure_id=_suggest_part_procedure("base"), keep_separate=True),
+        PartSpec(local_name="features", brief="features / cuts", procedure_id=None, keep_separate=True),
+        PartSpec(local_name="fasteners", brief="fasteners", procedure_id=None, keep_separate=True),
+    ]
 
 
 def assess_goal(goal: str) -> ClarifyNeeded | PartPlan | None:

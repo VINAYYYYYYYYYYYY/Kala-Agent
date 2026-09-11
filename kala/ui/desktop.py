@@ -914,10 +914,21 @@ class MainWindow(QMainWindow):
             self._rail_set("needs_clarify", export="—", tools="—", sync="—")
             return
         if isinstance(gate, PartPlan):
+            part_bits = []
+            for p in gate.parts:
+                bit = p.local_name
+                if p.procedure_id:
+                    bit += f"→{p.procedure_id}"
+                if not p.keep_separate:
+                    bit += " (merged)"
+                part_bits.append(bit)
             lines = [
                 "part_plan — BOM sketch only (per-part bind is next wave)",
-                "parts: " + ", ".join(gate.parts),
+                "parts: " + ", ".join(part_bits),
             ]
+            for p in gate.parts:
+                if p.brief:
+                    lines.append(f"  • {p.local_name}: {p.brief}")
             if gate.notes:
                 lines.append(gate.notes)
             self._add(self._agent_msg("\n".join(lines)))
