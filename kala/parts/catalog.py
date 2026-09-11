@@ -349,6 +349,41 @@ class PartsCatalog:
             return learned[key]
         return None
 
+    def resolve(self, local_name: str, brief: str | None = None) -> str | None:
+        """Resolve a BOM line to a known catalog part_id (aliases/search only; never invent)."""
+        texts: list[str] = []
+        if local_name and local_name.strip():
+            texts.append(local_name.strip())
+        if brief and brief.strip():
+            texts.append(brief.strip())
+
+        for text in texts:
+            hit = self.resolve_id(text)
+            if hit:
+                return hit
+
+        tokens: list[str] = []
+        for text in texts:
+            normalized = text.lower().replace("-", "_").replace(" ", "_")
+            tokens.extend(tok for tok in normalized.split("_") if tok)
+        for tok in tokens:
+            hit = self.resolve_id(tok)
+            if hit:
+                return hit
+
+        if local_name and local_name.strip():
+            search_result = self.search(local_name.strip())
+            parts = search_result.data.get("parts") or []
+            ids = [
+                str(p["part_id"])
+                for p in parts
+                if isinstance(p.get("part_id"), str) and p["part_id"] in self._parts
+            ]
+            if len(ids) == 1:
+                return ids[0]
+
+        return None
+
     def search(self, query: str) -> ToolResult:
         from kala.cad.protocol import ToolResult
 
