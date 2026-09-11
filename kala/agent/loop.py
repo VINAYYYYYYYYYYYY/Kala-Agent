@@ -95,6 +95,23 @@ def _skip_silent_fuse(state: SessionState) -> bool:
     return False
 
 
+def _procedure_step_context(state: SessionState) -> DynamicContext:
+    """Reuse procedure/step/allowed-tool ids — no DesignContextModel.enrich."""
+    step = state.current_step
+    if step is None:
+        return DynamicContext(focus=f"procedure={state.procedure.id} complete")
+    return DynamicContext(
+        focus=f"[{step.id}] {step.goal}",
+        constraints=[f"procedure_id={state.procedure.id}", f"step={step.id}"],
+        recommended_tools=list(step.allowed_tools),
+        snippets=[
+            f"procedure_id={state.procedure.id}",
+            f"step={step.id}",
+            f"exit_criteria={step.exit_criteria}",
+        ],
+    )
+
+
 def _force_modeling_progress(state: SessionState, registry: Any) -> list[ToolEvent]:
     """Force progress with real modeling tools when fidelity gate blocks.
     
@@ -425,11 +442,16 @@ class Agent:
         state: SessionState,
         registry: ToolRegistry,
         contexts: list[DynamicContext],
+        *,
+        enrich: bool = True,
     ) -> None:
         try:
             for _ in range(self.max_turns):
-                context = self.context_model.enrich(state)
-                contexts.append(context)
+                if enrich:
+                    context = self.context_model.enrich(state)
+                    contexts.append(context)
+                else:
+                    context = _procedure_step_context(state)
                 turn = self.planner.propose(state, context, registry.schemas_for_planner())
 
                 if not turn.calls and turn.done:
@@ -753,9 +775,11 @@ class Agent:
                 standard_parts=self.standard_parts,
                 procedure=load_default_procedure(pid),
                 status="running",
+                part_plan={"kind": "part_plan", "parts": [part.to_dict()], "notes": ""},
             )
-            # One Agent/session per PartSpec (sequential). Reuse planner + context
-            # model; do not bypass assess_goal on the parent brief.
+            # One Agent/session per PartSpec (sequential). Reuse planner; do not
+            # re-enter assess_goal (part briefs can contain "gearbox") and do not
+            # call DesignContextModel.enrich.
             child = Agent(
                 backend_name=self.backend_name,
                 standard_parts=self.standard_parts,
@@ -765,7 +789,7 @@ class Agent:
                 max_turns=self.max_turns,
             )
             child._backend = self._backend
-            child._execute_playbook(part_state, registry, [])
+            child._execute_playbook(part_state, registry, [], enrich=False)
             for event in part_state.history:
                 event.data = {
                     **event.data,

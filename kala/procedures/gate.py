@@ -165,33 +165,6 @@ def _sketch_parts(g: str) -> list[PartSpec]:
     ]
 
 
-def _with_gearbox_bindable(g: str, parts: list[PartSpec]) -> list[PartSpec]:
-    """Gearbox-class briefs need ≥1 existing library procedure_id (shaft/housing)."""
-    if "gearbox" not in g and "gear box" not in g:
-        return parts
-    names = {p.local_name for p in parts}
-    extra: list[PartSpec] = []
-    if "shaft" not in names:
-        extra.append(
-            PartSpec(
-                local_name="shaft",
-                brief="input / output shaft",
-                procedure_id=_suggest_part_procedure("shaft"),
-                keep_separate=True,
-            )
-        )
-    if "housing" not in names:
-        extra.append(
-            PartSpec(
-                local_name="housing",
-                brief="gearbox housing",
-                procedure_id=_suggest_part_procedure("housing"),
-                keep_separate=True,
-            )
-        )
-    return extra + parts
-
-
 def assess_goal(goal: str) -> ClarifyNeeded | PartPlan | None:
     """Gate before bind/done. None = packaged procedure may bind."""
     g = (goal or "").lower().strip()
@@ -223,11 +196,10 @@ def assess_goal(goal: str) -> ClarifyNeeded | PartPlan | None:
     )
     if strong_multi or (multipart and not single):
         return PartPlan(
-            parts=_with_gearbox_bindable(g, _sketch_parts(g)),
+            parts=_sketch_parts(g),
             notes=(
-                "Per-part runner binds packaged playbooks sequentially; "
-                "parts without a library procedure_id are skipped (never invented); "
-                "keep_separate parts are not fused into one brick."
+                "Consume PartPlan: bind packaged playbooks for library procedure_id; "
+                "skip null ids (never invent); keep_separate parts are not fused-all."
             ),
         )
 

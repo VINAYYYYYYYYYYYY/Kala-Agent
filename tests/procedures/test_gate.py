@@ -52,9 +52,6 @@ def test_gearbox_part_plan():
     gear = next(p for p in g.parts if p.local_name == "gear")
     assert gear.procedure_id is None
     assert gear.keep_separate is True
-    bindable = [p for p in g.parts if p.procedure_id]
-    assert bindable, "gearbox-class plan must include ≥1 existing procedure_id"
-    assert all(p.procedure_id in _KNOWN for p in bindable)
     payload = g.to_dict()
     assert payload["kind"] == "part_plan"
     assert isinstance(payload["parts"], list)
@@ -71,3 +68,13 @@ def test_housing_assembly_suggests_known_procedure():
         assert by_name["housing"].procedure_id == "housing_cover"
     if "cover" in by_name:
         assert by_name["cover"].procedure_id == "housing_cover"
+
+
+def test_gearbox_named_parts_keep_library_ids():
+    """Keywords already in the brief map to packaged ids — gate does not invent extras."""
+    g = assess_goal("planetary gearbox with shaft and housing")
+    assert isinstance(g, PartPlan)
+    by_name = {p.local_name: p for p in g.parts}
+    assert by_name["gear"].procedure_id is None
+    assert by_name["shaft"].procedure_id == "stepped_shaft"
+    assert by_name["housing"].procedure_id == "housing_cover"
