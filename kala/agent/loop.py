@@ -754,7 +754,18 @@ class Agent:
                 procedure=load_default_procedure(pid),
                 status="running",
             )
-            self._execute_playbook(part_state, registry, contexts)
+            # One Agent/session per PartSpec (sequential). Reuse planner + context
+            # model; do not bypass assess_goal on the parent brief.
+            child = Agent(
+                backend_name=self.backend_name,
+                standard_parts=self.standard_parts,
+                procedure_id=pid,
+                planner=self.planner,
+                context_model=self.context_model,
+                max_turns=self.max_turns,
+            )
+            child._backend = self._backend
+            child._execute_playbook(part_state, registry, [])
             for event in part_state.history:
                 event.data = {
                     **event.data,
@@ -778,6 +789,22 @@ class Agent:
                     "error": part_state.error,
                 }
             )
+
+        keep_separate = any(p.keep_separate for p in plan.parts)
+        if keep_separate and registry.has("export"):
+            asm_path = "outputs/kala_keep_separate.step"
+            result = registry.call("export", body_id="ALL", path=asm_path, fmt="step")
+            state.history.append(
+                ToolEvent(
+                    tool="export",
+                    args={"body_id": "ALL", "path": asm_path, "fmt": "step"},
+                    ok=result.ok,
+                    message=result.message,
+                    data=dict(result.data),
+                )
+            )
+            if result.ok:
+                state.last_export = str(result.data.get("path") or asm_path)
 
         modeled = any(
             r.get("procedure_id") and r.get("status") in {"done", "max_turns"}

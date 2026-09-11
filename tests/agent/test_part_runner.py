@@ -82,6 +82,13 @@ def test_keep_separate_does_not_fuse_all_parts():
     if len(executed_parts) >= 2:
         assert len(bodies) >= 2, "keep_separate must leave distinct solids, not one fused brick"
 
+    all_exports = [
+        e
+        for e in st.history
+        if e.ok and e.tool == "export" and str(e.args.get("body_id", "")).upper() == "ALL"
+    ]
+    assert all_exports, "keep_separate assembly must export body_id=ALL"
+
 
 def test_all_null_procedure_ids_clarify():
     agent = Agent(backend_name="mock", planner=StubPlanner(), max_turns=8)
