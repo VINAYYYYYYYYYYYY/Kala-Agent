@@ -13,7 +13,7 @@ from kala.agent.loop import (
 from kala.llm.stub import StubPlanner
 from kala.ml.base import DynamicContext
 from kala.ml.stub import StubDesignContextModel
-from kala.procedures import ClarifyNeeded, PartPlan, assess_goal
+from kala.procedures import ClarifyNeeded, PartPlan, PartSpec, assess_goal
 from kala.procedures.schema import list_procedure_ids, load_default_procedure
 from kala.session.state import SessionState
 
@@ -49,8 +49,8 @@ def test_laptop_still_clarify_no_modeling():
     assert isinstance(assess_goal("16 inch laptop"), ClarifyNeeded)
 
 
-def test_bare_gearbox_without_library_parts_clarifies():
-    """assess_goal unchanged: gear-only BOM has no library id → clarify, no invent."""
+def test_gear_only_bom_catalog_binds_without_procedure_id():
+    """assess_goal unchanged: gear-only BOM has no library id but catalog alias may bind."""
     goal = "planetary gearbox with sun and planets"
     gate = assess_goal(goal)
     assert isinstance(gate, PartPlan)
@@ -59,9 +59,14 @@ def test_bare_gearbox_without_library_parts_clarifies():
 
     agent = Agent(backend_name="mock", planner=StubPlanner(), max_turns=8)
     result = agent.run(goal)
-    assert result.state.status == "needs_clarify"
-    assert result.state.part_plan is not None
-    assert not any(e.ok and e.tool.startswith("create_") for e in result.state.history)
+    st = result.state
+    assert st.status == "done"
+    assert st.part_plan is not None
+    gear_runs = [r for r in st.part_runs if r.get("local_name") == "gear"]
+    assert gear_runs
+    assert gear_runs[0].get("status") == "catalog"
+    assert gear_runs[0].get("catalog_part_id") == "gear_planet"
+    assert gear_runs[0].get("procedure_id") is None
 
 
 def test_gearbox_executes_bindable_parts():
@@ -92,9 +97,10 @@ def test_gearbox_executes_bindable_parts():
     assert executed, "≥1 part with existing procedure_id must run"
     assert {r["procedure_id"] for r in executed} <= _KNOWN
 
-    skipped = [r for r in st.part_runs if r.get("status") == "skipped"]
-    assert any(r.get("local_name") == "gear" for r in skipped)
-    assert any(e.tool == "part_skip" for e in st.history)
+    catalog_runs = [r for r in st.part_runs if r.get("status") == "catalog"]
+    assert any(r.get("local_name") == "gear" for r in catalog_runs)
+    assert any(r.get("catalog_part_id") == "gear_planet" for r in catalog_runs)
+    assert any(e.tool == "part_catalog" for e in st.history)
     assert any(e.tool == "part_bind" for e in st.history)
     assert any(e.ok and e.tool.startswith("create_") for e in st.history)
 
@@ -175,6 +181,68 @@ def test_frozen_part_alias_follows_child_id_alias_remaps():
     assert state.part_body_map["bracket"] == "Fuse_2"
     assert state.id_aliases["part:bracket"] == "Fuse_2"
     assert _resolve_alias(state, "part:bracket") == "Fuse_2"
+
+
+def test_catalog_bind_null_procedure_id_motor():
+    """Null procedure_id + catalog alias hit inserts standard part instead of skip."""
+    goal = "NEMA17 planetary gearbox with shaft and housing"
+    agent = Agent(backend_name="mock", planner=StubPlanner(), max_turns=32)
+    result = agent.run(goal)
+    st = result.state
+    assert st.status == "done"
+
+    motor_runs = [r for r in st.part_runs if r.get("local_name") == "motor"]
+    assert motor_runs
+    motor = motor_runs[0]
+    assert motor.get("procedure_id") is None
+    assert motor.get("status") == "catalog"
+    assert motor.get("catalog_part_id") == "nema17_body"
+
+    assert any(e.tool == "part_catalog" for e in st.history)
+    assert any(e.ok and e.tool == "insert_part" for e in st.history)
+    assert "motor" in st.part_body_map
+    assert st.id_aliases.get("part:motor") == st.part_body_map["motor"]
+
+
+def test_catalog_bind_bearing_608_from_brief_token():
+    """Brief token 608 resolves to bearing_608 and runs via catalog, not skip."""
+    plan = PartPlan(
+        parts=[
+            PartSpec(
+                local_name="bearing",
+                brief="608 ball bearing skate",
+                procedure_id=None,
+                keep_separate=True,
+            ),
+            PartSpec(
+                local_name="shaft",
+                brief="shaft",
+                procedure_id="stepped_shaft",
+                keep_separate=True,
+            ),
+        ]
+    )
+    agent = Agent(backend_name="mock", planner=StubPlanner(), max_turns=32)
+    result = agent._run_part_plan("bearing assembly with shaft", plan, [])
+    st = result.state
+
+    bearing_runs = [r for r in st.part_runs if r.get("local_name") == "bearing"]
+    assert bearing_runs
+    bearing = bearing_runs[0]
+    assert bearing.get("procedure_id") is None
+    assert bearing.get("status") == "catalog"
+    assert bearing.get("catalog_part_id") == "bearing_608"
+    assert "bearing" in st.part_body_map
+
+
+def test_ambiguous_bearing_still_skips_without_catalog_hit():
+    goal = "planetary gearbox with shaft and housing and bearing"
+    agent = Agent(backend_name="mock", planner=StubPlanner(), max_turns=32)
+    result = agent.run(goal)
+    bearing_runs = [r for r in result.state.part_runs if r.get("local_name") == "bearing"]
+    assert bearing_runs
+    assert bearing_runs[0].get("status") == "skipped"
+    assert bearing_runs[0].get("catalog_part_id") is None
 
 
 def test_skip_silent_fuse_only_when_keep_separate():

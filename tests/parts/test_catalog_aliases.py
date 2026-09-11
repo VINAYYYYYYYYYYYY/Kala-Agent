@@ -363,6 +363,18 @@ class TestCatalogAliases:
             resolved = catalog.resolve_id(part_id)
             assert resolved == part_id, f"Exact part_id '{part_id}' should resolve to itself"
 
+    def test_resolve_motor_alias_from_local_name(self, catalog: PartsCatalog) -> None:
+        assert catalog.resolve("motor", "NEMA stepper / motor") == "nema17_body"
+
+    def test_resolve_bearing_608_from_brief_token(self, catalog: PartsCatalog) -> None:
+        assert catalog.resolve("bearing", "608 ball bearing skate") == "bearing_608"
+
+    def test_resolve_ambiguous_bearing_returns_none(self, catalog: PartsCatalog) -> None:
+        assert catalog.resolve("bearing", "bearing") is None
+
+    def test_resolve_never_invents_ids(self, catalog: PartsCatalog) -> None:
+        assert catalog.resolve("widget", "unknown custom part") is None
+
     def test_all_aliases_map_to_existing_parts(self, catalog: PartsCatalog) -> None:
         """Verify that all ALIASES map to parts that actually exist in the catalog."""
         from kala.parts.catalog import PartsCatalog as PC

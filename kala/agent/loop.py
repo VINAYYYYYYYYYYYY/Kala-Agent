@@ -84,6 +84,16 @@ def library_procedure_id(procedure_id: str | None) -> str | None:
     return procedure_id if procedure_id in set(list_procedure_ids()) else None
 
 
+def _part_plan_has_bind(plan: PartPlan, catalog: PartsCatalog) -> bool:
+    """True when any part can bind via library procedure or catalog resolve."""
+    for part in plan.parts:
+        if library_procedure_id(part.procedure_id):
+            return True
+        if catalog.resolve(part.local_name, part.brief):
+            return True
+    return False
+
+
 def _skip_silent_fuse(state: SessionState) -> bool:
     """keep_separate parts and machine_assembly must not be fused into one brick."""
     if state.procedure.id == "machine_assembly":
@@ -713,7 +723,7 @@ class Agent:
                 )
             )
 
-        if not bindable:
+        if not _part_plan_has_bind(plan, self.catalog):
             clarify = ClarifyNeeded(
                 reason=(
                     "Part plan has no existing library procedure_id — "
@@ -774,6 +784,54 @@ class Agent:
         for part in plan.parts:
             pid = library_procedure_id(part.procedure_id)
             if pid is None:
+                catalog_id = self.catalog.resolve(part.local_name, part.brief)
+                if catalog_id:
+                    state.history.append(
+                        ToolEvent(
+                            tool="part_catalog",
+                            args={
+                                "local_name": part.local_name,
+                                "catalog_part_id": catalog_id,
+                            },
+                            ok=True,
+                            message=(
+                                f"Catalog bind {catalog_id} for part "
+                                f"{part.local_name!r}: {part.brief}"
+                            ),
+                            data={
+                                "part": part.local_name,
+                                "catalog_part_id": catalog_id,
+                            },
+                        )
+                    )
+                    if registry.has("insert_part"):
+                        result = registry.call("insert_part", part_id=catalog_id)
+                    else:
+                        result = self.catalog.insert(self._backend, catalog_id)
+                    state.history.append(
+                        ToolEvent(
+                            tool="insert_part",
+                            args={"part_id": catalog_id},
+                            ok=result.ok,
+                            message=result.message,
+                            data=dict(result.data),
+                        )
+                    )
+                    body_id = result.data.get("body_id") if result.ok else None
+                    if body_id:
+                        freeze_part_alias(state, part.local_name, str(body_id))
+                    state.part_runs.append(
+                        {
+                            "local_name": part.local_name,
+                            "brief": part.brief,
+                            "procedure_id": part.procedure_id,
+                            "catalog_part_id": catalog_id,
+                            "status": "catalog" if result.ok else "error",
+                            "error": result.message if not result.ok else None,
+                        }
+                    )
+                    continue
+
                 state.history.append(
                     ToolEvent(
                         tool="part_skip",
@@ -784,7 +842,7 @@ class Agent:
                         ok=True,
                         message=(
                             f"Skip part {part.local_name!r}: no existing library "
-                            "procedure_id (never invent)."
+                            "procedure_id or catalog hit (never invent)."
                         ),
                         data={
                             "part": part.local_name,
@@ -798,7 +856,7 @@ class Agent:
                         "brief": part.brief,
                         "procedure_id": part.procedure_id,
                         "status": "skipped",
-                        "reason": "no library procedure_id",
+                        "reason": "no library procedure_id or catalog hit",
                     }
                 )
                 continue
@@ -880,6 +938,9 @@ class Agent:
 
         modeled = any(
             r.get("procedure_id") and r.get("status") in {"done", "max_turns"}
+            for r in state.part_runs
+        ) or any(
+            r.get("status") == "catalog" and r.get("catalog_part_id")
             for r in state.part_runs
         ) or any(e.ok and str(e.tool).startswith("create_") for e in state.history)
         if modeled:
