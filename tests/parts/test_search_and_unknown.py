@@ -40,10 +40,24 @@ class TestUnknownPartSoftened:
         msg = result.message
         assert "Unknown part_id" in msg
         assert len(msg) < 250
-        assert "search_parts" in msg.lower() or "similar" in msg.lower()
+        assert "search_parts" in msg.lower()
+        assert "Known:" not in msg
         data = result.data
         assert "suggestions" in data
         assert isinstance(data["suggestions"], list)
+
+
+
+    def test_resolve_rejects_false_substring_hits(self, catalog: PartsCatalog) -> None:
+        """Kill over-eager substring resolve (e.g. 'ring' inside 'bearing_9999')."""
+        assert catalog.resolve_id("bearing_9999") is None
+        assert catalog.resolve_id("nema23") is None
+
+    def test_insert_suggestions_are_existing_ids_only(self, catalog: PartsCatalog) -> None:
+        result = catalog.insert(MockBackend(), "bearing_9999")
+        assert result.ok is False
+        for sid in result.data["suggestions"]:
+            assert sid in catalog._parts
 
 
 class TestSearchFixtures:
@@ -72,7 +86,7 @@ class TestSearchFixtures:
     def test_search_empty_query(self, catalog: PartsCatalog) -> None:
         result = catalog.search("")
         assert result.ok is True
-        assert len(result.data["parts"]) == len(catalog.default()._parts)
+        assert len(result.data["parts"]) == len(catalog._parts)
 
     def test_search_no_match(self, catalog: PartsCatalog) -> None:
         result = catalog.search("xyznonexistent")
@@ -82,4 +96,4 @@ class TestSearchFixtures:
     def test_search_only_real_ids(self, catalog: PartsCatalog) -> None:
         result = catalog.search("gear")
         for p in result.data["parts"]:
-            assert p["part_id"] in catalog.default()._parts
+            assert p["part_id"] in catalog._parts

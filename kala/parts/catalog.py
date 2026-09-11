@@ -349,8 +349,9 @@ class PartsCatalog:
             return learned[key]
         return None
 
-    def search(self, query: str):
+    def search(self, query: str) -> ToolResult:
         from kala.cad.protocol import ToolResult
+
         q = query.lower().strip()
         hits = []
         for part in self._parts.values():
@@ -370,26 +371,61 @@ class PartsCatalog:
             data={"parts": hits, "query": query},
         )
 
+    def _suggest_ids(self, part_id: str, *, limit: int = 5) -> list[str]:
+        """Suggest existing catalog ids for an unresolved part_id (never invent ids)."""
+        needle = part_id.strip().lower().replace(" ", "_").replace("-", "_")
+        hits: list[str] = []
+        # Strong contains against real ids only (avoid short-alias false positives like "ring" in "bearing")
+        for pid in self._parts:
+            pl = pid.lower()
+            if len(needle) >= 3 and (needle in pl or pl in needle):
+                hits.append(pid)
+        for alias, pid in self.ALIASES.items():
+            if pid not in self._parts:
+                continue
+            if len(alias) < 4:
+                continue
+            if needle in alias or alias in needle:
+                hits.append(pid)
+        if not hits and needle:
+            search_hits = self.search(part_id)
+            for row in (search_hits.data.get("parts") or [])[:limit]:
+                pid = row.get("part_id")
+                if isinstance(pid, str) and pid in self._parts:
+                    hits.append(pid)
+        seen: set[str] = set()
+        out: list[str] = []
+        for pid in hits:
+            if pid not in seen:
+                seen.add(pid)
+                out.append(pid)
+            if len(out) >= limit:
+                break
+        return out
+
     def insert(
         self,
-        backend,
+        backend: CadBackend,
         part_id: str,
         *,
         x: float = 0.0,
         y: float = 0.0,
         z: float = 0.0,
-    ):
+    ) -> ToolResult:
         from kala.cad.protocol import ToolResult
+
         resolved = self.resolve_id(part_id)
         if resolved is None:
-            suggestions = [pid for pid in self._parts if part_id.lower() in pid.lower() or pid.lower() in part_id.lower()]
-            alias_suggestions = [self.ALIASES[alias] for alias in self.ALIASES if part_id.lower() in alias or alias in part_id.lower() and self.ALIASES[alias] in self._parts]
-            unique_suggestions = sorted(set(suggestions + alias_suggestions))[:5]
-            msg = f"Unknown part_id '{part_id}'. Try search_parts or similar: {', '.join(unique_suggestions) or 'none'}"
+            suggestions = self._suggest_ids(part_id)
+            hint = ", ".join(suggestions) if suggestions else "none — call search_parts"
+            msg = (
+                f"Unknown part_id '{part_id}'. "
+                f"Try search_parts for catalog ids. Suggestions: {hint}"
+            )
             return ToolResult(
                 ok=False,
                 message=msg,
-                data={"suggestions": unique_suggestions, "query": part_id},
+                data={"suggestions": suggestions, "query": part_id},
             )
         part = self._parts[resolved]
 
@@ -399,11 +435,9 @@ class PartsCatalog:
         body_id = result.data.get("body_id")
         if body_id and (x or y or z):
             backend.translate(str(body_id), x, y, z)
-        from kala.cad.protocol import ToolResult
         note = f"Inserted standard part {part.name} → {body_id}"
         if resolved != part_id:
             note += f" (resolved '{part_id}' → '{resolved}')"
-        from kala.cad.protocol import ToolResult
         return ToolResult(
             ok=True,
             message=note,
@@ -417,7 +451,9 @@ class PartsCatalog:
             },
         )
 
-    def _build(self, backend, part):
+    def _build(self, backend: CadBackend, part: StandardPart) -> ToolResult:
+        from kala.cad.protocol import ToolResult
+
         d = part.dims_mm
         if part.category == "bearing":
             # Tube: outer cylinder minus inner bore
@@ -483,7 +519,6 @@ class PartsCatalog:
                 d["width"] / 2.0,
                 d["height"] / 2.0,
             )
-            from kala.cad.protocol import ToolResult
             return ToolResult(
                 ok=True,
                 message=f"Inserted motor body {bid} + shaft {sid}",
