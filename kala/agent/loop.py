@@ -19,6 +19,7 @@ from kala.ml.base import DesignContextModel, DynamicContext
 from kala.ml.learned import LearnedDesignContextModel
 from kala.ml.stub import StubDesignContextModel
 from kala.parts.catalog import PartsCatalog
+from kala.procedures.gate import ClarifyNeeded, PartPlan, assess_goal
 from kala.procedures.schema import load_default_procedure
 from kala.session.state import SessionState, ToolEvent
 
@@ -386,6 +387,31 @@ class Agent:
 
     def run(self, goal: str) -> RunResult:
         contexts: list[DynamicContext] = []
+        gate = assess_goal(goal)
+        if isinstance(gate, ClarifyNeeded):
+            procedure = load_default_procedure(self.procedure_id)
+            state = SessionState(
+                goal=goal,
+                backend_name=self.backend_name,
+                standard_parts=self.standard_parts,
+                procedure=procedure,
+                status="needs_clarify",
+                clarify=gate.to_dict(),
+                error=gate.reason,
+            )
+            return RunResult(state=state, contexts=contexts)
+        if isinstance(gate, PartPlan):
+            procedure = load_default_procedure(self.procedure_id)
+            state = SessionState(
+                goal=goal,
+                backend_name=self.backend_name,
+                standard_parts=self.standard_parts,
+                procedure=procedure,
+                status="part_plan",
+                part_plan=gate.to_dict(),
+                error=gate.notes or "Part plan required before binding procedures.",
+            )
+            return RunResult(state=state, contexts=contexts)
         try:
             state, registry = self._build(goal)
         except Exception as exc:  # noqa: BLE001

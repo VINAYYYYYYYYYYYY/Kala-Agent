@@ -26,7 +26,14 @@ from PySide6.QtWidgets import (
 
 from kala.ui.providers_dialog import ProvidersDialog
 
-from kala.procedures import list_procedures, load_default_procedure, suggest_procedure
+from kala.procedures import (
+    ClarifyNeeded,
+    PartPlan,
+    assess_goal,
+    list_procedures,
+    load_default_procedure,
+    suggest_procedure,
+)
 
 # (label, prompt, procedure_id) — procedure ids from packaged library
 STARTERS: list[tuple[str, str, str]] = [
@@ -898,9 +905,39 @@ class MainWindow(QMainWindow):
 
         self._add(self._user_msg(goal))
         self.composer.clear()
+
+        gate = assess_goal(goal)
+        if isinstance(gate, ClarifyNeeded):
+            lines = ["needs_clarify — will not bind simple_bracket / finish envelope-only", gate.reason]
+            lines.extend(f"• {q}" for q in gate.questions)
+            self._add(self._agent_msg("\n".join(lines)))
+            self._rail_set("needs_clarify", export="—", tools="—", sync="—")
+            return
+        if isinstance(gate, PartPlan):
+            part_bits = []
+            for p in gate.parts:
+                bit = p.local_name
+                if p.procedure_id:
+                    bit += f"→{p.procedure_id}"
+                if not p.keep_separate:
+                    bit += " (merged)"
+                part_bits.append(bit)
+            lines = [
+                "part_plan — BOM sketch only (per-part bind is next wave)",
+                "parts: " + ", ".join(part_bits),
+            ]
+            for p in gate.parts:
+                if p.brief:
+                    lines.append(f"  • {p.local_name}: {p.brief}")
+            if gate.notes:
+                lines.append(gate.notes)
+            self._add(self._agent_msg("\n".join(lines)))
+            self._rail_set("part_plan", export="—", tools="—", sync="—")
+            return
+
         self._set_busy(True)
         suggested = suggest_procedure(goal)
-        if suggested in _LIBRARY_IDS:
+        if suggested and suggested in _LIBRARY_IDS:
             self._set_procedure(suggested)
         first = next(iter(self._proc), "envelope")
         self._mark_proc(first, done=False)

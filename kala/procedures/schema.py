@@ -80,8 +80,16 @@ def require_known_procedure(procedure_id: str) -> None:
         raise ValueError(f"Unknown procedure {procedure_id!r}. Known: {known}")
 
 
-def suggest_procedure(goal: str) -> str:
-    """Map design brief keywords to a packaged procedure id (fail soft → simple_bracket)."""
+def suggest_procedure(goal: str) -> str | None:
+    """Map design brief keywords to a packaged procedure id.
+
+    Returns None when assess_goal gates (product-like / multi-part) so callers
+    never silently default those briefs to simple_bracket.
+    """
+    from kala.procedures.gate import assess_goal
+
+    if assess_goal(goal) is not None:
+        return None
     g = (goal or "").lower()
     known = set(list_procedure_ids())
     rules: list[tuple[tuple[str, ...], str]] = [

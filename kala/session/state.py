@@ -38,6 +38,9 @@ class SessionState:
     analysis_by_body: dict[str, Any] = field(default_factory=dict)
     # Persistent body_id aliases across planner turns
     id_aliases: dict[str, str] = field(default_factory=dict)
+    # Decompose-or-clarify gate (set when status is needs_clarify / part_plan)
+    clarify: dict[str, Any] | None = None
+    part_plan: dict[str, Any] | None = None
 
     def add_usage(self, usage: dict[str, Any] | None) -> None:
         if not usage:
@@ -100,4 +103,6 @@ class SessionState:
             ],
             "analysis_by_body": self.analysis_by_body,
             "id_aliases": self.id_aliases,
+            "clarify": self.clarify,
+            "part_plan": self.part_plan,
         }
