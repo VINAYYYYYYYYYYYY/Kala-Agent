@@ -80,6 +80,19 @@ def require_known_procedure(procedure_id: str) -> None:
         raise ValueError(f"Unknown procedure {procedure_id!r}. Known: {known}")
 
 
+def resolve_procedure_for_send(
+    goal: str,
+    procedure_id: str,
+    *,
+    user_picked: bool,
+) -> str:
+    """Return procedure id for a run; keyword suggest only when user has not chosen one."""
+    if user_picked:
+        return procedure_id
+    suggested = suggest_procedure(goal)
+    return suggested if suggested else procedure_id
+
+
 def suggest_procedure(goal: str) -> str | None:
     """Map design brief keywords to a packaged procedure id.
 

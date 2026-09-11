@@ -11,6 +11,7 @@ from PySide6.QtCore import QPoint, Qt, QThread, Signal
 from PySide6.QtGui import QColor, QFont, QFontDatabase, QKeyEvent, QPalette
 from PySide6.QtWidgets import (
     QApplication,
+    QComboBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -32,7 +33,7 @@ from kala.procedures import (
     assess_goal,
     list_procedures,
     load_default_procedure,
-    suggest_procedure,
+    resolve_procedure_for_send,
 )
 
 # (label, prompt, procedure_id) — procedure ids from packaged library
@@ -64,9 +65,6 @@ STARTERS: list[tuple[str, str, str]] = [
         "housing_cover",
     ),
 ]
-
-# Smoke: library must load (also documents available playbooks for the rail).
-_LIBRARY_IDS = {p.id for p in list_procedures()}
 
 APP_QSS = """
 * {
@@ -254,6 +252,26 @@ QMenu {
 }
 QMenu::item { padding: 6px 16px; }
 QMenu::item:selected { background-color: #24352c; }
+QComboBox#procCombo {
+  background-color: #141719;
+  color: #c4c9cf;
+  border: 1px solid #252a30;
+  border-radius: 2px;
+  padding: 4px 8px;
+  font-family: "iA Writer Mono S", "Adwaita Mono", monospace;
+  font-size: 11px;
+}
+QComboBox#procCombo:hover { border-color: #355043; }
+QComboBox#procCombo::drop-down {
+  border: none;
+  width: 18px;
+}
+QComboBox#procCombo QAbstractItemView {
+  background-color: #141719;
+  color: #c4c9cf;
+  border: 1px solid #252a30;
+  selection-background-color: #24352c;
+}
 """
 
 
@@ -433,6 +451,7 @@ class MainWindow(QMainWindow):
         self._backend_id = default_backend
         self._parts_on = False
         self._procedure_id = "simple_bracket"
+        self._procedure_user_picked = False
 
         shell = QWidget()
         shell.setAutoFillBackground(True)
@@ -618,9 +637,15 @@ class MainWindow(QMainWindow):
         proc_h = QLabel("PROCEDURE")
         proc_h.setObjectName("railTitle")
         lay.addWidget(proc_h)
-        self.rail_proc_id = QLabel(self._procedure_id)
-        self.rail_proc_id.setObjectName("railDim")
-        lay.addWidget(self.rail_proc_id)
+        self.proc_combo = QComboBox()
+        self.proc_combo.setObjectName("procCombo")
+        for proc in list_procedures():
+            self.proc_combo.addItem(proc.id, proc.id)
+        idx = self.proc_combo.findData(self._procedure_id)
+        if idx >= 0:
+            self.proc_combo.setCurrentIndex(idx)
+        self.proc_combo.currentIndexChanged.connect(self._on_proc_combo_changed)
+        lay.addWidget(self.proc_combo)
 
         self._proc_box = QVBoxLayout()
         self._proc_box.setContentsMargins(0, 0, 0, 0)
@@ -741,11 +766,29 @@ class MainWindow(QMainWindow):
         self.composer.setFocus()
 
     def _fill_starter(self, text: str, procedure_id: str) -> None:
-        self._set_procedure(procedure_id)
+        self._set_procedure(procedure_id, user_picked=True)
         self._fill(text)
 
-    def _set_procedure(self, procedure_id: str) -> None:
+    def _on_proc_combo_changed(self, index: int) -> None:
+        if index < 0:
+            return
+        proc_id = self.proc_combo.itemData(index)
+        if not proc_id or proc_id == self._procedure_id:
+            return
+        self._procedure_user_picked = True
+        self._procedure_id = str(proc_id)
+        self._rebuild_proc_rail(self._procedure_id)
+
+    def _set_procedure(self, procedure_id: str, *, user_picked: bool = False) -> None:
         self._procedure_id = procedure_id
+        if user_picked:
+            self._procedure_user_picked = True
+        if hasattr(self, "proc_combo"):
+            idx = self.proc_combo.findData(procedure_id)
+            if idx >= 0:
+                self.proc_combo.blockSignals(True)
+                self.proc_combo.setCurrentIndex(idx)
+                self.proc_combo.blockSignals(False)
         self._rebuild_proc_rail(procedure_id)
 
     def _rebuild_proc_rail(self, procedure_id: str) -> None:
@@ -763,8 +806,6 @@ class MainWindow(QMainWindow):
             steps = [s.id for s in proc.steps]
         except Exception:  # noqa: BLE001
             steps = ["envelope", "features", "standard_parts", "export"]
-        if hasattr(self, "rail_proc_id"):
-            self.rail_proc_id.setText(procedure_id)
         for step in steps:
             lbl = QLabel(f"  {step}")
             lbl.setObjectName("proc")
@@ -936,9 +977,13 @@ class MainWindow(QMainWindow):
             return
 
         self._set_busy(True)
-        suggested = suggest_procedure(goal)
-        if suggested and suggested in _LIBRARY_IDS:
-            self._set_procedure(suggested)
+        procedure_id = resolve_procedure_for_send(
+            goal,
+            self._procedure_id,
+            user_picked=self._procedure_user_picked,
+        )
+        if procedure_id != self._procedure_id:
+            self._set_procedure(procedure_id)
         first = next(iter(self._proc), "envelope")
         self._mark_proc(first, done=False)
 
@@ -949,7 +994,7 @@ class MainWindow(QMainWindow):
             goal=goal,
             backend=self._backend_id,
             standard_parts=self._parts_on,
-            procedure=self._procedure_id,
+            procedure=procedure_id,
         )
         self._worker.finished_ok.connect(self._done)
         self._worker.failed.connect(self._fail)

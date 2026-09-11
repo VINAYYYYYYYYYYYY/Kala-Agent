@@ -9,6 +9,7 @@ from kala.procedures.schema import (
     list_procedures,
     list_procedure_ids,
     suggest_procedure,
+    resolve_procedure_for_send,
     require_known_procedure,
 )
 from kala.procedures.gate import ClarifyNeeded, PartPlan, PartSpec, assess_goal
@@ -22,6 +23,7 @@ __all__ = [
     "list_procedures",
     "list_procedure_ids",
     "suggest_procedure",
+    "resolve_procedure_for_send",
     "require_known_procedure",
     "ClarifyNeeded",
     "PartPlan",
