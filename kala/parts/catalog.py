@@ -6,7 +6,10 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from kala.cad.protocol import CadBackend, ToolResult
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from kala.cad.protocol import CadBackend, ToolResult
 
 
 @dataclass(frozen=True)
@@ -301,6 +304,16 @@ class PartsCatalog:
         "alu_extrusion": "profile_2020",
         "frame": "profile_2020",
         "rail": "profile_2020",
+
+        # Additional common aliases mapping only to existing ids
+        "m3_bolt_8": "hex_m3x8",
+        "m3_bolt_12": "hex_m3x12",
+        "m3_bolt_16": "hex_m3x16",
+        "nema_17_motor": "nema17_body",
+        "sun_gear_nema17": "gear_sun_nema17",
+        "planet_gear_blank": "gear_planet",
+        "ring_gear_internal": "gear_ring_internal",
+        "profile_2020_100": "profile_2020",
     }
 
     def __init__(self, parts: list[StandardPart]) -> None:
@@ -334,16 +347,10 @@ class PartsCatalog:
         learned = self._learned_aliases()
         if key in learned and learned[key] in self._parts:
             return learned[key]
-        # substring match against aliases / ids
-        for alias, pid in self.ALIASES.items():
-            if alias in key or key in alias:
-                return pid
-        for pid in self._parts:
-            if key in pid or pid in key:
-                return pid
         return None
 
-    def search(self, query: str) -> ToolResult:
+    def search(self, query: str):
+        from kala.cad.protocol import ToolResult
         q = query.lower().strip()
         hits = []
         for part in self._parts.values():
@@ -365,19 +372,24 @@ class PartsCatalog:
 
     def insert(
         self,
-        backend: CadBackend,
+        backend,
         part_id: str,
         *,
         x: float = 0.0,
         y: float = 0.0,
         z: float = 0.0,
-    ) -> ToolResult:
+    ):
+        from kala.cad.protocol import ToolResult
         resolved = self.resolve_id(part_id)
         if resolved is None:
-            known = ", ".join(sorted(self._parts))
+            suggestions = [pid for pid in self._parts if part_id.lower() in pid.lower() or pid.lower() in part_id.lower()]
+            alias_suggestions = [self.ALIASES[alias] for alias in self.ALIASES if part_id.lower() in alias or alias in part_id.lower() and self.ALIASES[alias] in self._parts]
+            unique_suggestions = sorted(set(suggestions + alias_suggestions))[:5]
+            msg = f"Unknown part_id '{part_id}'. Try search_parts or similar: {', '.join(unique_suggestions) or 'none'}"
             return ToolResult(
                 ok=False,
-                message=f"Unknown part_id: {part_id}. Known: {known}",
+                message=msg,
+                data={"suggestions": unique_suggestions, "query": part_id},
             )
         part = self._parts[resolved]
 
@@ -387,9 +399,11 @@ class PartsCatalog:
         body_id = result.data.get("body_id")
         if body_id and (x or y or z):
             backend.translate(str(body_id), x, y, z)
+        from kala.cad.protocol import ToolResult
         note = f"Inserted standard part {part.name} → {body_id}"
         if resolved != part_id:
             note += f" (resolved '{part_id}' → '{resolved}')"
+        from kala.cad.protocol import ToolResult
         return ToolResult(
             ok=True,
             message=note,
@@ -403,7 +417,7 @@ class PartsCatalog:
             },
         )
 
-    def _build(self, backend: CadBackend, part: StandardPart) -> ToolResult:
+    def _build(self, backend, part):
         d = part.dims_mm
         if part.category == "bearing":
             # Tube: outer cylinder minus inner bore
@@ -469,6 +483,7 @@ class PartsCatalog:
                 d["width"] / 2.0,
                 d["height"] / 2.0,
             )
+            from kala.cad.protocol import ToolResult
             return ToolResult(
                 ok=True,
                 message=f"Inserted motor body {bid} + shaft {sid}",
