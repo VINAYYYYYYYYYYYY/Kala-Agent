@@ -146,16 +146,13 @@ def main(argv: list[str] | None = None) -> None:
         return
 
     if args.command == "run":
-        from kala.procedures import list_procedure_ids, load_default_procedure
+        from kala.procedures import require_known_procedure
 
-        known = list_procedure_ids()
-        if args.procedure not in known:
-            print(
-                f"Unknown procedure {args.procedure!r}. Known: {', '.join(known)}",
-                file=sys.stderr,
-            )
+        try:
+            require_known_procedure(args.procedure)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
             raise SystemExit(2)
-        load_default_procedure(args.procedure)  # package-path smoke
         agent = Agent(
             backend_name=args.backend,
             standard_parts=(args.standard_parts == "on"),

@@ -7,6 +7,7 @@ from kala.procedures import (
     list_procedure_ids,
     list_procedures,
     load_default_procedure,
+    require_known_procedure,
 )
 
 
@@ -36,3 +37,18 @@ def test_load_stepped_shaft():
     p = load_default_procedure("stepped_shaft")
     assert p.id == "stepped_shaft"
     assert p.steps[0].id == "envelope"
+
+
+def test_require_known_procedure_ok():
+    require_known_procedure("simple_bracket")
+    require_known_procedure("machine_assembly")
+
+
+def test_require_known_procedure_unknown_fails():
+    try:
+        require_known_procedure("nonexistent_procedure_xyz")
+    except ValueError as exc:
+        assert "nonexistent_procedure_xyz" in str(exc)
+        assert "Known:" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError for unknown procedure")

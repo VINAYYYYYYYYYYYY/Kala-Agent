@@ -8,6 +8,7 @@ from kala.procedures.schema import (
     library_dir,
     list_procedures,
     list_procedure_ids,
+    require_known_procedure,
 )
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "library_dir",
     "list_procedures",
     "list_procedure_ids",
+    "require_known_procedure",
 ]
