@@ -48,7 +48,8 @@ Outputs land in `outputs/eval/<file_stem>/`:
 After a chunk finishes, we read `rectify_queue.md`, patch the agent, then re-run failed ids.
 
 ## Procedure audit (chore/designs-procedure-audit)
-- Source of valid ids: `designs/README.md` example + tracked JSONL usage → library = {"machine_assembly", "simple_bracket"}
+- Source of truth (library): `kala/procedures/library/` — all 5 ids: housing_cover, machine_assembly, plate_with_holes, simple_bracket, stepped_shaft
+- JSONL usage referencing only machine_assembly+simple_bracket is USAGE, not the library definition
 - Audited: batch_sample.jsonl, batch_cad1000_150.jsonl, batch_cad1000_rerun4.jsonl (tracked files)
 - All procedure refs valid; no mappings needed.
 - Untracked slices (batch_cad1000_slice*.jsonl, slice4_extreme, slice8_sc, slice12) left untouched (not tracked, risky size).
