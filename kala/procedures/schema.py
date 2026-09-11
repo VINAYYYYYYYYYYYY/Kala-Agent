@@ -79,3 +79,20 @@ def require_known_procedure(procedure_id: str) -> None:
         known = ", ".join(list_procedure_ids())
         raise ValueError(f"Unknown procedure {procedure_id!r}. Known: {known}")
 
+
+def suggest_procedure(goal: str) -> str:
+    """Map design brief keywords to a packaged procedure id (fail soft → simple_bracket)."""
+    g = (goal or "").lower()
+    known = set(list_procedure_ids())
+    rules: list[tuple[tuple[str, ...], str]] = [
+        (("shaft", "bushing", "stepped"), "stepped_shaft"),
+        (("housing", "cover", "lid"), "housing_cover"),
+        (("plate", "holes", "hole pattern"), "plate_with_holes"),
+        (("assembly", "machine", "fixture"), "machine_assembly"),
+        (("bracket", "flange", "l-bracket"), "simple_bracket"),
+    ]
+    for keys, pid in rules:
+        if any(k in g for k in keys) and pid in known:
+            return pid
+    return "simple_bracket" if "simple_bracket" in known else next(iter(sorted(known)), "simple_bracket")
+

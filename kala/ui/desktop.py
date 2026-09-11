@@ -26,23 +26,40 @@ from PySide6.QtWidgets import (
 
 from kala.ui.providers_dialog import ProvidersDialog
 
-PROCEDURE_STEPS = ("envelope", "features", "standard_parts", "export")
+from kala.procedures import list_procedures, load_default_procedure, suggest_procedure
 
-STARTERS: list[tuple[str, str]] = [
+# (label, prompt, procedure_id) — procedure ids from packaged library
+STARTERS: list[tuple[str, str, str]] = [
     (
         "L-bracket",
         "L-bracket base 60x40x4 and vertical wall 60x4x50 at origin, fuse, two Ø5 base holes at (12,20) and (48,20), export L_bracket.step",
+        "simple_bracket",
     ),
     (
         "Flanged bracket",
         "Flanged mounting bracket: vertical plate 120×80×10 mm fused to base flange "
         "160×100×12 mm, central bore Ø40 mm, four M10 clearance holes Ø11 mm inset 15 mm. Export STEP.",
+        "simple_bracket",
     ),
     (
         "Shaft bushing",
         "Shaft bushing OD Ø34 mm, bore Ø28 mm, length 40 mm. Export STEP.",
+        "stepped_shaft",
+    ),
+    (
+        "Plate holes",
+        "Rectangular plate 100x60x8 mm with four Ø6 holes inset 10 mm from corners. Export STEP.",
+        "plate_with_holes",
+    ),
+    (
+        "Housing cover",
+        "Housing cover plate 120x80x6 mm with central Ø40 bore and four M6 clearance holes. Export STEP.",
+        "housing_cover",
     ),
 ]
+
+# Smoke: library must load (also documents available playbooks for the rail).
+_LIBRARY_IDS = {p.id for p in list_procedures()}
 
 APP_QSS = """
 * {
@@ -402,11 +419,13 @@ class MainWindow(QMainWindow):
 
         self._worker: RunWorker | None = None
         self._proc: dict[str, QLabel] = {}
+        self._proc_box: QVBoxLayout | None = None
         self._thinking: QWidget | None = None
         self._empty = True
         self._default_backend = default_backend
         self._backend_id = default_backend
         self._parts_on = False
+        self._procedure_id = "simple_bracket"
 
         shell = QWidget()
         shell.setAutoFillBackground(True)
@@ -592,12 +611,15 @@ class MainWindow(QMainWindow):
         proc_h = QLabel("PROCEDURE")
         proc_h.setObjectName("railTitle")
         lay.addWidget(proc_h)
+        self.rail_proc_id = QLabel(self._procedure_id)
+        self.rail_proc_id.setObjectName("railDim")
+        lay.addWidget(self.rail_proc_id)
 
-        for step in PROCEDURE_STEPS:
-            lbl = QLabel(f"  {step}")
-            lbl.setObjectName("proc")
-            self._proc[step] = lbl
-            lay.addWidget(lbl)
+        self._proc_box = QVBoxLayout()
+        self._proc_box.setContentsMargins(0, 0, 0, 0)
+        self._proc_box.setSpacing(2)
+        lay.addLayout(self._proc_box)
+        self._rebuild_proc_rail(self._procedure_id)
 
         lay.addStretch(1)
 
@@ -652,11 +674,13 @@ class MainWindow(QMainWindow):
         srow = QHBoxLayout(self.starters)
         srow.setContentsMargins(0, 0, 0, 0)
         srow.setSpacing(16)
-        for label, prompt in STARTERS:
+        for label, prompt, proc_id in STARTERS:
             btn = QPushButton(label)
             btn.setObjectName("link")
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn.clicked.connect(lambda _=False, p=prompt: self._fill(p))
+            btn.clicked.connect(
+                lambda _=False, p=prompt, pid=proc_id: self._fill_starter(p, pid)
+            )
             srow.addWidget(btn)
         srow.addStretch(1)
         lay.addWidget(self.starters)
@@ -708,6 +732,38 @@ class MainWindow(QMainWindow):
     def _fill(self, text: str) -> None:
         self.composer.setPlainText(text)
         self.composer.setFocus()
+
+    def _fill_starter(self, text: str, procedure_id: str) -> None:
+        self._set_procedure(procedure_id)
+        self._fill(text)
+
+    def _set_procedure(self, procedure_id: str) -> None:
+        self._procedure_id = procedure_id
+        self._rebuild_proc_rail(procedure_id)
+
+    def _rebuild_proc_rail(self, procedure_id: str) -> None:
+        """Rebuild procedure rail labels from packaged library step ids."""
+        if self._proc_box is None:
+            return
+        while self._proc_box.count():
+            item = self._proc_box.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                w.deleteLater()
+        self._proc.clear()
+        try:
+            proc = load_default_procedure(procedure_id)
+            steps = [s.id for s in proc.steps]
+        except Exception:  # noqa: BLE001
+            steps = ["envelope", "features", "standard_parts", "export"]
+        if hasattr(self, "rail_proc_id"):
+            self.rail_proc_id.setText(procedure_id)
+        for step in steps:
+            lbl = QLabel(f"  {step}")
+            lbl.setObjectName("proc")
+            self._proc[step] = lbl
+            self._proc_box.addWidget(lbl)
+        self._mark_proc(None, done=False)
 
     def _drop(self, w: QWidget | None) -> None:
         if w is None:
@@ -843,7 +899,11 @@ class MainWindow(QMainWindow):
         self._add(self._user_msg(goal))
         self.composer.clear()
         self._set_busy(True)
-        self._mark_proc("envelope", done=False)
+        suggested = suggest_procedure(goal)
+        if suggested in _LIBRARY_IDS:
+            self._set_procedure(suggested)
+        first = next(iter(self._proc), "envelope")
+        self._mark_proc(first, done=False)
 
         self._thinking = self._agent_msg("Working…")
         self._add(self._thinking)
@@ -852,7 +912,7 @@ class MainWindow(QMainWindow):
             goal=goal,
             backend=self._backend_id,
             standard_parts=self._parts_on,
-            procedure="simple_bracket",
+            procedure=self._procedure_id,
         )
         self._worker.finished_ok.connect(self._done)
         self._worker.failed.connect(self._fail)

@@ -61,3 +61,23 @@ def test_unknown_procedure_fails_closed():
         pass
     else:
         raise AssertionError("Expected ValueError for unknown procedure")
+
+
+def test_features_not_via_export_alone():
+    st = _state()
+    st.history.append(ToolEvent("create_box", {}, True, "ok"))
+    # move to features step
+    while st.current_step and st.current_step.id != "features":
+        st.advance_step()
+    assert st.current_step and st.current_step.id == "features"
+    st.last_export = "/tmp/x.step"
+    st.history.append(ToolEvent("export", {}, True, "ok"))
+    assert _exit_criteria_met(st) is False
+
+
+def test_features_met_with_fuse():
+    st = _state()
+    while st.current_step and st.current_step.id != "features":
+        st.advance_step()
+    st.history.append(ToolEvent("boolean_fuse", {}, True, "ok"))
+    assert _exit_criteria_met(st) is True
