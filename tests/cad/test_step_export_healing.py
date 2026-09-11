@@ -386,3 +386,96 @@ def test_export_step_compound_all_invalid_raises():
 
     with pytest.raises(RuntimeError, match="No valid shapes"):
         backend._export_step_compound()
+
+
+def test_export_step_compound_creates_soft_assembly():
+    """Multiple valid shapes create a compound (soft assembly), not a single largest solid."""
+    from kala.cad.freecad.backend import FreeCADBackend
+
+    backend = FreeCADBackend.__new__(FreeCADBackend)
+    backend._step_path = Path("/tmp/kala_test_soft_assembly.step")
+    backend._Part = Mock()
+
+    mock_shape1 = Mock()
+    mock_shape1.isNull.return_value = False
+    mock_shape1.isValid.return_value = True
+    mock_shape1.Volume = 100.0
+
+    mock_shape2 = Mock()
+    mock_shape2.isNull.return_value = False
+    mock_shape2.isValid.return_value = True
+    mock_shape2.Volume = 50.0
+
+    mock_compound = Mock()
+    mock_compound.isNull.return_value = False
+    mock_compound.isValid.return_value = True
+    mock_compound.Volume = 150.0
+    mock_compound.Solids = []
+    mock_compound.removeSplitter.return_value = mock_compound
+    backend._Part.makeCompound.return_value = mock_compound
+
+    obj1 = Mock()
+    obj1.Name = "Box"
+    obj1.Label = "Box"
+    obj1.Shape = mock_shape1
+    obj2 = Mock()
+    obj2.Name = "Cylinder"
+    obj2.Label = "Cylinder"
+    obj2.Shape = mock_shape2
+
+    backend._doc = Mock()
+    backend._doc.Objects = [obj1, obj2]
+    backend._try_fix = Mock(side_effect=lambda s: s)
+
+    backend._export_step_compound()
+
+    backend._Part.makeCompound.assert_called_once()
+    args = backend._Part.makeCompound.call_args[0][0]
+    assert len(args) == 2
+
+
+def test_export_step_compound_heals_compound():
+    """Healing is applied to the soft assembly compound before export."""
+    from kala.cad.freecad.backend import FreeCADBackend
+
+    backend = FreeCADBackend.__new__(FreeCADBackend)
+    backend._step_path = Path("/tmp/kala_test_healed_compound.step")
+    backend._Part = Mock()
+
+    mock_shape1 = Mock()
+    mock_shape1.isNull.return_value = False
+    mock_shape1.isValid.return_value = True
+    mock_shape1.Volume = 100.0
+
+    mock_shape2 = Mock()
+    mock_shape2.isNull.return_value = False
+    mock_shape2.isValid.return_value = True
+    mock_shape2.Volume = 50.0
+
+    mock_compound = Mock()
+    mock_compound.isNull.return_value = False
+    mock_compound.Solids = []
+    mock_compound.removeSplitter.return_value = mock_compound
+    backend._Part.makeCompound.return_value = mock_compound
+    
+    # Track that _heal_shape_for_export is called with the compound
+    backend._heal_shape_for_export = Mock(return_value=mock_compound)
+
+    obj1 = Mock()
+    obj1.Name = "Box"
+    obj1.Label = "Box"
+    obj1.Shape = mock_shape1
+    obj2 = Mock()
+    obj2.Name = "Cylinder"
+    obj2.Label = "Cylinder"
+    obj2.Shape = mock_shape2
+
+    backend._doc = Mock()
+    backend._doc.Objects = [obj1, obj2]
+    backend._try_fix = Mock(side_effect=lambda s: s)
+
+    backend._export_step_compound()
+
+    backend._Part.makeCompound.assert_called_once()
+    # _heal_shape_for_export must be called on the compound (not a single solid)
+    assert backend._heal_shape_for_export.called

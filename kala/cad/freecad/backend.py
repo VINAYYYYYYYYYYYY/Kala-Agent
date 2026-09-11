@@ -93,7 +93,7 @@ class FreeCADBackend:
         return obj
 
     def _export_step_compound(self) -> None:
-        """Write the best finished solid to STEP for FreeCAD GUI (not every leftover cutter)."""
+        """Write the soft assembly (compound of all valid shapes) to STEP for FreeCAD GUI."""
         shapes = []
         preferred = None
         for obj in self._doc.Objects:
@@ -123,14 +123,14 @@ class FreeCADBackend:
         elif len(shapes) == 1:
             compound = shapes[0]
         else:
-            # Largest valid solid ≈ finished part when booleans produced one
+            # Soft assembly: compound all valid shapes (no fuse-all)
             valid_shapes = []
             for s in shapes:
                 fixed = s if s.isValid() else self._try_fix(s)
                 if fixed.isValid():
                     valid_shapes.append(fixed)
             if valid_shapes:
-                compound = max(valid_shapes, key=lambda s: float(getattr(s, "Volume", 0.0) or 0.0))
+                compound = self._Part.makeCompound(valid_shapes)
             else:
                 raise RuntimeError("No valid shapes to publish")
         # Heal before export to ensure valid STEP files
