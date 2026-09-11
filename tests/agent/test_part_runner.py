@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from kala.agent.loop import (
     Agent,
     _refresh_frozen_part_aliases,
@@ -10,6 +13,8 @@ from kala.agent.loop import (
     _skip_silent_fuse,
     library_procedure_id,
 )
+from kala.cad.mock import MockBackend
+from kala.cad.protocol import ToolResult
 from kala.llm.base import PlannerTurn, ToolCall
 from kala.llm.stub import StubPlanner
 from kala.ml.base import DynamicContext
@@ -339,6 +344,63 @@ def test_keep_separate_false_bracket_alias_after_fuse():
     assert st.part_body_map["bracket"] not in removed
     assert st.id_aliases.get("part:bracket") == fused_id
     assert _resolve_alias(st, "part:bracket") == fused_id
+
+
+class _NoAllExportBackend(MockBackend):
+    """Mock backend that rejects assembly ALL export but supports per-body STEP."""
+
+    def export(self, body_id: str, path: str, fmt: str = "step") -> ToolResult:
+        if str(body_id).upper() in {"*", "ALL", "__ALL__", "ASSEMBLY"}:
+            return ToolResult(ok=False, message="[mock] ALL export not supported")
+        return super().export(body_id, path, fmt)
+
+
+def test_keep_separate_falls_back_to_per_part_manifest_when_all_export_fails(
+    monkeypatch, tmp_path
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        "kala.agent.loop.create_backend",
+        lambda _name: _NoAllExportBackend(),
+    )
+
+    agent = Agent(backend_name="mock", planner=StubPlanner(), max_turns=32)
+    result = agent.run(_GEARBOX_BINDABLE)
+    st = result.state
+    assert st.status == "done"
+    assert st.part_body_map
+
+    all_attempts = [
+        e
+        for e in st.history
+        if e.tool == "export" and str(e.args.get("body_id", "")).upper() == "ALL"
+    ]
+    assert all_attempts, "keep_separate must attempt body_id=ALL first"
+    assert not any(e.ok for e in all_attempts)
+
+    for local_name in st.part_body_map:
+        part_exports = [
+            e
+            for e in st.history
+            if e.ok
+            and e.tool == "export"
+            and e.args.get("path") == f"outputs/parts/{local_name}.step"
+        ]
+        assert part_exports, f"missing per-part export for {local_name}"
+        assert Path(f"outputs/parts/{local_name}.step").is_file()
+
+    assert st.last_export == "outputs/assembly_manifest.json"
+    manifest = json.loads(Path("outputs/assembly_manifest.json").read_text(encoding="utf-8"))
+    assert manifest.get("kind") == "assembly_manifest"
+    manifest_names = {p["local_name"] for p in manifest.get("parts") or []}
+    assert manifest_names == set(st.part_body_map)
+    for entry in manifest.get("parts") or []:
+        assert entry["step"] == f"outputs/parts/{entry['local_name']}.step"
+        assert entry["body_id"] == st.part_body_map[entry["local_name"]]
+
+    bodies = getattr(agent._backend, "_bodies", {})
+    if len(st.part_body_map) >= 2:
+        assert len(bodies) >= 2, "fallback must not fuse-all into one brick"
 
 
 def test_skip_silent_fuse_only_when_keep_separate():

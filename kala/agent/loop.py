@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -146,6 +147,57 @@ def _refresh_frozen_part_aliases(state: SessionState) -> None:
         resolved = _resolve_alias(state, body_id)
         state.part_body_map[local_name] = resolved
         state.id_aliases[f"part:{local_name}"] = resolved
+
+
+def _export_keep_separate_assembly(
+    state: SessionState,
+    registry: ToolRegistry,
+) -> None:
+    """Export keep_separate assembly: prefer ALL, else per-part STEP + manifest."""
+    asm_path = "outputs/kala_keep_separate.step"
+    result = registry.call("export", body_id="ALL", path=asm_path, fmt="step")
+    state.history.append(
+        ToolEvent(
+            tool="export",
+            args={"body_id": "ALL", "path": asm_path, "fmt": "step"},
+            ok=result.ok,
+            message=result.message,
+            data=dict(result.data),
+        )
+    )
+    if result.ok:
+        state.last_export = str(result.data.get("path") or asm_path)
+        return
+
+    manifest_path = "outputs/assembly_manifest.json"
+    manifest_parts: list[dict[str, str]] = []
+    for local_name, body_id in state.part_body_map.items():
+        resolved = _resolve_alias(state, body_id)
+        step_path = f"outputs/parts/{local_name}.step"
+        part_result = registry.call("export", body_id=resolved, path=step_path, fmt="step")
+        state.history.append(
+            ToolEvent(
+                tool="export",
+                args={"body_id": resolved, "path": step_path, "fmt": "step"},
+                ok=part_result.ok,
+                message=part_result.message,
+                data=dict(part_result.data),
+            )
+        )
+        if part_result.ok:
+            manifest_parts.append(
+                {
+                    "local_name": local_name,
+                    "body_id": resolved,
+                    "step": str(part_result.data.get("path") or step_path),
+                }
+            )
+
+    manifest = {"kind": "assembly_manifest", "parts": manifest_parts}
+    out = Path(manifest_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    state.last_export = manifest_path
 
 
 def _procedure_step_context(state: SessionState) -> DynamicContext:
@@ -909,19 +961,7 @@ class Agent:
 
         keep_separate = any(p.keep_separate for p in plan.parts)
         if keep_separate and registry.has("export"):
-            asm_path = "outputs/kala_keep_separate.step"
-            result = registry.call("export", body_id="ALL", path=asm_path, fmt="step")
-            state.history.append(
-                ToolEvent(
-                    tool="export",
-                    args={"body_id": "ALL", "path": asm_path, "fmt": "step"},
-                    ok=result.ok,
-                    message=result.message,
-                    data=dict(result.data),
-                )
-            )
-            if result.ok:
-                state.last_export = str(result.data.get("path") or asm_path)
+            _export_keep_separate_assembly(state, registry)
 
         modeled = any(
             r.get("procedure_id") and r.get("status") in {"done", "max_turns"}
