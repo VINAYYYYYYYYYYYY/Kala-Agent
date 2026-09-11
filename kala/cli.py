@@ -34,7 +34,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     run.add_argument("--json", action="store_true", help="Print machine-readable result")
 
-    ui = sub.add_parser("ui", help="Launch the dark desktop UI")
+    ui = sub.add_parser(
+        "ui",
+        help="Launch desktop UI (companion to FreeCAD). Setup: cd ~/Kala-Agent && uv pip install -e . && kala ui",
+    )
     ui.add_argument(
         "--backend",
         default="freecad",
