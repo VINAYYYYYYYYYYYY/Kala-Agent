@@ -177,16 +177,26 @@ class FreeCadFemCalculiXBackend:
                 solver_status="solver_creation_failed",
             )
 
-        # Add minimal default material (steel) required by CalculiX
+        # Add minimal default material (Solids) required by CalculiX
         try:
-            material = ObjectsFem.makeMaterialSolid(doc, f"Steel_{body_id}")
+            material = ObjectsFem.makeMaterialSolid(doc, f"Solids_{body_id}")
             material_dict = {
-                "Name": "CalculiX-Steel",
+                "Name": "Solids",
                 "YoungsModulus": "210000 MPa",
                 "PoissonRatio": "0.30",
                 "Density": "7900 kg/m^3",
             }
             material.Material = material_dict
+            # Soft bind: empty refs = all geometry (OK for single material).
+            # When Shape has Solids, bind Solid1..SolidN like FreeCAD FEM examples.
+            try:
+                solids = getattr(solid_obj.Shape, "Solids", None) or []
+                if solids:
+                    material.References = [
+                        (solid_obj, f"Solid{i + 1}") for i in range(len(solids))
+                    ]
+            except Exception:  # noqa: BLE001
+                pass
             analysis.addObject(material)
         except Exception as exc:  # noqa: BLE001
             return AnalysisReport(
@@ -220,14 +230,17 @@ class FreeCadFemCalculiXBackend:
         constraints_incomplete = True
         try:
             fixed = ObjectsFem.makeConstraintFixed(doc, f"ConstraintFixed_{body_id}")
+            face_name = self._pick_fixed_face(solid_obj)
+            if face_name:
+                fixed.References = [(solid_obj, face_name)]
             analysis.addObject(fixed)
-            
+
             if hasattr(fixed, "References") and fixed.References:
                 constraints_incomplete = False
-            
+
             gravity = ObjectsFem.makeConstraintSelfWeight(doc, f"ConstraintGravity_{body_id}")
             analysis.addObject(gravity)
-            
+
             doc.recompute()
         except Exception:  # noqa: BLE001
             pass
@@ -339,6 +352,34 @@ class FreeCadFemCalculiXBackend:
                 kind="freecad_fem_calculix",
                 solver_status=status,
             )
+
+
+    def _pick_fixed_face(self, solid_obj: Any) -> str | None:
+        """Pick FaceN with lowest CenterOfMass.z as a soft gravity-base fixed face.
+
+        FreeCAD face names are 1-based (Face1 == Shape.Faces[0]). Returns None when
+        no usable face exists so callers keep constraints_incomplete=True.
+        """
+        try:
+            shape = getattr(solid_obj, "Shape", None)
+            faces = getattr(shape, "Faces", None) if shape is not None else None
+            if not faces:
+                return None
+            best_i: int | None = None
+            best_z: float | None = None
+            for i, face in enumerate(faces):
+                try:
+                    z = float(face.CenterOfMass.z)
+                except Exception:  # noqa: BLE001
+                    continue
+                if best_z is None or z < best_z:
+                    best_z = z
+                    best_i = i
+            if best_i is None:
+                return None
+            return f"Face{best_i + 1}"
+        except Exception:  # noqa: BLE001
+            return None
 
     def _extract_results(
         self, doc: Any, analysis: Any, body_id: str, metrics: dict[str, Any], report_path: Path, fea: Any = None
