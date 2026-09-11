@@ -9,6 +9,7 @@ from kala.agent.loop import (
     Agent,
     _refresh_frozen_part_aliases,
     _resolve_alias,
+    _strip_boolean_fuse_from_allowlist,
     freeze_part_alias,
     _skip_silent_fuse,
     library_procedure_id,
@@ -421,3 +422,78 @@ def test_skip_silent_fuse_only_when_keep_separate():
     )
     assert _skip_silent_fuse(keep) is True
     assert _skip_silent_fuse(merge) is False
+
+
+def test_keep_separate_assembly_strips_boolean_fuse_from_allowlist():
+    """Cross-part assembly turns must not offer boolean_fuse to the planner."""
+    proc = load_default_procedure("machine_assembly")
+    state = SessionState(
+        goal="gearbox assembly",
+        backend_name="mock",
+        standard_parts=False,
+        procedure=proc,
+        part_plan={
+            "kind": "part_plan",
+            "parts": [
+                {"local_name": "housing", "keep_separate": True},
+                {"local_name": "shaft", "keep_separate": True},
+            ],
+        },
+    )
+    features = proc.step(1)
+    assert features is not None
+    allowed = _strip_boolean_fuse_from_allowlist(state, list(features.allowed_tools))
+    assert "boolean_fuse" not in allowed
+    assert "boolean_cut" in allowed
+    assert "export" in allowed
+
+
+def test_intra_part_playbook_keeps_boolean_fuse_even_when_keep_separate():
+    """Single PartSpec child runs may fuse that part's own solids."""
+    proc = load_default_procedure("simple_bracket")
+    state = SessionState(
+        goal="bracket",
+        backend_name="mock",
+        standard_parts=False,
+        procedure=proc,
+        part_plan={
+            "kind": "part_plan",
+            "parts": [
+                {
+                    "local_name": "bracket",
+                    "brief": "L-bracket",
+                    "procedure_id": "simple_bracket",
+                    "keep_separate": True,
+                },
+            ],
+        },
+    )
+    features = proc.step(1)
+    assert features is not None
+    allowed = _strip_boolean_fuse_from_allowlist(state, list(features.allowed_tools))
+    assert "boolean_fuse" in allowed
+
+
+def test_keep_separate_false_single_part_keeps_boolean_fuse():
+    proc = load_default_procedure("simple_bracket")
+    state = SessionState(
+        goal="fused bracket",
+        backend_name="mock",
+        standard_parts=False,
+        procedure=proc,
+        part_plan={
+            "kind": "part_plan",
+            "parts": [
+                {
+                    "local_name": "bracket",
+                    "brief": "fuse two boxes",
+                    "procedure_id": "simple_bracket",
+                    "keep_separate": False,
+                },
+            ],
+        },
+    )
+    features = proc.step(1)
+    assert features is not None
+    allowed = _strip_boolean_fuse_from_allowlist(state, list(features.allowed_tools))
+    assert "boolean_fuse" in allowed
