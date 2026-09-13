@@ -7,14 +7,18 @@ from pathlib import Path
 
 from kala.agent.loop import (
     Agent,
+    _procedure_step_context,
     _refresh_frozen_part_aliases,
     _resolve_alias,
+    _strip_boolean_fuse_from_allowlist,
     freeze_part_alias,
     _skip_silent_fuse,
     library_procedure_id,
 )
+from kala.cad.factory import create_backend
 from kala.cad.mock import MockBackend
 from kala.cad.protocol import ToolResult
+from kala.cad.registry import build_registry
 from kala.llm.base import PlannerTurn, ToolCall
 from kala.llm.stub import StubPlanner
 from kala.ml.base import DynamicContext
@@ -421,3 +425,204 @@ def test_skip_silent_fuse_only_when_keep_separate():
     )
     assert _skip_silent_fuse(keep) is True
     assert _skip_silent_fuse(merge) is False
+
+
+def test_keep_separate_assembly_strips_boolean_fuse_from_allowlist():
+    """Cross-part assembly turns must not offer boolean_fuse to the planner."""
+    proc = load_default_procedure("machine_assembly")
+    state = SessionState(
+        goal="gearbox assembly",
+        backend_name="mock",
+        standard_parts=False,
+        procedure=proc,
+        part_plan={
+            "kind": "part_plan",
+            "parts": [
+                {"local_name": "housing", "keep_separate": True},
+                {"local_name": "shaft", "keep_separate": True},
+            ],
+        },
+    )
+    features = proc.step(1)
+    assert features is not None
+    allowed = _strip_boolean_fuse_from_allowlist(state, list(features.allowed_tools))
+    assert "boolean_fuse" not in allowed
+    assert "boolean_cut" in allowed
+    assert "export" in allowed
+
+    state.step_index = 1
+    ctx = _procedure_step_context(state)
+    assert "boolean_fuse" not in ctx.recommended_tools
+    assert "boolean_cut" in ctx.recommended_tools
+
+
+def test_intra_part_playbook_keeps_boolean_fuse_even_when_keep_separate():
+    """Single PartSpec child runs may fuse that part's own solids."""
+    proc = load_default_procedure("simple_bracket")
+    state = SessionState(
+        goal="bracket",
+        backend_name="mock",
+        standard_parts=False,
+        procedure=proc,
+        part_plan={
+            "kind": "part_plan",
+            "parts": [
+                {
+                    "local_name": "bracket",
+                    "brief": "L-bracket",
+                    "procedure_id": "simple_bracket",
+                    "keep_separate": True,
+                },
+            ],
+        },
+    )
+    features = proc.step(1)
+    assert features is not None
+    allowed = _strip_boolean_fuse_from_allowlist(state, list(features.allowed_tools))
+    assert "boolean_fuse" in allowed
+
+    state.step_index = 1
+    ctx = _procedure_step_context(state)
+    assert "boolean_fuse" in ctx.recommended_tools
+
+
+def test_keep_separate_false_single_part_keeps_boolean_fuse():
+    proc = load_default_procedure("simple_bracket")
+    state = SessionState(
+        goal="fused bracket",
+        backend_name="mock",
+        standard_parts=False,
+        procedure=proc,
+        part_plan={
+            "kind": "part_plan",
+            "parts": [
+                {
+                    "local_name": "bracket",
+                    "brief": "fuse two boxes",
+                    "procedure_id": "simple_bracket",
+                    "keep_separate": False,
+                },
+            ],
+        },
+    )
+    features = proc.step(1)
+    assert features is not None
+    allowed = _strip_boolean_fuse_from_allowlist(state, list(features.allowed_tools))
+    assert "boolean_fuse" in allowed
+
+    state.step_index = 1
+    ctx = _procedure_step_context(state)
+    assert "boolean_fuse" in ctx.recommended_tools
+
+
+class _FuseAllowlistSpy:
+    """Planner that records schemas and tries boolean_fuse once."""
+
+    def __init__(self) -> None:
+        self.schema_names: list[set[str]] = []
+
+    def propose(self, state: SessionState, context: DynamicContext, tool_schemas: list) -> PlannerTurn:
+        self.schema_names.append({s["name"] for s in tool_schemas})
+        if any(e.tool == "boolean_fuse" for e in state.history):
+            return PlannerTurn(thought="fuse already attempted", done=True)
+        return PlannerTurn(
+            thought="try fuse",
+            calls=[ToolCall("boolean_fuse", {"body_a": "Box_1", "body_b": "Box_2"})],
+        )
+
+
+def test_execute_playbook_blocks_boolean_fuse_on_keep_separate_assembly():
+    """Schemas + playbook gate must drop boolean_fuse on cross-part keep_separate."""
+    proc = load_default_procedure("machine_assembly")
+    state = SessionState(
+        goal="gearbox assembly",
+        backend_name="mock",
+        standard_parts=False,
+        procedure=proc,
+        step_index=1,
+        part_plan={
+            "kind": "part_plan",
+            "parts": [
+                {"local_name": "housing", "keep_separate": True},
+                {"local_name": "shaft", "keep_separate": True},
+            ],
+        },
+    )
+    spy = _FuseAllowlistSpy()
+    backend = create_backend("mock")
+    registry = build_registry(backend)
+    agent = Agent(backend_name="mock", planner=spy, max_turns=3)
+    agent._backend = backend
+    agent._execute_playbook(state, registry, [], enrich=False)
+
+    assert spy.schema_names
+    assert all("boolean_fuse" not in names for names in spy.schema_names)
+    fuse_events = [e for e in state.history if e.tool == "boolean_fuse"]
+    assert fuse_events
+    assert all(not e.ok for e in fuse_events)
+    assert all("blocked" in e.message for e in fuse_events)
+    assert not any(e.ok and e.tool == "boolean_fuse" for e in state.history)
+
+
+def test_execute_playbook_keeps_boolean_fuse_on_intra_part_keep_separate():
+    """Child simple_bracket playbook still sees boolean_fuse in planner schemas."""
+    proc = load_default_procedure("simple_bracket")
+    state = SessionState(
+        goal="bracket",
+        backend_name="mock",
+        standard_parts=False,
+        procedure=proc,
+        step_index=1,
+        part_plan={
+            "kind": "part_plan",
+            "parts": [
+                {
+                    "local_name": "bracket",
+                    "brief": "L-bracket",
+                    "procedure_id": "simple_bracket",
+                    "keep_separate": True,
+                },
+            ],
+        },
+    )
+    spy = _FuseAllowlistSpy()
+    backend = create_backend("mock")
+    registry = build_registry(backend)
+    agent = Agent(backend_name="mock", planner=spy, max_turns=2)
+    agent._backend = backend
+    agent._execute_playbook(state, registry, [], enrich=False)
+
+    assert spy.schema_names
+    assert any("boolean_fuse" in names for names in spy.schema_names)
+
+
+def test_execute_playbook_keeps_boolean_fuse_when_keep_separate_false():
+    """Single-part keep_separate=False runs still expose boolean_fuse."""
+    proc = load_default_procedure("simple_bracket")
+    state = SessionState(
+        goal="fused bracket",
+        backend_name="mock",
+        standard_parts=False,
+        procedure=proc,
+        step_index=1,
+        part_plan={
+            "kind": "part_plan",
+            "parts": [
+                {
+                    "local_name": "bracket",
+                    "brief": "fuse two boxes",
+                    "procedure_id": "simple_bracket",
+                    "keep_separate": False,
+                },
+            ],
+        },
+    )
+    spy = _FuseAllowlistSpy()
+    backend = create_backend("mock")
+    registry = build_registry(backend)
+    agent = Agent(backend_name="mock", planner=spy, max_turns=2)
+    agent._backend = backend
+    agent._execute_playbook(state, registry, [], enrich=False)
+
+    assert spy.schema_names
+    assert any("boolean_fuse" in names for names in spy.schema_names)
