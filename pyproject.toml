@@ -28,3 +28,8 @@ kala = [
 kala = "kala.cli:main"
 kala-gui = "kala.ui.desktop:main"
 kala-mcp-freecad = "kala.mcp_freecad.server:main"
+
+[tool.pytest.ini_options]
+markers = [
+    "freecad: optional FreeCAD-or-mock part-runner smoke (uses mock when FreeCAD is missing)",
+]
