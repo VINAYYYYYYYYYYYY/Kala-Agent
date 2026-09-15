@@ -1,0 +1,63 @@
+{
+  "id": "simple_bracket",
+  "name": "Simple Bracket",
+  "description": "Industry-style flow for a basic mounting bracket: envelope, features, optional standards, export.",
+  "steps": [
+    {
+      "id": "envelope",
+      "goal": "Create the primary envelope solid for the bracket body.",
+      "allowed_tools": [
+        "create_box",
+        "create_cylinder",
+        "create_sphere",
+        "create_cone",
+        "list_bodies"
+      ],
+      "exit_criteria": "At least one body exists representing the envelope."
+    },
+    {
+      "id": "features",
+      "goal": "Assemble solids (fuse), add cuts/holes/fillets, then export when finished.",
+      "allowed_tools": [
+        "create_box",
+        "create_cylinder",
+        "create_sphere",
+        "create_cone",
+        "boolean_cut",
+        "boolean_fuse",
+        "translate",
+        "rotate",
+        "fillet",
+        "list_bodies",
+        "export"
+      ],
+      "exit_criteria": "One finished solid fused/cut as needed, exported or ready to export."
+    },
+    {
+      "id": "standard_parts",
+      "goal": "Optionally insert matching standard fasteners or profiles.",
+      "allowed_tools": [
+        "search_parts",
+        "insert_part",
+        "list_bodies",
+        "translate",
+        "create_box",
+        "create_cylinder",
+        "create_sphere",
+        "boolean_cut",
+        "boolean_fuse",
+        "rotate",
+        "fillet",
+        "export"
+      ],
+      "exit_criteria": "Standards inserted or step skipped when toggle is off.",
+      "optional_parts": true
+    },
+    {
+      "id": "export",
+      "goal": "Export the finished design.",
+      "allowed_tools": ["list_bodies", "export", "boolean_fuse", "boolean_cut", "fillet"],
+      "exit_criteria": "An export path is produced."
+    }
+  ]
+}

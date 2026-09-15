@@ -1,0 +1,56 @@
+{
+  "dataset": "cad-1000-hours",
+  "path": "/run/media/v9i/july2020-/cad-1000-hours",
+  "note": "output_files/ empty on disk (LFS not pulled). Using task_desc+rubrics as briefs.",
+  "counts": {
+    "simple": 50,
+    "complex": 50,
+    "extreme": 50,
+    "total": 150,
+    "mechanical_candidates": 279
+  },
+  "examples": {
+    "simple": [
+      {
+        "id": "simple-so-20118498",
+        "task": "Create a symmetric five-section stepped shaft"
+      },
+      {
+        "id": "simple-ca-0c41f384",
+        "task": "Model an SJ screw jack cup"
+      },
+      {
+        "id": "simple-nx-34ba0c26",
+        "task": "Create a 3D taper pin model"
+      }
+    ],
+    "complex": [
+      {
+        "id": "complex-so-136e4bd0",
+        "task": "Create a 3D crankshaft part model."
+      },
+      {
+        "id": "complex-ca-7834c930",
+        "task": "Create a detailed 3D crankshaft part"
+      },
+      {
+        "id": "complex-nx-010db257",
+        "task": "Create the Gear Fidget Spinner top cover as a finished 3D CAD part."
+      }
+    ],
+    "extreme": [
+      {
+        "id": "extreme-so-9dc0e21e",
+        "task": "Create a 3D rotating clamp housing with a hollow cylindrical body and mounting lugs."
+      },
+      {
+        "id": "extreme-ca-1043860c",
+        "task": "Create a 3D screw-like part with a polygonal head and cylindrical shaft."
+      },
+      {
+        "id": "extreme-nx-3711b2f6",
+        "task": "Create a gusseted mounting bracket"
+      }
+    ]
+  }
+}

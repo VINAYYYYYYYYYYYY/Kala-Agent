@@ -1,0 +1,102 @@
+{
+  "version": "0.1.0",
+  "description": "Hand-authored rules for learned design context model",
+  "constraints": {
+    "high_failure_rate": {
+      "conditions": [
+        {"feature": "success_rate", "op": "lt", "value": 0.5},
+        {"feature": "history_length", "op": "gt", "value": 3}
+      ],
+      "add": [
+        "High failure rate detected — review recent tool calls for issues."
+      ]
+    },
+    "sheet_metal_hint": {
+      "conditions": [
+        {"feature": "goal_keywords.sheet", "op": "eq", "value": true}
+      ],
+      "add": [
+        "Sheet metal design — consider bend radii and flat pattern requirements."
+      ]
+    }
+  },
+  "manufacturing_notes": {
+    "box_enclosure": {
+      "conditions": [
+        {"feature": "goal_keywords.box", "op": "eq", "value": true}
+      ],
+      "add": [
+        "Box enclosures should include draft angles for molding if applicable.",
+        "Consider internal boss features for mounting PCBs or hardware."
+      ]
+    },
+    "fastener_design": {
+      "conditions": [
+        {"feature": "goal_keywords.fastener", "op": "eq", "value": true}
+      ],
+      "add": [
+        "Ensure adequate clearance for wrench or driver access to fasteners."
+      ]
+    }
+  },
+  "warnings": {
+    "no_export_late_stage": {
+      "conditions": [
+        {"feature": "has_export", "op": "eq", "value": false},
+        {"feature": "step_index", "op": "gte", "value": 2}
+      ],
+      "add": [
+        "Late in procedure without export — ensure geometry is finalized."
+      ]
+    },
+    "many_failures": {
+      "conditions": [
+        {"feature": "failure_count", "op": "gt", "value": 5}
+      ],
+      "add": [
+        "Multiple tool failures detected — consider simplifying approach."
+      ]
+    }
+  },
+  "recommended_tools": {
+    "export_step_hint": {
+      "conditions": [
+        {"feature": "current_step_id", "op": "eq", "value": "export"},
+        {"feature": "has_export", "op": "eq", "value": false}
+      ],
+      "add": ["export"]
+    }
+  },
+  "candidate_parts": {
+    "bracket_fasteners": {
+      "conditions": [
+        {"feature": "goal_keywords.bracket", "op": "eq", "value": true},
+        {"feature": "standard_parts", "op": "eq", "value": true}
+      ],
+      "add": [
+        {"part_id": "hex_m6x20", "reason": "Standard bracket fastener"},
+        {"part_id": "hex_m8x25", "reason": "Heavy-duty bracket option"}
+      ]
+    },
+    "mount_fasteners": {
+      "conditions": [
+        {"feature": "goal_keywords.mount", "op": "eq", "value": true},
+        {"feature": "standard_parts", "op": "eq", "value": true}
+      ],
+      "add": [
+        {"part_id": "hex_m5x16", "reason": "Common mounting fastener"}
+      ]
+    }
+  },
+  "snippets": {
+    "progress_indicator": {
+      "conditions": [
+        {"feature": "history_length", "op": "gt", "value": 0}
+      ],
+      "add": [
+        "Progress: {success_count} successes, {failure_count} failures"
+      ]
+    }
+  },
+  "focus": {}
+}

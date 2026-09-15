@@ -1,0 +1,61 @@
+{
+  "id": "housing_cover",
+  "name": "Housing cover",
+  "description": "Box housing with pocket/bore cuts, optional standards, export.",
+  "steps": [
+    {
+      "id": "envelope",
+      "goal": "Create the primary housing box envelope.",
+      "allowed_tools": [
+        "create_box",
+        "create_cylinder",
+        "list_bodies"
+      ],
+      "exit_criteria": "At least one body exists representing the housing."
+    },
+    {
+      "id": "features",
+      "goal": "Cut pockets/bores, fuse lids if needed, fillet edges.",
+      "allowed_tools": [
+        "create_box",
+        "create_cylinder",
+        "create_cone",
+        "boolean_cut",
+        "boolean_fuse",
+        "translate",
+        "rotate",
+        "fillet",
+        "list_bodies",
+        "export"
+      ],
+      "exit_criteria": "Pockets/bores cut; housing ready to export."
+    },
+    {
+      "id": "standard_parts",
+      "goal": "Optionally insert bearings/fasteners.",
+      "allowed_tools": [
+        "search_parts",
+        "insert_part",
+        "list_bodies",
+        "translate",
+        "rotate",
+        "boolean_cut",
+        "boolean_fuse",
+        "export"
+      ],
+      "exit_criteria": "Standards inserted or step skipped when toggle is off.",
+      "optional_parts": true
+    },
+    {
+      "id": "export",
+      "goal": "Export the finished housing.",
+      "allowed_tools": [
+        "list_bodies",
+        "export",
+        "boolean_fuse",
+        "fillet"
+      ],
+      "exit_criteria": "An export path is produced."
+    }
+  ]
+}

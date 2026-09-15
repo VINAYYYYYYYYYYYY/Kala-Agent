@@ -1,0 +1,12 @@
+# Kala batch designs — one JSON object per line.
+# Drop your 1000 designs here (or split across files). Fields:
+#   id              unique string
+#   goal            human design brief (required)
+#   backend         freecad|mock (optional)
+#   standard_parts  true|false (default true for machines)
+#   procedure       simple_bracket|machine_assembly
+#   expect          optional scoring hints
+
+{"id": "sample-l-bracket", "goal": "L-bracket base 60x40x4 and vertical wall 60x4x50 at origin, fuse, two Ø5 base holes at (12,20) and (48,20), export L_bracket.step", "standard_parts": false, "procedure": "simple_bracket", "expect": {"min_tools": 4, "require_export": true}}
+{"id": "sample-planetary", "goal": "NEMA17 planetary gearbox assembly keep parts separate: insert nema17_body, gear_sun_nema17, gear_ring_internal, four gear_planet, four bearing_mr128, bearing_6709, a few hex_m3x12, housing cylinder, export body_id=ALL as planetary_gearbox.step", "standard_parts": true, "procedure": "machine_assembly", "expect": {"min_tools": 6, "require_export": true}}
+{"id": "sample-flange", "goal": "Flanged mounting plate 120x80x10 fused to base 160x100x12, central bore Ø40, four M10 clearance holes Ø11, export STEP", "standard_parts": false, "procedure": "simple_bracket", "expect": {"min_tools": 5, "require_export": true}}

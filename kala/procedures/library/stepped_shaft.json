@@ -1,0 +1,60 @@
+{
+  "id": "stepped_shaft",
+  "name": "Stepped shaft",
+  "description": "Coaxial stepped shaft from cylinders: fuse shoulders, optional fillet, export one solid.",
+  "steps": [
+    {
+      "id": "envelope",
+      "goal": "Create the largest diameter cylinder as the primary envelope.",
+      "allowed_tools": [
+        "create_cylinder",
+        "create_box",
+        "list_bodies"
+      ],
+      "exit_criteria": "At least one body exists representing the shaft envelope."
+    },
+    {
+      "id": "features",
+      "goal": "Add shoulders with cylinders, fuse coaxially, cut/bore ends if needed, fillet.",
+      "allowed_tools": [
+        "create_cylinder",
+        "create_box",
+        "boolean_fuse",
+        "boolean_cut",
+        "translate",
+        "rotate",
+        "fillet",
+        "list_bodies",
+        "export"
+      ],
+      "exit_criteria": "Stepped solid fused; ready to export."
+    },
+    {
+      "id": "standard_parts",
+      "goal": "Optionally insert key/retaining features from catalog.",
+      "allowed_tools": [
+        "search_parts",
+        "insert_part",
+        "list_bodies",
+        "translate",
+        "rotate",
+        "boolean_cut",
+        "boolean_fuse",
+        "export"
+      ],
+      "exit_criteria": "Standards inserted or step skipped when toggle is off.",
+      "optional_parts": true
+    },
+    {
+      "id": "export",
+      "goal": "Export the finished shaft.",
+      "allowed_tools": [
+        "list_bodies",
+        "export",
+        "boolean_fuse",
+        "fillet"
+      ],
+      "exit_criteria": "An export path is produced."
+    }
+  ]
+}

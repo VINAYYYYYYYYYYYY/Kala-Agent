@@ -1,0 +1,15 @@
+#!/bin/bash
+HERE="$(dirname "$(readlink -f "$0")")"
+export PATH="${HERE}/usr/bin:${HERE}/usr:${PATH}"
+export LD_LIBRARY_PATH="${HERE}/usr:${HERE}/usr/lib:${LD_LIBRARY_PATH:-}"
+export QT_PLUGIN_PATH="${HERE}/usr/PySide6/Qt/plugins:${HERE}/usr/plugins:${QT_PLUGIN_PATH:-}"
+
+if [[ -x "${HERE}/usr/bin/kala-gui" ]]; then
+  exec "${HERE}/usr/bin/kala-gui" "$@"
+fi
+if [[ -x "${HERE}/usr/kala-gui" ]]; then
+  exec "${HERE}/usr/kala-gui" "$@"
+fi
+echo "kala-gui not found inside AppImage at ${HERE}" >&2
+ls -la "${HERE}/usr" >&2 || true
+exit 1

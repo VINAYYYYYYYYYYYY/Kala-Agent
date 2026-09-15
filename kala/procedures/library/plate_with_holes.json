@@ -1,0 +1,59 @@
+{
+  "id": "plate_with_holes",
+  "name": "Plate with holes",
+  "description": "Flat plate envelope with drilled hole cuts and export.",
+  "steps": [
+    {
+      "id": "envelope",
+      "goal": "Create the plate box envelope.",
+      "allowed_tools": [
+        "create_box",
+        "create_cylinder",
+        "list_bodies"
+      ],
+      "exit_criteria": "At least one body exists representing the plate."
+    },
+    {
+      "id": "features",
+      "goal": "Cut holes with cylinders, position with translate, optional fillet.",
+      "allowed_tools": [
+        "create_box",
+        "create_cylinder",
+        "boolean_cut",
+        "boolean_fuse",
+        "translate",
+        "rotate",
+        "fillet",
+        "list_bodies",
+        "export"
+      ],
+      "exit_criteria": "Holes cut; plate ready to export."
+    },
+    {
+      "id": "standard_parts",
+      "goal": "Optionally insert fasteners matching holes.",
+      "allowed_tools": [
+        "search_parts",
+        "insert_part",
+        "list_bodies",
+        "translate",
+        "rotate",
+        "boolean_cut",
+        "export"
+      ],
+      "exit_criteria": "Standards inserted or step skipped when toggle is off.",
+      "optional_parts": true
+    },
+    {
+      "id": "export",
+      "goal": "Export the finished plate.",
+      "allowed_tools": [
+        "list_bodies",
+        "export",
+        "boolean_fuse",
+        "fillet"
+      ],
+      "exit_criteria": "An export path is produced."
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+{"id": "gate-laptop", "goal": "16 inch laptop", "backend": "mock", "standard_parts": false, "procedure": "simple_bracket", "expect": {"gate": "needs_clarify", "require_export": false}}
+{"id": "gate-gearbox", "goal": "planetary gearbox with sun and planets", "backend": "mock", "standard_parts": false, "procedure": "machine_assembly", "expect": {"gate": "part_plan", "require_export": false}}
+{"id": "gate-l-bracket", "goal": "L-bracket base 60x40x4 and vertical wall 60x4x50 at origin, fuse, export", "backend": "mock", "standard_parts": false, "procedure": "simple_bracket", "expect": {"min_tools": 1, "require_export": false}}

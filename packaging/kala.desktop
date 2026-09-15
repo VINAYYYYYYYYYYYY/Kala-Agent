@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Kala
+Comment=CAD design agent
+Exec=kala-gui
+Icon=kala
+Categories=Graphics;Science;Engineering;
+Terminal=false

@@ -1,0 +1,127 @@
+"""decompose-or-clarify assess_goal gate."""
+
+from __future__ import annotations
+
+from kala.procedures import ClarifyNeeded, PartPlan, PartSpec, assess_goal
+from kala.procedures.schema import list_procedure_ids
+
+
+_KNOWN = set(list_procedure_ids())
+_PART_FIELDS = {"local_name", "brief", "procedure_id", "keep_separate"}
+
+
+def _assert_part_spec(p: PartSpec) -> None:
+    assert isinstance(p, PartSpec)
+    d = p.to_dict()
+    assert set(d.keys()) == _PART_FIELDS
+    assert isinstance(d["local_name"], str) and d["local_name"]
+    assert isinstance(d["brief"], str)
+    assert d["procedure_id"] is None or d["procedure_id"] in _KNOWN
+    assert isinstance(d["keep_separate"], bool)
+    assert d["keep_separate"] is True  # P0 default
+
+
+def test_l_bracket_passes():
+    assert assess_goal("L-bracket base 60x40") is None
+
+
+def test_plate_passes():
+    assert assess_goal("plate with four holes") is None
+
+
+def test_laptop_clarify():
+    g = assess_goal("16 inch laptop")
+    assert isinstance(g, ClarifyNeeded)
+    assert g.questions
+
+
+def test_car_clarify():
+    assert isinstance(assess_goal("design a car body"), ClarifyNeeded)
+
+
+def test_gearbox_part_plan():
+    g = assess_goal("planetary gearbox with sun and planets")
+    assert isinstance(g, PartPlan)
+    assert g.parts
+    assert all(isinstance(p, PartSpec) for p in g.parts)
+    for p in g.parts:
+        _assert_part_spec(p)
+    # gear keyword → local_name gear; no packaged gear playbook → null
+    names = {p.local_name for p in g.parts}
+    assert "gear" in names
+    gear = next(p for p in g.parts if p.local_name == "gear")
+    assert gear.procedure_id is None
+    assert gear.keep_separate is True
+    payload = g.to_dict()
+    assert payload["kind"] == "part_plan"
+    assert isinstance(payload["parts"], list)
+    assert set(payload["parts"][0].keys()) == _PART_FIELDS
+
+
+def test_housing_assembly_suggests_known_procedure():
+    g = assess_goal("multi-part housing and cover assembly")
+    assert isinstance(g, PartPlan)
+    for p in g.parts:
+        _assert_part_spec(p)
+    by_name = {p.local_name: p for p in g.parts}
+    if "housing" in by_name:
+        assert by_name["housing"].procedure_id == "housing_cover"
+    if "cover" in by_name:
+        assert by_name["cover"].procedure_id == "housing_cover"
+
+
+def test_gearbox_named_parts_keep_library_ids():
+    """Keywords already in the brief map to packaged ids — gate does not invent extras."""
+    g = assess_goal("planetary gearbox with shaft and housing")
+    assert isinstance(g, PartPlan)
+    by_name = {p.local_name: p for p in g.parts}
+    assert by_name["gear"].procedure_id is None
+    assert by_name["shaft"].procedure_id == "stepped_shaft"
+    assert by_name["housing"].procedure_id == "housing_cover"
+
+def test_phone_clarify():
+    g = assess_goal("design a phone")
+    assert isinstance(g, ClarifyNeeded)
+    assert g.questions
+    assert "product" in g.reason.lower() or "out-of-domain" in g.reason.lower()
+
+
+def test_smartphone_clarify():
+    assert isinstance(assess_goal("smartphone enclosure"), ClarifyNeeded)
+
+
+def test_car_clarify_has_questions():
+    g = assess_goal("design a car body")
+    assert isinstance(g, ClarifyNeeded)
+    assert g.questions
+    payload = g.to_dict()
+    assert payload["kind"] == "clarify_needed"
+    assert payload["questions"]
+
+
+def test_part_spec_null_procedure_id_when_no_playbook():
+    """Labels without a packaged playbook must keep procedure_id=None (never invent)."""
+    g = assess_goal("multi-part assembly with gear and bearing")
+    assert isinstance(g, PartPlan)
+    by_name = {p.local_name: p for p in g.parts}
+    assert "gear" in by_name
+    assert by_name["gear"].procedure_id is None
+    assert "bearing" in by_name
+    assert by_name["bearing"].procedure_id is None
+    # known playbook still allowed when hinted
+    if "shaft" in by_name:
+        assert by_name["shaft"].procedure_id in (None, "stepped_shaft")
+        if by_name["shaft"].procedure_id is not None:
+            assert by_name["shaft"].procedure_id in _KNOWN
+
+
+def test_part_spec_keep_separate_field_default_true():
+    """P0: keep_separate is always present and True on PartSpec / to_dict."""
+    g = assess_goal("planetary gearbox with sun and planets")
+    assert isinstance(g, PartPlan)
+    for p in g.parts:
+        assert p.keep_separate is True
+        d = p.to_dict()
+        assert "keep_separate" in d
+        assert d["keep_separate"] is True
+        assert set(d.keys()) == _PART_FIELDS
