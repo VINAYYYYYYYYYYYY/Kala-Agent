@@ -106,6 +106,30 @@ def _skip_silent_fuse(state: SessionState) -> bool:
     return False
 
 
+def _part_plan_parts(state: SessionState) -> list[dict[str, Any]]:
+    plan = state.part_plan or {}
+    return [p for p in plan.get("parts") or [] if isinstance(p, dict)]
+
+
+def _is_intra_part_playbook(state: SessionState) -> bool:
+    """True when executing a single PartSpec child playbook (intra-part fuse OK)."""
+    return len(_part_plan_parts(state)) == 1
+
+
+def _strip_boolean_fuse_from_allowlist(
+    state: SessionState,
+    allowed_tools: list[str],
+) -> list[str]:
+    """Drop boolean_fuse on cross-part assembly turns; keep intra-part fuse."""
+    if "boolean_fuse" not in allowed_tools:
+        return allowed_tools
+    if _is_intra_part_playbook(state):
+        return allowed_tools
+    if any(p.get("keep_separate") for p in _part_plan_parts(state)):
+        return [t for t in allowed_tools if t != "boolean_fuse"]
+    return allowed_tools
+
+
 def _resolve_alias(state: SessionState, bid: str) -> str:
     """Follow removed→new id_aliases chains to the live body id."""
     seen: set[str] = set()
@@ -208,7 +232,9 @@ def _procedure_step_context(state: SessionState) -> DynamicContext:
     return DynamicContext(
         focus=f"[{step.id}] {step.goal}",
         constraints=[f"procedure_id={state.procedure.id}", f"step={step.id}"],
-        recommended_tools=list(step.allowed_tools),
+        recommended_tools=list(
+            _strip_boolean_fuse_from_allowlist(state, step.allowed_tools)
+        ),
         snippets=[
             f"procedure_id={state.procedure.id}",
             f"step={step.id}",
@@ -545,12 +571,24 @@ class Agent:
     ) -> None:
         try:
             for _ in range(self.max_turns):
+                step = state.current_step
+                effective_allowed: set[str] | None = None
+                if step and step.allowed_tools:
+                    effective_allowed = set(
+                        _strip_boolean_fuse_from_allowlist(state, step.allowed_tools)
+                    )
+                tool_schemas = registry.schemas_for_planner()
+                if effective_allowed is not None:
+                    tool_schemas = [
+                        s for s in tool_schemas if s["name"] in effective_allowed
+                    ]
+
                 if enrich:
                     context = self.context_model.enrich(state)
                     contexts.append(context)
                 else:
                     context = _procedure_step_context(state)
-                turn = self.planner.propose(state, context, registry.schemas_for_planner())
+                turn = self.planner.propose(state, context, tool_schemas)
 
                 if not turn.calls and turn.done:
                     if state.last_export:
@@ -572,11 +610,10 @@ class Agent:
                     return out
 
                 for call in turn.calls:
-                    step = state.current_step
                     if (
                         step
-                        and step.allowed_tools
-                        and call.name not in step.allowed_tools
+                        and effective_allowed
+                        and call.name not in effective_allowed
                         and registry.has(call.name)
                     ):
                         result_msg = f"Tool {call.name} blocked by procedure step {step.id}"
