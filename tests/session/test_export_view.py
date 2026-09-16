@@ -9,7 +9,9 @@ from kala.session.export_view import (
     export_label,
     format_export_human,
     format_part_body_lines,
+    part_steps_from_manifest,
     read_assembly_manifest,
+    resolve_assembly_step_paths,
     resolve_step_export,
 )
 
@@ -74,3 +76,43 @@ def test_resolve_step_export_manifest(tmp_path: Path):
 
     resolved = resolve_step_export(str(manifest_path), root=tmp_path)
     assert resolved == step
+
+
+def test_part_steps_from_manifest_relative_under_root(tmp_path: Path):
+    parts_dir = tmp_path / "outputs" / "parts"
+    parts_dir.mkdir(parents=True)
+    housing = parts_dir / "housing.step"
+    shaft = parts_dir / "shaft.step"
+    housing.write_text("housing", encoding="utf-8")
+    shaft.write_text("shaft", encoding="utf-8")
+    manifest = {
+        "kind": "assembly_manifest",
+        "parts": [
+            {"local_name": "housing", "body_id": "Box_1", "step": "outputs/parts/housing.step"},
+            {"local_name": "shaft", "body_id": "Cyl_1", "step": "outputs/parts/shaft.step"},
+        ],
+    }
+    steps = part_steps_from_manifest(manifest, root=tmp_path)
+    assert steps == [housing, shaft]
+
+
+def test_resolve_assembly_step_paths_multi_part(tmp_path: Path):
+    parts_dir = tmp_path / "outputs" / "parts"
+    parts_dir.mkdir(parents=True)
+    housing = parts_dir / "housing.step"
+    shaft = parts_dir / "shaft.step"
+    housing.write_text("housing", encoding="utf-8")
+    shaft.write_text("shaft", encoding="utf-8")
+    manifest = {
+        "kind": "assembly_manifest",
+        "parts": [
+            {"local_name": "housing", "body_id": "Box_1", "step": "outputs/parts/housing.step"},
+            {"local_name": "shaft", "body_id": "Cyl_1", "step": "outputs/parts/shaft.step"},
+        ],
+    }
+    manifest_path = tmp_path / "outputs" / "assembly_manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    resolved = resolve_assembly_step_paths("outputs/assembly_manifest.json", root=tmp_path)
+    assert resolved == [housing, shaft]

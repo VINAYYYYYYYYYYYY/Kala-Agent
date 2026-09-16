@@ -210,6 +210,45 @@ def _resolve_export(export: Any) -> Path | None:
     return resolve_step_export(export, root=ROOT)
 
 
+def _resolve_export_steps(export: Any) -> list[Path]:
+    from kala.session.export_view import resolve_assembly_step_paths
+
+    return resolve_assembly_step_paths(export, root=ROOT)
+
+
+def _aggregate_step_metrics(paths: list[Path]) -> dict[str, Any]:
+    """Sum solids/volume/bytes across all part STEPs (assembly manifest scoring)."""
+    if not paths:
+        return {"error": "no_step_paths"}
+    per_part: list[dict[str, Any]] = []
+    total_solids = 0
+    total_volume = 0.0
+    total_bytes = 0
+    all_valid = True
+    errors: list[str] = []
+    for path in paths:
+        metrics = _step_metrics(path)
+        per_part.append({"path": str(path), **metrics})
+        if metrics.get("error"):
+            errors.append(str(metrics["error"]))
+            continue
+        total_solids += int(metrics.get("solids") or 0)
+        total_volume += float(metrics.get("volume") or 0)
+        total_bytes += int(metrics.get("bytes") or 0)
+        all_valid = all_valid and bool(metrics.get("valid"))
+    result: dict[str, Any] = {
+        "parts": len(paths),
+        "solids": total_solids,
+        "volume": total_volume,
+        "bytes": total_bytes,
+        "valid": all_valid and not errors,
+        "per_part": per_part,
+    }
+    if errors:
+        result["error"] = errors[0]
+    return result
+
+
 def _score_run(
     state: dict[str, Any],
     expect: dict[str, Any] | None,
@@ -270,9 +309,17 @@ def _score_run(
         reasons.append(f"too_few_tools={len(real_tools)}<{min_tools}")
 
     geo: dict[str, Any] = {}
-    path = export_path or _resolve_export(export)
-    if not is_gate and path and path.is_file() and str(path).lower().endswith((".step", ".stp")):
-        geo = _step_metrics(path)
+    step_paths = _resolve_export_steps(export)
+    if not step_paths:
+        single = export_path or _resolve_export(export)
+        if single and single.is_file() and str(single).lower().endswith((".step", ".stp")):
+            step_paths = [single]
+    path = step_paths[0] if step_paths else (export_path or _resolve_export(export))
+    if not is_gate and step_paths:
+        if len(step_paths) == 1:
+            geo = _step_metrics(step_paths[0])
+        else:
+            geo = _aggregate_step_metrics(step_paths)
         if geo.get("error"):
             reasons.append(f"step_read={geo['error']}")
             points -= 0.05
@@ -283,13 +330,13 @@ def _score_run(
             if float(geo.get("volume") or 0) <= 0:
                 points -= 0.1
                 reasons.append("zero_volume")
-            # Tiny exports often mean incomplete models
-            if path.stat().st_size < 1500 and float(geo.get("volume") or 0) < 50:
+            total_bytes = int(geo.get("bytes") or 0)
+            if total_bytes < 1500 and float(geo.get("volume") or 0) < 50:
                 points -= 0.1
                 reasons.append("tiny_geometry")
 
     points = max(0.0, min(1.0, points))
-    has_export = bool(path and path.is_file()) or bool(export)
+    has_export = bool(step_paths) or bool(path and path.is_file()) or bool(export)
     auto_ok = is_gate and gate_ok and (is_clarify_gate or (is_part_plan_route and status == "needs_clarify"))
     if auto_ok:
         ok = True
@@ -308,6 +355,7 @@ def _score_run(
             "search_parts": searches,
             "unknown_part_ids": unknown,
             "export": str(path) if path else export,
+            "export_steps": [str(p) for p in step_paths],
             "usage": state.get("usage"),
             "geometry": geo,
             "fail_messages": [
