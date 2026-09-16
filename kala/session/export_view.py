@@ -42,16 +42,39 @@ def resolve_export_path(export: str | Path | None, *, root: Path | None = None) 
     return export_path if export_path.exists() else None
 
 
-def primary_step_from_manifest(manifest: dict[str, Any]) -> Path | None:
-    """First on-disk part STEP path from an assembly manifest."""
+def _resolve_manifest_step(step: str | Path, *, root: Path | None = None) -> Path | None:
+    """Resolve a manifest part STEP path, including relative paths under run root."""
+    p = Path(str(step))
+    if p.is_file():
+        return p
+    if root is not None:
+        for cand in (root / p, root / "outputs" / p.name):
+            if cand.is_file():
+                return cand
+    return None
+
+
+def part_steps_from_manifest(manifest: dict[str, Any], *, root: Path | None = None) -> list[Path]:
+    """All on-disk part STEP paths from an assembly manifest (manifest order)."""
+    paths: list[Path] = []
     for entry in manifest.get("parts") or []:
         step = entry.get("step")
         if not step:
             continue
-        p = Path(str(step))
-        if p.is_file():
-            return p
-    return None
+        resolved = _resolve_manifest_step(step, root=root)
+        if resolved is not None:
+            paths.append(resolved)
+    return paths
+
+
+def primary_step_from_manifest(
+    manifest: dict[str, Any],
+    *,
+    root: Path | None = None,
+) -> Path | None:
+    """First on-disk part STEP path from an assembly manifest."""
+    steps = part_steps_from_manifest(manifest, root=root)
+    return steps[0] if steps else None
 
 
 def format_export_human(last_export: str | None, *, root: Path | None = None) -> list[str]:
@@ -86,6 +109,19 @@ def export_label(last_export: str | None, *, root: Path | None = None) -> str:
     return path.name
 
 
+def resolve_assembly_step_paths(export: str | Path | None, *, root: Path | None = None) -> list[Path]:
+    """Resolve last_export to STEP file(s); assembly manifests return all part STEPs."""
+    path = resolve_export_path(export, root=root)
+    if path is None:
+        return []
+    manifest = read_assembly_manifest(path)
+    if manifest is not None:
+        return part_steps_from_manifest(manifest, root=root)
+    if path.is_file() and path.suffix.lower() in {".step", ".stp"}:
+        return [path]
+    return []
+
+
 def resolve_step_export(export: str | Path | None, *, root: Path | None = None) -> Path | None:
     """Resolve last_export to a STEP file (manifest → first part step)."""
     path = resolve_export_path(export, root=root)
@@ -93,5 +129,5 @@ def resolve_step_export(export: str | Path | None, *, root: Path | None = None) 
         return None
     manifest = read_assembly_manifest(path)
     if manifest is not None:
-        return primary_step_from_manifest(manifest) or path
+        return primary_step_from_manifest(manifest, root=root) or path
     return path
