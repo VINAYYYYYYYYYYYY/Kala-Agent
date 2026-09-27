@@ -1,0 +1,76 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kala-agent-freecad"
+version = "0.1.0"
+description = "Optional FreeCAD CAD/CAE/FEM tool adapter for Kala Agent"
+requires-python = ">=3.11"
+dependencies = [
+    "kala-agent>=0.1",
+    "pydantic>=2.10,<3",
+]
+
+[project.optional-dependencies]
+serve = [
+    "uvicorn>=0.30",
+]
+dev = [
+    "coverage>=7.6",
+    "mypy>=1.14",
+    "pytest>=8.3",
+    "ruff>=0.9",
+    "uvicorn>=0.30",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["kala_agent_freecad*"]
+
+[tool.pytest.ini_options]
+minversion = "8.3"
+addopts = ["-ra", "--strict-config", "--strict-markers"]
+testpaths = ["tests"]
+pythonpath = ["../../src", "src"]
+markers = [
+    "freecad: exercises a real FreeCAD installation and is skipped when it is absent",
+]
+xfail_strict = true
+
+[tool.coverage.run]
+branch = true
+source = ["kala_agent_freecad"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+precision = 2
+fail_under = 60
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "UP", "ANN", "ASYNC", "RUF"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["kala_agent", "kala_agent_freecad"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+skip-magic-trailing-comma = false
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["src", "tests"]
+mypy_path = ["../../src", "src"]
+warn_unreachable = true
+show_error_codes = true
+pretty = true
