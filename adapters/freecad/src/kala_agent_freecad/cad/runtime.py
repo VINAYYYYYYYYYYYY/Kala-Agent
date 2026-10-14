@@ -171,6 +171,11 @@ def freecad_session(
         _restore_loader_path(introduced)
 
 
+def load_sketcher() -> FreeCADObject:
+    """Import Sketcher after FreeCAD itself has already been loaded."""
+    return _import_module("Sketcher", [])
+
+
 def _extend_loader_path(roots: Sequence[Path]) -> tuple[str, ...]:
     introduced: list[str] = []
     for root in roots:
@@ -257,5 +262,6 @@ __all__ = (
     "freecad_session",
     "import_roots_from_path",
     "is_import_root",
+    "load_sketcher",
     "native_output_to_stderr",
 )

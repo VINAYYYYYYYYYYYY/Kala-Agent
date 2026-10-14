@@ -14,6 +14,10 @@ from kala_agent.contracts import ToolDescriptor
 from kala_agent.tools.registry import ToolRegistry
 from kala_agent_freecad.availability import FreeCADAvailability, discover
 from kala_agent_freecad.contracts import (
+    DESIGN_INPUT_SCHEMA,
+    DESIGN_OUTPUT_SCHEMA,
+    DESIGN_TOOL_ID,
+    DESIGN_TOOL_VERSION,
     FEM_INPUT_SCHEMA,
     FEM_OUTPUT_SCHEMA,
     FEM_TOOL_ID,
@@ -22,6 +26,8 @@ from kala_agent_freecad.contracts import (
     GEOMETRY_OUTPUT_SCHEMA,
     GEOMETRY_TOOL_ID,
     GEOMETRY_TOOL_VERSION,
+    design_descriptor,
+    design_handler,
     fem_descriptor,
     fem_handler,
     geometry_descriptor,
@@ -31,6 +37,7 @@ from kala_agent_freecad.contracts import (
 REGISTRATIONS: Final[tuple[tuple[str, str], ...]] = (
     (GEOMETRY_TOOL_ID, GEOMETRY_TOOL_VERSION),
     (FEM_TOOL_ID, FEM_TOOL_VERSION),
+    (DESIGN_TOOL_ID, DESIGN_TOOL_VERSION),
 )
 
 
@@ -38,7 +45,7 @@ def register(
     registry: ToolRegistry,
     availability: FreeCADAvailability | None = None,
 ) -> tuple[ToolDescriptor, ...]:
-    """Register both tools and return the descriptors that were registered."""
+    """Register the FreeCAD tools and return the descriptors that were registered."""
     if not isinstance(registry, ToolRegistry):
         raise TypeError("registry must be a ToolRegistry")
     resolved = availability if availability is not None else discover()
@@ -58,7 +65,17 @@ def register(
         input_schema=FEM_INPUT_SCHEMA,
         output_schema=FEM_OUTPUT_SCHEMA,
     )
-    return (geometry_descriptor(), fem_descriptor())
+    registry.register(
+        design_descriptor(),
+        design_handler(),
+        input_schema=DESIGN_INPUT_SCHEMA,
+        output_schema=DESIGN_OUTPUT_SCHEMA,
+    )
+    return (
+        geometry_descriptor(),
+        fem_descriptor(),
+        design_descriptor(),
+    )
 
 
 def register_if_available(

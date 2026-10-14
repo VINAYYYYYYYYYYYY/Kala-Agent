@@ -23,9 +23,11 @@ from kala_agent.tools.protocol import (
     validate_against_schema,
 )
 from kala_agent_freecad.availability import resolve_calculix
-from kala_agent_freecad.cad import fem, geometry
+from kala_agent_freecad.cad import design, fem, geometry
 from kala_agent_freecad.cad.runtime import import_roots_from_path
 from kala_agent_freecad.contracts import (
+    DESIGN_INPUT_SCHEMA,
+    DESIGN_OUTPUT_SCHEMA,
     FEM_INPUT_SCHEMA,
     FEM_OUTPUT_SCHEMA,
     GEOMETRY_INPUT_SCHEMA,
@@ -81,6 +83,28 @@ def invoke_fem(request: ToolRequestEnvelope) -> ToolResponseEnvelope:
     except Exception as error:
         return _failed(request, error)
     return _succeeded(request, outcome.result, outcome.artifacts, FEM_OUTPUT_SCHEMA)
+
+
+def invoke_design(request: ToolRequestEnvelope) -> ToolResponseEnvelope:
+    """Apply one feature-modeling call list and publish the solid."""
+    arguments, rejection = _validated(request, DESIGN_INPUT_SCHEMA)
+    if rejection is not None:
+        return rejection
+    workspace, rejection = _workspace(request)
+    if rejection is not None:
+        return rejection
+    try:
+        outcome = design.run(
+            design.parse_request(arguments),
+            workspace=workspace,
+            import_roots=import_roots_from_path(),
+            max_artifact_bytes=request.max_artifact_bytes,
+            call_id=request.call_id,
+            calculix_path=resolve_calculix(),
+        )
+    except Exception as error:
+        return _failed(request, error)
+    return _succeeded(request, outcome.result, outcome.artifacts, DESIGN_OUTPUT_SCHEMA)
 
 
 def _validated(
@@ -152,6 +176,7 @@ def _succeeded(
 
 
 __all__ = (
+    "invoke_design",
     "invoke_fem",
     "invoke_geometry",
 )

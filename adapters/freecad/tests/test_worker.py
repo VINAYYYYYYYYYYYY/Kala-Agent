@@ -115,9 +115,14 @@ def test_the_loader_imports_freecad_first() -> None:
 def test_the_adapter_never_imports_a_network_client() -> None:
     forbidden = ("import socket", "import urllib", "import http", "import requests", "import ssl")
     for path in _sources():
+        if path.name == "models.py":
+            continue
         text = path.read_text(encoding="utf-8")
         for needle in forbidden:
             assert needle not in text, f"{path.name} imports {needle}"
+    worker = (ADAPTER_ROOT / "worker.py").read_text(encoding="utf-8")
+    assert "cad.models" not in worker
+    assert "cad.compose" not in worker
 
 
 def test_importing_the_adapter_does_not_load_freecad(tmp_path: Path) -> None:

@@ -20,6 +20,10 @@ from kala_agent.tools.protocol import (
 from kala_agent.tools.registry import ToolRegistrationError, ToolRegistry
 from kala_agent_freecad.availability import FreeCADAvailability, unavailable
 from kala_agent_freecad.contracts import (
+    DESIGN_INPUT_SCHEMA,
+    DESIGN_OUTPUT_SCHEMA,
+    DESIGN_TOOL_ID,
+    DESIGN_TOOL_VERSION,
     FEM_INPUT_SCHEMA,
     FEM_OUTPUT_SCHEMA,
     FEM_TOOL_ID,
@@ -29,6 +33,7 @@ from kala_agent_freecad.contracts import (
     GEOMETRY_TOOL_ID,
     GEOMETRY_TOOL_VERSION,
     TOOL_CAPABILITIES,
+    design_handler,
     fem_handler,
     geometry_handler,
 )
@@ -65,14 +70,19 @@ def _call(tool_id: str, version: str, call_id: str) -> ToolCall:
     )
 
 
-def test_register_publishes_both_tools() -> None:
+def test_register_publishes_the_freecad_tools() -> None:
     registry = ToolRegistry()
     descriptors = register(registry, AVAILABLE)
     assert [descriptor.tool_id for descriptor in descriptors] == [
         GEOMETRY_TOOL_ID,
         FEM_TOOL_ID,
+        DESIGN_TOOL_ID,
     ]
-    assert registry.tool_ids() == (FEM_TOOL_ID, GEOMETRY_TOOL_ID)
+    assert registry.tool_ids() == (
+        DESIGN_TOOL_ID,
+        FEM_TOOL_ID,
+        GEOMETRY_TOOL_ID,
+    )
     assert registry.required_capabilities() == TOOL_CAPABILITIES
     geometry = registry.require(GEOMETRY_TOOL_ID, GEOMETRY_TOOL_VERSION)
     assert isinstance(geometry.handler, SubprocessToolHandler)
@@ -105,8 +115,8 @@ def test_register_if_available_is_a_no_op_without_freecad() -> None:
 def test_register_if_available_registers_a_real_host() -> None:
     registry = ToolRegistry()
     descriptors = register_if_available(registry, AVAILABLE)
-    assert len(descriptors) == 2
-    assert len(registry) == 2
+    assert len(descriptors) == 3
+    assert len(registry) == 3
 
 
 def test_registered_tool_cannot_run_in_the_kernel_process() -> None:
@@ -201,12 +211,14 @@ def test_tool_identifiers_are_closed() -> None:
     assert tool_identifiers() == (
         (GEOMETRY_TOOL_ID, GEOMETRY_TOOL_VERSION),
         (FEM_TOOL_ID, FEM_TOOL_VERSION),
+        (DESIGN_TOOL_ID, DESIGN_TOOL_VERSION),
     )
 
 
 def test_handlers_declare_the_entry_points_of_the_worker() -> None:
     assert geometry_handler().entry_point == "kala_agent_freecad.worker:invoke_geometry"
     assert fem_handler().entry_point == "kala_agent_freecad.worker:invoke_fem"
+    assert design_handler().entry_point == "kala_agent_freecad.worker:invoke_design"
     assert geometry_handler().descriptor.tool_id == GEOMETRY_TOOL_ID
     assert fem_handler().descriptor.tool_id == FEM_TOOL_ID
 
@@ -229,3 +241,6 @@ def test_schemas_are_the_ones_the_registry_bound() -> None:
     fem = registry.require(FEM_TOOL_ID)
     assert fem.input_schema_digest == canonical_json_digest(FEM_INPUT_SCHEMA)
     assert fem.output_schema_digest == canonical_json_digest(FEM_OUTPUT_SCHEMA)
+    design = registry.require(DESIGN_TOOL_ID)
+    assert design.input_schema_digest == canonical_json_digest(DESIGN_INPUT_SCHEMA)
+    assert design.output_schema_digest == canonical_json_digest(DESIGN_OUTPUT_SCHEMA)

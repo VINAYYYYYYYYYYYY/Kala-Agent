@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "kala-agent-freecad"
 version = "0.1.0"
-description = "Optional FreeCAD CAD/CAE/FEM tool adapter for Kala Agent"
+description = "FreeCAD tool-calling plugin for Kala Agent"
 requires-python = ">=3.11"
 dependencies = [
     "kala-agent>=0.1",

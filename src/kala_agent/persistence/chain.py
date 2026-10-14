@@ -32,6 +32,14 @@ _LENGTH_PREFIX_BYTES: Final[int] = 8
 _LOWERCASE_HEX: Final[frozenset[str]] = frozenset("0123456789abcdef")
 
 
+def _length_prefixed(part: str) -> bytes:
+    encoded = part.encode("utf-8")
+    return len(encoded).to_bytes(_LENGTH_PREFIX_BYTES, "big") + encoded
+
+
+_CHAIN_DOMAIN_PREFIX: Final[bytes] = _length_prefixed(CHAIN_DOMAIN)
+
+
 class JournalIntegrityError(RuntimeError):
     """Raised when a stored row does not belong to the journal hash chain."""
 
@@ -65,9 +73,14 @@ class EventChainFields:
 
 def chain_digest(fields: EventChainFields) -> str:
     """Return the digest that binds one journal event to the event before it."""
-    parts = (CHAIN_DOMAIN, *fields.as_preimage_parts())
-    preimage = b"".join(_length_prefixed(part) for part in parts)
-    return hashlib.sha256(preimage).hexdigest()
+    digest = hashlib.sha256()
+    update = digest.update
+    update(_CHAIN_DOMAIN_PREFIX)
+    for part in fields.as_preimage_parts():
+        encoded = part.encode("utf-8")
+        update(len(encoded).to_bytes(_LENGTH_PREFIX_BYTES, "big"))
+        update(encoded)
+    return digest.hexdigest()
 
 
 def is_chain_digest(value: object) -> bool:
@@ -124,8 +137,3 @@ def backfill_event_chain(connection: sqlite3.Connection) -> None:
             (previous_event_digest, event_digest, sequence),
         )
         previous_event_digest = event_digest
-
-
-def _length_prefixed(part: str) -> bytes:
-    encoded = part.encode("utf-8")
-    return len(encoded).to_bytes(_LENGTH_PREFIX_BYTES, "big") + encoded

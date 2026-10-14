@@ -1994,6 +1994,28 @@ def test_executor_probes_the_strict_profile(
     assert "chroot_workspace_only" in executor.enforced_controls
 
 
+def test_executor_probes_with_the_running_interpreter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_probe(**kwargs: object) -> SandboxProbe:
+        captured.update(kwargs)
+        return SandboxProbe(
+            available=True,
+            platform="linux",
+            controls=tuple(sorted(STRICT_REQUIRED_CONTROLS)),
+        )
+
+    monkeypatch.setattr(executor_module, "probe_sandbox", fake_probe)
+    _executor(
+        tmp_path,
+        registry=_evaluator_registry(),
+        profile=SandboxProfile(isolation_profile=IsolationProfile.STRICT_LINUX),
+    )
+    assert captured["python_executable"] is None
+
+
 def test_executor_builds_a_strict_sandbox_spec(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

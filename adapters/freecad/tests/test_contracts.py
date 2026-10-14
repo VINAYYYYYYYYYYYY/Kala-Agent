@@ -24,6 +24,15 @@ from kala_agent.tools.protocol import (
 )
 from kala_agent.tools.registry import ToolRegistrationError, ToolRegistry
 from kala_agent_freecad.contracts import (
+    DESIGN_CAPABILITIES,
+    DESIGN_ENTRY_POINT,
+    DESIGN_INPUT_DIGEST,
+    DESIGN_INPUT_SCHEMA,
+    DESIGN_OUTPUT_DIGEST,
+    DESIGN_OUTPUT_SCHEMA,
+    DESIGN_TIMEOUT_SECONDS,
+    DESIGN_TOOL_ID,
+    DESIGN_TOOL_VERSION,
     EXPORT_MEDIA_TYPES,
     EXPORT_SUFFIXES,
     FEM_CAPABILITIES,
@@ -46,6 +55,8 @@ from kala_agent_freecad.contracts import (
     GEOMETRY_TOOL_VERSION,
     SHAPE_KINDS,
     SOLVER_STATUSES,
+    design_descriptor,
+    design_handler,
     fem_descriptor,
     fem_handler,
     geometry_descriptor,
@@ -58,6 +69,8 @@ SCHEMAS: Final[Mapping[str, Mapping[str, object]]] = MappingProxyType(
         "GEOMETRY_OUTPUT_SCHEMA": GEOMETRY_OUTPUT_SCHEMA,
         "FEM_INPUT_SCHEMA": FEM_INPUT_SCHEMA,
         "FEM_OUTPUT_SCHEMA": FEM_OUTPUT_SCHEMA,
+        "DESIGN_INPUT_SCHEMA": DESIGN_INPUT_SCHEMA,
+        "DESIGN_OUTPUT_SCHEMA": DESIGN_OUTPUT_SCHEMA,
     }
 )
 PRIVILEGED_CAPABILITIES: Final[frozenset[str]] = frozenset(
@@ -138,6 +151,8 @@ def test_digests_bind_different_schemas() -> None:
     assert GEOMETRY_INPUT_DIGEST != GEOMETRY_OUTPUT_DIGEST
     assert FEM_INPUT_DIGEST != FEM_OUTPUT_DIGEST
     assert GEOMETRY_INPUT_DIGEST != FEM_INPUT_DIGEST
+    assert DESIGN_INPUT_DIGEST != DESIGN_OUTPUT_DIGEST
+    assert DESIGN_INPUT_DIGEST != GEOMETRY_INPUT_DIGEST
 
 
 @pytest.mark.parametrize(
@@ -150,6 +165,12 @@ def test_digests_bind_different_schemas() -> None:
             GEOMETRY_TIMEOUT_SECONDS,
         ),
         (fem_descriptor(), FEM_INPUT_DIGEST, FEM_OUTPUT_DIGEST, FEM_TIMEOUT_SECONDS),
+        (
+            design_descriptor(),
+            DESIGN_INPUT_DIGEST,
+            DESIGN_OUTPUT_DIGEST,
+            DESIGN_TIMEOUT_SECONDS,
+        ),
     ),
 )
 def test_descriptor_declares_local_work_only(
@@ -174,7 +195,9 @@ def test_tool_identities_are_distinct() -> None:
     assert geometry_descriptor().version == GEOMETRY_TOOL_VERSION
     assert fem_descriptor().tool_id == FEM_TOOL_ID
     assert fem_descriptor().version == FEM_TOOL_VERSION
-    assert GEOMETRY_CAPABILITIES == FEM_CAPABILITIES
+    assert design_descriptor().tool_id == DESIGN_TOOL_ID
+    assert design_descriptor().version == DESIGN_TOOL_VERSION
+    assert GEOMETRY_CAPABILITIES == FEM_CAPABILITIES == DESIGN_CAPABILITIES
     assert GEOMETRY_CAPABILITIES == ("artifact.write", "design.write", "tool.execute")
 
 
@@ -183,6 +206,7 @@ def test_tool_identities_are_distinct() -> None:
     (
         (geometry_handler(), GEOMETRY_ENTRY_POINT),
         (fem_handler(), FEM_ENTRY_POINT),
+        (design_handler(), DESIGN_ENTRY_POINT),
     ),
 )
 def test_entry_point_resolves_to_a_callable(

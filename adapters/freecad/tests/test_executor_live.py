@@ -23,6 +23,7 @@ from kala_agent.tools.registry import ToolRegistry
 from kala_agent.tools.sandbox import IsolationProfile
 from kala_agent_freecad.availability import FreeCADAvailability
 from kala_agent_freecad.contracts import (
+    DESIGN_TOOL_ID,
     FEM_TOOL_ID,
     FEM_TOOL_VERSION,
     GEOMETRY_TOOL_ID,
@@ -40,7 +41,11 @@ def _live_freecad(require_freecad: FreeCADAvailability) -> None:
     del require_freecad
 
 
-CAD_TOOL_IDS: Final[tuple[str, ...]] = (GEOMETRY_TOOL_ID, FEM_TOOL_ID)
+CAD_TOOL_IDS: Final[tuple[str, ...]] = (
+    GEOMETRY_TOOL_ID,
+    FEM_TOOL_ID,
+    DESIGN_TOOL_ID,
+)
 RESULT_DETAIL: Final[int] = 4_096
 
 
@@ -210,6 +215,20 @@ def test_strict_profile_is_enforced_or_refused(
         )
         assert result.status is ToolRunStatus.SUCCEEDED, result.error_message
         assert set(executor.sandbox_probe.controls) <= set(executor.reports[-1].enforced_controls)
+        fem = executor.execute(
+            _call(
+                FEM_TOOL_ID,
+                FEM_TOOL_VERSION,
+                dict(FEM_BOX_ARGUMENTS),
+                "dispatch-strict-fem",
+                300.0,
+            )
+        )
+        assert fem.status is ToolRunStatus.SUCCEEDED, fem.error_message
+        assert {artifact.artifact_id for artifact in fem.artifacts} == {
+            "dispatch-strict-fem-fcstd",
+            "dispatch-strict-fem-step",
+        }
     else:
         result = executor.execute(
             _call(
@@ -222,3 +241,4 @@ def test_strict_profile_is_enforced_or_refused(
         )
         assert result.status is ToolRunStatus.DENIED
         assert result.error_code == ToolErrorCode.SANDBOX_UNAVAILABLE.value
+

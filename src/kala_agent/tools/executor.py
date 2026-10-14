@@ -1324,11 +1324,7 @@ class ToolExecutor:
         return probe_sandbox(
             import_roots=self._child_import_roots(),
             scratch_bytes=min(self._profile.max_artifact_bytes, 16 * 1_048_576),
-            python_executable=(
-                self._python_executable
-                if self._python_executable is not None
-                else os.path.realpath(sys.executable)
-            ),
+            python_executable=self._python_executable,
         )
 
     def _dispatch_in_process(

@@ -1,7 +1,7 @@
 """The frozen tool contracts of the FreeCAD adapter.
 
 Everything an operator, a registry, or the executor needs to trust this adapter
-lives here: the two tool identities, their strict input and output schemas,
+lives here: the tool identities, their strict input and output schemas,
 their canonical digests, the descriptors and subprocess handlers, the
 capability and CAD profile constants, and the entry points the executor
 dispatches. FreeCAD is a system dependency, so nothing here imports it.
@@ -25,8 +25,11 @@ GEOMETRY_TOOL_ID: Final[str] = "cad.freecad-geometry"
 GEOMETRY_TOOL_VERSION: Final[str] = "1.0.0"
 FEM_TOOL_ID: Final[str] = "cad.freecad-fem"
 FEM_TOOL_VERSION: Final[str] = "1.0.0"
+DESIGN_TOOL_ID: Final[str] = "cad.freecad-design"
+DESIGN_TOOL_VERSION: Final[str] = "1.0.0"
 GEOMETRY_ENTRY_POINT: Final[str] = "kala_agent_freecad.worker:invoke_geometry"
 FEM_ENTRY_POINT: Final[str] = "kala_agent_freecad.worker:invoke_fem"
+DESIGN_ENTRY_POINT: Final[str] = "kala_agent_freecad.worker:invoke_design"
 TOOL_CAPABILITIES: Final[tuple[str, ...]] = (
     "artifact.write",
     "design.write",
@@ -51,6 +54,14 @@ SOLVER_STATUSES: Final[tuple[str, ...]] = (
 
 GEOMETRY_TIMEOUT_SECONDS: Final[float] = 180.0
 FEM_TIMEOUT_SECONDS: Final[float] = 900.0
+DESIGN_TIMEOUT_SECONDS: Final[float] = 180.0
+DESIGN_ANALYSIS_STATUSES: Final[tuple[str, ...]] = (
+    "not_run",
+    "solver_unavailable",
+    "prerequisites_unmet",
+    "completed",
+    "failed",
+)
 
 CAD_PROFILE_NAME: Final[str] = "freecad-cad"
 CAD_MAX_ARTIFACT_BYTES: Final[int] = 268_435_456
@@ -512,13 +523,126 @@ FEM_OUTPUT_SCHEMA: Final[Mapping[str, object]] = MappingProxyType(
     }
 )
 
+_OBJECT_NAMES: Final[Mapping[str, object]] = MappingProxyType(
+    {
+        "items": MappingProxyType({"maxLength": 64, "minLength": 1, "type": "string"}),
+        "maxItems": 32,
+        "type": "array",
+    }
+)
+
 GEOMETRY_INPUT_DIGEST: Final[str] = canonical_json_digest(GEOMETRY_INPUT_SCHEMA)
 GEOMETRY_OUTPUT_DIGEST: Final[str] = canonical_json_digest(GEOMETRY_OUTPUT_SCHEMA)
 FEM_INPUT_DIGEST: Final[str] = canonical_json_digest(FEM_INPUT_SCHEMA)
 FEM_OUTPUT_DIGEST: Final[str] = canonical_json_digest(FEM_OUTPUT_SCHEMA)
+_CALLS_JSON: Final[Mapping[str, object]] = MappingProxyType(
+    {
+        "description": "JSON list of FreeCAD toolbar calls, in procedure order.",
+        "maxLength": 24_000,
+        "minLength": 2,
+        "type": "string",
+    }
+)
+_TRACE: Final[Mapping[str, object]] = MappingProxyType(
+    {
+        "items": MappingProxyType({"maxLength": 64, "minLength": 1, "type": "string"}),
+        "maxItems": 64,
+        "type": "array",
+    }
+)
+_ANALYSIS_DETAIL: Final[Mapping[str, object]] = MappingProxyType(
+    {
+        "description": "What the analysis pass actually did.",
+        "maxLength": 512,
+        "type": "string",
+    }
+)
+
+DESIGN_INPUT_SCHEMA: Final[Mapping[str, object]] = MappingProxyType(
+    {
+        "additionalProperties": False,
+        "properties": MappingProxyType(
+            {
+                "artifact_stem": _ARTIFACT_STEM,
+                "calls_json": _CALLS_JSON,
+                "document_name": _DOCUMENT_NAME,
+                "export_formats": MappingProxyType(
+                    {
+                        "description": "Formats to write into the worker workspace.",
+                        "items": {"enum": list(GEOMETRY_EXPORT_FORMATS), "type": "string"},
+                        "maxItems": len(GEOMETRY_EXPORT_FORMATS),
+                        "minItems": 1,
+                        "type": "array",
+                        "uniqueItems": True,
+                    }
+                ),
+            }
+        ),
+        "required": ["calls_json"],
+        "title": "cad.freecad-design.input",
+        "type": "object",
+    }
+)
+
+DESIGN_OUTPUT_SCHEMA: Final[Mapping[str, object]] = MappingProxyType(
+    {
+        "additionalProperties": False,
+        "properties": MappingProxyType(
+            {
+                "analysis_detail": _ANALYSIS_DETAIL,
+                "analysis_status": {
+                    "enum": list(DESIGN_ANALYSIS_STATUSES),
+                    "type": "string",
+                },
+                "artifacts": MappingProxyType(
+                    {
+                        "items": GEOMETRY_ARTIFACT_SCHEMA,
+                        "maxItems": len(GEOMETRY_EXPORT_FORMATS),
+                        "type": "array",
+                    }
+                ),
+                "degrees_of_freedom": {"maximum": 1_000, "minimum": 0, "type": "integer"},
+                "document_name": _OBJECT_NAME,
+                "freecad_version": {"maxLength": 64, "type": "string"},
+                "import_root": {"maxLength": 1_024, "type": "string"},
+                "measurement": _MEASUREMENT,
+                "object_count": {"maximum": 32, "minimum": 1, "type": "integer"},
+                "object_names": _OBJECT_NAMES,
+                "redesign_trace": _TRACE,
+                "stage": {"maxLength": 16, "minLength": 1, "type": "string"},
+                "tool_trace": _TRACE,
+                "valid": {"type": "boolean"},
+                "warnings": _WARNINGS,
+            }
+        ),
+        "required": [
+            "analysis_detail",
+            "analysis_status",
+            "artifacts",
+            "degrees_of_freedom",
+            "document_name",
+            "freecad_version",
+            "import_root",
+            "measurement",
+            "object_count",
+            "object_names",
+            "redesign_trace",
+            "stage",
+            "tool_trace",
+            "valid",
+            "warnings",
+        ],
+        "title": "cad.freecad-design.output",
+        "type": "object",
+    }
+)
+
+DESIGN_INPUT_DIGEST: Final[str] = canonical_json_digest(DESIGN_INPUT_SCHEMA)
+DESIGN_OUTPUT_DIGEST: Final[str] = canonical_json_digest(DESIGN_OUTPUT_SCHEMA)
 
 GEOMETRY_CAPABILITIES: Final[tuple[str, ...]] = TOOL_CAPABILITIES
 FEM_CAPABILITIES: Final[tuple[str, ...]] = TOOL_CAPABILITIES
+DESIGN_CAPABILITIES: Final[tuple[str, ...]] = TOOL_CAPABILITIES
 
 
 def geometry_descriptor(
@@ -597,6 +721,45 @@ def fem_handler(
     )
 
 
+def design_descriptor(
+    *,
+    tool_id: str = DESIGN_TOOL_ID,
+    version: str = DESIGN_TOOL_VERSION,
+) -> ToolDescriptor:
+    return ToolDescriptor(
+        tool_id=tool_id,
+        version=version,
+        name="FreeCAD feature design",
+        description=(
+            "Applies an ordered list of FreeCAD modeling-tool calls in one "
+            "document. The list has to follow the feature procedure: a body, "
+            "a fully constrained sketch, then a solid feature. FEM calls after "
+            "the solid are the analysis pass. The solver runs only when a "
+            "safely discovered CalculiX executable exists; without one the "
+            "call reports solver_unavailable and no stress is invented."
+        ),
+        input_schema_digest=DESIGN_INPUT_DIGEST,
+        output_schema_digest=DESIGN_OUTPUT_DIGEST,
+        side_effect_level=SideEffectLevel.LOCAL_WRITE,
+        required_capabilities=DESIGN_CAPABILITIES,
+        timeout_seconds=DESIGN_TIMEOUT_SECONDS,
+        destructive=False,
+        supports_structured_output=True,
+        idempotent=True,
+    )
+
+
+def design_handler(
+    *,
+    tool_id: str = DESIGN_TOOL_ID,
+    version: str = DESIGN_TOOL_VERSION,
+) -> SubprocessToolHandler:
+    return SubprocessToolHandler(
+        descriptor=design_descriptor(tool_id=tool_id, version=version),
+        entry_point=DESIGN_ENTRY_POINT,
+    )
+
+
 def validate_contract_schemas() -> None:
     """Fail loudly at import time if a shipped schema is not admissible."""
     for label, schema in (
@@ -604,6 +767,8 @@ def validate_contract_schemas() -> None:
         ("GEOMETRY_OUTPUT_SCHEMA", GEOMETRY_OUTPUT_SCHEMA),
         ("FEM_INPUT_SCHEMA", FEM_INPUT_SCHEMA),
         ("FEM_OUTPUT_SCHEMA", FEM_OUTPUT_SCHEMA),
+        ("DESIGN_INPUT_SCHEMA", DESIGN_INPUT_SCHEMA),
+        ("DESIGN_OUTPUT_SCHEMA", DESIGN_OUTPUT_SCHEMA),
     ):
         check_object_schema(schema, label=label)
 
@@ -623,6 +788,16 @@ __all__ = (
     "DEFAULT_ARTIFACT_STEM",
     "DEFAULT_DOCUMENT_NAME",
     "DEFAULT_MATERIAL_NAME",
+    "DESIGN_ANALYSIS_STATUSES",
+    "DESIGN_CAPABILITIES",
+    "DESIGN_ENTRY_POINT",
+    "DESIGN_INPUT_DIGEST",
+    "DESIGN_INPUT_SCHEMA",
+    "DESIGN_OUTPUT_DIGEST",
+    "DESIGN_OUTPUT_SCHEMA",
+    "DESIGN_TIMEOUT_SECONDS",
+    "DESIGN_TOOL_ID",
+    "DESIGN_TOOL_VERSION",
     "DISTRIBUTION_NAME",
     "EXPORT_MEDIA_TYPES",
     "EXPORT_SUFFIXES",
@@ -652,6 +827,8 @@ __all__ = (
     "SOLVER_ENGINE",
     "SOLVER_STATUSES",
     "TOOL_CAPABILITIES",
+    "design_descriptor",
+    "design_handler",
     "fem_descriptor",
     "fem_handler",
     "geometry_descriptor",

@@ -1,10 +1,11 @@
-"""Optional FreeCAD CAD/CAE/FEM adapter for Kala Agent.
+"""Optional FreeCAD plugin for Kala Agent.
 
 FreeCAD is a system dependency, never a Python wheel, so this package never
-imports it at module scope: the only public surface is the availability
-contract, the tool contracts, the registration helpers, and the CAD sandbox
-profile. A host without FreeCAD imports this package unchanged and simply
-registers no tools.
+imports it at module scope. The product path is tool calling: a reasoning model writes the parts, a
+decision model chooses which part is next, and ``cad.freecad-design`` applies
+the toolbar calls in one document. The primitive geometry and FEM tools remain
+available. A host without FreeCAD imports this package unchanged and simply
+registers no tools. The design box lives in the FreeCAD window.
 """
 
 from kala_agent_freecad.availability import (
@@ -32,6 +33,16 @@ from kala_agent_freecad.contracts import (
     DEFAULT_ARTIFACT_STEM,
     DEFAULT_DOCUMENT_NAME,
     DEFAULT_MATERIAL_NAME,
+    DESIGN_ANALYSIS_STATUSES,
+    DESIGN_CAPABILITIES,
+    DESIGN_ENTRY_POINT,
+    DESIGN_INPUT_DIGEST,
+    DESIGN_INPUT_SCHEMA,
+    DESIGN_OUTPUT_DIGEST,
+    DESIGN_OUTPUT_SCHEMA,
+    DESIGN_TIMEOUT_SECONDS,
+    DESIGN_TOOL_ID,
+    DESIGN_TOOL_VERSION,
     DISTRIBUTION_NAME,
     EXPORT_MEDIA_TYPES,
     EXPORT_SUFFIXES,
@@ -59,6 +70,8 @@ from kala_agent_freecad.contracts import (
     SOLVER_ENGINE,
     SOLVER_STATUSES,
     TOOL_CAPABILITIES,
+    design_descriptor,
+    design_handler,
     fem_descriptor,
     fem_handler,
     geometry_descriptor,
@@ -98,6 +111,16 @@ __all__ = (
     "DEFAULT_ARTIFACT_STEM",
     "DEFAULT_DOCUMENT_NAME",
     "DEFAULT_MATERIAL_NAME",
+    "DESIGN_ANALYSIS_STATUSES",
+    "DESIGN_CAPABILITIES",
+    "DESIGN_ENTRY_POINT",
+    "DESIGN_INPUT_DIGEST",
+    "DESIGN_INPUT_SCHEMA",
+    "DESIGN_OUTPUT_DIGEST",
+    "DESIGN_OUTPUT_SCHEMA",
+    "DESIGN_TIMEOUT_SECONDS",
+    "DESIGN_TOOL_ID",
+    "DESIGN_TOOL_VERSION",
     "DISTRIBUTION_NAME",
     "EXPORT_MEDIA_TYPES",
     "EXPORT_SUFFIXES",
@@ -138,6 +161,8 @@ __all__ = (
     "cad_profile",
     "cad_report",
     "candidate_lib_roots",
+    "design_descriptor",
+    "design_handler",
     "discover",
     "error_code_for",
     "error_message_for",
