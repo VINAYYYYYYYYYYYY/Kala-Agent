@@ -36,23 +36,57 @@ class _Planner(QtCore.QThread):
     ready = QtCore.Signal(str)
     failed = QtCore.Signal(str)
 
-    def __init__(self, prompt: str, analyze: bool) -> None:
+    def __init__(
+        self,
+        prompt: str,
+        analyze: bool,
+        script: dict[str, object] | None,
+        add_part: bool,
+    ) -> None:
         super().__init__()
         self._prompt = prompt
         self._analyze = analyze
+        self._script = script
+        self._add_part = add_part
 
     def run(self) -> None:
         try:
-            from kala_agent_freecad.cad.compose import design_request
+            from kala_agent_freecad.cad.compose import continue_design, design_request
 
-            plan = design_request(self._prompt, on_log=self.log_line.emit, analyze=self._analyze)
+            if self._script is None:
+                plan = design_request(
+                    self._prompt, on_log=self.log_line.emit, analyze=self._analyze
+                )
+            else:
+                plan = continue_design(
+                    self._prompt,
+                    self._script,
+                    on_log=self.log_line.emit,
+                    analyze=self._analyze,
+                    add_part=self._add_part,
+                )
+            script = getattr(plan, "script", None)
+            explanation = plan.summary
+            try:
+                from kala_agent_freecad.cad.models import explain_design
+
+                source = json.dumps(script) if isinstance(script, dict) else plan.summary
+                asked = self._prompt
+                if self._script is not None:
+                    asked = f"Change the current design: {self._prompt}"
+                explanation = explain_design(asked, source)
+            except Exception as error:
+                explanation = f"{plan.summary}\n\n{error}"
+            self.log_line.emit("Explanation:")
+            self.log_line.emit(explanation)
             payload: dict[str, object] = {
                 "analyze": self._analyze,
                 "calls": plan.as_json(),
+                "continued": self._script is not None,
+                "explanation": explanation,
                 "prompt": self._prompt,
                 "summary": plan.summary,
             }
-            script = getattr(plan, "script", None)
             if script is not None:
                 payload["script"] = script
             self.ready.emit(json.dumps(payload))
@@ -66,11 +100,19 @@ class KalaDock(QtWidgets.QDockWidget):
     def __init__(self, parent: QtWidgets.QWidget) -> None:
         super().__init__("Kala", parent)
         self.setObjectName("KalaDesign")
+        self.setMinimumWidth(360)
         body = QtWidgets.QWidget(self)
+        body.setObjectName("KalaBody")
         layout = QtWidgets.QVBoxLayout(body)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
+        self._session = QtWidgets.QLabel("No design yet", body)
+        self._session.setObjectName("KalaSession")
         self._prompt = QtWidgets.QPlainTextEdit(body)
-        self._prompt.setPlaceholderText("a screw jack, or a 80 x 40 x 8 mm plate")
-        self._prompt.setFixedHeight(88)
+        self._prompt.setObjectName("KalaPrompt")
+        self._prompt.setPlaceholderText("a screw jack, or an 80 x 40 x 8 mm plate")
+        self._prompt.setFixedHeight(116)
+        _editor_margin(self._prompt)
         _prepare_path()
         from kala_agent_freecad.cad.models import api_key, decide_key
 
@@ -87,15 +129,49 @@ class KalaDock(QtWidgets.QDockWidget):
         self._analyze = QtWidgets.QCheckBox("Run analysis", body)
         self._analyze.setChecked(False)
         self._build = QtWidgets.QPushButton("Build in this window", body)
-        self._status = QtWidgets.QLabel(
-            "Write a request. The part is built here, not in a browser.", body
-        )
+        self._build.setObjectName("KalaBuild")
+        self._build.setMinimumHeight(40)
+        actions = QtWidgets.QGridLayout()
+        actions.setHorizontalSpacing(8)
+        actions.setVerticalSpacing(8)
+        self._fresh = QtWidgets.QPushButton("New design", body)
+        self._part = QtWidgets.QPushButton("New part", body)
+        self._save = QtWidgets.QPushButton("Save", body)
+        self._export = QtWidgets.QPushButton("Export STEP", body)
+        for button in (self._fresh, self._part, self._save, self._export):
+            button.setObjectName("KalaAction")
+            button.setMinimumHeight(34)
+        actions.addWidget(self._fresh, 0, 0)
+        actions.addWidget(self._part, 0, 1)
+        actions.addWidget(self._save, 1, 0)
+        actions.addWidget(self._export, 1, 1)
+        actions.setColumnStretch(0, 1)
+        actions.setColumnStretch(1, 1)
+        self._part.setEnabled(False)
+        self._status = QtWidgets.QLabel("Write a request. The part is built in this window.", body)
+        self._status.setObjectName("KalaStatus")
         self._status.setWordWrap(True)
-        self._log = QtWidgets.QPlainTextEdit(body)
-        self._log.setReadOnly(True)
-        self._log.setPlaceholderText(
-            "Reasoning, each decision, and each FreeCAD tool are written here."
+        explanation_label = QtWidgets.QLabel("What was built", body)
+        explanation_label.setObjectName("KalaSection")
+        self._explanation = QtWidgets.QPlainTextEdit(body)
+        self._explanation.setObjectName("KalaExplanation")
+        self._explanation.setReadOnly(True)
+        self._explanation.setMinimumHeight(96)
+        self._explanation.setPlaceholderText(
+            "After a build, the model explains the parts, sizes, and what it left out."
         )
+        _editor_margin(self._explanation)
+        _fill(self._explanation)
+        log_label = QtWidgets.QLabel("Build log", body)
+        log_label.setObjectName("KalaSection")
+        self._log = QtWidgets.QPlainTextEdit(body)
+        self._log.setObjectName("KalaLog")
+        self._log.setReadOnly(True)
+        self._log.setMinimumHeight(120)
+        self._log.setPlaceholderText("The script, each decision, and each FreeCAD tool land here.")
+        _editor_margin(self._log)
+        _fill(self._log)
+        layout.addWidget(self._session)
         layout.addWidget(self._prompt)
         if self._key is not None:
             layout.addWidget(self._key)
@@ -103,17 +179,32 @@ class KalaDock(QtWidgets.QDockWidget):
             layout.addWidget(self._decide)
         layout.addWidget(self._analyze)
         layout.addWidget(self._build)
+        layout.addLayout(actions)
         layout.addWidget(self._status)
-        layout.addWidget(self._log)
+        layout.addWidget(explanation_label)
+        layout.addWidget(self._explanation, 2)
+        layout.addWidget(log_label)
+        layout.addWidget(self._log, 3)
+        body.setStyleSheet(_STYLE)
         self.setWidget(body)
         self._worker: _Planner | None = None
         self._journal: object | None = None
-        self._build.clicked.connect(self._start)
+        self._script: dict[str, object] | None = None
+        self._build.clicked.connect(lambda: self._start(add_part=False))
+        self._part.clicked.connect(lambda: self._start(add_part=True))
+        self._fresh.clicked.connect(self._new_design)
+        self._save.clicked.connect(self._save_document)
+        self._export.clicked.connect(self._export_step)
 
-    def _start(self) -> None:
+    def _start(self, *, add_part: bool = False) -> None:
         prompt = self._prompt.toPlainText().strip()
         if not prompt:
-            self._status.setText("The request is empty.")
+            self._status.setText(
+                "Describe the part to add." if add_part else "The request is empty."
+            )
+            return
+        if add_part and self._script is None:
+            self._status.setText("Build a design first, then add a part.")
             return
         if self._key is not None:
             key = self._key.text().strip()
@@ -124,14 +215,20 @@ class KalaDock(QtWidgets.QDockWidget):
             if key:
                 os.environ["OPENROUTER_DECIDE_API_KEY"] = key
         self._log.clear()
+        self._explanation.clear()
         self._open_journal(prompt)
         waiting, blocked = self._waiting()
         if blocked:
             self._status.setText(waiting)
             return
-        self._build.setEnabled(False)
-        self._status.setText(waiting)
-        worker = _Planner(prompt, self._analyze.isChecked())
+        self._set_busy(True)
+        if self._script is None:
+            self._status.setText("Writing a new design…")
+        elif add_part:
+            self._status.setText("Adding a part to this design…")
+        else:
+            self._status.setText("Changing this design…")
+        worker = _Planner(prompt, self._analyze.isChecked(), self._script, add_part)
         worker.log_line.connect(self._append)
         worker.ready.connect(self._build_calls)
         worker.failed.connect(self._fail)
@@ -165,16 +262,111 @@ class KalaDock(QtWidgets.QDockWidget):
     def _fail(self, message: str) -> None:
         self._append(message)
         self._status.setText(message)
-        self._build.setEnabled(True)
+        self._set_busy(False)
+
+    def _new_design(self) -> None:
+        self._script = None
+        self._prompt.clear()
+        self._explanation.clear()
+        self._refresh_session()
+        self._append("Started a new design. The open model stays until the next build.")
+        self._status.setText("Next request starts a new design. Save the open model if you still need it.")
+
+    def _refresh_session(self) -> None:
+        editing = self._script is not None
+        self._session.setText("Editing this design" if editing else "No design yet")
+        self._part.setEnabled(editing and self._build.isEnabled())
+        self._build.setText("Apply change" if editing else "Build in this window")
+        self._prompt.setPlaceholderText(
+            "a 10 mm hole in the center, or make the plate 100 mm wide"
+            if editing
+            else "a screw jack, or an 80 x 40 x 8 mm plate"
+        )
+
+    def _set_busy(self, busy: bool) -> None:
+        self._build.setEnabled(not busy)
+        self._fresh.setEnabled(not busy)
+        self._save.setEnabled(not busy)
+        self._export.setEnabled(not busy)
+        self._part.setEnabled(not busy and self._script is not None)
+
+    def _save_document(self) -> None:
+        import FreeCAD as App
+
+        document = App.ActiveDocument
+        if document is None:
+            self._status.setText("There is no model to save.")
+            return
+        try:
+            filename = str(getattr(document, "FileName", "") or "")
+            if filename:
+                document.save()
+                self._status.setText(f"Saved {filename}")
+                return
+            path, _selected = QtWidgets.QFileDialog.getSaveFileName(
+                self,
+                "Save design",
+                str(Path.home() / "kala.FCStd"),
+                "FreeCAD (*.FCStd)",
+            )
+            if not path:
+                return
+            if not path.lower().endswith(".fcstd"):
+                path = f"{path}.FCStd"
+            document.saveAs(path)
+            self._status.setText(f"Saved {path}")
+        except Exception as error:
+            self._status.setText(str(error))
+
+    def _export_step(self) -> None:
+        import FreeCAD as App
+
+        document = App.ActiveDocument
+        if document is None:
+            self._status.setText("There is no model to export.")
+            return
+        path, _selected = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Export STEP",
+            str(Path.home() / "kala.step"),
+            "STEP (*.step *.stp)",
+        )
+        if not path:
+            return
+        if not path.lower().endswith((".step", ".stp")):
+            path = f"{path}.step"
+        bodies = [
+            obj
+            for obj in list(getattr(document, "Objects", ()) or ())
+            if str(getattr(obj, "TypeId", "")) == "PartDesign::Body"
+        ]
+        if not bodies:
+            self._status.setText("There is no solid to export.")
+            return
+        try:
+            import Import
+
+            Import.export(bodies, path)
+        except Exception as error:
+            self._status.setText(str(error))
+            return
+        self._status.setText(f"Exported {path}")
 
     def _build_calls(self, payload: str) -> None:
         try:
             parsed = json.loads(payload)
             summary = str(parsed.get("summary", ""))
             calls = json.dumps(parsed["calls"])
+            explanation = parsed.get("explanation")
+            if isinstance(explanation, str) and explanation.strip():
+                self._explanation.setPlainText(explanation.strip())
             self._append("FreeCAD")
             self._status.setText(summary or "Building in this window.")
             measurements = self._run(calls, automatic_redesign=False)
+            script = parsed.get("script")
+            if isinstance(script, dict):
+                self._script = script
+            self._refresh_session()
             if parsed.get("analyze") and isinstance(parsed.get("script"), dict):
                 self._revise(
                     parsed,
@@ -184,12 +376,15 @@ class KalaDock(QtWidgets.QDockWidget):
                         "peak_stress_mpa": measurements.get("peak_stress_mpa"),
                     },
                 )
-            self._status.setText(summary or "The model is open in this window.")
+            if parsed.get("continued"):
+                self._status.setText(summary or "Updated this design.")
+            else:
+                self._status.setText(summary or "The model is open in this window.")
         except Exception as error:
             self._append(str(error))
             self._status.setText(str(error))
         finally:
-            self._build.setEnabled(True)
+            self._set_busy(False)
 
     def _revise(self, parsed: dict[str, object], measurements: dict[str, object]) -> None:
         from kala_agent.contracts import ConstructionError, load_construction
@@ -239,6 +434,12 @@ class KalaDock(QtWidgets.QDockWidget):
             import_order=("FreeCAD", "Part", "ObjectsFem"),
             solver_bridge_detail="",
         )
+        gui = Gui.ActiveDocument
+        if gui is not None:
+            try:
+                gui.resetEdit()
+            except Exception:
+                pass
         request = parse_request({"calls_json": calls_json, "document_name": "Kala"})
 
         def show(tool: str, sketch_name: str) -> None:
@@ -274,7 +475,115 @@ class KalaDock(QtWidgets.QDockWidget):
             on_step=show,
             calculix_path=resolve_calculix(),
             automatic_redesign=automatic_redesign,
+            reuse_document=True,
         )
+
+
+def _editor_margin(editor: QtWidgets.QPlainTextEdit) -> None:
+    editor.document().setDocumentMargin(8)
+    hidden = QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+    editor.setHorizontalScrollBarPolicy(hidden)
+    editor.setLineWrapMode(QtWidgets.QPlainTextEdit.LineWrapMode.WidgetWidth)
+
+
+def _fill(editor: QtWidgets.QPlainTextEdit) -> None:
+    policy = QtWidgets.QSizePolicy.Policy
+    editor.setSizePolicy(policy.Expanding, policy.Expanding)
+
+
+_STYLE = """
+QWidget#KalaBody {
+  background: #f6f5f2;
+  color: #1c1b19;
+  font-size: 14px;
+}
+QLabel#KalaSession {
+  color: #1f6b4a;
+  font-size: 13px;
+  font-weight: 600;
+}
+QLabel#KalaStatus {
+  color: #5e584f;
+  font-size: 13px;
+}
+QLabel#KalaSection {
+  color: #5e584f;
+  font-size: 12px;
+  font-weight: 600;
+}
+QPlainTextEdit {
+  background: #ffffff;
+  color: #1c1b19;
+  border: 1px solid #e4e0d8;
+  border-radius: 8px;
+  font-size: 14px;
+  selection-background-color: #d7efe3;
+  selection-color: #1c1b19;
+}
+QPlainTextEdit#KalaPrompt {
+  font-size: 15px;
+}
+QPlainTextEdit#KalaLog {
+  background: #fbfaf8;
+  color: #3f3c38;
+  font-family: "Source Code Pro", monospace;
+  font-size: 12px;
+}
+QPlainTextEdit QScrollBar:vertical {
+  background: transparent;
+  width: 8px;
+  margin: 4px 2px;
+}
+QPlainTextEdit QScrollBar::handle:vertical {
+  background: #d9d3c9;
+  border-radius: 4px;
+  min-height: 24px;
+}
+QPlainTextEdit QScrollBar::add-line:vertical,
+QPlainTextEdit QScrollBar::sub-line:vertical,
+QPlainTextEdit QScrollBar::add-page:vertical,
+QPlainTextEdit QScrollBar::sub-page:vertical {
+  background: transparent;
+  height: 0;
+}
+QLineEdit {
+  background: #ffffff;
+  color: #1c1b19;
+  border: 1px solid #e4e0d8;
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-height: 22px;
+}
+QCheckBox {
+  color: #1c1b19;
+  spacing: 8px;
+}
+QPushButton#KalaBuild {
+  background: #1f6b4a;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 600;
+}
+QPushButton#KalaBuild:disabled {
+  background: #9aab9f;
+  color: #ffffff;
+}
+QPushButton#KalaAction {
+  background: #ffffff;
+  color: #1c1b19;
+  border: 1px solid #e0dbd3;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+QPushButton#KalaAction:disabled {
+  color: #a39e96;
+  background: #f3f1ec;
+}
+"""
 
 
 def show_dock() -> None:
@@ -283,9 +592,14 @@ def show_dock() -> None:
     if window is None:
         return
     existing = window.findChild(QtWidgets.QDockWidget, "KalaDesign")
-    if existing is None:
+    created = existing is None
+    if created:
         existing = KalaDock(window)
         window.addDockWidget(_dock_area(), existing)
+        resize = getattr(window, "resizeDocks", None)
+        orientation = getattr(QtCore.Qt, "Orientation", QtCore.Qt)
+        if callable(resize):
+            resize([existing], [400], orientation.Horizontal)
     existing.show()
     existing.raise_()
 

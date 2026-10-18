@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from kala_agent.contracts import AnalysisReading, load_construction, load_reading
-from kala_agent_freecad.cad.compose import design_request, realize, revise_design
+from kala_agent_freecad.cad.compose import continue_design, design_request, realize, revise_design
 from kala_agent_freecad.cad.models import ModelChoice, WrittenIntent
 from kala_agent_freecad.errors import FreeCADDependencyError, FreeCADInputError
 
@@ -407,6 +407,137 @@ def test_revise_design_follows_the_decision(monkeypatch: pytest.MonkeyPatch) -> 
     assert "sketch.rectangle" not in tools
 
 
+def _accepted_jack() -> dict[str, object]:
+    return {
+        "assembly": [
+            {"component": "base", "op": "place", "x": 0, "y": 0, "z": 0},
+            {"component": "screw", "op": "place", "x": 0, "y": 0, "z": 12},
+            {"component": "cup", "op": "place", "x": 0, "y": 0, "z": 90},
+            {"component": "tommy", "op": "place", "x": 0, "y": 0, "z": 70},
+        ],
+        "components": [
+            {
+                "name": "base",
+                "steps": [
+                    {"height": 72, "op": "sketch", "profile": "rectangle", "width": 90},
+                    {"length": 12, "op": "extrude"},
+                ],
+            },
+            {
+                "name": "screw",
+                "steps": [
+                    {"diameter": 16, "op": "sketch", "profile": "circle"},
+                    {"length": 90, "op": "extrude"},
+                    {"diameter": 16, "length": 40, "op": "helix", "pitch": 4},
+                ],
+            },
+            {
+                "name": "cup",
+                "steps": [
+                    {"diameter": 36, "op": "sketch", "profile": "circle"},
+                    {"length": 20, "op": "extrude"},
+                ],
+            },
+            {
+                "name": "tommy",
+                "steps": [
+                    {"height": 10, "op": "sketch", "profile": "rectangle", "width": 80},
+                    {"length": 10, "op": "extrude"},
+                ],
+            },
+        ],
+        "summary": "A screw jack.",
+    }
+
+
+def test_a_refused_script_is_sent_back_to_the_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: list[str] = []
+    jack = json.dumps(_accepted_jack())
+
+    def write(prompt: str) -> WrittenIntent:
+        seen.append(prompt)
+        if len(seen) == 1:
+            return WrittenIntent(
+                text='{"summary":"no","components":[{"name":"plate","steps":[{"op":"sketch","profile":"gear"}]}]}',
+                model="cohere/north-mini-code:free",
+            )
+        return WrittenIntent(text=jack, model="cohere/north-mini-code:free")
+
+    monkeypatch.setattr("kala_agent_freecad.cad.compose.write_intent", write)
+
+    logged: list[str] = []
+    plan = design_request("a screw jack", on_log=logged.append)
+
+    assert len(seen) == 2
+    assert "Model input:" in logged
+    assert "Model output:" in logged
+    assert any("profile" in line for line in logged)
+    assert "a screw jack" in seen[1]
+    assert "refused" in seen[1]
+    assert plan.summary == "A screw jack."
+    assert "partdesign.helix" in [call.tool for call in plan.calls]
+
+
+def test_a_missing_duty_is_sent_back_before_the_build(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[str] = []
+    cylinder = json.dumps(
+        {
+            "components": [
+                {
+                    "name": "body",
+                    "steps": [
+                        {"diameter": 16, "op": "sketch", "profile": "circle"},
+                        {"length": 40, "op": "extrude"},
+                    ],
+                }
+            ],
+            "summary": "A cylinder.",
+        }
+    )
+
+    def write(prompt: str) -> WrittenIntent:
+        seen.append(prompt)
+        if len(seen) == 1:
+            return WrittenIntent(text=cylinder, model="cohere/north-mini-code:free")
+        return WrittenIntent(text=json.dumps(_accepted_jack()), model="cohere/north-mini-code:free")
+
+    monkeypatch.setattr("kala_agent_freecad.cad.compose.write_intent", write)
+    logged: list[str] = []
+    plan = design_request("a screw jack", on_log=logged.append)
+
+    assert "tommy bar" in seen[1]
+    assert "plate wider than the screw" in seen[1]
+    assert any("tommy bar" in line for line in logged)
+    assert plan.summary == "A screw jack."
+    assert [call.tool for call in plan.calls].count("partdesign.body") == 4
+
+
+def test_a_second_refused_design_is_not_built(monkeypatch: pytest.MonkeyPatch) -> None:
+    cylinder = json.dumps(
+        {
+            "components": [
+                {
+                    "name": "body",
+                    "steps": [
+                        {"diameter": 16, "op": "sketch", "profile": "circle"},
+                        {"length": 40, "op": "extrude"},
+                    ],
+                }
+            ],
+            "summary": "A cylinder.",
+        }
+    )
+    monkeypatch.setattr(
+        "kala_agent_freecad.cad.compose.write_intent",
+        lambda _prompt: WrittenIntent(text=cylinder, model="cohere/north-mini-code:free"),
+    )
+
+    with pytest.raises(FreeCADInputError, match="tommy bar"):
+        design_request("a screw jack")
+
+
 def test_a_missing_key_does_not_invent_a_plate(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -416,3 +547,133 @@ def test_a_missing_key_does_not_invent_a_plate(
     monkeypatch.setattr("kala_agent_freecad.cad.models.Path.home", lambda: tmp_path)
     with pytest.raises(FreeCADDependencyError, match="reasoning key"):
         design_request("a screw jack")
+
+
+def _built_plate() -> dict[str, object]:
+    return {
+        "assembly": [{"component": "plate", "op": "place", "x": 0, "y": 0, "z": 0}],
+        "components": [
+            {
+                "name": "plate",
+                "steps": [
+                    {"height": 40, "op": "sketch", "profile": "rectangle", "width": 80},
+                    {"length": 8, "op": "extrude"},
+                ],
+            }
+        ],
+        "summary": "An 80 by 40 by 8 mm plate.",
+    }
+
+
+def _plate_with_hole() -> dict[str, object]:
+    return {
+        "assembly": [{"component": "plate", "op": "place", "x": 0, "y": 0, "z": 0}],
+        "components": [
+            {
+                "name": "plate",
+                "steps": [
+                    {"height": 40, "op": "sketch", "profile": "rectangle", "width": 80},
+                    {"length": 8, "op": "extrude"},
+                    {"diameter": 10, "op": "sketch", "profile": "circle"},
+                    {"op": "pocket"},
+                ],
+            }
+        ],
+        "summary": "The plate with a 10 mm hole through the center.",
+    }
+
+
+def _different_part() -> dict[str, object]:
+    return {
+        "assembly": [{"component": "block", "op": "place", "x": 0, "y": 0, "z": 0}],
+        "components": [
+            {
+                "name": "block",
+                "steps": [
+                    {"height": 20, "op": "sketch", "profile": "rectangle", "width": 20},
+                    {"length": 8, "op": "extrude"},
+                    {"diameter": 10, "op": "sketch", "profile": "circle"},
+                    {"op": "pocket"},
+                ],
+            }
+        ],
+        "summary": "A different part.",
+    }
+
+
+def test_a_change_keeps_the_plate_and_adds_the_hole(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[str] = []
+
+    def write(prompt: str) -> WrittenIntent:
+        seen.append(prompt)
+        return WrittenIntent(text=json.dumps(_plate_with_hole()), model="cohere/north-mini-code:free")
+
+    monkeypatch.setattr("kala_agent_freecad.cad.compose.write_intent", write)
+    logged: list[str] = []
+    plan = continue_design("a 10 mm hole in the center", _built_plate(), on_log=logged.append)
+
+    assert seen[0].startswith("Change this same design.")
+    assert "plate" in seen[0]
+    assert "Changing the current design." in logged
+    assert plan.kind == "revised"
+    assert "partdesign.pocket" in [call.tool for call in plan.calls]
+    assert "sketch.rectangle" in [call.tool for call in plan.calls]
+
+
+def test_a_replacement_is_sent_back_and_then_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[str] = []
+
+    def write(prompt: str) -> WrittenIntent:
+        seen.append(prompt)
+        if len(seen) == 1:
+            return WrittenIntent(text=json.dumps(_different_part()), model="cohere/north-mini-code:free")
+        return WrittenIntent(text=json.dumps(_plate_with_hole()), model="cohere/north-mini-code:free")
+
+    monkeypatch.setattr("kala_agent_freecad.cad.compose.write_intent", write)
+    plan = continue_design("a 10 mm hole in the center", _built_plate())
+
+    assert "replaced the design" in seen[1]
+    assert plan.summary == "The plate with a 10 mm hole through the center."
+
+    def replace(prompt: str) -> WrittenIntent:
+        del prompt
+        return WrittenIntent(text=json.dumps(_different_part()), model="cohere/north-mini-code:free")
+
+    monkeypatch.setattr("kala_agent_freecad.cad.compose.write_intent", replace)
+    with pytest.raises(FreeCADInputError, match="replaced the current design"):
+        continue_design("a 10 mm hole in the center", _built_plate())
+
+
+def test_a_new_part_must_add_a_component(monkeypatch: pytest.MonkeyPatch) -> None:
+    pin = _plate_with_hole()
+    components = pin["components"]
+    assert isinstance(components, list)
+    components.append(
+        {
+            "name": "pin",
+            "steps": [
+                {"diameter": 6, "op": "sketch", "profile": "circle"},
+                {"length": 12, "op": "extrude"},
+            ],
+        }
+    )
+    assembly = pin["assembly"]
+    assert isinstance(assembly, list)
+    assembly.append({"component": "pin", "op": "place", "x": 30, "y": 0, "z": 8})
+    seen: list[str] = []
+
+    def write(prompt: str) -> WrittenIntent:
+        seen.append(prompt)
+        if len(seen) == 1:
+            return WrittenIntent(
+                text=json.dumps(_plate_with_hole()), model="cohere/north-mini-code:free"
+            )
+        return WrittenIntent(text=json.dumps(pin), model="cohere/north-mini-code:free")
+
+    monkeypatch.setattr("kala_agent_freecad.cad.compose.write_intent", write)
+    plan = continue_design("a 6 mm pin", _built_plate(), add_part=True)
+
+    assert "Add one new component" in seen[0]
+    assert "did not add one new component" in seen[1]
+    assert plan.calls
+    assert [call.tool for call in plan.calls].count("partdesign.body") == 2

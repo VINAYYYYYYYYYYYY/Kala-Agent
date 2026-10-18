@@ -1,0 +1,102 @@
+"""Build both screw jack variants in the existing FreeCAD/Kala instance.
+
+This run alone blocks Kala's external model gateway. The original routing is
+restored in finally; no credentials or persistent settings are changed.
+"""
+import datetime
+import json
+import os
+import runpy
+import sys
+import traceback
+from pathlib import Path
+
+import FreeCAD as App
+import FreeCADGui as Gui
+from PySide import QtWidgets
+
+ROOT = Path('/home/v9i/Projects/Kala-Agent')
+OUT = ROOT / 'outputs' / 'screw_jack_20261017'
+for path in [ROOT / 'src', ROOT / 'adapters/freecad/src', *list((ROOT / '.venv/lib').glob('python*/site-packages'))]:
+    if str(path) not in sys.path:
+        sys.path.insert(0, str(path))
+
+from kala_agent_freecad.cad import models
+
+before = {doc.Name: doc.FileName for doc in App.listDocuments().values()}
+request_file = OUT / 'pending_builds.json'
+requested = json.loads(request_file.read_text()) if request_file.exists() else ['tool_based', 'script_based']
+if request_file.exists():
+    request_file.unlink()
+state = {
+    'started_at_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    'pid': os.getpid(),
+    'freecad_version': list(App.Version())[:3],
+    'reasoning': 'Codex parent with delegated CAD/engineering work; no Kala LLM calls',
+    'decision_model': 'bypassed for this run',
+    'model_gateway_attempts': [],
+    'existing_documents': before,
+    'builds': [],
+}
+if (OUT / 'session_execution.json').exists():
+    previous = json.loads((OUT / 'session_execution.json').read_text())
+    state['started_at_utc'] = previous['started_at_utc']
+    state['existing_documents'] = previous['existing_documents']
+    state['builds'] = previous['builds']
+    state['model_gateway_attempts'] = previous['model_gateway_attempts']
+
+def record():
+    (OUT / 'session_execution.json').write_text(json.dumps(state, indent=2))
+
+def log(message):
+    App.Console.PrintMessage(message + '\n')
+    for dock in Gui.getMainWindow().findChildren(QtWidgets.QDockWidget):
+        if dock.objectName() == 'KalaDesign' and hasattr(dock, '_append'):
+            dock._append(message)
+    QtWidgets.QApplication.processEvents()
+
+def blocked_gateway(*args, **kwargs):
+    state['model_gateway_attempts'].append('blocked Kala model gateway call')
+    record()
+    raise RuntimeError('Kala model gateway disabled for this externally reasoned run')
+
+original_gateway = models._post
+try:
+    models._post = blocked_gateway
+    record()
+    log('Codex reasoning session: direct Kala tool calls, then Python script. Decision model bypassed for this run.')
+    for label, filename in [('tool_based', 'tool_build.py'), ('script_based', 'script_build.py')]:
+        if label not in requested:
+            continue
+        result = {'method': label, 'status': 'running'}
+        state['builds'].append(result)
+        record()
+        log('Building screw jack: ' + label)
+        names_before = set(App.listDocuments())
+        try:
+            namespace = runpy.run_path(str(OUT / filename))
+            namespace['build']()
+            result['documents'] = [doc.Name for doc in App.listDocuments().values() if doc.Name not in names_before]
+            result['status'] = 'completed'
+            if result['documents']:
+                App.setActiveDocument(result['documents'][-1])
+                Gui.getDocument(result['documents'][-1]).activeView().viewAxonometric()
+            if App.ActiveDocument:
+                view = Gui.getDocument(App.ActiveDocument.Name).activeView()
+                view.viewAxonometric()
+                view.fitAll()
+                Gui.updateGui()
+                view.saveImage(str(OUT / label / 'assembly.png'), 1800, 1400, 'White')
+            log('Finished screw jack: ' + label)
+        except Exception:
+            result['status'] = 'failed'
+            result['error'] = traceback.format_exc()
+            log(result['error'])
+        record()
+finally:
+    models._post = original_gateway
+    state['gateway_restored'] = models._post is original_gateway
+    state['finished_at_utc'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    state['preserved_documents'] = all(App.getDocument(name) is not None and App.getDocument(name).FileName == filename for name, filename in state['existing_documents'].items())
+    record()
+    log('Build session finished. Original Kala model routing restored; existing documents preserved.')

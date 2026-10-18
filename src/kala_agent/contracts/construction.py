@@ -32,7 +32,6 @@ _MIN_DIMENSION_MM: Final[float] = 0.001
 _MAX_ASSEMBLY_STEPS: Final[int] = 16
 _MAX_ANALYSIS_STEPS: Final[int] = 8
 _MAX_EDITS: Final[int] = 4
-_MAX_SUMMARY_CHARS: Final[int] = 240
 _MAX_VERDICT_CHARS: Final[int] = 500
 _MAX_FACE: Final[int] = 64
 _MAX_FORCE_N: Final[float] = 1_000_000.0
@@ -50,6 +49,20 @@ ANALYSIS_OPS: Final[frozenset[str]] = frozenset(
 EDIT_OPS: Final[frozenset[str]] = frozenset({"move", "resize", "fillet"})
 _PLANES: Final[frozenset[str]] = frozenset({"XY", "XZ", "YZ"})
 _PROFILES: Final[frozenset[str]] = frozenset({"rectangle", "circle"})
+_PROFILE_ALIASES: Final[dict[str, str]] = {
+    "box": "rectangle",
+    "rect": "rectangle",
+    "rectangle": "rectangle",
+    "rectangular": "rectangle",
+    "square": "rectangle",
+    "circle": "circle",
+    "circular": "circle",
+    "cylinder": "circle",
+    "cylindrical": "circle",
+    "disc": "circle",
+    "disk": "circle",
+    "round": "circle",
+}
 _SOLID_OPS: Final[frozenset[str]] = frozenset({"extrude", "revolve"})
 _ANALYSIS_RANK: Final[dict[str, int]] = {
     "material": 1,
@@ -132,6 +145,15 @@ def _component_name(value: str) -> str:
     return value
 
 
+def _text(value: object, label: str) -> str:
+    if not isinstance(value, str):
+        raise ValueError(f"{label} must be nonempty text")
+    text = value.strip()
+    if not text:
+        raise ValueError(f"{label} must be nonempty text")
+    return text
+
+
 def _bounded_text(value: object, label: str, limit: int) -> str:
     if not isinstance(value, str):
         raise ValueError(f"{label} must be nonempty text")
@@ -162,6 +184,11 @@ class ComponentStep(_ScriptModel):
     y: float = 0
     reversed: StrictBool = False
 
+    @model_validator(mode="before")
+    @classmethod
+    def flatten_profile(cls, value: object) -> object:
+        return _flatten_profile(value)
+
     @field_validator("op", mode="before")
     @classmethod
     def check_op(cls, value: object) -> str:
@@ -179,9 +206,9 @@ class ComponentStep(_ScriptModel):
     def check_profile(cls, value: object) -> str | None:
         if value is None:
             return None
-        if not isinstance(value, str) or value not in _PROFILES:
+        if not isinstance(value, str) or not value.strip():
             raise ValueError("profile must be rectangle or circle")
-        return value
+        return _PROFILE_ALIASES.get(value.strip().casefold(), value.strip().casefold())
 
     @field_validator(
         "width",
@@ -204,6 +231,7 @@ class ComponentStep(_ScriptModel):
     @model_validator(mode="after")
     def check_operation(self) -> Self:
         if self.op == "sketch":
+            _normalize_profile(self)
             _check_sketch(self)
         elif self.op == "extrude":
             _require(self.length, "extrude requires a length")
@@ -219,6 +247,55 @@ class ComponentStep(_ScriptModel):
         if self.reversed and self.op != "extrude":
             raise ValueError("reversed is only meaningful on extrude")
         return self
+
+
+def _flatten_profile(value: object) -> object:
+    """Lift a nested profile object onto the sketch step.
+
+    The model writes ``profile: {circle: {diameter}}`` rather than a profile name.
+    """
+    if not isinstance(value, dict):
+        return value
+    profile = value.get("profile")
+    if not isinstance(profile, Mapping):
+        return value
+    flat = dict(value)
+    shape: str | None = None
+    body: Mapping[str, object] | None = None
+    for key, item in profile.items():
+        if not isinstance(key, str):
+            continue
+        name = _PROFILE_ALIASES.get(key.casefold())
+        if name is not None and isinstance(item, Mapping):
+            shape = name
+            body = item
+            break
+    if shape is None:
+        named = profile.get("type") or profile.get("kind") or profile.get("shape")
+        if isinstance(named, str) and named.strip():
+            shape = _PROFILE_ALIASES.get(named.strip().casefold(), named.strip().casefold())
+            body = profile
+    if shape is not None:
+        flat["profile"] = shape
+    if body is not None:
+        for size in ("width", "height", "diameter", "length", "pitch"):
+            if size in body and flat.get(size) is None:
+                flat[size] = body[size]
+    for coord in ("x", "y"):
+        if coord in profile and coord not in flat:
+            flat[coord] = profile[coord]
+    return flat
+
+
+def _normalize_profile(step: ComponentStep) -> None:
+    """Keep a sketch the builder can draw when the model names the shape loosely."""
+    if step.profile in _PROFILES:
+        return
+    if step.diameter is not None and (step.width is None or step.height is None):
+        object.__setattr__(step, "profile", "circle")
+        return
+    if step.width is not None and step.height is not None:
+        object.__setattr__(step, "profile", "rectangle")
 
 
 def _check_sketch(step: ComponentStep) -> None:
@@ -337,7 +414,7 @@ class ConstructionScript(_ScriptModel):
     @field_validator("summary", mode="before")
     @classmethod
     def check_summary(cls, value: object) -> str:
-        return _bounded_text(value, "summary", _MAX_SUMMARY_CHARS)
+        return _text(value, "summary")
 
     @model_validator(mode="after")
     def check_references(self) -> Self:

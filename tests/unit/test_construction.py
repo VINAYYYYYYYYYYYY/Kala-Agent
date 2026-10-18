@@ -44,6 +44,59 @@ def _script(
     return raw
 
 
+def test_a_nested_profile_object_is_the_models_sketch() -> None:
+    script = load_construction(
+        {
+            "assembly": [{"component": "Screw", "op": "place", "x": 0, "y": 0, "z": 5}],
+            "components": [
+                {
+                    "name": "Screw",
+                    "steps": [
+                        {
+                            "op": "sketch",
+                            "plane": "XY",
+                            "profile": {"circle": {"diameter": 20}, "x": 0, "y": 0},
+                        },
+                        {"length": 100, "op": "extrude"},
+                        {"diameter": 20, "length": 100, "op": "helix", "pitch": 5},
+                    ],
+                }
+            ],
+            "summary": "A screw jack.",
+        }
+    )
+    sketch = script.components[0].steps[0]
+    assert sketch.profile == "circle"
+    assert sketch.diameter == 20
+    assert script.components[0].steps[2].op == "helix"
+
+
+def test_a_long_summary_is_kept() -> None:
+    summary = "Wall-mounted belt-driven spindle. " * 20
+    script = load_construction(_script([_plate_body("plate")], summary=summary))
+    assert script.summary == summary.strip()
+
+
+def test_a_loose_sketch_profile_becomes_a_rectangle_or_a_circle() -> None:
+    script = load_construction(
+        _script(
+            [
+                _component(
+                    "shaft",
+                    [
+                        {"diameter": 16, "op": "sketch", "profile": "circular"},
+                        _extrude(40),
+                        {"height": 40, "op": "sketch", "profile": "flange", "width": 40},
+                        _extrude(8),
+                    ],
+                )
+            ]
+        )
+    )
+    profiles = [step.profile for step in script.components[0].steps if step.op == "sketch"]
+    assert profiles == ["circle", "rectangle"]
+
+
 def test_a_plate_place_and_fuse_load() -> None:
     script = load_construction(
         _script(

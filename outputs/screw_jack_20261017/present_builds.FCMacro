@@ -1,0 +1,28 @@
+"""Fit and capture the finished build documents without changing geometry."""
+import json
+from pathlib import Path
+import FreeCAD as App
+import FreeCADGui as Gui
+from PySide import QtWidgets
+
+out = Path('/home/v9i/Projects/Kala-Agent/outputs/screw_jack_20261017')
+presented = []
+for method in ('tool_based', 'script_based'):
+    for doc in App.listDocuments().values():
+        if method == 'tool_based' and doc.Name != 'KalaScrewJackTool':
+            continue
+        if method == 'script_based' and not doc.Name.startswith('Kala_ScrewJack_Script_'):
+            continue
+        App.setActiveDocument(doc.Name)
+        for area in Gui.getMainWindow().findChildren(QtWidgets.QMdiArea):
+            for window in area.subWindowList():
+                if window.windowTitle().startswith(doc.Label + ' :') or window.windowTitle().startswith(doc.Name + ' :'):
+                    area.setActiveSubWindow(window)
+        QtWidgets.QApplication.processEvents()
+        view = Gui.getDocument(doc.Name).activeView()
+        view.viewAxonometric()
+        view.fitAll()
+        Gui.updateGui()
+        view.saveImage(str(out / method / 'assembly.png'), 1800, 1400, 'White')
+        presented.append({'method': method, 'document': doc.Name, 'gui_document': view.getViewer().getName() if hasattr(view, 'getViewer') and hasattr(view.getViewer(), 'getName') else str(view), 'image': str(out / method / 'assembly.png')})
+(out / 'presented_documents.json').write_text(json.dumps(presented, indent=2))

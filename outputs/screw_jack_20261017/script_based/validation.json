@@ -1,0 +1,242 @@
+{
+  "status": "DESIGN_REVIEW_ONLY_NOT_RELEASED",
+  "parts": [
+    {
+      "part_number": "SJ-001",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 424145.5222039229
+    },
+    {
+      "part_number": "SJ-002",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 323340.25382386445
+    },
+    {
+      "part_number": "SJ-003",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 117616.75084331425
+    },
+    {
+      "part_number": "SJ-004",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 196622.42922117922
+    },
+    {
+      "part_number": "SJ-005A",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 1488.1150101634787
+    },
+    {
+      "part_number": "SJ-005B",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 1488.1150101634787
+    },
+    {
+      "part_number": "SJ-006",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 29391.17007065931
+    },
+    {
+      "part_number": "SJ-007",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 38958.844561560276
+    },
+    {
+      "part_number": "SJ-008",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 1871.8297452010922
+    },
+    {
+      "part_number": "SJ-009",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 100530.9649148734
+    },
+    {
+      "part_number": "SJ-010-1",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 723.4637887701472
+    },
+    {
+      "part_number": "SJ-010-2",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 723.463788770147
+    },
+    {
+      "part_number": "SJ-010-3",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 723.4637887701467
+    },
+    {
+      "part_number": "SJ-010-4",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 723.4637887701467
+    }
+  ],
+  "intrusions": [],
+  "thread_model": "True BREP external and mating internal 30-degree trapezoidal helical sweeps",
+  "parameter_editing": "Edit this Python source PARAMETERS and regenerate; feature properties are reference metadata, not shape-driving expressions.",
+  "supplier_bearing": {
+    "model": "NSK 51305",
+    "url": "https://www.nsk.com/engineering/51305-apn.html",
+    "geometry_mm": [
+      25,
+      52,
+      18
+    ],
+    "C0a_kN": 61.5,
+    "Ca_kN": 36
+  },
+  "release_blockers": [
+    "Travel-stop collar retention and its clamp fasteners are not designed; envelope only.",
+    "Material specifications, heat treatment, fatigue, buckling, thread wear and load test validation remain required.",
+    "Production tolerances, thread fit/gauging, run-outs, fillets, weld sizes/procedure and corrosion protection remain to be released.",
+    "Bearing supplier fit, axial cap/retainer and mounting hardware selection/locking remain to be finalized.",
+    "Vehicle saddle interface, lateral-load stability, ground support and applicable lifting-device compliance are not validated."
+  ],
+  "all_parts_valid": true,
+  "midstroke_no_solid_interference": true,
+  "stroke_checks": [
+    {
+      "stroke_mm": 0.0,
+      "screw_rotation_deg_from_mid": -5400.0,
+      "saddle_top_mm": 328.0,
+      "thread_to_nut_intersection_mm3": 0.0,
+      "nut_thread_engagement_mm": 48.0,
+      "stop_gap_mm": 120.0,
+      "collar_bottom_ground_clearance_mm": 34.0,
+      "collar_bottom_base_clearance_mm": 22.0,
+      "pass_geometric_check": true
+    },
+    {
+      "stroke_mm": 30.0,
+      "screw_rotation_deg_from_mid": -2700.0,
+      "saddle_top_mm": 358.0,
+      "thread_to_nut_intersection_mm3": 0.0,
+      "nut_thread_engagement_mm": 48.0,
+      "stop_gap_mm": 90.0,
+      "collar_bottom_ground_clearance_mm": 64.0,
+      "collar_bottom_base_clearance_mm": 52.0,
+      "pass_geometric_check": true
+    },
+    {
+      "stroke_mm": 60.0,
+      "screw_rotation_deg_from_mid": 0.0,
+      "saddle_top_mm": 388.0,
+      "thread_to_nut_intersection_mm3": 0.0,
+      "nut_thread_engagement_mm": 48.0,
+      "stop_gap_mm": 60.0,
+      "collar_bottom_ground_clearance_mm": 94.0,
+      "collar_bottom_base_clearance_mm": 82.0,
+      "pass_geometric_check": true
+    },
+    {
+      "stroke_mm": 90.0,
+      "screw_rotation_deg_from_mid": 2700.0,
+      "saddle_top_mm": 418.0,
+      "thread_to_nut_intersection_mm3": 0.0,
+      "nut_thread_engagement_mm": 48.0,
+      "stop_gap_mm": 30.0,
+      "collar_bottom_ground_clearance_mm": 124.0,
+      "collar_bottom_base_clearance_mm": 112.0,
+      "pass_geometric_check": true
+    },
+    {
+      "stroke_mm": 120.0,
+      "screw_rotation_deg_from_mid": 5400.0,
+      "saddle_top_mm": 448.0,
+      "thread_to_nut_intersection_mm3": 0.0,
+      "nut_thread_engagement_mm": 48.0,
+      "stop_gap_mm": 0.0,
+      "collar_bottom_ground_clearance_mm": 154.0,
+      "collar_bottom_base_clearance_mm": 142.0,
+      "pass_geometric_check": true
+    }
+  ],
+  "rated_load_N": 19620.0,
+  "factored_design_load_N": 29430.0,
+  "design_load_factor_is_assumption_not_certified_test_factor": true,
+  "true_thread_fit_test_passed": true,
+  "build_elapsed_seconds": 23.729242086410522,
+  "document": "/home/v9i/Projects/Kala-Agent/outputs/screw_jack_20261017/script_based/screw_jack_script.FCStd",
+  "assembly_step": "/home/v9i/Projects/Kala-Agent/outputs/screw_jack_20261017/script_based/screw_jack_script.step",
+  "part_count": 14,
+  "parameters": {
+    "rated_load_kg": 2000.0,
+    "gravity_m_s2": 9.81,
+    "design_load_factor": 1.5,
+    "stroke_mm": 120.0,
+    "display_stroke_mm": 60.0,
+    "base_length_mm": 200.0,
+    "base_width_mm": 180.0,
+    "base_thickness_mm": 12.0,
+    "base_corner_radius_mm": 12.0,
+    "mounting_hole_diameter_mm": 13.0,
+    "mounting_hole_x_mm": 75.0,
+    "mounting_hole_y_mm": 65.0,
+    "housing_od_mm": 70.0,
+    "housing_id_mm": 56.0,
+    "housing_bottom_mm": 12.0,
+    "housing_top_mm": 212.0,
+    "support_flange_od_mm": 90.0,
+    "support_flange_bottom_mm": 204.0,
+    "nut_od_mm": 54.0,
+    "nut_minor_bore_mm": 26.0,
+    "nut_bottom_mm": 164.0,
+    "nut_top_mm": 212.0,
+    "nut_flange_od_mm": 80.0,
+    "nut_flange_top_mm": 220.0,
+    "entry_skirt_bottom_mm": 160.0,
+    "entry_skirt_bore_mm": 32.0,
+    "flange_bolt_pcd_mm": 66.0,
+    "flange_bolt_clearance_mm": 6.5,
+    "screw_major_diameter_mm": 30.0,
+    "screw_root_diameter_mm": 25.5,
+    "screw_pitch_mm": 4.0,
+    "thread_included_angle_deg": 30.0,
+    "screw_length_mm": 230.0,
+    "screw_collapsed_bottom_mm": 40.0,
+    "nut_thread_radial_clearance_mm": 0.25,
+    "nut_thread_axial_clearance_mm": 0.12,
+    "stop_collar_od_mm": 36.0,
+    "stop_collar_height_mm": 6.0,
+    "stop_collar_bore_mm": 25.7,
+    "head_od_mm": 48.0,
+    "head_height_mm": 28.0,
+    "handle_diameter_mm": 16.0,
+    "handle_length_mm": 500.0,
+    "handle_bore_mm": 17.0,
+    "bearing_od_mm": 52.0,
+    "bearing_id_mm": 25.0,
+    "bearing_height_mm": 18.0,
+    "bearing_C0a_kN": 61.5,
+    "bearing_Ca_kN": 36.0,
+    "journal_diameter_mm": 25.0,
+    "journal_height_mm": 28.0,
+    "saddle_od_mm": 70.0,
+    "saddle_bore_mm": 25.5,
+    "saddle_height_mm": 12.0
+  },
+  "stack_at_display_stroke_mm": {
+    "screw_bottom": 100.0,
+    "screw_top": 330.0,
+    "head_top": 358.0,
+    "bearing_top": 376.0,
+    "saddle_top": 388.0,
+    "handle_axis_z": 344.0,
+    "journal_top": 386.0
+  }
+}

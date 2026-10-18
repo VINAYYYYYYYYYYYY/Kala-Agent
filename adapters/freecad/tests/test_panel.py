@@ -16,6 +16,12 @@ def test_the_mod_is_the_design_box() -> None:
     assert "QDockWidget" in text
     assert "Build in this window" in text
     assert "Run analysis" in text
+    assert "What was built" in text
+    assert "explain_design" in text
+    assert "continue_design" in text
+    assert "New design" in text
+    assert "New part" in text
+    assert "Export STEP" in text
     assert "design_request" in text
     assert "RunLog" in text
     assert "kala_gui" in loader

@@ -105,6 +105,18 @@ class _Body:
         return False
 
 
+def test_explain_design_returns_the_model_prose(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        models,
+        "_post",
+        lambda *_args, **_kwargs: _reply("I made a base and a screw with a helix."),
+    )
+
+    text = models.explain_design("a screw jack", "{}")
+
+    assert "screw" in text
+
+
 def test_reasoning_and_decision_use_separate_keys(monkeypatch: pytest.MonkeyPatch) -> None:
     seen: list[tuple[str, str, dict[str, object]]] = []
 
@@ -142,9 +154,9 @@ def test_reasoning_and_decision_use_separate_keys(monkeypatch: pytest.MonkeyPatc
     assert choice.choice == "plate"
     assert seen[0][0] == models.CHAT_URL
     assert seen[0][1] == "Bearer reasoning-key"
-    assert seen[0][2]["model"] == "apodex/apodex-1.1-mini:free"
+    assert seen[0][2]["model"] == models.REASONING_MODEL
     assert seen[0][2]["reasoning"] == {"effort": "none"}
-    assert seen[0][2]["response_format"] == {"type": "json_object"}
+    assert "response_format" not in seen[0][2]
     assert seen[1][0] == models.DECIDE_URL
     assert seen[1][1] == "Bearer decision-key"
     assert seen[1][2]["model"] == "respan/span-01-lite"

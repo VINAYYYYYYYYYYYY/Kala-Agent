@@ -1,0 +1,245 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1280" role="img" aria-labelledby="title desc">
+<title id="title">Preliminary screw-jack general arrangement, 2,000 kg target, 120 mm travel</title>
+<desc id="desc">Dimensioned common general arrangement with section elevation, base plan, and release notes. Engineering review only, not a fabrication drawing or load rating.</desc>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#294c6d"/></marker>
+<pattern id="steel" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#eef2f5"/><path d="M-2,8 L8,-2 M6,10 L10,6" stroke="#b5c1cb" stroke-width="1"/></pattern>
+<pattern id="bronze" width="9" height="9" patternUnits="userSpaceOnUse"><rect width="9" height="9" fill="#f4dfaa"/><path d="M0,9 L9,0" stroke="#c09a45" stroke-width="1"/></pattern>
+</defs>
+<style>
+text{font-family:Arial,Helvetica,sans-serif;fill:#172c3d}.title{font-size:30px;font-weight:700}.subtitle{font-size:19px}.warn{font-size:22px;font-weight:700;fill:#a13b22}.label{font-size:19px}.small{font-size:17px}.tiny{font-size:15px}.dimtext{font-size:18px;fill:#294c6d}.edge{stroke:#243847;stroke-width:1.7}.ext{stroke:#708795;stroke-width:1}.dim{stroke:#294c6d;stroke-width:1.2}.lead{stroke:#294c6d;stroke-width:1.1;fill:none}.center{stroke:#7091a6;stroke-width:1;stroke-dasharray:12 4 2 4}.ghost{stroke:#8d9398;stroke-width:1.2;stroke-dasharray:7 5;fill:none}
+</style><rect width="1800" height="1280" fill="#ffffff"/>
+
+<text x="52.00" y="55.00" class="title" text-anchor="start" >KALA · SCREW JACK · COMMON GENERAL ARRANGEMENT</text>
+<text x="52.00" y="88.00" class="subtitle" text-anchor="start" >Target 2,000 kg / 120 mm stroke · Tr30×4 RH · dimensions mm · 17 October 2026</text>
+<text x="52.00" y="124.00" class="warn" text-anchor="start" >PRELIMINARY — NOT RELEASED FOR FABRICATION OR VEHICLE LIFTING</text>
+<line x1="52.00" y1="145.00" x2="1745.00" y2="145.00" class="ext" />
+<text x="285.00" y="193.00" class="subtitle" text-anchor="start" >SECTION ELEVATION · shown at 60 mm extension</text>
+<line x1="410.00" y1="429.60" x2="750.00" y2="429.60" class="ghost" />
+<text x="755.00" y="420.60" class="small" text-anchor="start" >collapsed top 328</text>
+<line x1="410.00" y1="213.60" x2="750.00" y2="213.60" class="ghost" />
+<text x="755.00" y="204.60" class="small" text-anchor="start" >raised top 448</text>
+<rect x="320.00" y="998.40" width="360.00" height="21.60" fill="url(#steel)" class="edge" />
+<rect x="437.00" y="638.40" width="126.00" height="360.00" fill="url(#steel)" class="edge" />
+<rect x="449.60" y="638.40" width="100.80" height="360.00" fill="#ffffff" class="edge" />
+<rect x="419.00" y="638.40" width="162.00" height="14.40" fill="url(#steel)" class="edge" />
+<rect x="449.60" y="638.40" width="100.80" height="14.40" fill="#ffffff" class="edge" />
+<rect x="451.40" y="638.40" width="97.20" height="86.40" fill="url(#bronze)" class="edge" />
+<rect x="472.82" y="638.40" width="54.36" height="86.40" fill="#ffffff" class="edge" />
+<rect x="451.40" y="724.80" width="97.20" height="7.20" fill="url(#bronze)" class="edge" />
+<rect x="471.20" y="724.80" width="57.60" height="7.20" fill="#ffffff" class="edge" />
+<rect x="428.00" y="624.00" width="144.00" height="14.40" fill="url(#bronze)" class="edge" />
+<rect x="471.20" y="624.00" width="57.60" height="14.40" fill="#ffffff" class="edge" />
+<rect x="477.05" y="426.00" width="45.90" height="414.00" fill="#d3dbe1" class="edge" />
+<rect x="467.60" y="840.00" width="64.80" height="10.80" fill="#8f9ca5" class="edge" />
+<rect x="476.87" y="840.00" width="46.26" height="10.80" fill="#ffffff" class="edge" />
+<rect x="456.80" y="375.60" width="86.40" height="50.40" fill="url(#steel)" class="edge" />
+<rect x="477.50" y="325.20" width="45.00" height="50.40" fill="#d3dbe1" class="edge" />
+<rect x="453.20" y="343.20" width="93.60" height="32.40" fill="#bcc6ce" class="edge" />
+<rect x="477.50" y="343.20" width="45.00" height="32.40" fill="#ffffff" class="edge" />
+<rect x="437.00" y="321.60" width="126.00" height="21.60" fill="url(#steel)" class="edge" />
+<rect x="477.05" y="321.60" width="45.90" height="21.60" fill="#ffffff" class="edge" />
+<line x1="500.00" y1="282.00" x2="500.00" y2="1038.00" class="center" />
+<line x1="473.00" y1="836.40" x2="477.05" y2="834.06" class="ext" />
+<line x1="522.95" y1="834.06" x2="527.00" y2="831.72" class="ext" />
+<line x1="473.00" y1="829.20" x2="477.05" y2="826.86" class="ext" />
+<line x1="522.95" y1="826.86" x2="527.00" y2="824.52" class="ext" />
+<line x1="473.00" y1="822.00" x2="477.05" y2="819.66" class="ext" />
+<line x1="522.95" y1="819.66" x2="527.00" y2="817.32" class="ext" />
+<line x1="473.00" y1="814.80" x2="477.05" y2="812.46" class="ext" />
+<line x1="522.95" y1="812.46" x2="527.00" y2="810.12" class="ext" />
+<line x1="473.00" y1="807.60" x2="477.05" y2="805.26" class="ext" />
+<line x1="522.95" y1="805.26" x2="527.00" y2="802.92" class="ext" />
+<line x1="473.00" y1="800.40" x2="477.05" y2="798.06" class="ext" />
+<line x1="522.95" y1="798.06" x2="527.00" y2="795.72" class="ext" />
+<line x1="473.00" y1="793.20" x2="477.05" y2="790.86" class="ext" />
+<line x1="522.95" y1="790.86" x2="527.00" y2="788.52" class="ext" />
+<line x1="473.00" y1="786.00" x2="477.05" y2="783.66" class="ext" />
+<line x1="522.95" y1="783.66" x2="527.00" y2="781.32" class="ext" />
+<line x1="473.00" y1="778.80" x2="477.05" y2="776.46" class="ext" />
+<line x1="522.95" y1="776.46" x2="527.00" y2="774.12" class="ext" />
+<line x1="473.00" y1="771.60" x2="477.05" y2="769.26" class="ext" />
+<line x1="522.95" y1="769.26" x2="527.00" y2="766.92" class="ext" />
+<line x1="473.00" y1="764.40" x2="477.05" y2="762.06" class="ext" />
+<line x1="522.95" y1="762.06" x2="527.00" y2="759.72" class="ext" />
+<line x1="473.00" y1="757.20" x2="477.05" y2="754.86" class="ext" />
+<line x1="522.95" y1="754.86" x2="527.00" y2="752.52" class="ext" />
+<line x1="473.00" y1="750.00" x2="477.05" y2="747.66" class="ext" />
+<line x1="522.95" y1="747.66" x2="527.00" y2="745.32" class="ext" />
+<line x1="473.00" y1="742.80" x2="477.05" y2="740.46" class="ext" />
+<line x1="522.95" y1="740.46" x2="527.00" y2="738.12" class="ext" />
+<line x1="473.00" y1="735.60" x2="477.05" y2="733.26" class="ext" />
+<line x1="522.95" y1="733.26" x2="527.00" y2="730.92" class="ext" />
+<line x1="473.00" y1="728.40" x2="477.05" y2="726.06" class="ext" />
+<line x1="522.95" y1="726.06" x2="527.00" y2="723.72" class="ext" />
+<line x1="473.00" y1="721.20" x2="477.05" y2="718.86" class="ext" />
+<line x1="522.95" y1="718.86" x2="527.00" y2="716.52" class="ext" />
+<line x1="473.00" y1="714.00" x2="477.05" y2="711.66" class="ext" />
+<line x1="522.95" y1="711.66" x2="527.00" y2="709.32" class="ext" />
+<line x1="473.00" y1="706.80" x2="477.05" y2="704.46" class="ext" />
+<line x1="522.95" y1="704.46" x2="527.00" y2="702.12" class="ext" />
+<line x1="473.00" y1="699.60" x2="477.05" y2="697.26" class="ext" />
+<line x1="522.95" y1="697.26" x2="527.00" y2="694.92" class="ext" />
+<line x1="473.00" y1="692.40" x2="477.05" y2="690.06" class="ext" />
+<line x1="522.95" y1="690.06" x2="527.00" y2="687.72" class="ext" />
+<line x1="473.00" y1="685.20" x2="477.05" y2="682.86" class="ext" />
+<line x1="522.95" y1="682.86" x2="527.00" y2="680.52" class="ext" />
+<line x1="473.00" y1="678.00" x2="477.05" y2="675.66" class="ext" />
+<line x1="522.95" y1="675.66" x2="527.00" y2="673.32" class="ext" />
+<line x1="473.00" y1="670.80" x2="477.05" y2="668.46" class="ext" />
+<line x1="522.95" y1="668.46" x2="527.00" y2="666.12" class="ext" />
+<line x1="473.00" y1="663.60" x2="477.05" y2="661.26" class="ext" />
+<line x1="522.95" y1="661.26" x2="527.00" y2="658.92" class="ext" />
+<line x1="473.00" y1="656.40" x2="477.05" y2="654.06" class="ext" />
+<line x1="522.95" y1="654.06" x2="527.00" y2="651.72" class="ext" />
+<line x1="473.00" y1="649.20" x2="477.05" y2="646.86" class="ext" />
+<line x1="522.95" y1="646.86" x2="527.00" y2="644.52" class="ext" />
+<line x1="473.00" y1="642.00" x2="477.05" y2="639.66" class="ext" />
+<line x1="522.95" y1="639.66" x2="527.00" y2="637.32" class="ext" />
+<line x1="473.00" y1="634.80" x2="477.05" y2="632.46" class="ext" />
+<line x1="522.95" y1="632.46" x2="527.00" y2="630.12" class="ext" />
+<line x1="473.00" y1="627.60" x2="477.05" y2="625.26" class="ext" />
+<line x1="522.95" y1="625.26" x2="527.00" y2="622.92" class="ext" />
+<line x1="473.00" y1="620.40" x2="477.05" y2="618.06" class="ext" />
+<line x1="522.95" y1="618.06" x2="527.00" y2="615.72" class="ext" />
+<line x1="473.00" y1="613.20" x2="477.05" y2="610.86" class="ext" />
+<line x1="522.95" y1="610.86" x2="527.00" y2="608.52" class="ext" />
+<line x1="473.00" y1="606.00" x2="477.05" y2="603.66" class="ext" />
+<line x1="522.95" y1="603.66" x2="527.00" y2="601.32" class="ext" />
+<line x1="473.00" y1="598.80" x2="477.05" y2="596.46" class="ext" />
+<line x1="522.95" y1="596.46" x2="527.00" y2="594.12" class="ext" />
+<line x1="473.00" y1="591.60" x2="477.05" y2="589.26" class="ext" />
+<line x1="522.95" y1="589.26" x2="527.00" y2="586.92" class="ext" />
+<line x1="473.00" y1="584.40" x2="477.05" y2="582.06" class="ext" />
+<line x1="522.95" y1="582.06" x2="527.00" y2="579.72" class="ext" />
+<line x1="473.00" y1="577.20" x2="477.05" y2="574.86" class="ext" />
+<line x1="522.95" y1="574.86" x2="527.00" y2="572.52" class="ext" />
+<line x1="473.00" y1="570.00" x2="477.05" y2="567.66" class="ext" />
+<line x1="522.95" y1="567.66" x2="527.00" y2="565.32" class="ext" />
+<line x1="473.00" y1="562.80" x2="477.05" y2="560.46" class="ext" />
+<line x1="522.95" y1="560.46" x2="527.00" y2="558.12" class="ext" />
+<line x1="473.00" y1="555.60" x2="477.05" y2="553.26" class="ext" />
+<line x1="522.95" y1="553.26" x2="527.00" y2="550.92" class="ext" />
+<line x1="473.00" y1="548.40" x2="477.05" y2="546.06" class="ext" />
+<line x1="522.95" y1="546.06" x2="527.00" y2="543.72" class="ext" />
+<line x1="473.00" y1="541.20" x2="477.05" y2="538.86" class="ext" />
+<line x1="522.95" y1="538.86" x2="527.00" y2="536.52" class="ext" />
+<line x1="473.00" y1="534.00" x2="477.05" y2="531.66" class="ext" />
+<line x1="522.95" y1="531.66" x2="527.00" y2="529.32" class="ext" />
+<line x1="473.00" y1="526.80" x2="477.05" y2="524.46" class="ext" />
+<line x1="522.95" y1="524.46" x2="527.00" y2="522.12" class="ext" />
+<line x1="473.00" y1="519.60" x2="477.05" y2="517.26" class="ext" />
+<line x1="522.95" y1="517.26" x2="527.00" y2="514.92" class="ext" />
+<line x1="473.00" y1="512.40" x2="477.05" y2="510.06" class="ext" />
+<line x1="522.95" y1="510.06" x2="527.00" y2="507.72" class="ext" />
+<line x1="473.00" y1="505.20" x2="477.05" y2="502.86" class="ext" />
+<line x1="522.95" y1="502.86" x2="527.00" y2="500.52" class="ext" />
+<line x1="473.00" y1="498.00" x2="477.05" y2="495.66" class="ext" />
+<line x1="522.95" y1="495.66" x2="527.00" y2="493.32" class="ext" />
+<line x1="473.00" y1="490.80" x2="477.05" y2="488.46" class="ext" />
+<line x1="522.95" y1="488.46" x2="527.00" y2="486.12" class="ext" />
+<line x1="473.00" y1="483.60" x2="477.05" y2="481.26" class="ext" />
+<line x1="522.95" y1="481.26" x2="527.00" y2="478.92" class="ext" />
+<line x1="473.00" y1="476.40" x2="477.05" y2="474.06" class="ext" />
+<line x1="522.95" y1="474.06" x2="527.00" y2="471.72" class="ext" />
+<line x1="473.00" y1="469.20" x2="477.05" y2="466.86" class="ext" />
+<line x1="522.95" y1="466.86" x2="527.00" y2="464.52" class="ext" />
+<line x1="473.00" y1="462.00" x2="477.05" y2="459.66" class="ext" />
+<line x1="522.95" y1="459.66" x2="527.00" y2="457.32" class="ext" />
+<line x1="473.00" y1="454.80" x2="477.05" y2="452.46" class="ext" />
+<line x1="522.95" y1="452.46" x2="527.00" y2="450.12" class="ext" />
+<line x1="473.00" y1="447.60" x2="477.05" y2="445.26" class="ext" />
+<line x1="522.95" y1="445.26" x2="527.00" y2="442.92" class="ext" />
+<line x1="473.00" y1="440.40" x2="477.05" y2="438.06" class="ext" />
+<line x1="522.95" y1="438.06" x2="527.00" y2="435.72" class="ext" />
+<line x1="473.00" y1="433.20" x2="477.05" y2="430.86" class="ext" />
+<line x1="522.95" y1="430.86" x2="527.00" y2="428.52" class="ext" />
+<line x1="473.00" y1="840.00" x2="473.00" y2="426.00" class="ext" />
+<line x1="527.00" y1="840.00" x2="527.00" y2="426.00" class="ext" />
+<rect x="50.00" y="386.40" width="900.00" height="28.80" fill="#8c9ba5" class="edge" />
+<line x1="41.00" y1="400.80" x2="959.00" y2="400.80" class="center" />
+<line x1="50.00" y1="386.40" x2="50.00" y2="258.00" class="ext" />
+<line x1="950.00" y1="386.40" x2="950.00" y2="258.00" class="ext" />
+<line x1="50.00" y1="250.00" x2="950.00" y2="250.00" class="dim" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<text x="500.00" y="241.00" class="dimtext" text-anchor="middle" >HANDLE Ø16 × 500</text>
+<line x1="320.00" y1="1020.00" x2="320.00" y2="1078.00" class="ext" />
+<line x1="680.00" y1="1020.00" x2="680.00" y2="1078.00" class="ext" />
+<line x1="320.00" y1="1070.00" x2="680.00" y2="1070.00" class="dim" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<text x="500.00" y="1061.00" class="dimtext" text-anchor="middle" >200</text>
+<line x1="680.00" y1="1020.00" x2="1028.00" y2="1020.00" class="ext" />
+<line x1="680.00" y1="321.60" x2="1028.00" y2="321.60" class="ext" />
+<line x1="1020.00" y1="1020.00" x2="1020.00" y2="321.60" class="dim" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<text x="1011.00" y="670.80" class="dimtext" text-anchor="middle" transform="rotate(-90 1011 670.8)">388 shown</text>
+<line x1="750.00" y1="429.60" x2="1108.00" y2="429.60" class="ext" />
+<line x1="750.00" y1="213.60" x2="1108.00" y2="213.60" class="ext" />
+<line x1="1100.00" y1="429.60" x2="1100.00" y2="213.60" class="dim" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<text x="1091.00" y="321.60" class="dimtext" text-anchor="middle" transform="rotate(-90 1091 321.6)">120 travel / 30 turns</text>
+<line x1="473.00" y1="840.00" x2="198.00" y2="840.00" class="ext" />
+<line x1="473.00" y1="426.00" x2="198.00" y2="426.00" class="ext" />
+<line x1="190.00" y1="840.00" x2="190.00" y2="426.00" class="dim" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<text x="181.00" y="633.00" class="dimtext" text-anchor="middle" transform="rotate(-90 181 633.0)">230 threaded length</text>
+<line x1="451.40" y1="724.80" x2="283.00" y2="724.80" class="ext" />
+<line x1="451.40" y1="638.40" x2="283.00" y2="638.40" class="ext" />
+<line x1="275.00" y1="724.80" x2="275.00" y2="638.40" class="dim" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<text x="266.00" y="681.60" class="dimtext" text-anchor="middle" transform="rotate(-90 266 681.5999999999999)">48 thread engagement</text>
+<line x1="563.00" y1="975.00" x2="728.00" y2="939.00" class="lead" />
+<line x1="728.00" y1="939.00" x2="743.00" y2="939.00" class="lead" />
+<circle cx="563.0" cy="975.0" r="3" fill="#294c6d"/>
+<text x="750.00" y="945.00" class="label" text-anchor="start" >Housing Ø70 / Ø56</text>
+<line x1="548.60" y1="687.00" x2="728.00" y2="740.00" class="lead" />
+<line x1="728.00" y1="740.00" x2="743.00" y2="740.00" class="lead" />
+<circle cx="548.6" cy="687.0" r="3" fill="#294c6d"/>
+<text x="750.00" y="746.00" class="label" text-anchor="start" >Bronze nut Ø54 · thread length 48</text>
+<line x1="572.00" y1="631.20" x2="728.00" y2="589.00" class="lead" />
+<line x1="728.00" y1="589.00" x2="743.00" y2="589.00" class="lead" />
+<circle cx="572.0" cy="631.2" r="3" fill="#294c6d"/>
+<text x="750.00" y="595.00" class="label" text-anchor="start" >Flange Ø80 × 8 on support ring Ø90 × 8</text>
+<line x1="532.40" y1="845.40" x2="728.00" y2="821.00" class="lead" />
+<line x1="728.00" y1="821.00" x2="743.00" y2="821.00" class="lead" />
+<circle cx="532.4" cy="845.4" r="3" fill="#294c6d"/>
+<text x="750.00" y="827.00" class="label" text-anchor="start" >Stop collar Ø36 / Ø25.7 × 6 · retention TBD</text>
+<line x1="543.20" y1="381.00" x2="1158.00" y2="285.00" class="lead" />
+<line x1="1158.00" y1="285.00" x2="1173.00" y2="285.00" class="lead" />
+<circle cx="543.2" cy="381.0" r="3" fill="#294c6d"/>
+<text x="1180.00" y="291.00" class="label" text-anchor="start" >Integral drive head Ø48 × 28 / Ø17 bore</text>
+<line x1="546.80" y1="359.40" x2="1158.00" y2="319.00" class="lead" />
+<line x1="1158.00" y1="319.00" x2="1173.00" y2="319.00" class="lead" />
+<circle cx="546.8" cy="359.4" r="3" fill="#294c6d"/>
+<text x="1180.00" y="325.00" class="label" text-anchor="start" >NSK51305 candidate · Ø25 / Ø52 × 18</text>
+<line x1="563.00" y1="327.00" x2="1158.00" y2="353.00" class="lead" />
+<line x1="1158.00" y1="353.00" x2="1173.00" y2="353.00" class="lead" />
+<circle cx="563.0" cy="327.0" r="3" fill="#294c6d"/>
+<text x="1180.00" y="359.00" class="label" text-anchor="start" >Saddle Ø70 × 12 · journal Ø25 / bore Ø25.5</text>
+<text x="1180.00" y="416.00" class="subtitle" text-anchor="start" >COMMON DESIGN CONTROLS</text>
+<text x="1180.00" y="451.00" class="small" text-anchor="start" >• Base 200 × 180 × 12; housing top z212.</text>
+<text x="1180.00" y="480.00" class="small" text-anchor="start" >• Tr30×4 single-start RH; basic root Ø25.5.</text>
+<text x="1180.00" y="509.00" class="small" text-anchor="start" >• Strength screening uses minimum root Ø25.0.</text>
+<text x="1180.00" y="538.00" class="small" text-anchor="start" >• Working target 19.62 kN; assumed proof 29.43 kN.</text>
+<text x="1180.00" y="567.00" class="small" text-anchor="start" >• Nut engagement remains 48 throughout travel.</text>
+<text x="1180.00" y="596.00" class="small" text-anchor="start" >• Raised screw starts z160; nut thread starts z164.</text>
+<text x="1180.00" y="625.00" class="small" text-anchor="start" >• Collar top contacts nut-skirt underside at z160.</text>
+<text x="1180.00" y="654.00" class="small" text-anchor="start" >• Stop clamp/attachment is NOT designed or rated.</text>
+<text x="1180.00" y="683.00" class="small" text-anchor="start" >• Ø54 nut in Ø56 housing needs fitted location.</text>
+<text x="1180.00" y="712.00" class="small" text-anchor="start" >• M6 flange screws nominal; fit/preload not released.</text>
+<text x="1180.00" y="741.00" class="small" text-anchor="start" >• Seat articulation / vehicle interface unresolved.</text>
+<text x="1180.00" y="770.00" class="small" text-anchor="start" >• Closed height 328 limits vehicle applicability.</text>
+<text x="1180.00" y="832.00" class="subtitle" text-anchor="start" >BASE PLAN · common envelope</text>
+<rect x="1190.00" y="866.00" width="360.00" height="324.00" fill="url(#steel)" class="edge" />
+<circle cx="1370" cy="1028" r="81.0" fill="#d3dbe1" class="edge"/>
+<circle cx="1370" cy="1028" r="63.0" fill="#e4e8eb" class="edge"/>
+<circle cx="1370" cy="1028" r="50.4" fill="#ffffff" class="edge"/>
+<line x1="1160.00" y1="1028.00" x2="1580.00" y2="1028.00" class="center" />
+<line x1="1370.00" y1="843.00" x2="1370.00" y2="1213.00" class="center" />
+<line x1="1190.00" y1="1190.00" x2="1190.00" y2="1238.00" class="ext" />
+<line x1="1550.00" y1="1190.00" x2="1550.00" y2="1238.00" class="ext" />
+<line x1="1190.00" y1="1230.00" x2="1550.00" y2="1230.00" class="dim" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<text x="1370.00" y="1221.00" class="dimtext" text-anchor="middle" >200</text>
+<line x1="1550.00" y1="866.00" x2="1610.00" y2="866.00" class="ext" />
+<line x1="1550.00" y1="1190.00" x2="1610.00" y2="1190.00" class="ext" />
+<line x1="1600.00" y1="866.00" x2="1600.00" y2="1190.00" class="dim" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<text x="1622.00" y="1034.00" class="dimtext" text-anchor="start" >180</text>
+<text x="52.00" y="1136.00" class="small" text-anchor="start" >CAD-route details differ: native call build uses editable feature regions; direct script adds gussets and rounded base corners.</text>
+<text x="52.00" y="1166.00" class="small" text-anchor="start" >Mounting holes / grip details / retention hardware are excluded here. Use each CAD validation and BOM to inspect its actual geometry.</text>
+<text x="52.00" y="1196.00" class="small" text-anchor="start" >General arrangement only. No dimensional tolerances, weld symbols, fits, heat-treatment process or product rating are established.</text>
+<text x="52.00" y="1226.00" class="tiny" text-anchor="start" >Source: design_basis.json revision 2026-10-17-B · regenerate with build_general_arrangement.py</text>
+</svg>

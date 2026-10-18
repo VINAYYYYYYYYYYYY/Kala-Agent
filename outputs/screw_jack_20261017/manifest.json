@@ -1,0 +1,253 @@
+{
+  "target": "2000 kg vertical screw jack, 120 mm lift",
+  "status": "Engineering prototype; no production release or lifting certification",
+  "geometry_checks_passed": true,
+  "external_kala_model_calls": 0,
+  "files": [
+    {
+      "path": "ENGINEERING_BASIS.md",
+      "bytes": 9787,
+      "sha256": "12533219dace2a59f956695bc3249d549d8ff5e12baa41003178521da78c496e"
+    },
+    {
+      "path": "INDEPENDENT_ENGINEERING_REVIEW.md",
+      "bytes": 5207,
+      "sha256": "4ce03270834797d09fd897fb5b971e79abd77b83f1e6ff72852199177fb31388"
+    },
+    {
+      "path": "README.md",
+      "bytes": 4723,
+      "sha256": "19801030bbb5bd906de1a0b2ce5aed10b6a29f5155e78a5801eca93f160cc0dd"
+    },
+    {
+      "path": "assembly_verification.json",
+      "bytes": 7780,
+      "sha256": "d931580cb280dd7f9eba803834fa141d705f83a83e59c880dbed0e084bec411d"
+    },
+    {
+      "path": "build_general_arrangement.py",
+      "bytes": 8489,
+      "sha256": "055851b5d093ada77fb575d2bdc7a4d2e9a6775917181e7f7c44e7ed68d09e06"
+    },
+    {
+      "path": "build_in_kala.FCMacro",
+      "bytes": 4379,
+      "sha256": "efc3787c9dca2861ed7ca34dbdc6f682b3237708514392c7758caa05e124b8b7"
+    },
+    {
+      "path": "calls.json",
+      "bytes": 38145,
+      "sha256": "15f03efecd6414aa94516e97085fc17433ff39d8861bf7a7813b325bc5333e40"
+    },
+    {
+      "path": "design_basis.json",
+      "bytes": 8139,
+      "sha256": "f2c9e04a2d53ab8583c0c0a49dee74367092285cc4d63932d494987cf6bc81f9"
+    },
+    {
+      "path": "engineering_calculations.py",
+      "bytes": 27656,
+      "sha256": "f7540b8393b63356ce1371a2b45b4a658fe2762dcf0d3fef90850cca82ccde73"
+    },
+    {
+      "path": "engineering_results.json",
+      "bytes": 9449,
+      "sha256": "eec4c4fa6bd2945a62637d28bc8e1fe955293ec090a5923882effdc772dfff93"
+    },
+    {
+      "path": "general_arrangement.png",
+      "bytes": 347864,
+      "sha256": "38182f6e607002ed8e5ee38446c2166be40303c640ecc968b2581b775bc14ba8"
+    },
+    {
+      "path": "general_arrangement.svg",
+      "bytes": 20488,
+      "sha256": "3a21f2915b218f105e3bef11c02dfdb45029afda3f0d309da5b5a6a72e98de18"
+    },
+    {
+      "path": "independent_thread_verification.json",
+      "bytes": 726,
+      "sha256": "2f29a66fc60bc41efcdfefb80bb513f9750fbbd43f4e2e184344d3de242f8232"
+    },
+    {
+      "path": "package_results.py",
+      "bytes": 2575,
+      "sha256": "0ca69c3f74620808856d42a9e469471dd6f694e90585b6d07015a40f5c93c1ea"
+    },
+    {
+      "path": "present_builds.FCMacro",
+      "bytes": 1489,
+      "sha256": "8a8aaf28d6e0c3a91c2378497d01d023fb48e2f9cb550f42917342146931a9f1"
+    },
+    {
+      "path": "script_based/BOM.csv",
+      "bytes": 3796,
+      "sha256": "997e9101c600762b86449c108b8a4660c8055c551ec1af3eb6a8264568c3060c"
+    },
+    {
+      "path": "script_based/assembly.png",
+      "bytes": 67235,
+      "sha256": "fd49a8e5fc3752687d83c95fe3f7f8e76d3fd51ce5771185d3fa8e1625e22837"
+    },
+    {
+      "path": "script_based/construction.json",
+      "bytes": 763,
+      "sha256": "95bba3b8241d61d74d8b2fa6b0473d960b01fc8ea46d528f2ad98acf352f31c6"
+    },
+    {
+      "path": "script_based/parameters.json",
+      "bytes": 1579,
+      "sha256": "6a7ccf7ee33a9532406fd384b23ed7ceca5feb52370445724fa0206808fe94ff"
+    },
+    {
+      "path": "script_based/parts/SJ-001.step",
+      "bytes": 18093,
+      "sha256": "309ae78de90cf85ac500c21e8044a4bf37de85cd4225b63db048073fd8dbeef4"
+    },
+    {
+      "path": "script_based/parts/SJ-002.step",
+      "bytes": 39543,
+      "sha256": "562d6c25f9057e534f1435d3f4aee8d2bb5bb9dd989507d6fde75b569c673206"
+    },
+    {
+      "path": "script_based/parts/SJ-003.step",
+      "bytes": 375811,
+      "sha256": "b61bfa664e44d79c19b11e6d8116bb035fb78f24cf9c9abb510928913cf78537"
+    },
+    {
+      "path": "script_based/parts/SJ-003_native_thread.FCStd",
+      "bytes": 519453,
+      "sha256": "89a863842e99aaad8f80784b235e7bdeb0fdbe379babe9108b95620b5689ef8f"
+    },
+    {
+      "path": "script_based/parts/SJ-004.step",
+      "bytes": 1651913,
+      "sha256": "87af038aaf0ff91003a36b5ebf835b779b60e1ed683f80bb876f07747d757a7c"
+    },
+    {
+      "path": "script_based/parts/SJ-004_native_thread.FCStd",
+      "bytes": 1797259,
+      "sha256": "0ce559511ee7f0281b8f11b99733191a39a6d21f3fd3ea6fee6c6c32b671eb0c"
+    },
+    {
+      "path": "script_based/parts/SJ-005A.step",
+      "bytes": 7326,
+      "sha256": "bb9db7115de2ef122ae9effb2bac6a2def428947259e5777578260ccb8861ab0"
+    },
+    {
+      "path": "script_based/parts/SJ-005B.step",
+      "bytes": 7344,
+      "sha256": "f986f0abdf8605c8c82c20052fca27a8ee9ff5bea448be00d231e4bca604a8e0"
+    },
+    {
+      "path": "script_based/parts/SJ-006.step",
+      "bytes": 4983,
+      "sha256": "ef464dc6738065384b2ca558fc663ef9d581ef9eebf7d4505f41b8a22cd14df0"
+    },
+    {
+      "path": "script_based/parts/SJ-007.step",
+      "bytes": 28121,
+      "sha256": "75e4f90178cca9fb02830ffad47f47601581503923134bffa0e2aca797bc210f"
+    },
+    {
+      "path": "script_based/parts/SJ-008.step",
+      "bytes": 13622,
+      "sha256": "af5bd0785fcd4dd7cfb57fa8d52abd4aea928d5456a5252fbe6d3bfd4cbaf6d7"
+    },
+    {
+      "path": "script_based/parts/SJ-009.step",
+      "bytes": 3557,
+      "sha256": "9af8d13ea02dcf1517ffe465e66b63e26c50bcdfb0a9ed8a2389cc125aebecec"
+    },
+    {
+      "path": "script_based/parts/SJ-010-1.step",
+      "bytes": 13722,
+      "sha256": "51618a70097ec8da7a13834459dc6fae2da6a27a1320098052957800ad10d9e6"
+    },
+    {
+      "path": "script_based/parts/SJ-010-2.step",
+      "bytes": 13587,
+      "sha256": "e794ad077bb8d0c14a4c0b00233e4c6b587fd0fde88bd8ffc7f4e8ac21b93c06"
+    },
+    {
+      "path": "script_based/parts/SJ-010-3.step",
+      "bytes": 13990,
+      "sha256": "354e8037af9aa91c54171bcf66bb3c468d5ae8d377b4f27e2fbb453c4cb09644"
+    },
+    {
+      "path": "script_based/parts/SJ-010-4.step",
+      "bytes": 13560,
+      "sha256": "a75b4b24c58a0eba236a031269587f7b3b9419f80d735b0a1e94883a041664f0"
+    },
+    {
+      "path": "script_based/screw_jack_script.FCStd",
+      "bytes": 1065791,
+      "sha256": "a1a9d09cdaa576e801385c6c95a073c5011a83c14383de0923db0e11cc6ae419"
+    },
+    {
+      "path": "script_based/screw_jack_script.step",
+      "bytes": 2215780,
+      "sha256": "ff75c1f4bd0df061b697f7949e061c59fe9632182a60dec1a956de32db32bcbb"
+    },
+    {
+      "path": "script_based/validation.json",
+      "bytes": 7231,
+      "sha256": "d33f08d16794af0b5b1d7251288c34f9bd0f07246078afa1df66726d054792e1"
+    },
+    {
+      "path": "script_build.py",
+      "bytes": 26431,
+      "sha256": "111b431a0869a4980633adda5d3d1ba187dbfa34c1858346296211a181670afa"
+    },
+    {
+      "path": "session_execution.json",
+      "bytes": 806,
+      "sha256": "c4455190a23cbb1b35971eedc487694e58687f62e6f67632bc236093457ee4ff"
+    },
+    {
+      "path": "tool_based/assembly.png",
+      "bytes": 69548,
+      "sha256": "b35d63a3ba64f86f73d872e4d3e265e6516173c26372cdd3259f45471328613c"
+    },
+    {
+      "path": "tool_based/independent_verification.json",
+      "bytes": 3129,
+      "sha256": "28ae4ce9ae3c603460e6969473cc2e3557d68ab70deee04c8bf79dbecdc5862d"
+    },
+    {
+      "path": "tool_based/request.json",
+      "bytes": 27740,
+      "sha256": "00c22d7619d51e3929bb76cdb37460779cd9e739824d4f03c8a52b08ab296902"
+    },
+    {
+      "path": "tool_based/screw-jack-tool.FCStd",
+      "bytes": 2044127,
+      "sha256": "37c153d408a54643907cb4f333e97900bf479ed201963e6398a431a488020750"
+    },
+    {
+      "path": "tool_based/screw-jack-tool.step",
+      "bytes": 1745254,
+      "sha256": "c1b4cc4b91741dfc543fb7097380a5762fc47830688723a3e6847b1183d2e047"
+    },
+    {
+      "path": "tool_based/tool_trace.log",
+      "bytes": 12552,
+      "sha256": "735ccfbeca810fe2a7fc54d79268a2c9ed4c6a3e7b28600c4337508946399ad6"
+    },
+    {
+      "path": "tool_based/validation.json",
+      "bytes": 10342,
+      "sha256": "f5e101a3bc32d0ab2a78d2e2a3ba324c0a5ae014435fc52580ac5023bd34e77f"
+    },
+    {
+      "path": "tool_build.py",
+      "bytes": 16496,
+      "sha256": "dced94fe9e3d831d9e59388368f5b27cc7314f58bcf23be1956bad09f80fd4f9"
+    },
+    {
+      "path": "verify_cad.py",
+      "bytes": 4620,
+      "sha256": "4bda63b4d0e3873d6af8bd15b4adca36c81c195cb4a80058d2d9dacbbf40cce4"
+    }
+  ]
+}

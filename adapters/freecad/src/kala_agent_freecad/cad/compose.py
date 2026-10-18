@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Final, cast
 
 from kala_agent.contracts import ConstructionError, ConstructionScript, load_construction
+from kala_agent_freecad.cad.accept import accept_design
 from kala_agent_freecad.cad.compile import (
     apply_edits,
     compile_construction,
@@ -43,6 +44,7 @@ from kala_agent_freecad.errors import FreeCADInputError
 
 MAX_PARTS: Final[int] = 8
 MAX_FEATURES: Final[int] = 12
+_CONTINUE_CHARS: Final[int] = 24_000
 _ADDITIVE: Final[frozenset[str]] = frozenset({"helix", "pad", "revolution"})
 _KINDS: Final[frozenset[str]] = frozenset({"helix", "pad", "pocket", "revolution"})
 _PLANES: Final[frozenset[str]] = frozenset({"XY", "XZ", "YZ"})
@@ -93,13 +95,42 @@ def design_request(
     """
     _require_prompt(prompt)
     text = prompt.strip()
-    script, model = _written_script(text)
-    if analyze:
-        calls = compile_construction(script, analysis=write_analysis(text, script))
-    else:
-        calls = compile_construction(script)
-    lines = _script_log(script, model, on_log, analyze=analyze)
-    return _planned(script, calls, kind="designed", log=lines)
+    script, model = _written_script(text, on_log)
+    return _compiled(text, script, model, on_log, analyze=analyze, kind="designed")
+
+
+def continue_design(
+    prompt: str,
+    current: Mapping[str, object],
+    on_log: Callable[[str], None] | None = None,
+    *,
+    analyze: bool = False,
+    add_part: bool = False,
+) -> DesignPlan:
+    """Revise the open construction script instead of starting a new design.
+
+    The model must return the whole script. Existing components stay unless the
+    change removes one. A new part must add a component and keep the others.
+    """
+    _require_prompt(prompt)
+    try:
+        previous = load_construction(current)
+    except ConstructionError as error:
+        raise FreeCADInputError(str(error)) from error
+    message = _continue_message(prompt.strip(), previous, add_part=add_part)
+    if len(message) > _CONTINUE_CHARS:
+        raise FreeCADInputError("the current design is too large to revise in one request")
+    if on_log is not None:
+        on_log("Adding a part." if add_part else "Changing the current design.")
+    script, model = _written_script(message, on_log)
+    if not _same_design(previous, script, add_part=add_part):
+        script, model = _written_script(
+            _continue_retry(message, previous, add_part=add_part),
+            on_log,
+        )
+    if not _same_design(previous, script, add_part=add_part):
+        raise FreeCADInputError("the model replaced the current design instead of changing it")
+    return _compiled(prompt.strip(), script, model, on_log, analyze=analyze, kind="revised")
 
 
 def revise_design(
@@ -133,6 +164,70 @@ def revise_design(
     else:
         return None
     return _planned(updated, calls, kind="revised", log=lines)
+
+
+def _compiled(
+    prompt: str,
+    script: ConstructionScript,
+    model: str,
+    on_log: Callable[[str], None] | None,
+    *,
+    analyze: bool,
+    kind: str,
+) -> DesignPlan:
+    if analyze:
+        calls = compile_construction(script, analysis=write_analysis(prompt, script))
+    else:
+        calls = compile_construction(script)
+    lines = _script_log(script, model, on_log, analyze=analyze)
+    return _planned(script, calls, kind=kind, log=lines)
+
+
+def _continue_message(prompt: str, script: ConstructionScript, *, add_part: bool) -> str:
+    names = ", ".join(component.name for component in script.components)
+    if add_part:
+        lead = (
+            "Add one new component to this same design. "
+            f"Keep every existing component ({names}) and all of its steps."
+        )
+    else:
+        lead = (
+            "Change this same design. "
+            f"Keep every existing component ({names}) unless the change explicitly removes one. "
+            "Apply the change by editing sizes or adding steps, such as a pocket. "
+            "Do not start a new, unrelated design."
+        )
+    return (
+        f"{lead}\n\nCurrent construction script:\n{script.model_dump_json()}\n\nChange:\n{prompt}"
+    )
+
+
+def _continue_retry(message: str, script: ConstructionScript, *, add_part: bool) -> str:
+    names = ", ".join(component.name for component in script.components)
+    if add_part:
+        fault = (
+            "Your previous script did not add one new component. "
+            f"Keep these components: {names}. Add one new component for the change."
+        )
+    else:
+        fault = (
+            "Your previous script replaced the design. "
+            f"Keep these components: {names}. Apply only the requested change."
+        )
+    return f"{message}\n\n{fault}"
+
+
+def _same_design(
+    previous: ConstructionScript,
+    updated: ConstructionScript,
+    *,
+    add_part: bool,
+) -> bool:
+    old = {component.name for component in previous.components}
+    new = {component.name for component in updated.components}
+    if not old <= new:
+        return False
+    return not add_part or bool(new - old)
 
 
 def _planned(
@@ -207,20 +302,69 @@ def realize(
     return DesignPlan(calls=parsed, summary=intent.summary, kind="designed", log=tuple(lines))
 
 
-def _written_script(prompt: str) -> tuple[ConstructionScript, str]:
+def _written_script(
+    prompt: str,
+    on_log: Callable[[str], None] | None = None,
+) -> tuple[ConstructionScript, str]:
+    """Ask the reasoning model for the script, then refuse it when a duty is missing."""
     written = write_intent(prompt)
+    _exchange(on_log, prompt, written.text)
+    script, reason = _reviewed(prompt, written.text, on_log)
+    if script is not None:
+        return script, written.model
+    follow = (
+        f"{prompt}\n\nYour previous construction script was refused: {reason}. "
+        "Return one corrected construction script for this same request."
+    )
+    corrected = write_intent(follow)
+    _exchange(on_log, follow, corrected.text)
+    script, reason = _reviewed(prompt, corrected.text, on_log)
+    if script is None:
+        raise FreeCADInputError(reason)
+    return script, corrected.model
+
+
+def _reviewed(
+    prompt: str,
+    raw: object,
+    on_log: Callable[[str], None] | None,
+) -> tuple[ConstructionScript | None, str]:
+    """Parse one reply and list the engineering duties it still misses."""
+    script = _try_script(raw)
+    if script is None:
+        return None, _script_error(raw)
+    duties = accept_design(prompt, script)
+    for duty in duties:
+        if on_log is not None:
+            on_log(duty)
+    if duties:
+        return None, " ".join(duties)
+    return script, ""
+
+
+def _exchange(on_log: Callable[[str], None] | None, sent: str, received: str) -> None:
+    """Write the model request and the model reply into the design log."""
+    if on_log is None:
+        return
+    on_log("Model input:")
+    on_log(sent)
+    on_log("Model output:")
+    on_log(received)
+
+
+def _try_script(raw: object) -> ConstructionScript | None:
     try:
-        parsed: object = json.loads(written.text)
-    except json.JSONDecodeError as error:
-        raise FreeCADInputError("the reasoning model did not return a design object") from error
+        return _script(raw)
+    except FreeCADInputError:
+        return None
+
+
+def _script_error(raw: object) -> str:
     try:
-        return load_construction(parsed), written.model
-    except ConstructionError as error:
-        folded = str(error).casefold()
-        if "helix" not in folded or "solid" not in folded:
-            raise FreeCADInputError(str(error)) from error
-    corrected = write_intent(f"{prompt}\n\nA helix must follow a shaft on the same component.")
-    return _script(corrected.text), corrected.model
+        _script(raw)
+    except FreeCADInputError as error:
+        return str(error)
+    return "the construction script was refused"
 
 
 def _script(raw: object) -> ConstructionScript:
@@ -370,7 +514,7 @@ def _intent(raw: object) -> _Intent:
         raise FreeCADInputError("the design has too many parts")
     used: set[str] = set()
     parsed = tuple(_part(item, used) for item in parts)
-    return _Intent(summary=summary.strip()[:240], parts=parsed)
+    return _Intent(summary=summary.strip(), parts=parsed)
 
 
 def _part(raw: object, used: set[str]) -> _Part:

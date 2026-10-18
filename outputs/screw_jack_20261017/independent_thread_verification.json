@@ -1,0 +1,31 @@
+{
+  "scope": "Independent re-read of final exported spindle/nut STEP; five coupled screw-motion poses; not product qualification",
+  "checks": [
+    {
+      "stroke_mm": 0,
+      "external_internal_thread_common_volume_mm3": 0.0,
+      "pass": true
+    },
+    {
+      "stroke_mm": 30,
+      "external_internal_thread_common_volume_mm3": 0.0,
+      "pass": true
+    },
+    {
+      "stroke_mm": 60,
+      "external_internal_thread_common_volume_mm3": 0.0,
+      "pass": true
+    },
+    {
+      "stroke_mm": 90,
+      "external_internal_thread_common_volume_mm3": 0.0,
+      "pass": true
+    },
+    {
+      "stroke_mm": 120,
+      "external_internal_thread_common_volume_mm3": 0.0,
+      "pass": true
+    }
+  ],
+  "pass": true
+}

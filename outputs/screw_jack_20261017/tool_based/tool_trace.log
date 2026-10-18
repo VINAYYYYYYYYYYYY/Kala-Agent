@@ -1,0 +1,387 @@
+Codex-authored Kala calls; local reasoning and decision gateways bypassed.
+[1/386] partdesign.body 
+[2/386] partdesign.placement 
+[3/386] sketch.new Sketch
+[4/386] sketch.polyline Sketch
+[5/386] sketch.coincident Sketch
+[6/386] sketch.distance_x Sketch
+[7/386] sketch.distance_y Sketch
+[8/386] sketch.coincident Sketch
+[9/386] sketch.distance_x Sketch
+[10/386] sketch.distance_y Sketch
+[11/386] sketch.coincident Sketch
+[12/386] sketch.distance_x Sketch
+[13/386] sketch.distance_y Sketch
+[14/386] sketch.coincident Sketch
+[15/386] sketch.distance_x Sketch
+[16/386] sketch.distance_y Sketch
+[17/386] sketch.validate Sketch
+[18/386] sketch.leave 
+[19/386] partdesign.pad 
+[20/386] partdesign.check 
+[21/386] sketch.new Sketch001
+[22/386] sketch.circle Sketch001
+[23/386] sketch.diameter Sketch001
+[24/386] sketch.distance_x Sketch001
+[25/386] sketch.distance_y Sketch001
+[26/386] sketch.circle Sketch001
+[27/386] sketch.diameter Sketch001
+[28/386] sketch.distance_x Sketch001
+[29/386] sketch.distance_y Sketch001
+[30/386] sketch.circle Sketch001
+[31/386] sketch.diameter Sketch001
+[32/386] sketch.distance_x Sketch001
+[33/386] sketch.distance_y Sketch001
+[34/386] sketch.circle Sketch001
+[35/386] sketch.diameter Sketch001
+[36/386] sketch.distance_x Sketch001
+[37/386] sketch.distance_y Sketch001
+[38/386] sketch.validate Sketch001
+[39/386] sketch.leave 
+[40/386] partdesign.pocket 
+[41/386] partdesign.check 
+[42/386] partdesign.body 
+[43/386] partdesign.placement 
+[44/386] sketch.new Sketch002
+[45/386] sketch.circle Sketch002
+[46/386] sketch.diameter Sketch002
+[47/386] sketch.coincident Sketch002
+[48/386] sketch.circle Sketch002
+[49/386] sketch.diameter Sketch002
+[50/386] sketch.coincident Sketch002
+[51/386] sketch.validate Sketch002
+[52/386] sketch.leave 
+[53/386] partdesign.pad 
+[54/386] partdesign.check 
+[55/386] sketch.new Sketch003
+[56/386] sketch.circle Sketch003
+[57/386] sketch.diameter Sketch003
+[58/386] sketch.coincident Sketch003
+[59/386] sketch.circle Sketch003
+[60/386] sketch.diameter Sketch003
+[61/386] sketch.coincident Sketch003
+[62/386] sketch.validate Sketch003
+[63/386] sketch.leave 
+[64/386] partdesign.pad 
+[65/386] partdesign.check 
+[66/386] sketch.new Sketch004
+[67/386] sketch.circle Sketch004
+[68/386] sketch.diameter Sketch004
+[69/386] sketch.distance_x Sketch004
+[70/386] sketch.distance_y Sketch004
+[71/386] sketch.circle Sketch004
+[72/386] sketch.diameter Sketch004
+[73/386] sketch.distance_x Sketch004
+[74/386] sketch.distance_y Sketch004
+[75/386] sketch.circle Sketch004
+[76/386] sketch.diameter Sketch004
+[77/386] sketch.distance_x Sketch004
+[78/386] sketch.distance_y Sketch004
+[79/386] sketch.circle Sketch004
+[80/386] sketch.diameter Sketch004
+[81/386] sketch.distance_x Sketch004
+[82/386] sketch.distance_y Sketch004
+[83/386] sketch.validate Sketch004
+[84/386] sketch.leave 
+[85/386] partdesign.pocket 
+[86/386] partdesign.check 
+[87/386] partdesign.body 
+[88/386] partdesign.placement 
+[89/386] sketch.new Sketch005
+[90/386] sketch.circle Sketch005
+[91/386] sketch.diameter Sketch005
+[92/386] sketch.coincident Sketch005
+[93/386] sketch.circle Sketch005
+[94/386] sketch.diameter Sketch005
+[95/386] sketch.coincident Sketch005
+[96/386] sketch.validate Sketch005
+[97/386] sketch.leave 
+[98/386] partdesign.pad 
+[99/386] partdesign.check 
+[100/386] sketch.new Sketch006
+[101/386] sketch.circle Sketch006
+[102/386] sketch.diameter Sketch006
+[103/386] sketch.coincident Sketch006
+[104/386] sketch.circle Sketch006
+[105/386] sketch.diameter Sketch006
+[106/386] sketch.coincident Sketch006
+[107/386] sketch.validate Sketch006
+[108/386] sketch.leave 
+[109/386] partdesign.pad 
+[110/386] partdesign.check 
+[111/386] sketch.new Sketch007
+[112/386] sketch.circle Sketch007
+[113/386] sketch.diameter Sketch007
+[114/386] sketch.coincident Sketch007
+[115/386] sketch.circle Sketch007
+[116/386] sketch.diameter Sketch007
+[117/386] sketch.coincident Sketch007
+[118/386] sketch.validate Sketch007
+[119/386] sketch.leave 
+[120/386] partdesign.pad 
+[121/386] partdesign.check 
+[122/386] sketch.new Sketch008
+[123/386] sketch.circle Sketch008
+[124/386] sketch.diameter Sketch008
+[125/386] sketch.distance_x Sketch008
+[126/386] sketch.distance_y Sketch008
+[127/386] sketch.circle Sketch008
+[128/386] sketch.diameter Sketch008
+[129/386] sketch.distance_x Sketch008
+[130/386] sketch.distance_y Sketch008
+[131/386] sketch.circle Sketch008
+[132/386] sketch.diameter Sketch008
+[133/386] sketch.distance_x Sketch008
+[134/386] sketch.distance_y Sketch008
+[135/386] sketch.circle Sketch008
+[136/386] sketch.diameter Sketch008
+[137/386] sketch.distance_x Sketch008
+[138/386] sketch.distance_y Sketch008
+[139/386] sketch.validate Sketch008
+[140/386] sketch.leave 
+[141/386] partdesign.pocket 
+[142/386] partdesign.check 
+[143/386] partdesign.body 
+[144/386] partdesign.placement 
+[145/386] sketch.new Sketch009
+[146/386] sketch.circle Sketch009
+[147/386] sketch.diameter Sketch009
+[148/386] sketch.coincident Sketch009
+[149/386] sketch.validate Sketch009
+[150/386] sketch.leave 
+[151/386] partdesign.pad 
+[152/386] partdesign.check 
+[153/386] sketch.new Sketch010
+[154/386] sketch.circle Sketch010
+[155/386] sketch.diameter Sketch010
+[156/386] sketch.coincident Sketch010
+[157/386] sketch.validate Sketch010
+[158/386] sketch.leave 
+[159/386] partdesign.pad 
+[160/386] partdesign.check 
+[161/386] sketch.new Sketch011
+[162/386] sketch.polyline Sketch011
+[163/386] sketch.coincident Sketch011
+[164/386] sketch.distance_x Sketch011
+[165/386] sketch.distance_y Sketch011
+[166/386] sketch.coincident Sketch011
+[167/386] sketch.distance_x Sketch011
+[168/386] sketch.distance_y Sketch011
+[169/386] sketch.coincident Sketch011
+[170/386] sketch.distance_x Sketch011
+[171/386] sketch.distance_y Sketch011
+[172/386] sketch.coincident Sketch011
+[173/386] sketch.distance_x Sketch011
+[174/386] sketch.distance_y Sketch011
+[175/386] sketch.validate Sketch011
+[176/386] sketch.leave 
+[177/386] partdesign.helix 
+[178/386] partdesign.check 
+[179/386] partdesign.body 
+[180/386] partdesign.placement 
+[181/386] sketch.new Sketch012
+[182/386] sketch.circle Sketch012
+[183/386] sketch.diameter Sketch012
+[184/386] sketch.distance_x Sketch012
+[185/386] sketch.distance_y Sketch012
+[186/386] sketch.validate Sketch012
+[187/386] sketch.leave 
+[188/386] partdesign.pad 
+[189/386] partdesign.check 
+[190/386] sketch.new Sketch013
+[191/386] sketch.circle Sketch013
+[192/386] sketch.diameter Sketch013
+[193/386] sketch.distance_x Sketch013
+[194/386] sketch.distance_y Sketch013
+[195/386] sketch.validate Sketch013
+[196/386] sketch.leave 
+[197/386] partdesign.pad 
+[198/386] partdesign.check 
+[199/386] sketch.new Sketch014
+[200/386] sketch.circle Sketch014
+[201/386] sketch.diameter Sketch014
+[202/386] sketch.distance_x Sketch014
+[203/386] sketch.distance_y Sketch014
+[204/386] sketch.validate Sketch014
+[205/386] sketch.leave 
+[206/386] partdesign.pocket 
+[207/386] partdesign.check 
+[208/386] sketch.new Sketch015
+[209/386] sketch.circle Sketch015
+[210/386] sketch.diameter Sketch015
+[211/386] sketch.distance_x Sketch015
+[212/386] sketch.distance_y Sketch015
+[213/386] sketch.validate Sketch015
+[214/386] sketch.leave 
+[215/386] partdesign.pocket 
+[216/386] partdesign.check 
+[217/386] partdesign.body 
+[218/386] partdesign.placement 
+[219/386] sketch.new Sketch016
+[220/386] sketch.circle Sketch016
+[221/386] sketch.diameter Sketch016
+[222/386] sketch.coincident Sketch016
+[223/386] sketch.circle Sketch016
+[224/386] sketch.diameter Sketch016
+[225/386] sketch.coincident Sketch016
+[226/386] sketch.validate Sketch016
+[227/386] sketch.leave 
+[228/386] partdesign.pad 
+[229/386] partdesign.check 
+[230/386] partdesign.body 
+[231/386] partdesign.placement 
+[232/386] sketch.new Sketch017
+[233/386] sketch.circle Sketch017
+[234/386] sketch.diameter Sketch017
+[235/386] sketch.coincident Sketch017
+[236/386] sketch.validate Sketch017
+[237/386] sketch.leave 
+[238/386] partdesign.pad 
+[239/386] partdesign.check 
+[240/386] partdesign.body 
+[241/386] partdesign.placement 
+[242/386] sketch.new Sketch018
+[243/386] sketch.circle Sketch018
+[244/386] sketch.diameter Sketch018
+[245/386] sketch.coincident Sketch018
+[246/386] sketch.validate Sketch018
+[247/386] sketch.leave 
+[248/386] partdesign.pad 
+[249/386] partdesign.check 
+[250/386] partdesign.body 
+[251/386] partdesign.placement 
+[252/386] sketch.new Sketch019
+[253/386] sketch.circle Sketch019
+[254/386] sketch.diameter Sketch019
+[255/386] sketch.coincident Sketch019
+[256/386] sketch.validate Sketch019
+[257/386] sketch.leave 
+[258/386] partdesign.pad 
+[259/386] partdesign.check 
+[260/386] partdesign.body 
+[261/386] partdesign.placement 
+[262/386] sketch.new Sketch020
+[263/386] sketch.circle Sketch020
+[264/386] sketch.diameter Sketch020
+[265/386] sketch.coincident Sketch020
+[266/386] sketch.circle Sketch020
+[267/386] sketch.diameter Sketch020
+[268/386] sketch.coincident Sketch020
+[269/386] sketch.validate Sketch020
+[270/386] sketch.leave 
+[271/386] partdesign.pad 
+[272/386] partdesign.check 
+[273/386] partdesign.body 
+[274/386] partdesign.placement 
+[275/386] sketch.new Sketch021
+[276/386] sketch.circle Sketch021
+[277/386] sketch.diameter Sketch021
+[278/386] sketch.coincident Sketch021
+[279/386] sketch.circle Sketch021
+[280/386] sketch.diameter Sketch021
+[281/386] sketch.coincident Sketch021
+[282/386] sketch.validate Sketch021
+[283/386] sketch.leave 
+[284/386] partdesign.pad 
+[285/386] partdesign.check 
+[286/386] sketch.new Sketch022
+[287/386] sketch.circle Sketch022
+[288/386] sketch.diameter Sketch022
+[289/386] sketch.coincident Sketch022
+[290/386] sketch.circle Sketch022
+[291/386] sketch.diameter Sketch022
+[292/386] sketch.coincident Sketch022
+[293/386] sketch.validate Sketch022
+[294/386] sketch.leave 
+[295/386] partdesign.pad 
+[296/386] partdesign.check 
+[297/386] partdesign.body 
+[298/386] partdesign.placement 
+[299/386] sketch.new Sketch023
+[300/386] sketch.circle Sketch023
+[301/386] sketch.diameter Sketch023
+[302/386] sketch.coincident Sketch023
+[303/386] sketch.validate Sketch023
+[304/386] sketch.leave 
+[305/386] partdesign.pad 
+[306/386] partdesign.check 
+[307/386] sketch.new Sketch024
+[308/386] sketch.circle Sketch024
+[309/386] sketch.diameter Sketch024
+[310/386] sketch.coincident Sketch024
+[311/386] sketch.validate Sketch024
+[312/386] sketch.leave 
+[313/386] partdesign.pad 
+[314/386] partdesign.check 
+[315/386] partdesign.body 
+[316/386] partdesign.placement 
+[317/386] sketch.new Sketch025
+[318/386] sketch.circle Sketch025
+[319/386] sketch.diameter Sketch025
+[320/386] sketch.coincident Sketch025
+[321/386] sketch.validate Sketch025
+[322/386] sketch.leave 
+[323/386] partdesign.pad 
+[324/386] partdesign.check 
+[325/386] sketch.new Sketch026
+[326/386] sketch.circle Sketch026
+[327/386] sketch.diameter Sketch026
+[328/386] sketch.coincident Sketch026
+[329/386] sketch.validate Sketch026
+[330/386] sketch.leave 
+[331/386] partdesign.pad 
+[332/386] partdesign.check 
+[333/386] partdesign.body 
+[334/386] partdesign.placement 
+[335/386] sketch.new Sketch027
+[336/386] sketch.circle Sketch027
+[337/386] sketch.diameter Sketch027
+[338/386] sketch.coincident Sketch027
+[339/386] sketch.validate Sketch027
+[340/386] sketch.leave 
+[341/386] partdesign.pad 
+[342/386] partdesign.check 
+[343/386] sketch.new Sketch028
+[344/386] sketch.circle Sketch028
+[345/386] sketch.diameter Sketch028
+[346/386] sketch.coincident Sketch028
+[347/386] sketch.validate Sketch028
+[348/386] sketch.leave 
+[349/386] partdesign.pad 
+[350/386] partdesign.check 
+[351/386] partdesign.body 
+[352/386] partdesign.placement 
+[353/386] sketch.new Sketch029
+[354/386] sketch.circle Sketch029
+[355/386] sketch.diameter Sketch029
+[356/386] sketch.coincident Sketch029
+[357/386] sketch.validate Sketch029
+[358/386] sketch.leave 
+[359/386] partdesign.pad 
+[360/386] partdesign.check 
+[361/386] sketch.new Sketch030
+[362/386] sketch.circle Sketch030
+[363/386] sketch.diameter Sketch030
+[364/386] sketch.coincident Sketch030
+[365/386] sketch.validate Sketch030
+[366/386] sketch.leave 
+[367/386] partdesign.pad 
+[368/386] partdesign.check 
+[369/386] partdesign.body 
+[370/386] partdesign.placement 
+[371/386] sketch.new Sketch031
+[372/386] sketch.circle Sketch031
+[373/386] sketch.diameter Sketch031
+[374/386] sketch.coincident Sketch031
+[375/386] sketch.validate Sketch031
+[376/386] sketch.leave 
+[377/386] partdesign.pad 
+[378/386] partdesign.check 
+[379/386] sketch.new Sketch032
+[380/386] sketch.circle Sketch032
+[381/386] sketch.diameter Sketch032
+[382/386] sketch.coincident Sketch032
+[383/386] sketch.validate Sketch032
+[384/386] sketch.leave 
+[385/386] partdesign.pad 
+[386/386] partdesign.check 

@@ -1,0 +1,17 @@
+import json
+from pathlib import Path
+import FreeCAD as App
+import FreeCADGui as Gui
+
+out = Path('/home/v9i/Projects/Kala-Agent/outputs/screw_jack_20261017')
+states = []
+for doc in App.listDocuments().values():
+    entry = {'name': doc.Name, 'label': doc.Label, 'objects': []}
+    for obj in doc.Objects:
+        if obj.TypeId == 'PartDesign::Body' or hasattr(obj, 'PartNumber'):
+            entry['objects'].append({'label': obj.Label, 'visibility': obj.ViewObject.Visibility,
+                'mode': obj.ViewObject.DisplayMode, 'placement': str(obj.Placement),
+                'tip': str(getattr(obj, 'Tip', None)),
+                'tip_visible': obj.Tip.ViewObject.Visibility if getattr(obj, 'Tip', None) else None})
+    states.append(entry)
+(out / 'view_state.json').write_text(json.dumps({'active': App.ActiveDocument.Name, 'documents': states}, indent=2))

@@ -1,0 +1,23 @@
+"""Read-only connection probe for the user's running FreeCAD/Kala window."""
+import json
+import os
+import sys
+from pathlib import Path
+
+import FreeCAD as App
+import FreeCADGui as Gui
+
+out = Path('/home/v9i/Projects/Kala-Agent/outputs/screw_jack_20261017')
+state = {
+    'pid': os.getpid(),
+    'freecad_version': list(App.Version())[:3],
+    'documents': [
+        {'name': doc.Name, 'label': doc.Label, 'file': doc.FileName}
+        for doc in App.listDocuments().values()
+    ],
+    'active_document': App.ActiveDocument.Name if App.ActiveDocument else None,
+    'kala_module': getattr(sys.modules.get('kala_gui'), '__file__', None),
+    'docks': [dock.objectName() for dock in Gui.getMainWindow().findChildren(__import__('PySide').QtWidgets.QDockWidget)],
+}
+(out / 'connection_probe.json').write_text(json.dumps(state, indent=2))
+App.Console.PrintMessage('Codex connected to FreeCAD/Kala. Existing documents preserved.\n')

@@ -1,6 +1,6 @@
 """OpenRouter calls for the design loop.
 
-Apodex 1.1 Mini writes the construction script, the analysis, and the reading.
+North Mini Code writes the construction script, the analysis, and the reading.
 Span-01 Lite chooses the next part or the revision. Each call reads its own
 key from the environment or ``~/.config/kala`` and never stores or returns
 that key.
@@ -28,7 +28,7 @@ from kala_agent.contracts import (
 )
 from kala_agent_freecad.errors import FreeCADDependencyError
 
-REASONING_MODEL: Final[str] = "apodex/apodex-1.1-mini:free"
+REASONING_MODEL: Final[str] = "cohere/north-mini-code:free"
 DECIDE_MODEL: Final[str] = "respan/span-01-lite"
 CHAT_URL: Final[str] = "https://openrouter.ai/api/v1/chat/completions"
 DECIDE_URL: Final[str] = "https://openrouter.ai/api/alpha/decisions"
@@ -92,7 +92,7 @@ class WrittenIntent:
 
 
 def write_intent(prompt: str) -> WrittenIntent:
-    """Ask Apodex for one construction script, as one JSON object.
+    """Ask North Mini Code for one construction script, as one JSON object.
 
     A free model often answers in prose. That reply is asked again once.
     """
@@ -111,7 +111,6 @@ def write_intent(prompt: str) -> WrittenIntent:
                 "messages": messages,
                 "model": REASONING_MODEL,
                 "reasoning": {"effort": "none"},
-                "response_format": {"type": "json_object"},
                 "temperature": 0.2,
             },
             timeout=90,
@@ -127,6 +126,37 @@ def write_intent(prompt: str) -> WrittenIntent:
     raise FreeCADDependencyError(
         f"the reasoning model {REASONING_MODEL} did not return a design object"
     )
+
+
+def explain_design(prompt: str, script_text: str) -> str:
+    """Ask the reasoning model to describe the script it just wrote, in prose."""
+    payload = _post(
+        CHAT_URL,
+        {
+            "max_tokens": 700,
+            "messages": [
+                {"content": _EXPLAIN, "role": "system"},
+                {
+                    "content": f"Request:\n{prompt}\n\nConstruction script:\n{script_text}",
+                    "role": "user",
+                },
+            ],
+            "model": REASONING_MODEL,
+            "reasoning": {"effort": "none"},
+            "temperature": 0.3,
+        },
+        timeout=60,
+        idempotent=False,
+        key=api_key(),
+        missing="the OpenRouter reasoning key is not set",
+        who=f"reasoning model {REASONING_MODEL}",
+    )
+    texts = _reply_texts(payload)
+    if not texts:
+        raise FreeCADDependencyError(
+            f"the reasoning model {REASONING_MODEL} did not explain the design"
+        )
+    return texts[0]
 
 
 def choose_part(state: str, options: Mapping[str, str]) -> ModelChoice:
@@ -166,7 +196,7 @@ REVISION_OPTIONS: Final[Mapping[str, str]] = {
 
 
 def write_analysis(prompt: str, script: ConstructionScript) -> AnalysisScript:
-    """Ask Apodex for the analysis script that belongs with a design."""
+    """Ask North Mini Code for the analysis script that belongs with a design."""
     return _ask_model(
         _ANALYSIS_SYSTEM,
         f"Request:\n{prompt}\n\nDesign:\n{script.model_dump_json()}",
@@ -180,7 +210,7 @@ def read_analysis(
     script: ConstructionScript,
     measurements: Mapping[str, object],
 ) -> AnalysisReading:
-    """Ask Apodex to read the analysis numbers against the request."""
+    """Ask North Mini Code to read the analysis numbers against the request."""
     measured = json.dumps(measurements, default=str)
     return _ask_model(
         _READING_SYSTEM,
@@ -236,7 +266,6 @@ def _ask_model(
                 "messages": messages,
                 "model": REASONING_MODEL,
                 "reasoning": {"effort": "none"},
-                "response_format": {"type": "json_object"},
                 "temperature": 0.2,
             },
             timeout=90,
@@ -516,6 +545,11 @@ def _post(
     return parsed
 
 
+_EXPLAIN: Final[str] = """You just wrote a construction script for a CAD build.
+Explain it the way a coding agent explains a change: plain sentences, no JSON.
+Name the parts, the important sizes and where they sit, and anything the request asked for that this script cannot make.
+Stay under 160 words. Do not use markdown headings.
+"""
 _SYSTEM: Final[str] = """You are a mechanical designer. Return one JSON object and no other text.
 Do not write FreeCAD Python. Do not return a parts list or pad and pocket feature lists.
 The object is {summary, components, assembly}. All sizes are millimetres.

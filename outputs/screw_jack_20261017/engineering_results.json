@@ -1,0 +1,203 @@
+{
+  "working_axial_load_N": 19620.0,
+  "assumed_proof_axial_load_N": 29430.0,
+  "turns_for_full_travel": 30.0,
+  "thread_lead_angle_degrees": 2.603608291147242,
+  "critical_thread_friction_coefficient_for_self_locking": 0.04392339140400819,
+  "torque_cases": [
+    {
+      "load": "working",
+      "thread_mu": 0.08,
+      "thread_raise_Nm": 35.37327409837336,
+      "thread_lower_resisting_Nm": 10.220600589517097,
+      "bearing_surrogate_Nm": 7.863288311688312,
+      "total_raise_Nm": 43.23656241006167,
+      "handle_force_N": 172.9462496402467,
+      "thread_only_self_locking": true
+    },
+    {
+      "load": "proof_assumption",
+      "thread_mu": 0.08,
+      "thread_raise_Nm": 53.05991114756004,
+      "thread_lower_resisting_Nm": 15.330900884275644,
+      "bearing_surrogate_Nm": 11.794932467532467,
+      "total_raise_Nm": 64.8548436150925,
+      "handle_force_N": 259.41937446037,
+      "thread_only_self_locking": true
+    },
+    {
+      "load": "working",
+      "thread_mu": 0.12,
+      "thread_raise_Nm": 46.87967352212613,
+      "thread_lower_resisting_Nm": 21.51235111155797,
+      "bearing_surrogate_Nm": 7.863288311688312,
+      "total_raise_Nm": 54.74296183381445,
+      "handle_force_N": 218.9718473352578,
+      "thread_only_self_locking": true
+    },
+    {
+      "load": "proof_assumption",
+      "thread_mu": 0.12,
+      "thread_raise_Nm": 70.3195102831892,
+      "thread_lower_resisting_Nm": 32.26852666733695,
+      "bearing_surrogate_Nm": 11.794932467532467,
+      "total_raise_Nm": 82.11444275072166,
+      "handle_force_N": 328.45777100288666,
+      "thread_only_self_locking": true
+    },
+    {
+      "load": "working",
+      "thread_mu": 0.15,
+      "thread_raise_Nm": 55.53811386237105,
+      "thread_lower_resisting_Nm": 29.95345168371152,
+      "bearing_surrogate_Nm": 7.863288311688312,
+      "total_raise_Nm": 63.40140217405936,
+      "handle_force_N": 253.60560869623743,
+      "thread_only_self_locking": true
+    },
+    {
+      "load": "proof_assumption",
+      "thread_mu": 0.15,
+      "thread_raise_Nm": 83.30717079355658,
+      "thread_lower_resisting_Nm": 44.93017752556727,
+      "bearing_surrogate_Nm": 11.794932467532467,
+      "total_raise_Nm": 95.10210326108904,
+      "handle_force_N": 380.40841304435617,
+      "thread_only_self_locking": true
+    },
+    {
+      "load": "working",
+      "thread_mu": 0.03,
+      "thread_raise_Nm": 21.051300701202013,
+      "thread_lower_resisting_Nm": -3.953806102950136,
+      "bearing_surrogate_Nm": 7.863288311688312,
+      "total_raise_Nm": 28.914589012890325,
+      "handle_force_N": 115.6583560515613,
+      "thread_only_self_locking": false
+    },
+    {
+      "load": "proof_assumption",
+      "thread_mu": 0.03,
+      "thread_raise_Nm": 31.57695105180302,
+      "thread_lower_resisting_Nm": -5.9307091544252035,
+      "bearing_surrogate_Nm": 11.794932467532467,
+      "total_raise_Nm": 43.37188351933549,
+      "handle_force_N": 173.48753407734196,
+      "thread_only_self_locking": false
+    }
+  ],
+  "screw": {
+    "strength_diameter_mm": 25.0,
+    "area_mm2": 490.8738521234052,
+    "second_moment_mm4": 19174.759848570513,
+    "proof_axial_stress_MPa": 59.95430368248934,
+    "conservative_proof_torsional_stress_MPa": 30.998466216833396,
+    "proof_von_mises_centered_MPa": 80.48126026250235,
+    "assumed_yield_margin_centered": 8.076414284268441,
+    "eccentricity_sensitivity_mm": 15,
+    "proof_bending_stress_MPa": 287.7806576759489,
+    "proof_von_mises_with_eccentricity_MPa": 351.8555358017592,
+    "assumed_yield_margin_with_eccentricity": 1.8473490789874059,
+    "effective_length_mm": 500,
+    "slenderness": 80.00000000000001,
+    "Euler_load_N": 155182.78123685208,
+    "Johnson_load_N": 155060.7759379553,
+    "screening_buckling_load_N": 155060.7759379553,
+    "screening_buckling_margin_to_proof": 5.2687997260603225,
+    "note": "No thread-root concentration, residual stress, corrosion, fatigue or column imperfection included"
+  },
+  "nut": {
+    "engaged_turns": 12.0,
+    "mean_proof_thread_bearing_pressure_MPa": 13.940267783316903,
+    "effective_60pct_proof_thread_bearing_pressure_MPa": 23.233779638861506,
+    "mean_proof_screw_root_thread_shear_MPa": 15.613099917314933,
+    "effective_60pct_proof_thread_shear_MPa": 26.021833195524888,
+    "proof_flange_support_bearing_pressure_MPa": 11.480220527437451,
+    "raised_thread_start_reserve_mm": 4,
+    "note": "Mean stresses do not qualify first-thread concentration, flank bending, wear, fit or actual bronze grade"
+  },
+  "housing": {
+    "proof_nominal_compression_MPa": 21.24231281267338
+  },
+  "bearing_candidate": {
+    "part": "NSK 51305",
+    "basic_dynamic_rating_N": 36000,
+    "basic_static_rating_N": 61500,
+    "static_rating_to_working_axial_load": 3.1345565749235473,
+    "static_rating_to_assumed_proof_axial_load": 2.0897043832823647,
+    "shaft_abutment_diameter_mm": 48,
+    "minimum_required_shaft_abutment_mm": 41,
+    "housing_abutment_bore_mm": 25.5,
+    "maximum_required_housing_abutment_bore_mm": 36,
+    "nominal_head_seat_bearing_pressure_proof_MPa": 22.31771280616786,
+    "nominal_saddle_seat_bearing_pressure_proof_MPa": 18.97288091218017,
+    "journal_all_axial_load_conservative_stress_MPa": 59.95430368248934,
+    "note": "Normal thrust bypasses journal via bearing races; nominal seat pressures exclude race flexibility and edge loading; candidate has no radial load capacity"
+  },
+  "base": {
+    "average_ground_pressure_proof_MPa": 0.8175,
+    "centered_strip_model_plate_bending_MPa": 71.95703125,
+    "strip_model_note": "Uniform foundation pressure and an unsupported plate strip from housing edge; not a validated plate/ground FEA",
+    "stability_and_pressure_sensitivities": [
+      {
+        "scenario": "vertical_centered",
+        "resultant_offset_mm": 0,
+        "distance_to_tipping_edge_mm": 90.0,
+        "geometric_tipping_ratio": null,
+        "contact_width_mm": 180,
+        "peak_ground_pressure_MPa": 0.8175,
+        "plate_strip_stress_scaled_by_peak_pressure_MPa": 71.95703125
+      },
+      {
+        "scenario": "vertical_with_15mm_offset",
+        "resultant_offset_mm": 15,
+        "distance_to_tipping_edge_mm": 75.0,
+        "geometric_tipping_ratio": 6.0,
+        "contact_width_mm": 180,
+        "peak_ground_pressure_MPa": 1.22625,
+        "plate_strip_stress_scaled_by_peak_pressure_MPa": 107.935546875
+      },
+      {
+        "scenario": "15mm_offset_plus_3deg_slope_sensitivity",
+        "resultant_offset_mm": 38.47868511880246,
+        "distance_to_tipping_edge_mm": 51.52131488119754,
+        "geometric_tipping_ratio": 2.3389572622382007,
+        "contact_width_mm": 154.5639446435926,
+        "peak_ground_pressure_MPa": 1.9040663117043455,
+        "plate_strip_stress_scaled_by_peak_pressure_MPa": 167.59750347814293
+      },
+      {
+        "scenario": "offset_slope_plus_5pct_horizontal_sensitivity",
+        "resultant_offset_mm": 60.878685118802466,
+        "distance_to_tipping_edge_mm": 29.121314881197534,
+        "geometric_tipping_ratio": 1.478349931907504,
+        "contact_width_mm": 87.3639446435926,
+        "peak_ground_pressure_MPa": 3.36866657292797,
+        "plate_strip_stress_scaled_by_peak_pressure_MPa": 296.51283897126405
+      }
+    ]
+  },
+  "handle": {
+    "worst_assumed_proof_input_torque_Nm": 95.10210326108904,
+    "proof_nominal_bending_stress_MPa": 236.49952863184657,
+    "assumed_yield_margin": 2.7484198541970044,
+    "note": "Drive-head cross-bore stress concentration and sliding-handle position require separate checks"
+  },
+  "stop": {
+    "nominal_stop_annular_contact_area_mm2": 213.62830044410595,
+    "stress_if_full_proof_were_transferred_through_stop_MPa": 137.7626463292494,
+    "note": "This is an adverse sensitivity, not the normal lifting load path; stop attachment/contact must be qualified for overtravel force"
+  },
+  "limitations": [
+    "Qualify candidate NSK51305 bearing for actual load/life/static safety, races, shaft/seat tolerances, sealing, misalignment and drag; catalogue rating alone does not qualify installation",
+    "Qualify actual screw/nut thread tolerance, minimum root, runout, flank contact and bronze wear/PV limits; CAD thread envelope is not a tolerance specification",
+    "Resolve 2 mm diametral nut-to-housing clearance using a positive locating pilot/bushing and antirotation feature; retaining bolts alone must not be assumed a precision guide",
+    "Engineer saddle angular accommodation, vehicle lift-point interface, retention and load eccentricity; flat CAD saddle is only an envelope",
+    "Design and qualify end-stop collar retention, nut-skirt contact and overload behavior; CAD touching faces do not prove stop strength",
+    "Provide qualified load-holding protection: verify self-locking across lubrication/wear/vibration and design an independent restraint as required by hazard analysis",
+    "Validate 12 mm base under eccentric/nonuniform ground contact, welds, local ring/flange bending, bolt holes and housing stability",
+    "Resolve accessible pinch points, handle end stops/retention, maximum-travel indication, corrosion, lubrication and service interval",
+    "Create fully toleranced manufacturing drawings, material/heat-treatment/weld procedures, traceable BOM, inspection plan and current-market standards compliance matrix",
+    "Conduct independent structural review, proof/overload, stability, load-holding, endurance, wear, misuse and environmental tests before product release"
+  ]
+}

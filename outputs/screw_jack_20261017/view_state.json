@@ -1,0 +1,144 @@
+{
+  "active": "ScrewJack",
+  "documents": [
+    {
+      "name": "KalaScrewJackTool",
+      "label": "screw-jack-tool",
+      "objects": [
+        {
+          "label": "BasePlate",
+          "visibility": true,
+          "mode": "Flat Lines",
+          "placement": "Placement [Pos=(0,0,0), Yaw-Pitch-Roll=(0,0,0)]",
+          "tip": "<PartDesign::Pocket>",
+          "tip_visible": true
+        },
+        {
+          "label": "Housing",
+          "visibility": true,
+          "mode": "Flat Lines",
+          "placement": "Placement [Pos=(0,0,204), Yaw-Pitch-Roll=(0,0,0)]",
+          "tip": "<PartDesign::Pocket>",
+          "tip_visible": true
+        },
+        {
+          "label": "BronzeNut",
+          "visibility": true,
+          "mode": "Flat Lines",
+          "placement": "Placement [Pos=(0,0,212), Yaw-Pitch-Roll=(0,0,0)]",
+          "tip": "<PartDesign::Pocket>",
+          "tip_visible": true
+        },
+        {
+          "label": "PowerScrew",
+          "visibility": true,
+          "mode": "Flat Lines",
+          "placement": "Placement [Pos=(0,0,100), Yaw-Pitch-Roll=(0,0,0)]",
+          "tip": "<PartDesign::AdditiveHelix>",
+          "tip_visible": true
+        },
+        {
+          "label": "DriveHead",
+          "visibility": true,
+          "mode": "Flat Lines",
+          "placement": "Placement [Pos=(-24,0,358), Yaw-Pitch-Roll=(0,0,0)]",
+          "tip": "<PartDesign::Pocket>",
+          "tip_visible": true
+        },
+        {
+          "label": "RemovableStopCollar",
+          "visibility": true,
+          "mode": "Flat Lines",
+          "placement": "Placement [Pos=(0,0,94), Yaw-Pitch-Roll=(0,0,0)]",
+          "tip": "<PartDesign::Pad>",
+          "tip_visible": true
+        },
+        {
+          "label": "TommyBar",
+          "visibility": true,
+          "mode": "Flat Lines",
+          "placement": "Placement [Pos=(-250,0,344), Yaw-Pitch-Roll=(0,0,0)]",
+          "tip": "<PartDesign::Pad>",
+          "tip_visible": true
+        },
+        {
+          "label": "HandleGripLeft",
+          "visibility": true,
+          "mode": "Flat Lines",
+          "placement": "Placement [Pos=(-258,0,344), Yaw-Pitch-Roll=(0,0,0)]",
+          "tip": "<PartDesign::Pad>",
+          "tip_visible": true
+        },
+        {
+          "label": "HandleGripRight",
+          "visibility": true,
+          "mode": "Flat Lines",
+          "placement": "Placement [Pos=(250,0,344), Yaw-Pitch-Roll=(0,0,0)]",
+          "tip": "<PartDesign::Pad>",
+          "tip_visible": true
+        },
+        {
+          "label": "ThrustBearingEnvelope",
+          "visibility": true,
+          "mode": "Flat Lines",
+          "placement": "Placement [Pos=(0,0,358), Yaw-Pitch-Roll=(0,0,0)]",
+          "tip": "<PartDesign::Pad>",
+          "tip_visible": true
+        },
+        {
+          "label": "SwivelSaddle",
+          "visibility": true,
+          "mode": "Flat Lines",
+          "placement": "Placement [Pos=(0,0,376), Yaw-Pitch-Roll=(0,0,0)]",
+          "tip": "<PartDesign::Pad>",
+          "tip_visible": true
+        },
+        {
+          "label": "AxialRetainerEnvelope",
+          "visibility": true,
+          "mode": "Flat Lines",
+          "placement": "Placement [Pos=(0,0,386), Yaw-Pitch-Roll=(0,0,0)]",
+          "tip": "<PartDesign::Pad>",
+          "tip_visible": true
+        },
+        {
+          "label": "NutBolt1",
+          "visibility": true,
+          "mode": "Flat Lines",
+          "placement": "Placement [Pos=(23.3345,23.3345,220), Yaw-Pitch-Roll=(0,0,0)]",
+          "tip": "<PartDesign::Pad>",
+          "tip_visible": true
+        },
+        {
+          "label": "NutBolt2",
+          "visibility": true,
+          "mode": "Flat Lines",
+          "placement": "Placement [Pos=(-23.3345,23.3345,220), Yaw-Pitch-Roll=(0,0,0)]",
+          "tip": "<PartDesign::Pad>",
+          "tip_visible": true
+        },
+        {
+          "label": "NutBolt3",
+          "visibility": true,
+          "mode": "Flat Lines",
+          "placement": "Placement [Pos=(-23.3345,-23.3345,220), Yaw-Pitch-Roll=(0,0,0)]",
+          "tip": "<PartDesign::Pad>",
+          "tip_visible": true
+        },
+        {
+          "label": "NutBolt4",
+          "visibility": true,
+          "mode": "Flat Lines",
+          "placement": "Placement [Pos=(23.3345,-23.3345,220), Yaw-Pitch-Roll=(0,0,0)]",
+          "tip": "<PartDesign::Pad>",
+          "tip_visible": true
+        }
+      ]
+    },
+    {
+      "name": "ScrewJack",
+      "label": "ScrewJack",
+      "objects": []
+    }
+  ]
+}

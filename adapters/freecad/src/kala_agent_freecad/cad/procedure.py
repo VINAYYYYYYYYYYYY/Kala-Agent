@@ -30,7 +30,7 @@ from kala_agent_freecad.cad.catalog import (
 )
 from kala_agent_freecad.errors import FreeCADInputError
 
-MAX_CALLS: Final[int] = 160
+MAX_CALLS: Final[int] = 2_000
 _SKETCH_TOOLS: Final[frozenset[str]] = frozenset(
     (
         *SKETCH_GEOMETRY,

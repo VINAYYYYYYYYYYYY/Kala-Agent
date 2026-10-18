@@ -105,10 +105,19 @@ def run_open(
     on_step: Callable[[str, str], None] | None = None,
     calculix_path: str = "",
     automatic_redesign: bool = True,
+    reuse_document: bool = False,
 ) -> dict[str, object]:
-    """Apply the call list in an already open FreeCAD document and leave it open."""
+    """Apply the call list in an already open FreeCAD document and leave it open.
+
+    When reuse_document is set, a document with the same name is cleared and
+    built again so a later change stays in the same window.
+    """
     check_procedure(request.calls)
-    document = _new_document(modules.freecad, request.document_name)
+    document = _open_document(
+        modules.freecad,
+        request.document_name,
+        reuse=reuse_document,
+    )
     activate = getattr(modules.freecad, "setActiveDocument", None)
     if callable(activate):
         activate(document.Name)
@@ -818,6 +827,56 @@ _HANDLERS: Final[dict[str, Callable[[_Session, Mapping[str, object]], None]]] = 
     "sketch.validate": _Session.sketch_validate,
     "sketch.vertical": _Session.sketch_vertical,
 }
+
+
+def _open_document(freecad: FreeCADObject, name: str, *, reuse: bool) -> FreeCADObject:
+    if reuse:
+        existing = _existing_document(freecad, name)
+        if existing is not None:
+            _clear_document(existing)
+            return existing
+    return _new_document(freecad, name)
+
+
+def _existing_document(freecad: FreeCADObject, name: str) -> FreeCADObject | None:
+    getter = getattr(freecad, "getDocument", None)
+    if not callable(getter):
+        return None
+    try:
+        found = getter(name)
+    except Exception:
+        return None
+    if found is None:
+        return None
+    return cast("FreeCADObject", found)
+
+
+def _clear_document(document: FreeCADObject) -> None:
+    remove = getattr(document, "removeObject", None)
+    if not callable(remove):
+        return
+    for _pass in range(8):
+        objects = list(getattr(document, "Objects", ()) or ())
+        if not objects:
+            break
+        removed = False
+        for obj in reversed(objects):
+            object_name = getattr(obj, "Name", "")
+            if not isinstance(object_name, str) or not object_name:
+                continue
+            try:
+                remove(object_name)
+            except Exception:
+                continue
+            removed = True
+        if not removed:
+            break
+    recompute = getattr(document, "recompute", None)
+    if callable(recompute):
+        try:
+            recompute()
+        except Exception:
+            return
 
 
 def _new_document(freecad: FreeCADObject, name: str) -> FreeCADObject:

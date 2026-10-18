@@ -1,0 +1,339 @@
+{
+  "build_method": "native Kala tool calls",
+  "reasoning_model": "Codex in this chat",
+  "local_models_called": [],
+  "automatic_redesign": false,
+  "call_count": 386,
+  "calls_json_bytes": 23714,
+  "native_body_count": 16,
+  "manufacturing_part_count": 15,
+  "integral_spindle": {
+    "cad_regions": [
+      "PowerScrew",
+      "DriveHead"
+    ],
+    "face_gap_mm": 0.0,
+    "manufacture": "one integral machined component"
+  },
+  "all_sketches_fully_constrained": true,
+  "parts": [
+    {
+      "name": "BasePlate",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 426571.32789459697,
+      "bounds_mm": [
+        -100.0,
+        -90.0,
+        0.0,
+        100.0,
+        90.0,
+        12.0
+      ],
+      "material": "S355 structural steel",
+      "note": "200 x 180 x 12; four diameter-12 mounting holes on 150 x 130 centres"
+    },
+    {
+      "name": "Housing",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 296566.3464988766,
+      "bounds_mm": [
+        -45.0,
+        -45.0,
+        11.9999999,
+        45.0,
+        45.0,
+        212.0000001
+      ],
+      "material": "S355 structural steel",
+      "note": "Tube OD70/ID56 z12..204; welded integral support ring OD90/ID56 z204..212; M6x1 tapped holes8mm engagement represented by diameter5 tap-drill envelope, internal thread ridges omitted"
+    },
+    {
+      "name": "BronzeNut",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 114207.9513641296,
+      "bounds_mm": [
+        -40.0,
+        -40.0,
+        159.9999999,
+        40.0,
+        40.0,
+        220.0
+      ],
+      "material": "CuSn12 bronze",
+      "note": "Tr30x4 RH internal thread specified; modeled diameter30.2 clearance envelope, internal helix omitted by tool limitation"
+    },
+    {
+      "name": "PowerScrew",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 142213.95147614693,
+      "bounds_mm": [
+        -14.999998953978471,
+        -14.999999665641091,
+        93.9999999,
+        15.000000659064813,
+        14.999999665484246,
+        330.0000001
+      ],
+      "material": "42CrMo4 quenched and tempered steel",
+      "note": "Tr30x4 RH external helical ridge on diameter25.5 root; midstroke60; removable stop collar below root limits upward travel to120; PowerScrew and DriveHead are two editable CAD regions of one integral machined spindle"
+    },
+    {
+      "name": "DriveHead",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 52789.934285272466,
+      "bounds_mm": [
+        -24.0000001,
+        -24.0000001,
+        329.9999999,
+        24.0000001,
+        24.0000001,
+        386.0
+      ],
+      "material": "42CrMo4 quenched and tempered steel",
+      "note": "OD48 head z330..358; diameter17 tommy-bar bore at344; diameter25 journal z358..386; diameter6.4 axial retainer bore; integral machined continuation of PowerScrew, separate CAD region only"
+    },
+    {
+      "name": "RemovableStopCollar",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 2994.770320924276,
+      "bounds_mm": [
+        -18.0,
+        -18.0,
+        94.0,
+        18.0,
+        18.0,
+        100.0
+      ],
+      "material": "42CrMo4 steel",
+      "note": "OD36 ID25.7 h6 removable stop collar; split/clamp retention omitted and must be engineered before release"
+    },
+    {
+      "name": "TommyBar",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 100530.96491487342,
+      "bounds_mm": [
+        -250.0,
+        -8.0,
+        335.99999999999983,
+        250.0000000000001,
+        8.000000000000002,
+        352.0
+      ],
+      "material": "42CrMo4 quenched and tempered steel",
+      "note": "Diameter16 x 500; sliding removable bar; grip end caps retained separately"
+    },
+    {
+      "name": "HandleGripLeft",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 3619.1147369354426,
+      "bounds_mm": [
+        -258.0,
+        -12.0,
+        332.0,
+        -250.0,
+        12.000000000000004,
+        356.0
+      ],
+      "material": "Oil-resistant elastomer",
+      "note": "Diameter24 retaining grip end; nominal envelope"
+    },
+    {
+      "name": "HandleGripRight",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 3619.1147369354426,
+      "bounds_mm": [
+        250.0,
+        -12.0,
+        332.0,
+        258.0,
+        12.000000000000004,
+        356.0
+      ],
+      "material": "Oil-resistant elastomer",
+      "note": "Diameter24 retaining grip end; nominal envelope"
+    },
+    {
+      "name": "ThrustBearingEnvelope",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 29391.17007065931,
+      "bounds_mm": [
+        -26.0,
+        -26.0,
+        358.0,
+        26.0,
+        26.0,
+        376.0
+      ],
+      "material": "Bearing steel",
+      "note": "NSK51305 candidate axial rolling thrust bearing envelope OD52 ID25 h18; C0a61.5kN Ca36kN; supplier specification/fit/life verification required"
+    },
+    {
+      "name": "SwivelSaddle",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 39294.84456156028,
+      "bounds_mm": [
+        -35.0000001,
+        -35.0000001,
+        375.9999999,
+        35.0000001,
+        35.0000001,
+        388.0000001
+      ],
+      "material": "C45 steel",
+      "note": "OD70 h12; diameter25.5 through journal clearance; OD33 upper counterbore from385.8 to388; 0.2 axial retention clearance; vehicle-specific contact geometry remains a release gate"
+    },
+    {
+      "name": "AxialRetainerEnvelope",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 1891.2387774610554,
+      "bounds_mm": [
+        -16.0,
+        -16.0,
+        376.0,
+        16.0,
+        16.0,
+        388.0
+      ],
+      "material": "Property class 10.9 steel",
+      "note": "Nominal axial retainer OD32 h2 with M6 stud10 below; fits saddle counterbore with0.5radial/0.2axial clearance; thread/drive/locking detail unresolved"
+    },
+    {
+      "name": "NutBolt1",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 772.9574564892328,
+      "bounds_mm": [
+        18.33452377915607,
+        18.33452377915607,
+        204.0,
+        28.33452377915607,
+        28.33452377915607,
+        226.0
+      ],
+      "material": "Property class 10.9 steel",
+      "note": "M6x1 bolt with modeled diameter4.9 thread-root envelope; support ring8mm tapped engagement, nominal grip clearance; external thread ridges and head socket omitted"
+    },
+    {
+      "name": "NutBolt2",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 772.9574564892328,
+      "bounds_mm": [
+        -28.33452377915607,
+        18.33452377915607,
+        204.0,
+        -18.33452377915607,
+        28.33452377915607,
+        226.0
+      ],
+      "material": "Property class 10.9 steel",
+      "note": "M6x1 bolt with modeled diameter4.9 thread-root envelope; support ring8mm tapped engagement, nominal grip clearance; external thread ridges and head socket omitted"
+    },
+    {
+      "name": "NutBolt3",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 772.9574564892328,
+      "bounds_mm": [
+        -28.33452377915607,
+        -28.33452377915607,
+        204.0,
+        -18.33452377915607,
+        -18.33452377915607,
+        226.0
+      ],
+      "material": "Property class 10.9 steel",
+      "note": "M6x1 bolt with modeled diameter4.9 thread-root envelope; support ring8mm tapped engagement, nominal grip clearance; external thread ridges and head socket omitted"
+    },
+    {
+      "name": "NutBolt4",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 772.9574564892328,
+      "bounds_mm": [
+        18.33452377915607,
+        -28.33452377915607,
+        204.0,
+        28.33452377915607,
+        -18.33452377915607,
+        226.0
+      ],
+      "material": "Property class 10.9 steel",
+      "note": "M6x1 bolt with modeled diameter4.9 thread-root envelope; support ring8mm tapped engagement, nominal grip clearance; external thread ridges and head socket omitted"
+    }
+  ],
+  "files": [
+    {
+      "path": "/home/v9i/Projects/Kala-Agent/outputs/screw_jack_20261017/tool_based/screw-jack-tool.FCStd",
+      "bytes": 2044127,
+      "sha256": "37c153d408a54643907cb4f333e97900bf479ed201963e6398a431a488020750"
+    },
+    {
+      "path": "/home/v9i/Projects/Kala-Agent/outputs/screw_jack_20261017/tool_based/screw-jack-tool.step",
+      "bytes": 1745254,
+      "sha256": "c1b4cc4b91741dfc543fb7097380a5762fc47830688723a3e6847b1183d2e047"
+    }
+  ],
+  "step_roundtrip": {
+    "valid": true,
+    "solid_count": 16
+  },
+  "midstroke_mm": 60,
+  "stroke_range_mm": [
+    0,
+    120
+  ],
+  "saddle_top_mm": {
+    "collapsed": 328,
+    "midstroke": 388,
+    "raised": 448
+  },
+  "fem": {
+    "analysis_detail": "analysis was not requested",
+    "analysis_status": "not_run",
+    "peak_stress_mpa": null
+  },
+  "release_status": "engineering candidate; not certified production-ready",
+  "limitations": [
+    "Internal nut helical thread is specified but represented by clearance envelope.",
+    "Bearing is a purchasing envelope for NSK51305; installation fits and bearing life require verification.",
+    "No load test, fatigue assessment, welding qualification, tolerance validation or safety certification completed.",
+    "Axial saddle retainer is nominal; thread, drive, locking and vehicle interface require detailed design.",
+    "M6 bolts omit thread/socket detail; base attachment and fastener preload require design approval.",
+    "Removable collar is a nominal ring; its split/clamp retention is not modeled or validated."
+  ],
+  "external_thread_dimension_check": {
+    "valid": true,
+    "optimal_bounds_mm": [
+      -14.999998953978471,
+      -14.999999665641091,
+      93.9999999,
+      15.000000659064813,
+      14.999999665484246,
+      330.0000001
+    ],
+    "optimal_xy_size_mm": [
+      29.999999613043286,
+      29.999999331125338
+    ],
+    "tessellation_deflection_mm": 0.03,
+    "tessellation_vertex_count": 30912,
+    "maximum_tessellated_radius_mm": 15.000025952031038,
+    "nominal_major_diameter_mm": 30,
+    "passed_30_001_mm_envelope": true,
+    "bound_method_note": "optimalBoundingBox(False, False) measures analytic geometry without cached triangulation; default BoundBox overstates the long helical B-spline control-pole enclosure"
+  },
+  "bounding_box_method": "OpenCascade optimalBoundingBox (geometric extrema)"
+}

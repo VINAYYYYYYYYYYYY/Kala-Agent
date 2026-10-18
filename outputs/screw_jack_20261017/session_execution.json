@@ -1,0 +1,34 @@
+{
+  "started_at_utc": "2026-10-17T09:16:41.295463+00:00",
+  "pid": 180062,
+  "freecad_version": [
+    "1",
+    "1",
+    "3"
+  ],
+  "reasoning": "Codex parent with delegated CAD/engineering work; no Kala LLM calls",
+  "decision_model": "bypassed for this run",
+  "model_gateway_attempts": [],
+  "existing_documents": {
+    "ScrewJack": "/home/v9i/Documents/ChatGPT/cad/screw_jack/ScrewJack.FCStd"
+  },
+  "builds": [
+    {
+      "method": "tool_based",
+      "status": "completed",
+      "documents": [
+        "KalaScrewJackTool"
+      ]
+    },
+    {
+      "method": "script_based",
+      "status": "completed",
+      "documents": [
+        "Kala_ScrewJack_Script_145051"
+      ]
+    }
+  ],
+  "gateway_restored": true,
+  "finished_at_utc": "2026-10-17T09:21:03.046811+00:00",
+  "preserved_documents": true
+}

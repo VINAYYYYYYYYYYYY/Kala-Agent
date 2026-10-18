@@ -1,0 +1,192 @@
+{
+  "revision": "2026-10-17-B",
+  "status": "ENGINEERING PROTOTYPE — NOT RELEASED FOR MANUFACTURE OR VEHICLE LIFTING",
+  "architecture": "Vertical manual single-start trapezoidal screw bottle jack",
+  "units": {
+    "length": "mm",
+    "force": "N",
+    "stress": "MPa",
+    "torque": "N m"
+  },
+  "target_working_mass_kg": 2000,
+  "gravity_m_s2": 9.81,
+  "proof_load_multiplier_project_assumption": 1.5,
+  "travel_mm": 120,
+  "displayed_travel_mm": 60,
+  "saddle_height_collapsed_mm": 328,
+  "saddle_height_displayed_mm": 388,
+  "saddle_height_raised_mm": 448,
+  "datum": "Base underside z=0; XY centered on screw; displayed pose is 60 mm above collapsed",
+  "geometry": {
+    "base": {
+      "length_x": 200,
+      "width_y": 180,
+      "thickness": 12,
+      "z_min": 0,
+      "z_max": 12
+    },
+    "housing": {
+      "outer_diameter": 70,
+      "bore_diameter": 56,
+      "z_min": 12,
+      "z_max": 212
+    },
+    "top_support_ring": {
+      "outer_diameter": 90,
+      "inner_diameter": 56,
+      "z_min": 204,
+      "z_max": 212
+    },
+    "nut_body": {
+      "outer_diameter": 54,
+      "thread": "Tr30x4 RH single-start",
+      "engagement": 48,
+      "z_min": 164,
+      "z_max": 212
+    },
+    "nut_flange": {
+      "outer_diameter": 80,
+      "clearance_bore_diameter": 32,
+      "z_min": 212,
+      "z_max": 220,
+      "retaining_bolts": "4 x M6 at PCD66; detailed fastening pending"
+    },
+    "nut_stop_skirt": {
+      "outer_diameter": 54,
+      "inner_diameter": 32,
+      "z_min": 160,
+      "z_max": 164
+    },
+    "screw": {
+      "major_diameter_basic": 30,
+      "pitch_diameter_basic": 28,
+      "root_diameter_basic": 25.5,
+      "root_diameter_strength_assumption": 25.0,
+      "thread_pitch": 4,
+      "lead": 4,
+      "flank_included_angle_degrees": 30,
+      "thread_length": 230,
+      "displayed_z_min": 100,
+      "displayed_z_max": 330,
+      "collapsed_z_min": 40,
+      "collapsed_z_max": 270,
+      "raised_z_min": 160,
+      "raised_z_max": 390
+    },
+    "screw_end_stop_collar": {
+      "outer_diameter": 36,
+      "inner_diameter": 25.7,
+      "z_min": 94,
+      "z_max": 100,
+      "retention": "Removable collar envelope only; split/clamp retention and fasteners unresolved; no rated pin is claimed",
+      "assembly": "Install nut from lower screw end before removable collar; integral head and integral collar would trap nut"
+    },
+    "drive_head": {
+      "outer_diameter": 48,
+      "z_min": 330,
+      "z_max": 358,
+      "cross_bore_diameter": 17,
+      "cross_bore_center_z": 344
+    },
+    "handle": {
+      "diameter": 16,
+      "length": 500,
+      "effective_lever_arm": 250,
+      "axis": "X through drive-head cross-bore",
+      "center_z": 344
+    },
+    "thrust_bearing": {
+      "candidate": "NSK 51305",
+      "outer_diameter": 52,
+      "inner_diameter": 25,
+      "z_min": 358,
+      "z_max": 376,
+      "candidate_selected": true,
+      "application_qualified": false,
+      "basic_dynamic_load_rating_N": 36000,
+      "basic_static_load_rating_N": 61500,
+      "minimum_C0a_project_target_N": 58860,
+      "minimum_shaft_abutment_diameter": 41,
+      "maximum_housing_abutment_bore_diameter": 36,
+      "maximum_fillet_radius": 1,
+      "note": "Catalogue candidate with verified dimensions/rating; CAD is envelope only; application, alignment, drag and sealing still unqualified"
+    },
+    "saddle_journal": {
+      "diameter": 25,
+      "z_min": 358,
+      "z_max": 386,
+      "retention": "Positive axial saddle retention required; detail pending"
+    },
+    "saddle": {
+      "outer_diameter": 70,
+      "bore_diameter": 25.5,
+      "z_min": 376,
+      "z_max": 388,
+      "interface": "Vehicle-specific load seat and angular accommodation unresolved"
+    }
+  },
+  "material_requirements_are_assumptions": {
+    "screw_and_handle": "42CrMo4 / AISI4140 Q&T candidate; certified minimum yield 650 MPa assumed",
+    "housing_base_support_ring": "Weldable steel candidate; minimum yield 355 MPa assumed",
+    "nut": "Bearing bronze candidate; project screening allowables 30 MPa thread bearing and 60 MPa shear; supplier qualification required",
+    "screw_elastic_modulus_MPa": 205000
+  },
+  "analysis_assumptions": {
+    "thread_friction_range": [
+      0.08,
+      0.12,
+      0.15
+    ],
+    "adverse_low_thread_friction_case": 0.03,
+    "rolling_thrust_equivalent_friction": 0.02,
+    "strength_screw_root_min_mm": 25.0,
+    "screw_unsupported_length_mm": 250,
+    "buckling_effective_length_factor": 2,
+    "nut_effective_engagement_fraction_sensitivity": 0.6,
+    "eccentric_axial_load_sensitivity_mm": 15,
+    "slope_sensitivity_degrees_not_an_operating_rating": 3,
+    "horizontal_force_fraction_sensitivity_not_allowed_working_load": 0.05,
+    "support": "Hard level non-slipping foundation; substrate bearing and local vehicle lift-point qualification excluded"
+  },
+  "standards_scope": {
+    "candidate": "ASME PASE-2024, subject to intended market and classification review",
+    "verified_public_scope": "Publisher lists automotive mechanical jacks",
+    "full_standard_reviewed": false,
+    "proof_multiplier_from_standard": false,
+    "claims_of_conformity": "None"
+  },
+  "sources": [
+    {
+      "title": "ASME publisher PASE product and scope",
+      "url": "https://www.asme.org/codes-standards/find-codes-standards/safety-standard-for-portable-automotive-service-equipment",
+      "use": "Automotive mechanical-jack scope and 2024 edition; no detailed proof requirement inferred"
+    },
+    {
+      "title": "NSK 51103 manufacturer specifications",
+      "url": "https://www.nsk.com/engineering/products/bearings/ball-bearings/thrust-ball-bearings/single-direction-thrust-ball-bearings/51103-apn.html",
+      "use": "Example 17x30x9 thrust bearing C0a=19500N is insufficient for this project's 29430N proof assumption; not a chosen component"
+    },
+    {
+      "title": "NSK 51305 manufacturer specifications",
+      "url": "https://www.nsk.com/engineering/51305-apn.html",
+      "use": "Selected candidate dimensions 25x52x18; Ca=36000N, C0a=61500N; da>=41, Da<=36, fillet<=1mm; application qualification pending"
+    },
+    {
+      "title": "Schaeffler trapezoidal-screw catalogue supplied as design reference",
+      "url": "https://www.schaeffler.com/remotemedien/media/_shared_media/08_media_library/01_publications/schaeffler_2/catalogue_1/downloads_6/la1_de_en.pdf",
+      "use": "Reference only; web retrieval failed because file exceeds tool size limit; exact thread tolerances still to verify"
+    }
+  ],
+  "release_blockers": [
+    "Qualify candidate NSK51305 bearing for actual load/life/static safety, races, shaft/seat tolerances, sealing, misalignment and drag; catalogue rating alone does not qualify installation",
+    "Qualify actual screw/nut thread tolerance, minimum root, runout, flank contact and bronze wear/PV limits; CAD thread envelope is not a tolerance specification",
+    "Resolve 2 mm diametral nut-to-housing clearance using a positive locating pilot/bushing and antirotation feature; retaining bolts alone must not be assumed a precision guide",
+    "Engineer saddle angular accommodation, vehicle lift-point interface, retention and load eccentricity; flat CAD saddle is only an envelope",
+    "Design and qualify end-stop collar retention, nut-skirt contact and overload behavior; CAD touching faces do not prove stop strength",
+    "Provide qualified load-holding protection: verify self-locking across lubrication/wear/vibration and design an independent restraint as required by hazard analysis",
+    "Validate 12 mm base under eccentric/nonuniform ground contact, welds, local ring/flange bending, bolt holes and housing stability",
+    "Resolve accessible pinch points, handle end stops/retention, maximum-travel indication, corrosion, lubrication and service interval",
+    "Create fully toleranced manufacturing drawings, material/heat-treatment/weld procedures, traceable BOM, inspection plan and current-market standards compliance matrix",
+    "Conduct independent structural review, proof/overload, stability, load-holding, endurance, wear, misuse and environmental tests before product release"
+  ]
+}

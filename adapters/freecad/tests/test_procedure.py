@@ -75,6 +75,19 @@ def test_a_second_body_is_legal_after_a_solid() -> None:
     assert [call.tool for call in calls].count("partdesign.body") == 2
 
 
+def test_a_model_script_longer_than_160_calls_is_accepted() -> None:
+    cycle = (
+        {"arguments": {}, "tool": "partdesign.body"},
+        {"arguments": {"plane": "XY"}, "tool": "sketch.new"},
+        {"arguments": {}, "tool": "sketch.rectangle"},
+        {"arguments": {}, "tool": "sketch.leave"},
+        {"arguments": {"length": 8}, "tool": "partdesign.pad"},
+        {"arguments": {"x": 0, "y": 0, "z": 0}, "tool": "partdesign.placement"},
+    )
+    calls = parse_calls(cycle * 30)
+    assert len(calls) == 180
+
+
 def test_a_body_sketch_and_pad_reach_a_solid() -> None:
     calls = parse_calls(
         (

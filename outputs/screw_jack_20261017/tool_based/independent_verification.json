@@ -1,0 +1,148 @@
+{
+  "native_file": "/home/v9i/Projects/Kala-Agent/outputs/screw_jack_20261017/tool_based/screw-jack-tool.FCStd",
+  "part_count": 16,
+  "solid_checks": [
+    {
+      "name": "BasePlate",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 426571.32789459697
+    },
+    {
+      "name": "Housing",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 296566.3464988766
+    },
+    {
+      "name": "BronzeNut",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 114207.9513641296
+    },
+    {
+      "name": "PowerScrew",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 142213.95147614693
+    },
+    {
+      "name": "DriveHead",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 52789.934285272466
+    },
+    {
+      "name": "RemovableStopCollar",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 2994.770320924276
+    },
+    {
+      "name": "TommyBar",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 100530.96491487339
+    },
+    {
+      "name": "HandleGripLeft",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 3619.114736935442
+    },
+    {
+      "name": "HandleGripRight",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 3619.114736935442
+    },
+    {
+      "name": "ThrustBearingEnvelope",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 29391.17007065931
+    },
+    {
+      "name": "SwivelSaddle",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 39294.84456156028
+    },
+    {
+      "name": "AxialRetainerEnvelope",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 1891.2387774610554
+    },
+    {
+      "name": "NutBolt1",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 772.9574564892328
+    },
+    {
+      "name": "NutBolt2",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 772.9574564892328
+    },
+    {
+      "name": "NutBolt3",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 772.9574564892328
+    },
+    {
+      "name": "NutBolt4",
+      "valid": true,
+      "solid_count": 1,
+      "volume_mm3": 772.9574564892328
+    }
+  ],
+  "dimensional_checks": [
+    {
+      "part": "PowerScrew",
+      "maximum_thread_diameter_mm": 30.002,
+      "volume_outside_thread_envelope_mm3": 0.0,
+      "passed": true
+    }
+  ],
+  "poses": [
+    {
+      "lift_mm": 0.0,
+      "screw_rotation_from_mid_deg": -5400.0,
+      "interferences": [],
+      "clear": true
+    },
+    {
+      "lift_mm": 30.0,
+      "screw_rotation_from_mid_deg": -2700.0,
+      "interferences": [],
+      "clear": true
+    },
+    {
+      "lift_mm": 60.0,
+      "screw_rotation_from_mid_deg": 0.0,
+      "interferences": [],
+      "clear": true
+    },
+    {
+      "lift_mm": 90.0,
+      "screw_rotation_from_mid_deg": 2700.0,
+      "interferences": [],
+      "clear": true
+    },
+    {
+      "lift_mm": 120.0,
+      "screw_rotation_from_mid_deg": 5400.0,
+      "interferences": [],
+      "clear": true
+    }
+  ],
+  "step_roundtrip": {
+    "valid": true,
+    "solid_count": 16,
+    "same_solid_count": true
+  },
+  "passed": true
+}

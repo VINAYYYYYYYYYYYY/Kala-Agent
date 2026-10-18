@@ -1,0 +1,14 @@
+{
+  "route": "Direct FreeCAD Python / OCCT geometry, with Codex reasoning",
+  "decision_model": "No separate decision model used by this build script",
+  "source": "/home/v9i/Projects/Kala-Agent/outputs/screw_jack_20261017/script_build.py",
+  "operations": [
+    "Rounded plate union and four through-hole cuts",
+    "Tubular housing / support flange / four gusset union",
+    "True Tr30\u00d74 external helical sweep and root/head/journal union",
+    "True mating internal trapezoidal helical subtraction in bronze nut",
+    "Handle, bearing supplier envelope, saddle, stop collar halves, axial retaining cap and four flange bolts",
+    "Exact BREP solid validation, pairwise intersection checks and five coupled screw-motion poses"
+  ],
+  "not_released": true
+}
