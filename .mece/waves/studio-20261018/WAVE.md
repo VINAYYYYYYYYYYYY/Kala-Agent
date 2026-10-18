@@ -2,7 +2,7 @@
 
 User requested a standalone Windows/Linux mechanical engineering app, CAD/analysis interoperability, live 3D preview, provider choice, and OpenCode implementation under ChatGPT review.
 
-Model: opencode-go/minimax-m3 (available; existing OpenCode Console account). Three concurrent workers. No commits, pushes, deployment, credential reading, or edits to existing dirty FreeCAD/construction work.
+Model: `opencode/deepseek-v4.1-flash-free`, explicitly selected by user on October 18, 2026 (not Go). Local model listing confirms ID; a no-tools availability probe returned READY. User also authorized Spacebunny free, but latest instruction prefers just DeepSeek Flash; do not switch automatically. Three concurrent OpenCode worker cells resume their existing sessions under this model. Prior Minimax402 and Go Spacebunny429 runs remain historical failures, not current success. No new commits, pushes, deployment, or credential reading.
 
 ## Shared contract
 

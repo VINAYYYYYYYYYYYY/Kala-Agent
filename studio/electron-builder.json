@@ -1,0 +1,62 @@
+// electron-builder configuration for Kala Studio. Backend binary is
+// prepared by the delivery worker and dropped at studio/backend/. The
+// bundled UI lives at studio/dist/. Both are pulled in via extraResources.
+//
+// `linux.desktop` follows the `LinuxDesktopFile` schema from
+// app-builder-lib (entry object holding `[Desktop Entry]` metadata).
+
+{
+  "appId": "com.kala-agent.studio",
+  "productName": "Kala Studio",
+  "asar": true,
+  "directories": {
+    "output": "release",
+    "buildResources": "electron"
+  },
+  "files": [
+    "electron/bootstrap.cjs",
+    "electron/main.cjs",
+    "electron/preload.cjs",
+    "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": "dist",
+      "to": "app/dist"
+    },
+    {
+      "from": "backend",
+      "to": "backend"
+    }
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "artifactName": "kala-studio-${version}-setup.${ext}"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "deleteAppDataOnUninstall": false
+  },
+  "linux": {
+    "target": ["AppImage"],
+    "category": "Engineering",
+    "desktop": {
+      "entry": {
+        "Name": "Kala Studio",
+        "Comment": "Standalone mechanical design workspace",
+        "Categories": "Engineering;Science;Graphics;",
+        "Keywords": "cad;mechanical;design;fea;stl;step",
+        "StartupWMClass": "Kala Studio"
+      }
+    },
+    "artifactName": "kala-studio-${version}-${arch}.${ext}",
+    "executableName": "kala-studio"
+  }
+}

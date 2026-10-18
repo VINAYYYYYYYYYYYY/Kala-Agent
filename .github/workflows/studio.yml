@@ -1,0 +1,298 @@
+name: studio
+
+# Build and smoke-test the unsigned Kala Studio desktop bundle on
+# Ubuntu and Windows runners. The matrix never signs artefacts, never
+# authenticates against an LLM provider, never publishes, and never
+# modifies the host. See docs/studio-limitations.md.
+#
+# The "on" key is quoted so YAML loaders do not read it as a boolean.
+"on":
+  push:
+    branches: [main]
+    paths:
+      - "studio/**"
+      - "src/kala_agent/studio/**"
+      - "packaging/**"
+      - "pyproject.toml"
+      - ".github/workflows/studio.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "studio/**"
+      - "src/kala_agent/studio/**"
+      - "packaging/**"
+      - "pyproject.toml"
+      - ".github/workflows/studio.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: studio-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build and smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      PYINSTALLER_SPEC: packaging/studio-backend.spec
+      STUDIO_BACKEND_BIN_DIR: studio/backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install Python dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          # `dev` brings pytest/httpx; `studio` brings uvicorn;
+          # `geometry` brings cadquery-ocp. A release that cannot write
+          # STEP must fail closed, so the wheel is mandatory here.
+          python -m pip install -e ".[dev,studio,geometry]"
+          python -m pip install pyinstaller
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Node 22 LTS. studio/package.json requires >=22.12 for the
+          # Vite 8 / Vitest 5 toolchain; setup-node resolves the latest
+          # 22.x release, which satisfies that range.
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: studio/package-lock.json
+
+      - name: Install npm dependencies
+        working-directory: studio
+        shell: bash
+        run: npm ci
+
+      - name: Build UI
+        working-directory: studio
+        shell: bash
+        run: npm run build
+
+      - name: Type-check UI
+        working-directory: studio
+        shell: bash
+        run: npm run typecheck
+
+      - name: Test UI
+        working-directory: studio
+        shell: bash
+        run: npm test
+
+      - name: Lint and type-check studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Studio-only gates (no unrelated core gates). `ruff` and
+          # `mypy` come from the `dev` extra. Strict mypy runs against
+          # the studio package source, which is fully annotated.
+          python -m ruff check \
+            src/kala_agent/studio \
+            tests/security/test_studio*.py \
+            tests/unit/test_studio*.py
+          python -m ruff format --check \
+            src/kala_agent/studio \
+            tests/security/test_studio*.py \
+            tests/unit/test_studio*.py
+          python -m mypy --strict src/kala_agent/studio
+
+      - name: Test studio backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Globs so a new studio test is picked up automatically; they
+          # include the mocked-HTTP provider tests (no socket) and the
+          # OCP-mocked/exact STEP tests. None call a live provider or
+          # solver.
+          python -m pytest -q --no-header --no-summary \
+            tests/security/test_studio*.py \
+            tests/unit/test_studio*.py
+
+      - name: Build backend (PyInstaller)
+        shell: bash
+        run: |
+          set -euo pipefail
+          pyinstaller "${PYINSTALLER_SPEC}" --noconfirm --clean
+          test -f dist/kala-studio || test -f dist/kala-studio.exe
+
+      - name: Smoke-test frozen backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f dist/kala-studio.exe ]; then
+            BACKEND=dist/kala-studio.exe
+          else
+            BACKEND=dist/kala-studio
+          fi
+          # Launches the frozen binary from a temporary working
+          # directory and requires real health, UI, preview, and STEP
+          # responses. STEP is mandatory: the smoke fails when the
+          # writer is absent unless --allow-missing-step is passed.
+          python packaging/studio_smoke.py \
+            --backend "${BACKEND}" --timeout 120
+
+      - name: Copy backend binary into studio/backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${STUDIO_BACKEND_BIN_DIR}"
+          if [ -f dist/kala-studio.exe ]; then
+            cp dist/kala-studio.exe \
+              "${STUDIO_BACKEND_BIN_DIR}/kala-studio.exe"
+          else
+            cp dist/kala-studio "${STUDIO_BACKEND_BIN_DIR}/kala-studio"
+            chmod +x "${STUDIO_BACKEND_BIN_DIR}/kala-studio"
+          fi
+
+      - name: Compute backend digest
+        id: digest
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f "${STUDIO_BACKEND_BIN_DIR}/kala-studio.exe" ]; then
+            sha256sum "${STUDIO_BACKEND_BIN_DIR}/kala-studio.exe" \
+              > digest.txt
+          else
+            sha256sum "${STUDIO_BACKEND_BIN_DIR}/kala-studio" \
+              > digest.txt
+          fi
+          cat digest.txt
+
+      - name: Build desktop bundle (electron-builder)
+        working-directory: studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f "backend/kala-studio.exe" ] \
+             || [ -f "backend/kala-studio" ]; then
+            # --publish never keeps the matrix from pushing to any
+            # registry even if the UI config later adds a default.
+            npm run desktop:pack -- --publish never
+          else
+            echo "::error::backend binary missing at studio/backend/"
+            exit 1
+          fi
+
+      - name: Upload backend binary (unsigned)
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-backend-${{ matrix.os }}
+          path: |
+            studio/backend/kala-studio
+            studio/backend/kala-studio.exe
+            digest.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload desktop bundle (unsigned)
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-desktop-${{ matrix.os }}
+          path: |
+            studio/release/*.AppImage
+            studio/release/*.exe
+            studio/release/*.nsis.7z
+            studio/release/*.blockmap
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Summarise
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Kala Studio build (${{ matrix.os }})"
+            echo ""
+            echo "**Status:** ${{ job.status }}"
+            echo "**Signing:** none (unsigned)."
+            echo ""
+            if [ "${{ job.status }}" = "success" ] && [ -f digest.txt ]; then
+              echo "**Backend sha256:**"
+              echo ""
+              echo '```'
+              cat digest.txt
+              echo '```'
+            else
+              echo "**Backend sha256:** unavailable (build failed)."
+            fi
+            echo ""
+            echo "Built the PyInstaller backend, ran the frozen runtime"
+            echo "smoke (health, UI, preview, STEP), built the"
+            echo "electron-builder bundle, and uploaded the unsigned"
+            echo "artefacts. Did not sign, did not authenticate against"
+            echo "any provider, did not publish, and did not run the"
+            echo "installer on a clean host."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  core-tests-linux:
+    name: core tests (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          # Install the geometry extra so the OCP-only STEP tests run
+          # instead of skipping on this baseline host.
+          python -m pip install -e ".[dev,studio,geometry]"
+
+      - name: Run core test suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest -q --no-header --no-summary
+
+  adapter-tests-linux:
+    name: FreeCAD adapter tests (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install adapter dev extras
+        working-directory: adapters/freecad
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run FreeCAD adapter test suite
+        working-directory: adapters/freecad
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The `freecad` marker needs a real FreeCAD install; the
+          # marker-less tests still exercise import and discovery.
+          python -m pytest -q --no-header --no-summary -m "not freecad"

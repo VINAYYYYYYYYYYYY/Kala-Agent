@@ -30,8 +30,12 @@ _SCREW: Final[str] = (
     "The screw must be a shaft with a helix. "
     "The pitch must be coarser than a bolt thread and smaller than the diameter."
 )
-_CUP: Final[str] = "The cup must be a short part on the screw axis, large enough to sit on the screw."
-_TOMMY: Final[str] = "The tommy bar must be longer than the screw diameter and must cross the screw."
+_CUP: Final[str] = (
+    "The cup must be a short part on the screw axis, large enough to sit on the screw."
+)
+_TOMMY: Final[str] = (
+    "The tommy bar must be longer than the screw diameter and must cross the screw."
+)
 _AXIS: Final[str] = "The base, the screw, and the cup must share one axis."
 _HOLE_DUTY: Final[str] = "A hole must be a pocket in an existing part, not a separate body."
 _THREAD_DUTY: Final[str] = "A screw or a thread must include a helix."
@@ -101,7 +105,12 @@ def _jack(prompt: str, script: ConstructionScript) -> list[str]:
         duties.append(_CUP)
     if tommy is None:
         duties.append(_TOMMY)
-    if base is not None and screw is not None and cup is not None and not _aligned(base, screw, cup):
+    if (
+        base is not None
+        and screw is not None
+        and cup is not None
+        and not _aligned(base, screw, cup)
+    ):
         duties.append(_AXIS)
     return duties
 
@@ -154,11 +163,7 @@ def _diameter(part: _Part | None) -> float | None:
 
 
 def _base(parts: tuple[_Part, ...], screw: _Part | None, diameter: float) -> _Part | None:
-    plates = [
-        part
-        for part in parts
-        if part is not screw and _is_plate(part.solids[0], diameter)
-    ]
+    plates = [part for part in parts if part is not screw and _is_plate(part.solids[0], diameter)]
     if not plates:
         return None
     return max(plates, key=lambda part: _area(part.solids[0]))

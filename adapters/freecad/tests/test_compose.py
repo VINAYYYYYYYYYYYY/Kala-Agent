@@ -606,7 +606,9 @@ def test_a_change_keeps_the_plate_and_adds_the_hole(monkeypatch: pytest.MonkeyPa
 
     def write(prompt: str) -> WrittenIntent:
         seen.append(prompt)
-        return WrittenIntent(text=json.dumps(_plate_with_hole()), model="cohere/north-mini-code:free")
+        return WrittenIntent(
+            text=json.dumps(_plate_with_hole()), model="cohere/north-mini-code:free"
+        )
 
     monkeypatch.setattr("kala_agent_freecad.cad.compose.write_intent", write)
     logged: list[str] = []
@@ -626,8 +628,12 @@ def test_a_replacement_is_sent_back_and_then_refused(monkeypatch: pytest.MonkeyP
     def write(prompt: str) -> WrittenIntent:
         seen.append(prompt)
         if len(seen) == 1:
-            return WrittenIntent(text=json.dumps(_different_part()), model="cohere/north-mini-code:free")
-        return WrittenIntent(text=json.dumps(_plate_with_hole()), model="cohere/north-mini-code:free")
+            return WrittenIntent(
+                text=json.dumps(_different_part()), model="cohere/north-mini-code:free"
+            )
+        return WrittenIntent(
+            text=json.dumps(_plate_with_hole()), model="cohere/north-mini-code:free"
+        )
 
     monkeypatch.setattr("kala_agent_freecad.cad.compose.write_intent", write)
     plan = continue_design("a 10 mm hole in the center", _built_plate())
@@ -637,7 +643,9 @@ def test_a_replacement_is_sent_back_and_then_refused(monkeypatch: pytest.MonkeyP
 
     def replace(prompt: str) -> WrittenIntent:
         del prompt
-        return WrittenIntent(text=json.dumps(_different_part()), model="cohere/north-mini-code:free")
+        return WrittenIntent(
+            text=json.dumps(_different_part()), model="cohere/north-mini-code:free"
+        )
 
     monkeypatch.setattr("kala_agent_freecad.cad.compose.write_intent", replace)
     with pytest.raises(FreeCADInputError, match="replaced the current design"):

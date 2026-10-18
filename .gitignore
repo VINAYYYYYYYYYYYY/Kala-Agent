@@ -14,3 +14,34 @@ dist/
 .env
 .env.*
 !.env.example
+# Studio local credential/settings files (never commit API keys or bearer tokens).
+studio-settings.json
+**/studio-settings.json
+*.token
+# Kala Studio packaging pipeline (delivery-owned).
+# PyInstaller one-file backend build artefacts.
+packaging/build/
+packaging/dist/
+packaging/*.spec.bak
+# Desktop wrappers and bundled runtimes (electron-builder).
+studio/release/
+studio/dist-unpacked/
+studio/node_modules/
+studio/out/
+studio/backend/kala-studio
+studio/backend/kala-studio.exe
+# Electron-builder Linux/Windows artefacts uploaded by CI.
+*.AppImage
+*.AppImage.zsync
+*.snap
+*.flatpak
+*.exe
+*.dmg
+*.deb
+*.rpm
+*.nsis.7z
+*.blockmap
+# Per-platform packaging scratch that the spec file may extract to.
+packaging/_pyinstaller/
+packaging/_pyi_cache/
+packaging/__pycache__/

@@ -1,0 +1,9 @@
+# Newly discovered browser manual-connection regression
+
+Actual production build passes57tests but browser at localhost8765 cannot connect anymore. Form submit displays 'Loading registries…' indefinitely, no registry requests. Current BootGate onSubmit only dispatches connection/ready + setPhase; removed old connection-dependent registry loading, and bootstrap returns awaiting-browser then exits. No code calls loadRegistries after manual submission. This is a NEW regression, not the earlier StrictMode handle bug.
+
+Own studio/** only. Focus ONLY this new failure after desktop requirements are finished. Use same lifecycle-owned cancellable bounded registry path for BOTH manual and bridge connections, with proper retry on invalid token/server failure. Don't duplicate unowned async work; all callbacks guarded per-effect handle. Actual React test render without bridge, fill origin/token, click Connect, assert getHealth/getIntegrations/getProviders called and shell/initial box preview displayed. Existing bridge-mocked tests don't cover manual mode. No real token in tests, synthetic QA token only.
+
+Conductor actual browser was stuck after entering synthetic token kala-studio-browser-qa-20261018 and clicking Connect; backend health works200 independently. Fix and rerun build/tests; report. No commit/delegation.
+
+Write report at ABSOLUTE `/home/v9i/Projects/Kala-Agent/.mece/waves/studio-20261018/cells/ui/REPORT.md`; previous desktop run accidentally wrote a DUPLICATE under `studio/.mece/`. Remove only that misplaced worker-owned duplicate, preserve root coordination artifacts. Desktop launcher must use installed Vite JS entry if dist absent (currently assumes node_modules/npm which this package does not install); or fail clearly instructing npm run build. Don't spawn nonexistent npm-cli path. Renderer manual-connect fix is priority, no further desktop redesign.

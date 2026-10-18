@@ -270,7 +270,9 @@ class KalaDock(QtWidgets.QDockWidget):
         self._explanation.clear()
         self._refresh_session()
         self._append("Started a new design. The open model stays until the next build.")
-        self._status.setText("Next request starts a new design. Save the open model if you still need it.")
+        self._status.setText(
+            "Next request starts a new design. Save the open model if you still need it."
+        )
 
     def _refresh_session(self) -> None:
         editing = self._script is not None

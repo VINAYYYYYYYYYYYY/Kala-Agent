@@ -241,4 +241,3 @@ def test_strict_profile_is_enforced_or_refused(
         )
         assert result.status is ToolRunStatus.DENIED
         assert result.error_code == ToolErrorCode.SANDBOX_UNAVAILABLE.value
-

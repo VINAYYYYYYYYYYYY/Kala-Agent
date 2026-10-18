@@ -16,6 +16,24 @@ dependencies = [
 serve = [
     "uvicorn>=0.30",
 ]
+# Kala Studio desktop backend. uvicorn is the runtime bound by
+# `python -m kala_agent.studio` and the `kala-studio` entry point.
+# OCP is intentionally NOT here; it is the heavy STEP-export
+# dependency declared in `geometry` below. Installing `.[studio]`
+# gives a working backend that serves the UI and accepts chat
+# requests; STEP export returns 503 until `.[geometry]` is also
+# installed.
+studio = [
+    "uvicorn>=0.30",
+]
+# Real B-rep STEP writer (cadquery-ocp). Optional on every platform
+# where upstream ships a wheel; without it the studio export route
+# returns 503 with an actionable error rather than fabricating a
+# STEP file. The wheel availability matrix is upstream's
+# responsibility; we do not gate it here.
+geometry = [
+    "cadquery-ocp>=7.7",
+]
 dev = [
     "coverage>=7.6",
     "httpx>=0.27",
@@ -28,6 +46,10 @@ dev = [
 
 [project.scripts]
 kala-agent = "kala_agent.cli.main:main"
+# Kala Studio standalone desktop backend. Resolved by the
+# packaging pipeline (see `packaging/studio-backend.spec`) and
+# the `studio/electron` shell at launch time.
+kala-studio = "kala_agent.studio.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

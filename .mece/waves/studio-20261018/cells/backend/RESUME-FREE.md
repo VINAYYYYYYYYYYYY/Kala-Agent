@@ -1,0 +1,11 @@
+# Backend continuation under user-selected DeepSeek Flash free
+
+User authorized concurrent OpenCode workers using `opencode/deepseek-v4.1-flash-free`, NOT Go, and no paid fallback. Previous worker stopped on402 mid-repair; preserve all current edits. Read project instructions and actual source, not stale success claims. Same session/ownership: src/kala_agent/studio/** and tests/unit/test_studio*.py, tests/security/test_studio*.py. Use apply_patch. No delegation/commit/push/deploy, live provider/auth calls or credential-file reads. UI and delivery run concurrently; do not touch their files.
+
+Finish attached existing ERROR-HANDLER-REGRESSION.md requirements, not another speculative rewrite. Current117 tests pass, ruff check clean. Strict mypy has38errors9files at /tmp/kala-studio-paused-mypy.log; format1file errors.py. Fix real types with existing strict config; no blanket lint/mypy suppression. OCP imports may use targeted import-untyped ignore because optional library has no stubs; preserve missing-OCP503. os.Mapping is nonexistent, route annotations must include actual Response branches, Final subclass fields and resolver tuples need correct typing. No core changes.
+
+HTTP400 handler repair partially written before402: inspect actual errors.py, regression-test generic4xx/5xx sanitized responses, no raw prompt/credentials/error leakage. Codex subscription route deliberately unavailable: configuredFalse even if CLIonPATH; consistent503 unavailable even explicit enable; don't expose installation paths. Preserve fail-closed wrapper, do not implement unsafe subprocess now.
+
+Add real mocked HTTP opener transport tests for OpenAI/OpenRouter success, fixed URL/auth/body, consent refusal before network, redirects refused, JSON failure, response bound, timeout. No real network or environment keys. Registry truthful neutral-file only, not native automation. Existing exactSTEP+mesh geometry already independently verified; don't rewrite it or loosen topology tests.
+
+Run targeted Studio pytest, ruff check+format in owned paths, mypy src/kala_agent/studio --follow-imports=silent. Record real logs/status; do not hide exit code with tail pipelines. Absolute REPORT path /home/v9i/Projects/Kala-Agent/.mece/waves/studio-20261018/cells/backend/REPORT.md. Report remaining blockers honestly. Finish promptly after focused checks.

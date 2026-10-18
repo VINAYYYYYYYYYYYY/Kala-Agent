@@ -1,0 +1,1307 @@
+/* Kala Studio — single bundled stylesheet.
+ *
+ * The whole UI is a CSS grid of:
+ *   header · sidebar · viewport · inspector · chat · footer.
+ * No external font, no CDN, no remote assets. Every text colour and
+ * background here is paired with a non-colour indicator (icon or text) so
+ * the UI does not rely on colour alone to convey state.
+ */
+
+:root {
+  --bg-0: #0c1116;
+  --bg-1: #14181f;
+  --bg-2: #1a2029;
+  --bg-3: #232a35;
+  --bg-elev: #2a3340;
+  --fg-0: #e6ecf3;
+  --fg-1: #c5cfdb;
+  --fg-2: #8b97a7;
+  --fg-3: #5a6675;
+  --accent: #66ccff;
+  --accent-strong: #2a99ff;
+  --warning: #f0a830;
+  --danger: #ff6b6b;
+  --success: #5fd07a;
+  --grid-line: #2a323d;
+  --border: #2e3744;
+  --shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  --radius: 6px;
+  --gap: 12px;
+  --gap-lg: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  /* The app shell owns all scrolling: each region scrolls internally.
+   * Without this the document itself scrolls and an over-tall column
+   * (e.g. the sidebar) exposes a page scrollbar and pushes the footer
+   * off-screen. */
+  overflow: hidden;
+  background: var(--bg-0);
+  color: var(--fg-0);
+  font: 14px/1.45 -apple-system, "Segoe UI", "Cantarell", "Ubuntu", system-ui, sans-serif;
+  font-feature-settings: "tnum" 1, "cv02" 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+input, select, textarea {
+  font: inherit;
+  color: var(--fg-0);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+}
+
+input:focus, select:focus, textarea:focus, button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+code {
+  font: 12px/1.5 ui-monospace, "JetBrains Mono", "Cascadia Mono", "SF Mono", monospace;
+  background: var(--bg-2);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+/* App shell ----------------------------------------------------------- */
+
+.app-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  height: 100%;
+  background: var(--bg-0);
+}
+
+.app-shell-body {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  /* Bound the single row. Without an explicit row the implicit `auto`
+   * track sized itself to the tallest column (the sidebar's intrinsic
+   * content), so the row grew past the shell and pushed the viewport,
+   * canvas and footer out of the window. `minmax(0, 1fr)` pins it to the
+   * shell height; the sidebar then scrolls internally. */
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.app-shell-main {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-areas:
+    "toolbar toolbar"
+    "viewport rail";
+  min-height: 0;
+  min-width: 0;
+  gap: var(--gap);
+  padding: var(--gap);
+}
+
+.app-shell-viewport {
+  grid-area: viewport;
+  position: relative;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  min-height: 0;
+  min-width: 0;
+}
+
+.app-shell-rail {
+  grid-area: rail;
+  display: grid;
+  grid-template-rows: minmax(0, auto) minmax(0, auto) minmax(0, 1fr);
+  gap: var(--gap);
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.right-rail {
+  grid-area: rail;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  min-width: 0;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* Docked OpenCascade preview. Only rendered while the main viewport shows
+ * the agent, so the grid grows a middle row exactly when it is present. */
+.right-rail.has-preview {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.right-rail-preview {
+  position: relative;
+  height: 190px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.right-rail-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-2);
+}
+
+.right-rail-tab {
+  flex: 1 1 0;
+  padding: 8px 10px;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  color: var(--fg-2);
+  font-size: 12px;
+}
+
+.right-rail-tab:hover {
+  background: var(--bg-3);
+}
+
+.right-rail-tab.is-active {
+  background: var(--bg-1);
+  color: var(--fg-0);
+  border-bottom: 2px solid var(--accent);
+}
+
+.right-rail-panel {
+  min-height: 0;
+  overflow: auto;
+}
+
+.app-shell-footer {
+  padding: 8px 12px;
+  background: var(--bg-1);
+  border-top: 1px solid var(--border);
+  color: var(--fg-2);
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.app-shell-footer-secondary {
+  color: var(--fg-3);
+}
+
+/* Header -------------------------------------------------------------- */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-header-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.app-header-brand h1 {
+  font-size: 16px;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.app-header-mark {
+  font-size: 18px;
+}
+
+.app-header-tagline {
+  color: var(--fg-2);
+  font-size: 12px;
+}
+
+.app-header-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--fg-2);
+  font-size: 12px;
+}
+
+.app-header-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+}
+
+.app-header-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fg-3);
+}
+
+.app-header-chip-online .app-header-chip-dot { background: var(--success); }
+.app-header-chip-offline .app-header-chip-dot { background: var(--danger); }
+.app-header-chip-unknown .app-header-chip-dot { background: var(--warning); }
+
+.app-header-mode-detail {
+  color: var(--fg-3);
+  font-family: ui-monospace, monospace;
+}
+
+/* Sidebar ------------------------------------------------------------- */
+
+.app-sidebar {
+  background: var(--bg-1);
+  border-right: 1px solid var(--border);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  /* `min-height: auto` (the default) refused to shrink below its content,
+   * which is what forced the whole body row taller than the window. Pin
+   * it to the row and let the sidebar scroll. */
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.app-sidebar-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.app-sidebar-button {
+  display: grid;
+  text-align: left;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  border-color: var(--border);
+  gap: 2px;
+}
+
+.app-sidebar-button:hover {
+  background: var(--bg-3);
+}
+
+.app-sidebar-button.is-current {
+  border-color: var(--accent);
+  background: rgba(102, 204, 255, 0.08);
+}
+
+.app-sidebar-button-label {
+  font-weight: 600;
+}
+
+.app-sidebar-button-description {
+  color: var(--fg-2);
+  font-size: 12px;
+}
+
+.app-sidebar-context {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  display: grid;
+  gap: 6px;
+}
+
+.app-sidebar-context h2 {
+  margin: 0;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--fg-2);
+}
+
+.app-sidebar-secondary {
+  text-align: left;
+  background: var(--bg-3);
+  border-color: var(--border);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+}
+
+/* Toolbar ------------------------------------------------------------- */
+
+.viewport-toolbar {
+  grid-area: toolbar;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.viewport-toolbar-group {
+  display: inline-flex;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2px;
+}
+
+.viewport-toolbar-view-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2px 6px 2px 2px;
+}
+
+.viewport-toolbar-view-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--fg-2);
+}
+
+.viewport-toolbar-button {
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  color: var(--fg-1);
+}
+
+.viewport-toolbar-button:hover {
+  background: var(--bg-3);
+}
+
+.viewport-toolbar-button.is-active {
+  background: var(--accent-strong);
+  color: #07101a;
+  border-color: var(--accent-strong);
+}
+
+.viewport-toolbar-button-warning {
+  border-color: var(--border);
+  color: var(--warning);
+}
+
+.viewport-toolbar-status {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+
+/* Viewer canvas ------------------------------------------------------- */
+
+.viewer-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.viewer-canvas canvas {
+  display: block;
+}
+
+.viewer-canvas-overlay {
+  position: absolute;
+  pointer-events: none;
+  inset: 0;
+}
+
+.viewer-canvas-dimensions {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  padding: 8px 10px;
+  background: rgba(12, 17, 22, 0.85);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: ui-monospace, monospace;
+  color: var(--fg-1);
+  font-size: 12px;
+  pointer-events: auto;
+}
+
+.viewer-canvas-source {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 6px 10px;
+  background: rgba(12, 17, 22, 0.85);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--fg-2);
+}
+
+.viewer-canvas-fallback {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  width: 100%;
+  padding: 24px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--warning);
+  background: var(--bg-1);
+}
+
+/* Inspector ----------------------------------------------------------- */
+
+.inspector {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.inspector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.inspector-header h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.inspector-source {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--bg-3);
+  color: var(--fg-2);
+  border: 1px solid var(--border);
+}
+
+.inspector-source[data-source="server"] {
+  background: rgba(95, 208, 122, 0.12);
+  color: var(--success);
+  border-color: rgba(95, 208, 122, 0.4);
+}
+
+.inspector-source[data-source="local"] {
+  background: rgba(240, 168, 48, 0.12);
+  color: var(--warning);
+  border-color: rgba(240, 168, 48, 0.4);
+}
+
+.inspector-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.inspector-field {
+  display: grid;
+  gap: 4px;
+}
+
+.inspector-field-label {
+  font-size: 12px;
+  color: var(--fg-2);
+}
+
+.inspector-field-input {
+  width: 100%;
+}
+
+.inspector-field.has-error .inspector-field-input {
+  border-color: var(--danger);
+}
+
+.inspector-field-error {
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.inspector-validation {
+  color: var(--danger);
+  font-size: 12px;
+  margin: 0;
+}
+
+.inspector-bounds h3 {
+  margin: 0 0 4px 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--fg-2);
+}
+
+.inspector-bounds dl {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 0;
+}
+
+.inspector-bounds dt {
+  color: var(--fg-2);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.inspector-bounds dd {
+  margin: 0;
+  font-family: ui-monospace, monospace;
+}
+
+.inspector-drift {
+  font-size: 12px;
+  color: var(--warning);
+  margin: 6px 0 0 0;
+}
+
+/* Nominal OpenCascade geometry estimate (volume / area / envelope). */
+.inspector-estimates {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  padding: 8px 10px;
+}
+
+.inspector-estimates h3 {
+  margin: 0 0 6px 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--fg-2);
+}
+
+.inspector-estimates dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.inspector-estimates dt {
+  color: var(--fg-2);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.inspector-estimates dd {
+  margin: 0;
+  font-family: ui-monospace, monospace;
+  color: var(--fg-0);
+  word-break: break-word;
+}
+
+.inspector-estimates-note {
+  font-size: 11px;
+  color: var(--fg-3);
+  margin: 8px 0 0 0;
+}
+
+/* Export panel -------------------------------------------------------- */
+
+.export-panel {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.export-panel-header h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.export-panel-help {
+  font-size: 12px;
+  color: var(--fg-2);
+  margin: 0;
+}
+
+.export-panel-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.export-panel-button {
+  padding: 8px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--fg-0);
+}
+
+.export-panel-button:hover {
+  background: var(--bg-3);
+}
+
+.export-panel-button-secondary {
+  background: var(--bg-2);
+  border-style: dashed;
+}
+
+.export-panel-integrations {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.export-panel-integration {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  display: grid;
+  gap: 6px;
+  background: var(--bg-2);
+}
+
+.export-panel-integration header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.export-panel-integration-name {
+  font-weight: 600;
+}
+
+.export-panel-integration-status {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--bg-3);
+}
+
+.export-panel-integration-status-native {
+  background: rgba(255, 107, 107, 0.12);
+  color: var(--danger);
+  border: 1px solid rgba(255, 107, 107, 0.4);
+}
+
+.export-panel-integration-status-handoff {
+  background: rgba(95, 208, 122, 0.12);
+  color: var(--success);
+  border: 1px solid rgba(95, 208, 122, 0.4);
+}
+
+.export-panel-integration-status-unavailable {
+  background: rgba(240, 168, 48, 0.12);
+  color: var(--warning);
+  border: 1px solid rgba(240, 168, 48, 0.4);
+}
+
+.export-panel-integration-notes {
+  margin: 0;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+
+.export-panel-result {
+  font-size: 12px;
+  color: var(--success);
+  margin: 0;
+}
+
+.export-panel-error {
+  font-size: 12px;
+  color: var(--danger);
+  margin: 0;
+}
+
+.export-panel-empty {
+  color: var(--fg-2);
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* Chat panel ---------------------------------------------------------- */
+
+.chat-panel {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: grid;
+  /* header · intro (context + starters) · scrolling thread · composer */
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  min-height: 0;
+}
+
+.chat-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.chat-panel-heading {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.chat-panel-subtitle {
+  margin: 0;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+
+.chat-panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chat-panel-settings-toggle {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 8px;
+  background: var(--bg-2);
+  color: var(--fg-1);
+  font-size: 12px;
+}
+
+.chat-panel-settings-toggle[aria-expanded="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.chat-panel-settings {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-2);
+  display: grid;
+  gap: 8px;
+  max-height: 36vh;
+  overflow: auto;
+}
+
+.chat-panel-settings-header h3 {
+  margin: 0 0 2px 0;
+  font-size: 13px;
+}
+
+.chat-panel-settings-header p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+
+.chat-panel-intro {
+  display: grid;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-2);
+  overflow: auto;
+  max-height: 34vh;
+}
+
+/* Active Geometry Context — the OpenCascade primitive the agent is sizing. */
+.chat-panel-context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-1);
+  font-size: 12px;
+  color: var(--fg-1);
+}
+
+.chat-panel-context-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--fg-2);
+}
+
+.chat-panel-context-kind {
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.chat-panel-context-dims {
+  font-family: ui-monospace, monospace;
+  color: var(--fg-0);
+}
+
+.chat-panel-context-envelope,
+.chat-panel-context-volume {
+  font-family: ui-monospace, monospace;
+  color: var(--fg-2);
+}
+
+.chat-panel-starters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chat-panel-starter {
+  padding: 5px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  background: var(--bg-1);
+  color: var(--fg-1);
+  font-size: 12px;
+}
+
+.chat-panel-starter:hover {
+  background: var(--bg-3);
+  color: var(--fg-0);
+}
+
+.chat-panel-header h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* In agent mode the viewport holds the Mechanical Engineering Agent, which
+ * owns the full height of the band and does its own internal scrolling. */
+.app-shell-viewport > .chat-panel {
+  height: 100%;
+}
+
+.chat-panel-clear {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 8px;
+  background: var(--bg-2);
+  font-size: 12px;
+}
+
+.chat-panel-thread {
+  padding: 8px 10px;
+  overflow: auto;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.chat-panel-empty {
+  color: var(--fg-2);
+  font-size: 12px;
+  margin: 0;
+}
+
+.chat-panel-message {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  background: var(--bg-2);
+  display: grid;
+  gap: 4px;
+}
+
+.chat-panel-message p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.chat-panel-message-role {
+  font-size: 11px;
+  color: var(--fg-2);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.chat-panel-message-user {
+  border-color: rgba(102, 204, 255, 0.4);
+}
+
+.chat-panel-message-assistant {
+  border-color: rgba(95, 208, 122, 0.4);
+}
+
+.chat-panel-pending {
+  color: var(--fg-2);
+  font-size: 12px;
+  margin: 0;
+}
+
+.chat-panel-error {
+  color: var(--danger);
+  font-size: 12px;
+  margin: 0;
+}
+
+.chat-panel-form {
+  border-top: 1px solid var(--border);
+  padding: 8px 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.chat-panel-field {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+
+.chat-panel-field-grow {
+  align-self: stretch;
+}
+
+.chat-panel-consent {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 6px;
+  align-items: start;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+
+.chat-panel-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-panel-send {
+  background: var(--accent-strong);
+  color: #07101a;
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  border: none;
+  font-weight: 600;
+}
+
+.chat-panel-warning {
+  font-size: 12px;
+  color: var(--warning);
+}
+
+/* Generic panel list -------------------------------------------------- */
+
+.panel-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.panel-list-compact {
+  gap: 4px;
+}
+
+.panel-list-item {
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.panel-list-item header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.panel-list-name {
+  font-weight: 600;
+}
+
+.panel-list-status {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-3);
+  color: var(--fg-2);
+}
+
+.panel-list-status-on {
+  background: rgba(95, 208, 122, 0.12);
+  color: var(--success);
+  border-color: rgba(95, 208, 122, 0.4);
+}
+
+.panel-list-status-off {
+  background: rgba(255, 107, 107, 0.12);
+  color: var(--danger);
+  border-color: rgba(255, 107, 107, 0.4);
+}
+
+.panel-list-status-native {
+  background: rgba(255, 107, 107, 0.12);
+  color: var(--danger);
+  border-color: rgba(255, 107, 107, 0.4);
+}
+
+.panel-list-status-handoff {
+  background: rgba(95, 208, 122, 0.12);
+  color: var(--success);
+  border-color: rgba(95, 208, 122, 0.4);
+}
+
+.panel-list-status-unavailable {
+  background: rgba(240, 168, 48, 0.12);
+  color: var(--warning);
+  border-color: rgba(240, 168, 48, 0.4);
+}
+
+.panel-list-meta {
+  font-size: 12px;
+  color: var(--fg-2);
+  margin: 0;
+}
+
+.panel-list-notes {
+  font-size: 12px;
+  color: var(--fg-1);
+  margin: 0;
+}
+
+.panel-list-capabilities summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+
+.panel-list-capabilities ul {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.panel-empty {
+  color: var(--fg-2);
+  font-size: 12px;
+  margin: 0;
+}
+
+.provider-key-form {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border);
+}
+
+.provider-key-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--fg-2);
+}
+
+.provider-key-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.provider-key-input {
+  flex: 1 1 140px;
+  min-width: 0;
+  font-family: ui-monospace, "JetBrains Mono", "Cascadia Mono", "SF Mono", monospace;
+  font-size: 12px;
+}
+
+.provider-key-save {
+  background: var(--accent-strong);
+  color: #07101a;
+  border-radius: var(--radius);
+  padding: 5px 10px;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.provider-key-clear {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--fg-1);
+}
+
+.provider-key-status {
+  margin: 0;
+  font-size: 11px;
+  color: var(--success);
+}
+
+.provider-key-error {
+  margin: 0;
+  font-size: 11px;
+  color: var(--danger);
+}
+
+/* Boot gate ----------------------------------------------------------- */
+
+.boot-gate {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  /* The document no longer scrolls, so a tall card must scroll here. */
+  overflow: auto;
+  padding: 24px;
+  background: var(--bg-0);
+}
+
+.boot-gate-card {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  display: grid;
+  gap: 12px;
+  max-width: 460px;
+  box-shadow: var(--shadow);
+}
+
+.boot-gate-card h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.boot-gate-message {
+  margin: 0;
+  color: var(--fg-1);
+}
+
+.boot-gate-retry {
+  background: var(--accent-strong);
+  color: #07101a;
+  border-radius: var(--radius);
+  border: none;
+  padding: 8px 14px;
+  font-weight: 600;
+}
+
+.boot-gate-help {
+  margin: 0;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+
+/* Connection form ----------------------------------------------------- */
+
+.connection-form {
+  display: grid;
+  gap: 8px;
+}
+
+.connection-form h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.connection-form-help {
+  margin: 0;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+
+.connection-form-field {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+
+.connection-form-field input {
+  font-family: ui-monospace, "JetBrains Mono", "Cascadia Mono", "SF Mono", monospace;
+}
+
+.connection-form-error {
+  color: var(--danger);
+  font-size: 12px;
+  margin: 0;
+}
+
+.connection-form-submit {
+  background: var(--accent-strong);
+  color: #07101a;
+  border-radius: var(--radius);
+  border: none;
+  padding: 8px 14px;
+  font-weight: 600;
+  justify-self: start;
+}
+
+/* Compact screens ----------------------------------------------------- */
+
+@media (max-width: 1100px) {
+  /* Stack toolbar / viewport / rail and BOUND both content rows so a
+   * short, narrow window (e.g. 960x720) stays usable: the viewport and
+   * the rail each scroll internally instead of growing the main column
+   * past the shell and pushing the footer off-screen. */
+  .app-shell-main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1.4fr) minmax(0, 1fr);
+    grid-template-areas:
+      "toolbar"
+      "viewport"
+      "rail";
+  }
+}
+
+@media (max-width: 720px) {
+  .app-shell-body {
+    grid-template-columns: minmax(0, 1fr);
+    /* Sidebar on top (capped + scrollable), workspace below. */
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .app-sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 42vh;
+  }
+}
