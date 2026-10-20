@@ -1,0 +1,1302 @@
+{
+  "immediate": {
+    "labels": [
+      "ISO · FROM (+X −Y +Z)",
+      "TOP · LOOKING −Z",
+      "FRONT · LOOKING +Y",
+      "RIGHT · LOOKING −X"
+    ],
+    "cut": "CUT A–A · XZ · Y = 4.00 mm",
+    "cutRect": {
+      "x": 946.234375,
+      "y": 710.953125,
+      "width": 149.765625,
+      "height": 13.046875,
+      "right": 1096,
+      "bottom": 724
+    },
+    "topCaptionRect": {
+      "x": 878.74853515625,
+      "y": 70.48936462402344,
+      "width": 67.609375,
+      "height": 9,
+      "right": 946.35791015625,
+      "bottom": 79.48936462402344
+    },
+    "frontCaptionRect": {
+      "x": 873.53759765625,
+      "y": 472.10638427734375,
+      "width": 78.03125,
+      "height": 8.999969482421875,
+      "right": 951.56884765625,
+      "bottom": 481.1063537597656
+    },
+    "cutOverlapsTopCaption": false,
+    "cutOverlapsFrontCaption": false,
+    "sectionTraces": [
+      {
+        "view": "iso",
+        "plane": "XZ",
+        "pathLength": 995
+      },
+      {
+        "view": "front",
+        "plane": "XZ",
+        "pathLength": 931
+      }
+    ],
+    "readout": [
+      {
+        "label": "ENV",
+        "text": "60×45×40 mm",
+        "title": "ENV 60×45×40 mm — Envelope measured by FreeCAD 1.1.4: 60 × 45 × 40 mm",
+        "clientWidth": 59,
+        "scrollWidth": 59,
+        "truncated": false
+      },
+      {
+        "label": "VOL",
+        "text": "35 571 mm³",
+        "title": "VOL 35 571 mm³ — Volume measured by FreeCAD 1.1.4: 35571.416047 mm³",
+        "clientWidth": 51,
+        "scrollWidth": 51,
+        "truncated": false
+      },
+      {
+        "label": "AREA",
+        "text": "11 889 mm²",
+        "title": "AREA 11 889 mm² — Surface area measured by FreeCAD 1.1.4: 11889.101731 mm²",
+        "clientWidth": 51,
+        "scrollWidth": 51,
+        "truncated": false
+      },
+      {
+        "label": "SCALE",
+        "text": "FIT",
+        "title": "SCALE FIT — The viewport frames the part to fit the sheet, so the sheet carries no fixed model-to-paper ratio. FIT states that honestly.",
+        "clientWidth": 16,
+        "scrollWidth": 16,
+        "truncated": false
+      }
+    ],
+    "journal": [
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[BRIDGE]",
+        "message": "Loopback connected · browser fallback · http://127.0.0.1:8785"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[SYSTEM]",
+        "message": "Registries loaded · 11 integrations · 4 providers"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[TOOL]",
+        "message": "POST /api/studio/preview · box"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[PREVIEW]",
+        "message": "Server preview verified · analytic · 24 vertices"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[CHAT]",
+        "message": "You · Design a machined aluminum L-bracket for a 40 mm mounting plate, 8 mm wall thickness, with a 10 mm centered bore and 4x M5 corner mounting holes."
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[TOOL]",
+        "message": "POST /api/studio/chat · local · CAD freecad"
+      },
+      {
+        "source": "server",
+        "seq": "1",
+        "chain": "ok",
+        "type": "design.intent",
+        "message": "template l_bracket · provider freecad · L-bracket 60 x 45 x 40 · design a9d04f8f"
+      },
+      {
+        "source": "server",
+        "seq": "2",
+        "chain": "ok",
+        "type": "provider.build.requested",
+        "message": "design_id=a9d04f8ff14e365ee57e0a7d · provider=freecad · provider_version=1.1.4"
+      },
+      {
+        "source": "server",
+        "seq": "3",
+        "chain": "ok",
+        "type": "provider.build.completed",
+        "message": "freecad 1.1.4 · build completed · step b69a9a0f"
+      },
+      {
+        "source": "server",
+        "seq": "4",
+        "chain": "ok",
+        "type": "artifact.stored",
+        "message": "script · 1457 bytes · sha 88a7ec13"
+      },
+      {
+        "source": "server",
+        "seq": "5",
+        "chain": "ok",
+        "type": "artifact.stored",
+        "message": "step · 21648 bytes · sha b69a9a0f"
+      },
+      {
+        "source": "server",
+        "seq": "6",
+        "chain": "ok",
+        "type": "artifact.stored",
+        "message": "fcstd · 40287 bytes · sha 6497b6b4"
+      },
+      {
+        "source": "server",
+        "seq": "7",
+        "chain": "ok",
+        "type": "view.imported",
+        "message": "view imported · 1 solid · 568 triangles"
+      },
+      {
+        "source": "server",
+        "seq": "8",
+        "chain": "ok",
+        "type": "design.measured",
+        "message": "measured by FreeCAD · volume 35571.416 mm^3 · area 11889.102 mm^2 · 1 solid"
+      },
+      {
+        "source": "server",
+        "seq": "9",
+        "chain": "ok",
+        "type": "design.checked",
+        "message": "verified · 5 checks passed"
+      },
+      {
+        "source": "server",
+        "seq": "10",
+        "chain": "ok",
+        "type": "chat.turn",
+        "message": "local · CAD freecad · offline · design requested"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[CHAT]",
+        "message": "Agent · Local helper. Design intent parsed from declared values. 4x M5 mapped to 5.5 mm clearance holes (ISO 273 medium). Plate width 60 mm and depth 45 mm are canonic…"
+      }
+    ],
+    "stamp": "HASH-CHAIN OK",
+    "barTruncated": false,
+    "documentOverflow": 0,
+    "barWidth": 376.25,
+    "barScrollWidth": 376,
+    "titleBlock": [
+      [
+        "SUBJECT // DESIGN ID",
+        "a9d04f8f"
+      ],
+      [
+        "DRAWING",
+        "L-bracket 60 x 45 x 40"
+      ],
+      [
+        "MEASURED BY",
+        "measured by FreeCAD 1.1.4"
+      ],
+      [
+        "MATERIAL (DECLARED)",
+        "aluminium"
+      ],
+      [
+        "TOLERANCES (DECLARED)",
+        "bore diameter 10 mm (declared) · 4 x hole diameter 5.5 mm (declared) · ISO 2768-m (declared)"
+      ],
+      [
+        "SCALE",
+        "FIT"
+      ],
+      [
+        "UNITS",
+        "METRIC (MM)"
+      ],
+      [
+        "PROJECTION",
+        "3RD ANGLE"
+      ],
+      [
+        "REV",
+        "—"
+      ]
+    ],
+    "hlrViewLabel": "view: OpenCascade import (view-only)",
+    "auxFooter": "CUT A–A · XZ · Y = 4.00 mmAREA: 2,321.46 mm²",
+    "auxArea": "AREA 2,321.46 mm²"
+  },
+  "late": {
+    "labels": [
+      "ISO · FROM (+X −Y +Z)",
+      "TOP · LOOKING −Z",
+      "FRONT · LOOKING +Y",
+      "RIGHT · LOOKING −X"
+    ],
+    "cut": "CUT A–A · XZ · Y = 4.00 mm",
+    "cutRect": {
+      "x": 946.234375,
+      "y": 710.953125,
+      "width": 149.765625,
+      "height": 13.046875,
+      "right": 1096,
+      "bottom": 724
+    },
+    "topCaptionRect": {
+      "x": 878.74853515625,
+      "y": 70.48936462402344,
+      "width": 67.609375,
+      "height": 9,
+      "right": 946.35791015625,
+      "bottom": 79.48936462402344
+    },
+    "frontCaptionRect": {
+      "x": 873.53759765625,
+      "y": 472.10638427734375,
+      "width": 78.03125,
+      "height": 8.999969482421875,
+      "right": 951.56884765625,
+      "bottom": 481.1063537597656
+    },
+    "cutOverlapsTopCaption": false,
+    "cutOverlapsFrontCaption": false,
+    "sectionTraces": [
+      {
+        "view": "iso",
+        "plane": "XZ",
+        "pathLength": 995
+      },
+      {
+        "view": "front",
+        "plane": "XZ",
+        "pathLength": 931
+      }
+    ],
+    "readout": [
+      {
+        "label": "ENV",
+        "text": "60×45×40 mm",
+        "title": "ENV 60×45×40 mm — Envelope measured by FreeCAD 1.1.4: 60 × 45 × 40 mm",
+        "clientWidth": 59,
+        "scrollWidth": 59,
+        "truncated": false
+      },
+      {
+        "label": "VOL",
+        "text": "35 571 mm³",
+        "title": "VOL 35 571 mm³ — Volume measured by FreeCAD 1.1.4: 35571.416047 mm³",
+        "clientWidth": 51,
+        "scrollWidth": 51,
+        "truncated": false
+      },
+      {
+        "label": "AREA",
+        "text": "11 889 mm²",
+        "title": "AREA 11 889 mm² — Surface area measured by FreeCAD 1.1.4: 11889.101731 mm²",
+        "clientWidth": 51,
+        "scrollWidth": 51,
+        "truncated": false
+      },
+      {
+        "label": "SCALE",
+        "text": "FIT",
+        "title": "SCALE FIT — The viewport frames the part to fit the sheet, so the sheet carries no fixed model-to-paper ratio. FIT states that honestly.",
+        "clientWidth": 16,
+        "scrollWidth": 16,
+        "truncated": false
+      }
+    ],
+    "journal": [
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[BRIDGE]",
+        "message": "Loopback connected · browser fallback · http://127.0.0.1:8785"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[SYSTEM]",
+        "message": "Registries loaded · 11 integrations · 4 providers"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[TOOL]",
+        "message": "POST /api/studio/preview · box"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[PREVIEW]",
+        "message": "Server preview verified · analytic · 24 vertices"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[CHAT]",
+        "message": "You · Design a machined aluminum L-bracket for a 40 mm mounting plate, 8 mm wall thickness, with a 10 mm centered bore and 4x M5 corner mounting holes."
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[TOOL]",
+        "message": "POST /api/studio/chat · local · CAD freecad"
+      },
+      {
+        "source": "server",
+        "seq": "1",
+        "chain": "ok",
+        "type": "design.intent",
+        "message": "template l_bracket · provider freecad · L-bracket 60 x 45 x 40 · design a9d04f8f"
+      },
+      {
+        "source": "server",
+        "seq": "2",
+        "chain": "ok",
+        "type": "provider.build.requested",
+        "message": "design_id=a9d04f8ff14e365ee57e0a7d · provider=freecad · provider_version=1.1.4"
+      },
+      {
+        "source": "server",
+        "seq": "3",
+        "chain": "ok",
+        "type": "provider.build.completed",
+        "message": "freecad 1.1.4 · build completed · step b69a9a0f"
+      },
+      {
+        "source": "server",
+        "seq": "4",
+        "chain": "ok",
+        "type": "artifact.stored",
+        "message": "script · 1457 bytes · sha 88a7ec13"
+      },
+      {
+        "source": "server",
+        "seq": "5",
+        "chain": "ok",
+        "type": "artifact.stored",
+        "message": "step · 21648 bytes · sha b69a9a0f"
+      },
+      {
+        "source": "server",
+        "seq": "6",
+        "chain": "ok",
+        "type": "artifact.stored",
+        "message": "fcstd · 40287 bytes · sha 6497b6b4"
+      },
+      {
+        "source": "server",
+        "seq": "7",
+        "chain": "ok",
+        "type": "view.imported",
+        "message": "view imported · 1 solid · 568 triangles"
+      },
+      {
+        "source": "server",
+        "seq": "8",
+        "chain": "ok",
+        "type": "design.measured",
+        "message": "measured by FreeCAD · volume 35571.416 mm^3 · area 11889.102 mm^2 · 1 solid"
+      },
+      {
+        "source": "server",
+        "seq": "9",
+        "chain": "ok",
+        "type": "design.checked",
+        "message": "verified · 5 checks passed"
+      },
+      {
+        "source": "server",
+        "seq": "10",
+        "chain": "ok",
+        "type": "chat.turn",
+        "message": "local · CAD freecad · offline · design requested"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[CHAT]",
+        "message": "Agent · Local helper. Design intent parsed from declared values. 4x M5 mapped to 5.5 mm clearance holes (ISO 273 medium). Plate width 60 mm and depth 45 mm are canonic…"
+      }
+    ],
+    "stamp": "HASH-CHAIN OK",
+    "barTruncated": false,
+    "documentOverflow": 0,
+    "barWidth": 376.25,
+    "barScrollWidth": 376,
+    "titleBlock": [
+      [
+        "SUBJECT // DESIGN ID",
+        "a9d04f8f"
+      ],
+      [
+        "DRAWING",
+        "L-bracket 60 x 45 x 40"
+      ],
+      [
+        "MEASURED BY",
+        "measured by FreeCAD 1.1.4"
+      ],
+      [
+        "MATERIAL (DECLARED)",
+        "aluminium"
+      ],
+      [
+        "TOLERANCES (DECLARED)",
+        "bore diameter 10 mm (declared) · 4 x hole diameter 5.5 mm (declared) · ISO 2768-m (declared)"
+      ],
+      [
+        "SCALE",
+        "FIT"
+      ],
+      [
+        "UNITS",
+        "METRIC (MM)"
+      ],
+      [
+        "PROJECTION",
+        "3RD ANGLE"
+      ],
+      [
+        "REV",
+        "—"
+      ]
+    ],
+    "hlrViewLabel": "view: OpenCascade import (view-only)",
+    "auxFooter": "CUT A–A · XZ · Y = 4.00 mmAREA: 2,321.46 mm²",
+    "auxArea": "AREA 2,321.46 mm²"
+  },
+  "clay": {
+    "labels": [],
+    "cut": "CUT A–A · XZ · Y = 4.00 mm",
+    "cutRect": {
+      "x": 364,
+      "y": 70,
+      "width": 159.125,
+      "height": 13.046875,
+      "right": 523.125,
+      "bottom": 83.046875
+    },
+    "topCaptionRect": null,
+    "frontCaptionRect": null,
+    "cutOverlapsTopCaption": false,
+    "cutOverlapsFrontCaption": false,
+    "sectionTraces": [],
+    "readout": [
+      {
+        "label": "ENV",
+        "text": "60×45×40 mm",
+        "title": "ENV 60×45×40 mm — Envelope measured by FreeCAD 1.1.4: 60 × 45 × 40 mm",
+        "clientWidth": 59,
+        "scrollWidth": 59,
+        "truncated": false
+      },
+      {
+        "label": "VOL",
+        "text": "35 571 mm³",
+        "title": "VOL 35 571 mm³ — Volume measured by FreeCAD 1.1.4: 35571.416047 mm³",
+        "clientWidth": 51,
+        "scrollWidth": 51,
+        "truncated": false
+      },
+      {
+        "label": "AREA",
+        "text": "11 889 mm²",
+        "title": "AREA 11 889 mm² — Surface area measured by FreeCAD 1.1.4: 11889.101731 mm²",
+        "clientWidth": 51,
+        "scrollWidth": 51,
+        "truncated": false
+      },
+      {
+        "label": "SCALE",
+        "text": "FIT",
+        "title": "SCALE FIT — The viewport frames the part to fit the sheet, so the sheet carries no fixed model-to-paper ratio. FIT states that honestly.",
+        "clientWidth": 16,
+        "scrollWidth": 16,
+        "truncated": false
+      }
+    ],
+    "journal": [
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[BRIDGE]",
+        "message": "Loopback connected · browser fallback · http://127.0.0.1:8785"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[SYSTEM]",
+        "message": "Registries loaded · 11 integrations · 4 providers"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[TOOL]",
+        "message": "POST /api/studio/preview · box"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[PREVIEW]",
+        "message": "Server preview verified · analytic · 24 vertices"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[CHAT]",
+        "message": "You · Design a machined aluminum L-bracket for a 40 mm mounting plate, 8 mm wall thickness, with a 10 mm centered bore and 4x M5 corner mounting holes."
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[TOOL]",
+        "message": "POST /api/studio/chat · local · CAD freecad"
+      },
+      {
+        "source": "server",
+        "seq": "1",
+        "chain": "ok",
+        "type": "design.intent",
+        "message": "template l_bracket · provider freecad · L-bracket 60 x 45 x 40 · design a9d04f8f"
+      },
+      {
+        "source": "server",
+        "seq": "2",
+        "chain": "ok",
+        "type": "provider.build.requested",
+        "message": "design_id=a9d04f8ff14e365ee57e0a7d · provider=freecad · provider_version=1.1.4"
+      },
+      {
+        "source": "server",
+        "seq": "3",
+        "chain": "ok",
+        "type": "provider.build.completed",
+        "message": "freecad 1.1.4 · build completed · step b69a9a0f"
+      },
+      {
+        "source": "server",
+        "seq": "4",
+        "chain": "ok",
+        "type": "artifact.stored",
+        "message": "script · 1457 bytes · sha 88a7ec13"
+      },
+      {
+        "source": "server",
+        "seq": "5",
+        "chain": "ok",
+        "type": "artifact.stored",
+        "message": "step · 21648 bytes · sha b69a9a0f"
+      },
+      {
+        "source": "server",
+        "seq": "6",
+        "chain": "ok",
+        "type": "artifact.stored",
+        "message": "fcstd · 40287 bytes · sha 6497b6b4"
+      },
+      {
+        "source": "server",
+        "seq": "7",
+        "chain": "ok",
+        "type": "view.imported",
+        "message": "view imported · 1 solid · 568 triangles"
+      },
+      {
+        "source": "server",
+        "seq": "8",
+        "chain": "ok",
+        "type": "design.measured",
+        "message": "measured by FreeCAD · volume 35571.416 mm^3 · area 11889.102 mm^2 · 1 solid"
+      },
+      {
+        "source": "server",
+        "seq": "9",
+        "chain": "ok",
+        "type": "design.checked",
+        "message": "verified · 5 checks passed"
+      },
+      {
+        "source": "server",
+        "seq": "10",
+        "chain": "ok",
+        "type": "chat.turn",
+        "message": "local · CAD freecad · offline · design requested"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[CHAT]",
+        "message": "Agent · Local helper. Design intent parsed from declared values. 4x M5 mapped to 5.5 mm clearance holes (ISO 273 medium). Plate width 60 mm and depth 45 mm are canonic…"
+      }
+    ],
+    "stamp": "HASH-CHAIN OK",
+    "barTruncated": false,
+    "documentOverflow": 0,
+    "barWidth": 376.25,
+    "barScrollWidth": 376,
+    "titleBlock": [
+      [
+        "SUBJECT // DESIGN ID",
+        "a9d04f8f"
+      ],
+      [
+        "DRAWING",
+        "L-bracket 60 x 45 x 40"
+      ],
+      [
+        "MEASURED BY",
+        "measured by FreeCAD 1.1.4"
+      ],
+      [
+        "MATERIAL (DECLARED)",
+        "aluminium"
+      ],
+      [
+        "TOLERANCES (DECLARED)",
+        "bore diameter 10 mm (declared) · 4 x hole diameter 5.5 mm (declared) · ISO 2768-m (declared)"
+      ],
+      [
+        "SCALE",
+        "FIT"
+      ],
+      [
+        "UNITS",
+        "METRIC (MM)"
+      ],
+      [
+        "PROJECTION",
+        "3RD ANGLE"
+      ],
+      [
+        "REV",
+        "—"
+      ]
+    ],
+    "auxFooter": "CUT A–A · XZ · Y = 4.00 mmAREA: 2,321.46 mm²",
+    "auxArea": "AREA 2,321.46 mm²"
+  },
+  "compact": {
+    "labels": [
+      "ISO · FROM (+X −Y +Z)",
+      "TOP · LOOKING −Z",
+      "FRONT · LOOKING +Y",
+      "RIGHT · LOOKING −X"
+    ],
+    "cut": "CUT A–A · XZ · Y = 4.00 mm",
+    "cutRect": {
+      "x": 846.234375,
+      "y": 610.953125,
+      "width": 149.765625,
+      "height": 13.046875,
+      "right": 996,
+      "bottom": 624
+    },
+    "topCaptionRect": {
+      "x": 784.8228149414062,
+      "y": 53.159996032714844,
+      "width": 61.234375,
+      "height": 9,
+      "right": 846.0571899414062,
+      "bottom": 62.159996032714844
+    },
+    "frontCaptionRect": {
+      "x": 780.1040649414062,
+      "y": 417.12799072265625,
+      "width": 71.04705810546875,
+      "height": 9,
+      "right": 851.151123046875,
+      "bottom": 426.12799072265625
+    },
+    "cutOverlapsTopCaption": false,
+    "cutOverlapsFrontCaption": false,
+    "sectionTraces": [
+      {
+        "view": "iso",
+        "plane": "XZ",
+        "pathLength": 995
+      },
+      {
+        "view": "front",
+        "plane": "XZ",
+        "pathLength": 931
+      }
+    ],
+    "readout": [
+      {
+        "label": "ENV",
+        "text": "60×45×40 mm",
+        "title": "ENV 60×45×40 mm — Envelope measured by FreeCAD 1.1.4: 60 × 45 × 40 mm",
+        "clientWidth": 59,
+        "scrollWidth": 59,
+        "truncated": false
+      },
+      {
+        "label": "VOL",
+        "text": "35 571 mm³",
+        "title": "VOL 35 571 mm³ — Volume measured by FreeCAD 1.1.4: 35571.416047 mm³",
+        "clientWidth": 51,
+        "scrollWidth": 51,
+        "truncated": false
+      },
+      {
+        "label": "AREA",
+        "text": "11 889 mm²",
+        "title": "AREA 11 889 mm² — Surface area measured by FreeCAD 1.1.4: 11889.101731 mm²",
+        "clientWidth": 51,
+        "scrollWidth": 51,
+        "truncated": false
+      },
+      {
+        "label": "SCALE",
+        "text": "FIT",
+        "title": "SCALE FIT — The viewport frames the part to fit the sheet, so the sheet carries no fixed model-to-paper ratio. FIT states that honestly.",
+        "clientWidth": 16,
+        "scrollWidth": 16,
+        "truncated": false
+      }
+    ],
+    "journal": [
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[BRIDGE]",
+        "message": "Loopback connected · browser fallback · http://127.0.0.1:8785"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[SYSTEM]",
+        "message": "Registries loaded · 11 integrations · 4 providers"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[TOOL]",
+        "message": "POST /api/studio/preview · box"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[PREVIEW]",
+        "message": "Server preview verified · analytic · 24 vertices"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[CHAT]",
+        "message": "You · Design a machined aluminum L-bracket for a 40 mm mounting plate, 8 mm wall thickness, with a 10 mm centered bore and 4x M5 corner mounting holes."
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[TOOL]",
+        "message": "POST /api/studio/chat · local · CAD freecad"
+      },
+      {
+        "source": "server",
+        "seq": "1",
+        "chain": "ok",
+        "type": "design.intent",
+        "message": "template l_bracket · provider freecad · L-bracket 60 x 45 x 40 · design a9d04f8f"
+      },
+      {
+        "source": "server",
+        "seq": "2",
+        "chain": "ok",
+        "type": "provider.build.requested",
+        "message": "design_id=a9d04f8ff14e365ee57e0a7d · provider=freecad · provider_version=1.1.4"
+      },
+      {
+        "source": "server",
+        "seq": "3",
+        "chain": "ok",
+        "type": "provider.build.completed",
+        "message": "freecad 1.1.4 · build completed · step b69a9a0f"
+      },
+      {
+        "source": "server",
+        "seq": "4",
+        "chain": "ok",
+        "type": "artifact.stored",
+        "message": "script · 1457 bytes · sha 88a7ec13"
+      },
+      {
+        "source": "server",
+        "seq": "5",
+        "chain": "ok",
+        "type": "artifact.stored",
+        "message": "step · 21648 bytes · sha b69a9a0f"
+      },
+      {
+        "source": "server",
+        "seq": "6",
+        "chain": "ok",
+        "type": "artifact.stored",
+        "message": "fcstd · 40287 bytes · sha 6497b6b4"
+      },
+      {
+        "source": "server",
+        "seq": "7",
+        "chain": "ok",
+        "type": "view.imported",
+        "message": "view imported · 1 solid · 568 triangles"
+      },
+      {
+        "source": "server",
+        "seq": "8",
+        "chain": "ok",
+        "type": "design.measured",
+        "message": "measured by FreeCAD · volume 35571.416 mm^3 · area 11889.102 mm^2 · 1 solid"
+      },
+      {
+        "source": "server",
+        "seq": "9",
+        "chain": "ok",
+        "type": "design.checked",
+        "message": "verified · 5 checks passed"
+      },
+      {
+        "source": "server",
+        "seq": "10",
+        "chain": "ok",
+        "type": "chat.turn",
+        "message": "local · CAD freecad · offline · design requested"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[CHAT]",
+        "message": "Agent · Local helper. Design intent parsed from declared values. 4x M5 mapped to 5.5 mm clearance holes (ISO 273 medium). Plate width 60 mm and depth 45 mm are canonic…"
+      }
+    ],
+    "stamp": "HASH-CHAIN OK",
+    "barTruncated": false,
+    "documentOverflow": 0,
+    "barWidth": 352.25,
+    "barScrollWidth": 352,
+    "titleBlock": [
+      [
+        "SUBJECT // DESIGN ID",
+        "a9d04f8f"
+      ],
+      [
+        "DRAWING",
+        "L-bracket 60 x 45 x 40"
+      ],
+      [
+        "MEASURED BY",
+        "measured by FreeCAD 1.1.4"
+      ],
+      [
+        "MATERIAL (DECLARED)",
+        "aluminium"
+      ],
+      [
+        "TOLERANCES (DECLARED)",
+        "bore diameter 10 mm (declared) · 4 x hole diameter 5.5 mm (declared) · ISO 2768-m (declared)"
+      ],
+      [
+        "SCALE",
+        "FIT"
+      ],
+      [
+        "UNITS",
+        "METRIC (MM)"
+      ],
+      [
+        "PROJECTION",
+        "3RD ANGLE"
+      ],
+      [
+        "REV",
+        "—"
+      ]
+    ],
+    "hlrViewLabel": "view: OpenCascade import (view-only)",
+    "auxFooter": "CUT A–A · XZ · Y = 4.00 mmAREA: 2,321.46 mm²",
+    "auxArea": "AREA 2,321.46 mm²"
+  },
+  "opencascade": {
+    "labels": [
+      "ISO · FROM (+X −Y +Z)",
+      "TOP · LOOKING −Z",
+      "FRONT · LOOKING +Y",
+      "RIGHT · LOOKING −X"
+    ],
+    "cut": "CUT A–A · XZ · Y = 4.00 mm",
+    "cutRect": {
+      "x": 946.234375,
+      "y": 710.953125,
+      "width": 149.765625,
+      "height": 13.046875,
+      "right": 1096,
+      "bottom": 724
+    },
+    "topCaptionRect": {
+      "x": 878.74853515625,
+      "y": 70.48936462402344,
+      "width": 67.609375,
+      "height": 9,
+      "right": 946.35791015625,
+      "bottom": 79.48936462402344
+    },
+    "frontCaptionRect": {
+      "x": 873.53759765625,
+      "y": 472.10638427734375,
+      "width": 78.03125,
+      "height": 8.999969482421875,
+      "right": 951.56884765625,
+      "bottom": 481.1063537597656
+    },
+    "cutOverlapsTopCaption": false,
+    "cutOverlapsFrontCaption": false,
+    "sectionTraces": [
+      {
+        "view": "iso",
+        "plane": "XZ",
+        "pathLength": 995
+      },
+      {
+        "view": "front",
+        "plane": "XZ",
+        "pathLength": 931
+      }
+    ],
+    "readout": [
+      {
+        "label": "ENV",
+        "text": "60×45×40 mm",
+        "title": "ENV 60×45×40 mm — Envelope measured by OpenCascade (opt-in) 8.0.1.1: 60 × 45 × 40 mm",
+        "clientWidth": 59,
+        "scrollWidth": 59,
+        "truncated": false
+      },
+      {
+        "label": "VOL",
+        "text": "35 571 mm³",
+        "title": "VOL 35 571 mm³ — Volume measured by OpenCascade (opt-in) 8.0.1.1: 35571.416047 mm³",
+        "clientWidth": 51,
+        "scrollWidth": 51,
+        "truncated": false
+      },
+      {
+        "label": "AREA",
+        "text": "11 889 mm²",
+        "title": "AREA 11 889 mm² — Surface area measured by OpenCascade (opt-in) 8.0.1.1: 11889.101731 mm²",
+        "clientWidth": 51,
+        "scrollWidth": 51,
+        "truncated": false
+      },
+      {
+        "label": "SCALE",
+        "text": "FIT",
+        "title": "SCALE FIT — The viewport frames the part to fit the sheet, so the sheet carries no fixed model-to-paper ratio. FIT states that honestly.",
+        "clientWidth": 16,
+        "scrollWidth": 16,
+        "truncated": false
+      }
+    ],
+    "journal": [
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[BRIDGE]",
+        "message": "Loopback connected · browser fallback · http://127.0.0.1:8785"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[SYSTEM]",
+        "message": "Registries loaded · 11 integrations · 4 providers"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[TOOL]",
+        "message": "POST /api/studio/preview · box"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[PREVIEW]",
+        "message": "Server preview verified · analytic · 24 vertices"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[CHAT]",
+        "message": "You · Design a machined aluminum L-bracket for a 40 mm mounting plate, 8 mm wall thickness, with a 10 mm centered bore and 4x M5 corner mounting holes."
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[TOOL]",
+        "message": "POST /api/studio/chat · local · CAD freecad"
+      },
+      {
+        "source": "server",
+        "seq": "1",
+        "chain": "ok",
+        "type": "design.intent",
+        "message": "template l_bracket · provider freecad · L-bracket 60 x 45 x 40 · design a9d04f8f"
+      },
+      {
+        "source": "server",
+        "seq": "2",
+        "chain": "ok",
+        "type": "provider.build.requested",
+        "message": "design_id=a9d04f8ff14e365ee57e0a7d · provider=freecad · provider_version=1.1.4"
+      },
+      {
+        "source": "server",
+        "seq": "3",
+        "chain": "ok",
+        "type": "provider.build.completed",
+        "message": "freecad 1.1.4 · build completed · step b69a9a0f"
+      },
+      {
+        "source": "server",
+        "seq": "4",
+        "chain": "ok",
+        "type": "artifact.stored",
+        "message": "script · 1457 bytes · sha 88a7ec13"
+      },
+      {
+        "source": "server",
+        "seq": "5",
+        "chain": "ok",
+        "type": "artifact.stored",
+        "message": "step · 21648 bytes · sha b69a9a0f"
+      },
+      {
+        "source": "server",
+        "seq": "6",
+        "chain": "ok",
+        "type": "artifact.stored",
+        "message": "fcstd · 40287 bytes · sha 6497b6b4"
+      },
+      {
+        "source": "server",
+        "seq": "7",
+        "chain": "ok",
+        "type": "view.imported",
+        "message": "view imported · 1 solid · 568 triangles"
+      },
+      {
+        "source": "server",
+        "seq": "8",
+        "chain": "ok",
+        "type": "design.measured",
+        "message": "measured by FreeCAD · volume 35571.416 mm^3 · area 11889.102 mm^2 · 1 solid"
+      },
+      {
+        "source": "server",
+        "seq": "9",
+        "chain": "ok",
+        "type": "design.checked",
+        "message": "verified · 5 checks passed"
+      },
+      {
+        "source": "server",
+        "seq": "10",
+        "chain": "ok",
+        "type": "chat.turn",
+        "message": "local · CAD freecad · offline · design requested"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[CHAT]",
+        "message": "Agent · Local helper. Design intent parsed from declared values. 4x M5 mapped to 5.5 mm clearance holes (ISO 273 medium). Plate width 60 mm and depth 45 mm are canonic…"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[CHAT]",
+        "message": "You · Design a machined aluminum L-bracket for a 40 mm mounting plate, 8 mm wall thickness, with a 10 mm centered bore and 4x M5 corner mounting holes."
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[TOOL]",
+        "message": "POST /api/studio/chat · local · CAD opencascade"
+      },
+      {
+        "source": "server",
+        "seq": "11",
+        "chain": "ok",
+        "type": "design.intent",
+        "message": "template l_bracket · provider opencascade · L-bracket 60 x 45 x 40 · design 594f408b"
+      },
+      {
+        "source": "server",
+        "seq": "12",
+        "chain": "ok",
+        "type": "provider.build.requested",
+        "message": "design_id=594f408b3223505c51bfdef6 · provider=opencascade · provider_version=8.0.1.1"
+      },
+      {
+        "source": "server",
+        "seq": "13",
+        "chain": "ok",
+        "type": "provider.build.completed",
+        "message": "opencascade 8.0.1.1 · build completed · step c9054e51"
+      },
+      {
+        "source": "server",
+        "seq": "14",
+        "chain": "ok",
+        "type": "artifact.stored",
+        "message": "script · 1457 bytes · sha 88a7ec13"
+      },
+      {
+        "source": "server",
+        "seq": "15",
+        "chain": "ok",
+        "type": "artifact.stored",
+        "message": "step · 55554 bytes · sha c9054e51"
+      },
+      {
+        "source": "server",
+        "seq": "16",
+        "chain": "ok",
+        "type": "view.imported",
+        "message": "view imported · 1 solid · 568 triangles"
+      },
+      {
+        "source": "server",
+        "seq": "17",
+        "chain": "ok",
+        "type": "design.compiled",
+        "message": "2 components · fused · design 594f408b"
+      },
+      {
+        "source": "server",
+        "seq": "18",
+        "chain": "ok",
+        "type": "design.measured",
+        "message": "measured by OpenCascade (opt-in) · volume 35571.416 mm^3 · area 11889.102 mm^2 · 1 solid"
+      },
+      {
+        "source": "server",
+        "seq": "19",
+        "chain": "ok",
+        "type": "design.checked",
+        "message": "verified · 5 checks passed"
+      },
+      {
+        "source": "server",
+        "seq": "20",
+        "chain": "ok",
+        "type": "chat.turn",
+        "message": "local · CAD opencascade · offline · design requested"
+      },
+      {
+        "source": "local",
+        "seq": "—",
+        "chain": "local",
+        "type": "[CHAT]",
+        "message": "Agent · Local helper. Design intent parsed from declared values. 4x M5 mapped to 5.5 mm clearance holes (ISO 273 medium). Plate width 60 mm and depth 45 mm are canonic…"
+      }
+    ],
+    "stamp": "HASH-CHAIN OK",
+    "barTruncated": false,
+    "documentOverflow": 0,
+    "barWidth": 376.25,
+    "barScrollWidth": 376,
+    "titleBlock": [
+      [
+        "SUBJECT // DESIGN ID",
+        "594f408b"
+      ],
+      [
+        "DRAWING",
+        "L-bracket 60 x 45 x 40"
+      ],
+      [
+        "MEASURED BY",
+        "measured by OpenCascade (opt-in) 8.0.1.1"
+      ],
+      [
+        "MATERIAL (DECLARED)",
+        "aluminium"
+      ],
+      [
+        "TOLERANCES (DECLARED)",
+        "bore diameter 10 mm (declared) · 4 x hole diameter 5.5 mm (declared) · ISO 2768-m (declared)"
+      ],
+      [
+        "SCALE",
+        "FIT"
+      ],
+      [
+        "UNITS",
+        "METRIC (MM)"
+      ],
+      [
+        "PROJECTION",
+        "3RD ANGLE"
+      ],
+      [
+        "REV",
+        "—"
+      ]
+    ],
+    "hlrViewLabel": "view: OpenCascade (opt-in) build",
+    "auxFooter": "CUT A–A · XZ · Y = 4.00 mmAREA: 2,321.46 mm²",
+    "auxArea": "AREA 2,321.46 mm²"
+  }
+}

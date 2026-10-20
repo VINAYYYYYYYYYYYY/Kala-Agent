@@ -15,6 +15,19 @@ import net from 'node:net';
 type Main = typeof import('../electron/main.cjs');
 
 let mainModule: Main;
+const temporaryDirectories: string[] = [];
+
+function makeTemporaryDirectory(): string {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'kala-electron-main-'));
+  temporaryDirectories.push(directory);
+  return directory;
+}
+
+function makeExecutable(filePath: string, contents = 'native-backend'): void {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, contents);
+  if (process.platform !== 'win32') fs.chmodSync(filePath, 0o755);
+}
 
 beforeEach(async () => {
   // Dynamic import of a CommonJS module under vitest returns
@@ -26,6 +39,9 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  for (const directory of temporaryDirectories.splice(0)) {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 describe('buildBackendInvocation', () => {
@@ -260,6 +276,259 @@ describe('BackendProcess (mocked spawn)', () => {
     });
     expect(() => proc.shutdown()).not.toThrow();
     expect(() => proc.shutdown()).not.toThrow();
+  });
+});
+
+describe('resolveBackendCommand', () => {
+  it('packaged mode resolves only resources/backend/kala-studio and ignores Python overrides', () => {
+    const root = makeTemporaryDirectory();
+    const resources = path.join(root, 'resources');
+    const packaged = path.join(resources, 'backend', 'kala-studio');
+    makeExecutable(packaged);
+    const resolved = mainModule.resolveBackendCommand({
+      isPackaged: true,
+      platform: 'linux',
+      resourcesPath: resources,
+      python: '/definitely/not/the/python',
+    });
+    expect(resolved.mode).toBe('packaged-native');
+    expect(resolved.command).toBe(packaged);
+    expect(resolved.args).toEqual([]);
+    expect(resolved.exists).toBe(true);
+  });
+
+  it('packaged mode fails closed when the native binary is missing', () => {
+    const root = makeTemporaryDirectory();
+    const resources = path.join(root, 'resources');
+    const resolved = mainModule.resolveBackendCommand({
+      isPackaged: true,
+      platform: 'linux',
+      resourcesPath: resources,
+      python: '/usr/bin/python3',
+      devBackend: 'python',
+    });
+    expect(resolved.exists).toBe(false);
+    expect(resolved.mode).toBe('packaged-native');
+    expect(resolved.command).toBe(path.join(resources, 'backend', 'kala-studio'));
+    expect(resolved.instructions).toMatch(/packaged native backend/);
+    expect(resolved.args).not.toContain('-m');
+  });
+
+  it('development prefers the staged native binary without a Python dependency', () => {
+    const root = makeTemporaryDirectory();
+    const native = path.join(root, 'studio', 'backend-native', 'kala-studio');
+    makeExecutable(native);
+    const resolved = mainModule.resolveBackendCommand({
+      isPackaged: false,
+      platform: 'linux',
+      repoRoot: root,
+      devBackend: 'native',
+      python: '',
+    });
+    expect(resolved.mode).toBe('native');
+    expect(resolved.command).toBe(native);
+    expect(resolved.args).toEqual([]);
+    expect(resolved.exists).toBe(true);
+    expect(resolved.cwd).toBe(root);
+  });
+
+  it('development fails with actionable build instructions when native is missing', () => {
+    const root = makeTemporaryDirectory();
+    const resolved = mainModule.resolveBackendCommand({
+      isPackaged: false,
+      platform: 'linux',
+      repoRoot: root,
+      devBackend: 'native',
+      python: '',
+    });
+    expect(resolved.mode).toBe('native');
+    expect(resolved.exists).toBe(false);
+    expect(resolved.command).toBe(path.join(root, 'studio', 'backend-native', 'kala-studio'));
+    expect(resolved.instructions).toContain('npm run build:native');
+    expect(resolved.instructions).toContain('KALA_STUDIO_PYTHON');
+    // Never silently falls back to an arbitrary `python` on PATH.
+    expect(resolved.command).not.toBe('python');
+  });
+
+  it('honours an explicit KALA_STUDIO_PYTHON override as a development-only reference', () => {
+    const root = makeTemporaryDirectory();
+    const python = path.join(root, 'python-reference');
+    makeExecutable(python);
+    const resolved = mainModule.resolveBackendCommand({
+      isPackaged: false,
+      platform: 'linux',
+      repoRoot: root,
+      devBackend: 'native',
+      python,
+    });
+    expect(resolved.mode).toBe('python-override');
+    expect(resolved.command).toBe(python);
+    expect(resolved.args).toEqual(['-m', 'kala_agent.studio']);
+    expect(resolved.env.PYTHONPATH).toBe(path.join(root, 'src'));
+    expect(resolved.exists).toBe(true);
+  });
+
+  it('development defaults to the staged native binary, not Python', () => {
+    const root = makeTemporaryDirectory();
+    const native = path.join(root, 'studio', 'backend-native', 'kala-studio');
+    makeExecutable(native);
+    const resolved = mainModule.resolveBackendCommand({
+      isPackaged: false,
+      platform: 'linux',
+      repoRoot: root,
+      devBackend: '',
+      python: '',
+    });
+    expect(resolved.mode).toBe('native');
+    expect(resolved.command).toBe(native);
+    expect(resolved.args).toEqual([]);
+    expect(resolved.exists).toBe(true);
+  });
+
+  it('development fails closed when the default native binary is missing', () => {
+    const root = makeTemporaryDirectory();
+    const resolved = mainModule.resolveBackendCommand({
+      isPackaged: false,
+      platform: 'linux',
+      repoRoot: root,
+      devBackend: '',
+      python: '',
+    });
+    expect(resolved.mode).toBe('native');
+    expect(resolved.exists).toBe(false);
+    expect(resolved.command).toBe(path.join(root, 'studio', 'backend-native', 'kala-studio'));
+    expect(resolved.instructions).toContain('npm run build:native');
+    expect(resolved.instructions).toContain('KALA_STUDIO_DEV_BACKEND=python');
+    // Never silently falls back to an arbitrary `python` on PATH.
+    expect(resolved.command).not.toBe('python');
+    expect(resolved.args).not.toContain('-m');
+  });
+
+  it('selects the Python reference only behind an explicit development opt-in', () => {
+    const root = makeTemporaryDirectory();
+    const venv = path.join(root, '.venv', 'bin', 'python');
+    makeExecutable(venv);
+    const resolved = mainModule.resolveBackendCommand({
+      isPackaged: false,
+      platform: 'linux',
+      repoRoot: root,
+      devBackend: 'python',
+      python: '',
+    });
+    expect(resolved.mode).toBe('python-reference');
+    expect(resolved.command).toBe(venv);
+    expect(resolved.args).toEqual(['-m', 'kala_agent.studio']);
+    expect(resolved.env.PYTHONPATH).toBe(path.join(root, 'src'));
+    expect(resolved.exists).toBe(true);
+  });
+
+  it('development still supports the explicit native opt-in', () => {
+    const root = makeTemporaryDirectory();
+    const venv = path.join(root, '.venv', 'bin', 'python');
+    makeExecutable(venv);
+    const native = path.join(root, 'studio', 'backend-native', 'kala-studio');
+    makeExecutable(native);
+    const resolved = mainModule.resolveBackendCommand({
+      isPackaged: false,
+      platform: 'linux',
+      repoRoot: root,
+      devBackend: 'native',
+      python: '',
+    });
+    expect(resolved.mode).toBe('native');
+    expect(resolved.command).toBe(native);
+    expect(resolved.exists).toBe(true);
+  });
+
+  it('rejects an unknown development backend mode instead of guessing', () => {
+    const root = makeTemporaryDirectory();
+    const resolved = mainModule.resolveBackendCommand({
+      isPackaged: false,
+      platform: 'linux',
+      repoRoot: root,
+      devBackend: 'rust-please',
+      python: '',
+    });
+    expect(resolved.mode).toBe('invalid');
+    expect(resolved.exists).toBe(false);
+    expect(resolved.instructions).toContain('unknown KALA_STUDIO_DEV_BACKEND=rust-please');
+    expect(resolved.args).not.toContain('-m');
+  });
+
+  it('resolves the Windows .exe name in packaged mode', () => {
+    const root = makeTemporaryDirectory();
+    const resources = path.join(root, 'resources');
+    const packaged = path.join(resources, 'backend', 'kala-studio.exe');
+    makeExecutable(packaged);
+    const resolved = mainModule.resolveBackendCommand({
+      isPackaged: true,
+      platform: 'win32',
+      resourcesPath: resources,
+      python: '',
+    });
+    expect(resolved.command).toBe(packaged);
+    expect(resolved.exists).toBe(true);
+  });
+
+  it('packaged mode removes Python selection variables and exposes bundled loader paths', () => {
+    const root = makeTemporaryDirectory();
+    const resources = path.join(root, 'resources');
+    const backend = path.join(resources, 'backend');
+    makeExecutable(path.join(backend, 'kala-studio'));
+    fs.mkdirSync(path.join(backend, 'lib'), { recursive: true });
+    fs.mkdirSync(path.join(backend, 'adapters', 'freecad', 'src'), { recursive: true });
+
+    const saved = {
+      PYTHONPATH: process.env.PYTHONPATH,
+      KALA_STUDIO_PYTHON: process.env.KALA_STUDIO_PYTHON,
+      KALA_STUDIO_DEV_BACKEND: process.env.KALA_STUDIO_DEV_BACKEND,
+      KALA_STUDIO_GEOMETRY_WORKER: process.env.KALA_STUDIO_GEOMETRY_WORKER,
+      KALA_STUDIO_REPO_ROOT: process.env.KALA_STUDIO_REPO_ROOT,
+      KALA_STUDIO_DIST: process.env.KALA_STUDIO_DIST,
+      LD_LIBRARY_PATH: process.env.LD_LIBRARY_PATH,
+    };
+    process.env.PYTHONPATH = '/tmp/must-not-leak';
+    process.env.KALA_STUDIO_PYTHON = '/usr/bin/python3';
+    process.env.KALA_STUDIO_DEV_BACKEND = 'python';
+    process.env.KALA_STUDIO_GEOMETRY_WORKER = '/tmp/worker';
+    process.env.KALA_STUDIO_REPO_ROOT = '/tmp/repo';
+    process.env.KALA_STUDIO_DIST = '/tmp/ui';
+    process.env.LD_LIBRARY_PATH = '/opt/system-libs';
+    try {
+      const env = mainModule.packagedBackendEnvironment({
+        resourcesPath: resources,
+        platform: 'linux',
+      });
+      expect(env.PYTHONPATH).toBeUndefined();
+      expect(env.KALA_STUDIO_PYTHON).toBeUndefined();
+      expect(env.KALA_STUDIO_DEV_BACKEND).toBeUndefined();
+      expect(env.KALA_STUDIO_GEOMETRY_WORKER).toBeUndefined();
+      expect(env.KALA_STUDIO_REPO_ROOT).toBeUndefined();
+      expect(env.KALA_STUDIO_DIST).toBeUndefined();
+      expect(env.LD_LIBRARY_PATH).toBe(
+        [path.join(backend, 'lib'), '/opt/system-libs'].join(path.delimiter),
+      );
+      expect(env.KALA_FREECAD_SYS_PATH).toBe(path.join(backend, 'adapters', 'freecad', 'src'));
+    } finally {
+      for (const [key, value] of Object.entries(saved)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
+
+  it('packaged mode keeps inherited Python variables on a Windows environment only by removing them', () => {
+    const root = makeTemporaryDirectory();
+    const backend = path.join(root, 'resources', 'backend');
+    fs.mkdirSync(path.join(backend, 'lib'), { recursive: true });
+    const env = mainModule.packagedBackendEnvironment({
+      resourcesPath: path.join(root, 'resources'),
+      platform: 'win32',
+      environ: { PATH: 'C:\\Windows', PYTHONPATH: 'C:\\leak' },
+    });
+    expect(env.PYTHONPATH).toBeUndefined();
+    expect(env.PATH).toBeDefined();
+    expect(env.PATH!.startsWith(backend)).toBe(true);
   });
 });
 

@@ -1,0 +1,744 @@
+[
+ {
+  "prompt": "A box 10x20x30 mm for FreeCAD. Show the envelope.",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 9dbbedb7. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. Neutral STEP/STL exports are ready to import into FreeCAD; the studio does not drive a native vendor API. A box 10x20x30 mm for FreeCAD. Show the envelope.",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "A box 10x20x30 mm for FreeCAD. Show the envelope.",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 9dbbedb7. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. Neutral STEP/STL exports are ready to import into FreeCAD; the studio does not drive a native vendor API. A box 10x20x30 mm for FreeCAD. Show the envelope.",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "x",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 2d711642. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. x",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "x",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 2d711642. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. x",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id e3b0c442. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. (empty prompt)",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id e3b0c442. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. (empty prompt)",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "   ",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id e3b0c442. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. (empty prompt)",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "   ",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id e3b0c442. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. (empty prompt)",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "Size an L-bracket for a 40 mm mounting plate: legs of 60 mm and 45 mm, 8 mm wall thickness. Give me the bounding envelope and the nominal volume I should expect before I model it in CAD.",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 29f57666. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 40x60x45 mm): volume 108000 mm^3 (108 cm^3), surface area 13800 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. Size an L-bracket for a 40 mm mounting plate: legs of 60 mm and 45 mm, 8 mm wall thickness. Give me the bounding envelope and the nominal volume I should expect before I model it in CAD.",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "Size an L-bracket for a 40 mm mounting plate: legs of 60 mm and 45 mm, 8 mm wall thickness. Give me the bounding envelope and the nominal volume I should expect before I model it in CAD.",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 29f57666. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 40x60x45 mm): volume 108000 mm^3 (108 cm^3), surface area 13800 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. Size an L-bracket for a 40 mm mounting plate: legs of 60 mm and 45 mm, 8 mm wall thickness. Give me the bounding envelope and the nominal volume I should expect before I model it in CAD.",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "A box 10 CM x 2 cm x 3cm for solidworks, solid edge, solidedge, autocad, fusion 360, fusion360, freecad, openscad, ansys and abaqus.",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id b2d1390f. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 100x20x30 mm): volume 60000 mm^3 (60 cm^3), surface area 11200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. Neutral STEP/STL exports are ready to import into SOLIDWORKS, Solid Edge, AutoCAD, Fusion 360, FreeCAD, OpenSCAD, ANSYS Mechanical, Abaqus; the studio does not drive a native vendor API. A box 10 CM x 2 cm x 3cm for solidworks, solid edge, solidedge, autocad, fusion 360, fusion360, freecad, openscad, ansys and abaqus.",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "A box 10 CM x 2 cm x 3cm for solidworks, solid edge, solidedge, autocad, fusion 360, fusion360, freecad, openscad, ansys and abaqus.",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id b2d1390f. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 100x20x30 mm): volume 60000 mm^3 (60 cm^3), surface area 11200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. Neutral STEP/STL exports are ready to import into SOLIDWORKS, Solid Edge, AutoCAD, Fusion 360, FreeCAD, OpenSCAD, ANSYS Mechanical, Abaqus; the studio does not drive a native vendor API. A box 10 CM x 2 cm x 3cm for solidworks, solid edge, solidedge, autocad, fusion 360, fusion360, freecad, openscad, ansys and abaqus.",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "cylinder radius 5 mm height 10 mm",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 6ee78631. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (cylinder r=5 h=10 mm): volume 785.398 mm^3 (0.785 cm^3), surface area 471.239 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. cylinder radius 5 mm height 10 mm",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "cylinder radius 5 mm height 10 mm",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 6ee78631. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (cylinder r=5 h=10 mm): volume 785.398 mm^3 (0.785 cm^3), surface area 471.239 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. cylinder radius 5 mm height 10 mm",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "shaft 10 mm by 20 mm",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id eeca0c79. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (cylinder r=10 h=20 mm): volume 6283.185 mm^3 (6.283 cm^3), surface area 1884.956 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. shaft 10 mm by 20 mm",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "shaft 10 mm by 20 mm",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id eeca0c79. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (cylinder r=10 h=20 mm): volume 6283.185 mm^3 (6.283 cm^3), surface area 1884.956 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. shaft 10 mm by 20 mm",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "sphere radius 2.5 cm",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id c74fa712. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (sphere r=25 mm): volume 65449.847 mm^3 (65.45 cm^3), surface area 7853.982 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. sphere radius 2. 5 cm",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "sphere radius 2.5 cm",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id c74fa712. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (sphere r=25 mm): volume 65449.847 mm^3 (65.45 cm^3), surface area 7853.982 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. sphere radius 2. 5 cm",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "ball 10mm",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 738a619a. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (sphere r=10 mm): volume 4188.79 mm^3 (4.189 cm^3), surface area 1256.637 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. ball 10mm",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "ball 10mm",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 738a619a. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (sphere r=10 mm): volume 4188.79 mm^3 (4.189 cm^3), surface area 1256.637 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. ball 10mm",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "plate 100 x 50 x 5",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id d228b2ae. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 100x50x5 mm): volume 25000 mm^3 (25 cm^3), surface area 11500 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. plate 100 x 50 x 5",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "plate 100 x 50 x 5",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id d228b2ae. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 100x50x5 mm): volume 25000 mm^3 (25 cm^3), surface area 11500 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. plate 100 x 50 x 5",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "bearing 12",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 12e7f717. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (sphere r=12 mm): volume 7238.229 mm^3 (7.238 cm^3), surface area 1809.557 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. bearing 12",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "bearing 12",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 12e7f717. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (sphere r=12 mm): volume 7238.229 mm^3 (7.238 cm^3), surface area 1809.557 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. bearing 12",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "box cylinder sphere 10x20x30",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id c0dc31e5. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box cylinder sphere 10x20x30",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "box cylinder sphere 10x20x30",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id c0dc31e5. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box cylinder sphere 10x20x30",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "First! Second? Third. Fourth.",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 8999e54c. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. First! Second? Third. Fourth.",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "First! Second? Third. Fourth.",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 8999e54c. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. First! Second? Third. Fourth.",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "  line one\n\tline two   line three.  ",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id f1ab2e08. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. line one line two line three.",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "  line one\n\tline two   line three.  ",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id f1ab2e08. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. line one line two line three.",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "bøks 10 mm",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id e2cd87a7. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. bøks 10 mm",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "bøks 10 mm",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id e2cd87a7. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. bøks 10 mm",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "10×20×30",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 5aaaa611. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 10×20×30",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "10×20×30",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 5aaaa611. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 10×20×30",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "10 * 20 * 30",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 1f13de98. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 10 * 20 * 30",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "10 * 20 * 30",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 1f13de98. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 10 * 20 * 30",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "10by20by30",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 8a8f10c3. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 10by20by30",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "10by20by30",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 8a8f10c3. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 10by20by30",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "10x20x30m",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 3debf7fe. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10000x20000x30000 mm): volume 6000000000000 mm^3 (6000000000 cm^3), surface area 2200000000 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 10x20x30m",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "10x20x30m",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 3debf7fe. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10000x20000x30000 mm): volume 6000000000000 mm^3 (6000000000 cm^3), surface area 2200000000 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 10x20x30m",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "box size_x=1 size_y: 2 size z 3",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id ca77f8d5. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 1x2x3 mm): volume 6 mm^3 (0.006 cm^3), surface area 22 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box size_x=1 size_y: 2 size z 3",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "box size_x=1 size_y: 2 size z 3",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id ca77f8d5. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 1x2x3 mm): volume 6 mm^3 (0.006 cm^3), surface area 22 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box size_x=1 size_y: 2 size z 3",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "box x=1 y=2 z=3",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 619e4295. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 1x2x3 mm): volume 6 mm^3 (0.006 cm^3), surface area 22 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box x=1 y=2 z=3",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "box x=1 y=2 z=3",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 619e4295. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 1x2x3 mm): volume 6 mm^3 (0.006 cm^3), surface area 22 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box x=1 y=2 z=3",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "box 1 2 3",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id f1400242. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 1x2x3 mm): volume 6 mm^3 (0.006 cm^3), surface area 22 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box 1 2 3",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "box 1 2 3",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id f1400242. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 1x2x3 mm): volume 6 mm^3 (0.006 cm^3), surface area 22 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box 1 2 3",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "box 1.2.3",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 943bfd48. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box 1. 2. 3",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "box 1.2.3",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 943bfd48. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box 1. 2. 3",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "box abc10 20 30",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 90877319. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box abc10 20 30",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "box abc10 20 30",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 90877319. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box abc10 20 30",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "box 10.5mm 20.5mm 30.5mm",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id d6c27613. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10.5x20.5x30.5 mm): volume 6565.125 mm^3 (6.565 cm^3), surface area 2321.5 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box 10. 5mm 20. 5mm 30.",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "box 10.5mm 20.5mm 30.5mm",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id d6c27613. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10.5x20.5x30.5 mm): volume 6565.125 mm^3 (6.565 cm^3), surface area 2321.5 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box 10. 5mm 20. 5mm 30.",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "box 0.0000001 x 0.0000002 x 0.0000003 mm",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id b91d208f. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 1e-07x2e-07x3e-07 mm): volume 6e-21 mm^3 (6e-24 cm^3), surface area 2.2e-13 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box 0. 0000001 x 0. 0000002 x 0.",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "box 0.0000001 x 0.0000002 x 0.0000003 mm",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id b91d208f. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 1e-07x2e-07x3e-07 mm): volume 6e-21 mm^3 (6e-24 cm^3), surface area 2.2e-13 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box 0. 0000001 x 0. 0000002 x 0.",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "box 10000000000000000 x 2 x 3 mm",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 91820ba7. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 1e+16x2x3 mm): volume 6e+16 mm^3 (60000000000000 cm^3), surface area 1e+17 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box 10000000000000000 x 2 x 3 mm",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "box 10000000000000000 x 2 x 3 mm",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 91820ba7. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 1e+16x2x3 mm): volume 6e+16 mm^3 (60000000000000 cm^3), surface area 1e+17 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box 10000000000000000 x 2 x 3 mm",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "box 9999999999999999 x 2 x 3 mm",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 84abeeb2. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 1e+16x2x3 mm): volume 6e+16 mm^3 (60000000000000 cm^3), surface area 1e+17 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box 9999999999999999 x 2 x 3 mm",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "box 9999999999999999 x 2 x 3 mm",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 84abeeb2. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 1e+16x2x3 mm): volume 6e+16 mm^3 (60000000000000 cm^3), surface area 1e+17 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box 9999999999999999 x 2 x 3 mm",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "cylinder r=2 h: 10",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id c051f335. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (cylinder r=2 h=10 mm): volume 125.664 mm^3 (0.126 cm^3), surface area 150.796 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. cylinder r=2 h: 10",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "cylinder r=2 h: 10",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id c051f335. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (cylinder r=2 h=10 mm): volume 125.664 mm^3 (0.126 cm^3), surface area 150.796 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. cylinder r=2 h: 10",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "cylinder 2 10",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 9c9ce605. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (cylinder r=2 h=10 mm): volume 125.664 mm^3 (0.126 cm^3), surface area 150.796 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. cylinder 2 10",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "cylinder 2 10",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 9c9ce605. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (cylinder r=2 h=10 mm): volume 125.664 mm^3 (0.126 cm^3), surface area 150.796 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. cylinder 2 10",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "sphere 5",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id d67ad8a9. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (sphere r=5 mm): volume 523.599 mm^3 (0.524 cm^3), surface area 314.159 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. sphere 5",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "sphere 5",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id d67ad8a9. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (sphere r=5 mm): volume 523.599 mm^3 (0.524 cm^3), surface area 314.159 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. sphere 5",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "sphere r 5",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 63b660a6. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (sphere r=5 mm): volume 523.599 mm^3 (0.524 cm^3), surface area 314.159 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. sphere r 5",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "sphere r 5",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 63b660a6. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (sphere r=5 mm): volume 523.599 mm^3 (0.524 cm^3), surface area 314.159 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. sphere r 5",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "pipe 3 7",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id f8036842. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (cylinder r=3 h=7 mm): volume 197.92 mm^3 (0.198 cm^3), surface area 188.496 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. pipe 3 7",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "pipe 3 7",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id f8036842. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (cylinder r=3 h=7 mm): volume 197.92 mm^3 (0.198 cm^3), surface area 188.496 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. pipe 3 7",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "rod 4.5 mm 12 mm",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 64762265. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (cylinder r=4.5 h=12 mm): volume 763.407 mm^3 (0.763 cm^3), surface area 466.527 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. rod 4. 5 mm 12 mm",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "rod 4.5 mm 12 mm",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 64762265. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (cylinder r=4.5 h=12 mm): volume 763.407 mm^3 (0.763 cm^3), surface area 466.527 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. rod 4. 5 mm 12 mm",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "pin height 10 radius 2",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 176199b9. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (cylinder r=2 h=10 mm): volume 125.664 mm^3 (0.126 cm^3), surface area 150.796 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. pin height 10 radius 2",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "pin height 10 radius 2",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 176199b9. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (cylinder r=2 h=10 mm): volume 125.664 mm^3 (0.126 cm^3), surface area 150.796 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. pin height 10 radius 2",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "bracket 40x20x10 mm",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id a5627d73. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 40x20x10 mm): volume 8000 mm^3 (8 cm^3), surface area 2800 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. bracket 40x20x10 mm",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "bracket 40x20x10 mm",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id a5627d73. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 40x20x10 mm): volume 8000 mm^3 (8 cm^3), surface area 2800 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. bracket 40x20x10 mm",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "block 1e3 x 2 x 3",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 57b18004. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 3x2x3 mm): volume 18 mm^3 (0.018 cm^3), surface area 42 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. block 1e3 x 2 x 3",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "block 1e3 x 2 x 3",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 57b18004. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 3x2x3 mm): volume 18 mm^3 (0.018 cm^3), surface area 42 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. block 1e3 x 2 x 3",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "box 10 x 20 x 30 mm. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. ",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 7e9e6333. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box 10 x 20 x 30 mm. More text. More text.",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "box 10 x 20 x 30 mm. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. More text. ",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 7e9e6333. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box 10 x 20 x 30 mm. More text. More text.",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 9a74b60b. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 9a74b60b. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "A cylinder 25 mm diameter by 120 mm long. What is the nominal volume, the surface area, and the envelope?",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id bb312465. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (cylinder r=25 h=120 mm): volume 235619.449 mm^3 (235.619 cm^3), surface area 22776.547 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. A cylinder 25 mm diameter by 120 mm long. What is the nominal volume, the surface area, and the envelope?",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "A cylinder 25 mm diameter by 120 mm long. What is the nominal volume, the surface area, and the envelope?",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id bb312465. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (cylinder r=25 h=120 mm): volume 235619.449 mm^3 (235.619 cm^3), surface area 22776.547 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. A cylinder 25 mm diameter by 120 mm long. What is the nominal volume, the surface area, and the envelope?",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "I am quoting a cylindrical housing, 80 mm outer diameter and 60 mm tall. Give me the nominal OpenCascade volume and surface area.",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 5e80ee30. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. I am quoting a cylindrical housing, 80 mm outer diameter and 60 mm tall. Give me the nominal OpenCascade volume and surface area.",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "I am quoting a cylindrical housing, 80 mm outer diameter and 60 mm tall. Give me the nominal OpenCascade volume and surface area.",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 5e80ee30. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. I am quoting a cylindrical housing, 80 mm outer diameter and 60 mm tall. Give me the nominal OpenCascade volume and surface area.",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "10x20x30",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 6e5210e6. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 10x20x30",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "10x20x30",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 6e5210e6. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 10x20x30",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "10 x 20 x 30",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 0f83d664. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 10 x 20 x 30",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "10 x 20 x 30",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 0f83d664. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 10 x 20 x 30",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "10x20",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 1b453e3e. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 10x20",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "10x20",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 1b453e3e. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 10x20",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "x10 20 30",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 4591d6de. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. x10 20 30",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "x10 20 30",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 4591d6de. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. x10 20 30",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "10mm x 20mm x 30mm",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 94d04c95. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 10mm x 20mm x 30mm",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "10mm x 20mm x 30mm",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 94d04c95. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 10mm x 20mm x 30mm",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "10 cm x 20 cm x 30 cm",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 602b6694. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 100x200x300 mm): volume 6000000 mm^3 (6000 cm^3), surface area 220000 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 10 cm x 20 cm x 30 cm",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "10 cm x 20 cm x 30 cm",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 602b6694. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 100x200x300 mm): volume 6000000 mm^3 (6000 cm^3), surface area 220000 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 10 cm x 20 cm x 30 cm",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "0.5 m x 0.5 m x 0.5 m",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id 2466a2ea. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 500x500x500 mm): volume 125000000 mm^3 (125000 cm^3), surface area 1500000 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 0. 5 m x 0. 5 m x 0.",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "0.5 m x 0.5 m x 0.5 m",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id 2466a2ea. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 500x500x500 mm): volume 125000000 mm^3 (125000 cm^3), surface area 1500000 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. 0. 5 m x 0. 5 m x 0.",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "box 2000 x 2000 x 2000 mm",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id b134dfc4. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 2000x2000x2000 mm): volume 8000000000 mm^3 (8000000 cm^3), surface area 24000000 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box 2000 x 2000 x 2000 mm",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "box 2000 x 2000 x 2000 mm",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id b134dfc4. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 2000x2000x2000 mm): volume 8000000000 mm^3 (8000000 cm^3), surface area 24000000 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box 2000 x 2000 x 2000 mm",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "box 0.1 x 0.1 x 0.1 mm",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id a502dcee. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 0.1x0.1x0.1 mm): volume 0.001 mm^3 (0 cm^3), surface area 0.06 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box 0. 1 x 0. 1 x 0.",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "box 0.1 x 0.1 x 0.1 mm",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id a502dcee. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 0.1x0.1x0.1 mm): volume 0.001 mm^3 (0 cm^3), surface area 0.06 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. box 0. 1 x 0. 1 x 0.",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "CYLINDER RADIUS 5 MM HEIGHT 10 MM",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id ca527e2c. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (cylinder r=5 h=10 mm): volume 785.398 mm^3 (0.785 cm^3), surface area 471.239 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. CYLINDER RADIUS 5 MM HEIGHT 10 MM",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "CYLINDER RADIUS 5 MM HEIGHT 10 MM",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id ca527e2c. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (cylinder r=5 h=10 mm): volume 785.398 mm^3 (0.785 cm^3), surface area 471.239 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. CYLINDER RADIUS 5 MM HEIGHT 10 MM",
+  "model": "custom-model-1",
+  "offline": true
+ },
+ {
+  "prompt": "Box 10X20X30 MM",
+  "request_model": null,
+  "text": "Local helper. Reasoning trace id f8555264. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. Box 10X20X30 MM",
+  "model": "deterministic-paraphrase-v1",
+  "offline": true
+ },
+ {
+  "prompt": "Box 10X20X30 MM",
+  "request_model": "custom-model-1",
+  "text": "Local helper. Reasoning trace id f8555264. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. Box 10X20X30 MM",
+  "model": "custom-model-1",
+  "offline": true
+ }
+]

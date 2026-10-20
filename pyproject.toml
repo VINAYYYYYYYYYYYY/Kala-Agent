@@ -63,6 +63,9 @@ pythonpath = ["src"]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
 xfail_strict = true
+markers = [
+    "freecad: exercises a real FreeCADCmd installation and is skipped when it is absent",
+]
 
 [tool.coverage.run]
 branch = true

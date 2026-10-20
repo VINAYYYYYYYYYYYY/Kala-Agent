@@ -1,0 +1,17 @@
+[package]
+name = "kala-budget"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Native arbitrary-precision Decimal and run-budget ledger compatible with the Kala Agent Python kernel"
+
+[dependencies]
+# Reviewed foundation crate: reuse its CPython-compatible float formatting
+# (`kala_json::format_float`) instead of maintaining a second implementation.
+kala-json = { path = "../kala-json" }
+num-bigint.workspace = true
+num-traits.workspace = true
+serde_json = { workspace = true, features = ["arbitrary_precision"] }
+thiserror.workspace = true

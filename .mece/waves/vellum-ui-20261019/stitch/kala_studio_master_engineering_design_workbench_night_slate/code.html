@@ -1,0 +1,637 @@
+<!DOCTYPE html><html class="dark" lang="en"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100..900&amp;family=Newsreader:wght@100..900&amp;family=Space+Grotesk:wght@100..900&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "error-container": "#ffdad6", "on-secondary-container": "#295982", "on-surface": "#F5F5F7", "on-primary": "#ffffff", "surface": "#0A0A0B", "surface-dim": "#121214", "on-background": "#F5F5F7", "secondary-container": "#a4d0ff", "on-error-container": "#93000a", "surface-container-high": "#232326", "primary-fixed": "#e5e2de", "primary-fixed-dim": "#c9c6c3", "tertiary-container": "#3e0500", "primary": "#000000", "on-tertiary-fixed-variant": "#891e07", "on-surface-variant": "#8E8D94", "secondary": "#33628b", "secondary-fixed-dim": "#9ecbfa", "surface-container-low": "#121214", "on-secondary-fixed-variant": "#154a72", "background": "#0A0A0B", "surface-container-lowest": "#000000", "on-primary-container": "#858481", "tertiary": "#000000", "secondary-fixed": "#cfe5ff", "outline-variant": "#26262A", "surface-bright": "#161619", "error": "#ba1a1a", "on-tertiary-container": "#dd5a3e", "inverse-on-surface": "#1c1c18", "inverse-surface": "#f3f0e9", "outline": "#777770", "on-tertiary": "#ffffff", "on-secondary": "#ffffff", "surface-container": "#161619", "surface-tint": "#5f5e5b", "on-primary-fixed": "#1c1c1a", "on-primary-fixed-variant": "#474744", "on-error": "#ffffff", "inverse-primary": "#c9c6c3", "tertiary-fixed-dim": "#ffb4a4", "tertiary-fixed": "#ffdad3", "surface-variant": "#1A1A1E", "on-tertiary-fixed": "#3e0500", "surface-container-highest": "#232326", "primary-container": "#0A0A0B", "on-secondary-fixed": "#001d33" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "space-xl": "2rem", "space-md": "0.75rem", "margin": "1rem", "gutter": "0.75rem", "space-lg": "1.25rem", "margin-mobile": "0.75rem", "space-xs": "0.25rem", "gutter-mobile": "0.5rem", "space-sm": "0.5rem" }, "fontFamily": { "body-md": ["Space Grotesk"], "label-lg": ["JetBrains Mono"], "body-sm": ["Space Grotesk"], "headline-xl-mobile": ["Newsreader"], "body-lg": ["Space Grotesk"], "label-sm": ["JetBrains Mono"], "label-md": ["JetBrains Mono"], "headline-lg": ["Newsreader"], "headline-md": ["Newsreader"], "headline-xl": ["Newsreader"] }, "fontSize": { "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }], "label-lg": ["13px", { "lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "600" }], "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "headline-xl-mobile": ["30px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "400" }], "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }], "label-sm": ["9px", { "lineHeight": "12px", "letterSpacing": "0.08em", "fontWeight": "500" }], "label-md": ["11px", { "lineHeight": "14px", "letterSpacing": "0.06em", "fontWeight": "500" }], "headline-lg": ["28px", { "lineHeight": "34px", "letterSpacing": "-0.01em", "fontWeight": "400" }], "headline-md": ["22px", { "lineHeight": "28px", "fontWeight": "500" }], "headline-xl": ["38px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "400" }] } } } };</script></head><body class="bg-[#0A0A0B] text-[#F5F5F7] font-body-sm antialiased selection:bg-[#2B5B84] selection:text-white select-none"><header class="fixed top-0 left-0 right-0 h-[42px] bg-[#0A0A0B] border-b border-[#232326] z-50 flex items-center justify-between px-3"><div class="flex items-center gap-3"><div class="flex items-center gap-2"><span class="material-symbols-outlined text-[16px] text-[#F5F5F7]">settings</span><span class="font-label-md text-label-md text-[#F5F5F7] tracking-wider uppercase font-semibold">Kala Studio</span></div><div class="h-3 w-px bg-[#232326]"></div><span class="font-label-sm text-label-sm text-[#8E8D94] tracking-wider uppercase">chat-first mechanical engineering agent</span></div><div class="flex items-center gap-2"><div class="flex items-center gap-1.5 px-2 py-0.5 bg-[#121214] border border-[#232326] rounded"><span class="relative flex h-1.5 w-1.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span></span><span class="font-label-sm text-label-sm text-[#F5F5F7] font-medium tracking-wide uppercase">Live</span></div><span class="font-label-sm text-label-sm text-[#8E8D94] bg-[#121214] border border-[#232326] px-1.5 py-0.5 rounded tracking-wide uppercase">Desktop shell</span><span class="font-label-sm text-label-sm text-[#8E8D94] bg-[#121214] border border-[#232326] px-1.5 py-0.5 rounded tracking-wide font-mono">v0.1.0</span><!-- Night / Paper Toggle with clearly active NIGHT mode highlighted --><div class="flex items-center bg-[#000000] border border-[#323238] rounded p-0.5 ml-1 ring-1 ring-[#2B5B84]/50"><button class="flex items-center gap-1.5 px-2 py-0.5 text-white bg-[#232326] shadow-sm border border-[#3E3E44] rounded text-[10px] font-label-sm font-semibold uppercase tracking-wider transition-all" id="theme-night-btn" type="button"><span class="material-symbols-outlined text-[12px] text-[#9ecbfa]">dark_mode</span><span>Night</span><span class="w-1 h-1 rounded-full bg-[#33628b]"></span></button><button class="flex items-center gap-1 px-1.5 py-0.5 text-[#8E8D94] hover:text-[#F5F5F7] rounded text-[10px] font-label-sm uppercase transition-colors" id="theme-paper-btn" type="button"><span class="material-symbols-outlined text-[12px]">light_mode</span>Paper</button></div><div class="w-6 h-6 rounded-full bg-[#121214] border border-[#232326] flex items-center justify-center ml-1"><span class="material-symbols-outlined text-[#F5F5F7] text-[14px]">person</span></div></div></header><aside class="fixed left-0 top-[42px] bottom-0 w-[220px] bg-[#121214] border-r border-[#232326] z-40 flex flex-col justify-between overflow-y-auto"><div class="flex flex-col"><div class="px-3 py-2 border-b border-[#232326] flex items-center justify-between"><span class="font-label-sm text-label-sm uppercase tracking-widest text-[#8E8D94]">Modules // Kernels</span><span class="font-label-sm text-label-sm text-[#8E8D94]">3 Active</span></div><nav class="flex flex-col py-1" data-active-classes="bg-[#232326] border-l-2 border-l-[#2B5B84] text-[#F5F5F7]"><a aria-current="page" class="flex flex-col px-3 py-2 transition-all bg-[#232326] border-l-2 border-l-[#2B5B84] text-[#F5F5F7]" data-path="cad-workspace" href="#"><div class="flex items-center justify-between w-full"><span class="font-label-md text-label-md font-medium tracking-wide text-[#F5F5F7]">[CAD]</span><span class="font-label-sm text-label-sm text-[#8E8D94]">3 Int.</span></div><span class="font-label-sm text-label-sm text-[#8E8D94] mt-0.5 truncate">Parametric kernel</span></a><a class="flex flex-col px-3 py-2 text-[#8E8D94] hover:bg-[#1a1a1c] hover:text-[#F5F5F7] transition-all border-l-2 border-l-transparent" data-path="analysis-workspace" href="#"><div class="flex items-center justify-between w-full"><span class="font-label-md text-label-md font-medium tracking-wide text-[#F5F5F7]">[Analysis]</span><span class="font-label-sm text-label-sm text-[#8E8D94]">2 Int.</span></div><span class="font-label-sm text-label-sm text-[#8E8D94] mt-0.5 truncate">FEA/CAE solver</span></a><a class="flex flex-col px-3 py-2 text-[#8E8D94] hover:bg-[#1a1a1c] hover:text-[#F5F5F7] transition-all border-l-2 border-l-transparent" data-path="provider-settings" href="#"><div class="flex items-center justify-between w-full"><span class="font-label-md text-label-md font-medium tracking-wide text-[#F5F5F7]">[Providers]</span><span class="font-label-sm text-label-sm text-[#8E8D94]">2/3 Conf.</span></div><span class="font-label-sm text-label-sm text-[#8E8D94] mt-0.5 truncate">API keys &amp; keytar</span></a></nav><div class="px-3 pt-3 pb-1"><span class="font-label-sm text-label-sm uppercase tracking-widest text-[#8E8D94]">Integrations</span></div><div class="flex flex-col px-2 gap-1 pb-3"><div class="p-2 bg-[#0A0A0B] border border-[#232326] rounded flex flex-col gap-1"><div class="flex items-center justify-between"><span class="font-label-sm text-label-sm text-[#F5F5F7] font-medium">FreeCAD</span><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span></div><span class="font-label-sm text-label-sm text-[#8E8D94]">Local adapter active</span></div><div class="p-2 bg-[#0A0A0B] border border-[#232326] rounded flex flex-col gap-1"><div class="flex items-center justify-between"><span class="font-label-sm text-label-sm text-[#F5F5F7] font-medium">SOLIDWORKS</span><span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span></div><span class="font-label-sm text-label-sm text-[#8E8D94]">Spool listener ready</span></div><div class="p-2 bg-[#0A0A0B] border border-[#232326] rounded flex flex-col gap-1"><div class="flex items-center justify-between"><span class="font-label-sm text-label-sm text-[#F5F5F7] font-medium">Fusion 360</span><span class="h-1.5 w-1.5 rounded-full bg-[#8E8D94]"></span></div><span class="font-label-sm text-label-sm text-[#8E8D94]">Idle export link</span></div></div></div><div class="p-2 border-t border-[#232326] bg-[#0A0A0B]"><div class="p-2 bg-[#121214] border border-[#232326] rounded flex flex-col gap-1"><div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[13px] text-emerald-400">lock</span><span class="font-label-sm text-label-sm uppercase text-[#F5F5F7] font-semibold">Keytar Enclave</span></div><span class="font-label-sm text-label-sm text-[#8E8D94] truncate" title="Connected to http://127.0.0.1:8765 (desktop shell)">127.0.0.1:8765 (desktop shell)</span></div></div></aside><div class="pl-[220px]"><main class="relative pt-[42px] min-h-screen bg-[#0A0A0B] text-[#F5F5F7]"><div class="flex flex-col w-full text-on-surface select-none">
+<!-- PRIMARY GRID CONTAINER (CENTER VIEWPORT + RIGHT RAIL) -->
+<div class="flex flex-col xl:flex-row w-full min-h-[calc(100vh-42px)] bg-primary-container">
+<!-- ========================================================================= -->
+<!-- CENTER WORKSPACE (SPLIT LIVING DRAFT VIEWPORT & AGENT THREAD)           -->
+<!-- ========================================================================= -->
+<div class="flex-1 flex flex-col min-w-0 bg-primary-container border-r border-[#26262A]">
+<!-- WORKSPACE SUB-HEADER / TOOLBAR -->
+<div class="h-10 bg-[#121214] border-b border-[#26262A] px-3 flex items-center justify-between gap-2 overflow-x-auto">
+<!-- Group 1: View Modes -->
+<div class="flex items-center gap-1">
+<div class="flex items-center bg-[#0A0A0B] p-0.5 rounded border border-[#26262A]">
+<button class="px-2 py-0.5 bg-[#232326] text-[#F5F5F7] rounded text-label-sm font-label-sm flex items-center gap-1 uppercase tracking-wider transition-all" id="btn-view-agent" type="button">
+<span class="material-symbols-outlined text-[12px] text-[#295982]">splitscreen</span>
+<span>Agent</span>
+</button>
+<button class="px-2 py-0.5 text-[#8E8D94] hover:text-[#F5F5F7] rounded text-label-sm font-label-sm flex items-center gap-1 uppercase tracking-wider transition-all" id="btn-view-3d" type="button">
+<span class="material-symbols-outlined text-[12px]">view_in_ar</span>
+<span>3D Focus</span>
+</button>
+</div>
+</div>
+<div class="h-4 w-px bg-[#26262A]"></div>
+<!-- Group 2: Primitives -->
+<div class="flex items-center gap-1">
+<span class="font-label-sm text-label-sm text-[#8E8D94] uppercase tracking-wider mr-1">Shape:</span>
+<div class="flex items-center bg-[#0A0A0B] p-0.5 rounded border border-[#26262A]">
+<button class="px-2 py-0.5 bg-[#232326] text-[#F5F5F7] font-label-sm text-label-sm rounded uppercase font-medium">Box</button>
+<button class="px-2 py-0.5 text-[#8E8D94] hover:text-[#F5F5F7] font-label-sm text-label-sm rounded uppercase">Cyl</button>
+<button class="px-2 py-0.5 text-[#8E8D94] hover:text-[#F5F5F7] font-label-sm text-label-sm rounded uppercase">Sph</button>
+</div>
+</div>
+<div class="h-4 w-px bg-[#26262A]"></div>
+<!-- Group 3: Layer Toggles -->
+<div class="flex items-center gap-2">
+<label class="flex items-center gap-1 cursor-pointer">
+<input checked="" class="w-3 h-3 accent-[#33628b] rounded-none bg-[#0A0A0B] border border-[#26262A]" type="checkbox">
+<span class="font-label-sm text-label-sm text-[#F5F5F7]">Grid</span>
+</label>
+<label class="flex items-center gap-1 cursor-pointer">
+<input checked="" class="w-3 h-3 accent-[#33628b] rounded-none bg-[#0A0A0B] border border-[#26262A]" type="checkbox">
+<span class="font-label-sm text-label-sm text-[#F5F5F7]">Axes</span>
+</label>
+<label class="flex items-center gap-1 cursor-pointer">
+<input checked="" class="w-3 h-3 accent-[#33628b] rounded-none bg-[#0A0A0B] border border-[#26262A]" type="checkbox">
+<span class="font-label-sm text-label-sm text-[#F5F5F7]">Dims</span>
+</label>
+<label class="flex items-center gap-1 cursor-pointer">
+<input checked="" class="w-3 h-3 accent-[#dd5a3e] rounded-none bg-[#0A0A0B] border border-[#26262A]" type="checkbox">
+<span class="font-label-sm text-label-sm text-[#dd5a3e] font-semibold">Section Cut</span>
+</label>
+</div>
+<div class="h-4 w-px bg-[#26262A]"></div>
+<!-- Group 4 & 5: Shading & Canvas Tone -->
+<div class="flex items-center gap-2">
+<div class="flex items-center gap-1 bg-[#0A0A0B] border border-[#26262A] px-1.5 py-0.5 rounded">
+<span class="font-label-sm text-label-sm text-[#8E8D94]">Mat:</span>
+<span class="font-label-sm text-label-sm text-[#F5F5F7] font-medium">Wireframe</span>
+</div>
+<div class="flex items-center gap-1 bg-[#0A0A0B] border border-[#26262A] px-1.5 py-0.5 rounded">
+<span class="font-label-sm text-label-sm text-[#8E8D94]">Bg:</span>
+<span class="font-label-sm text-label-sm text-[#F5F5F7] font-medium">Dark Slate</span>
+</div>
+</div>
+<div class="h-4 w-px bg-[#26262A]"></div>
+<!-- Group 6: Reset Action -->
+<button class="px-2 py-0.5 bg-[#1a1a1d] hover:bg-[#232326] text-[#F5F5F7] border border-[#26262A] rounded font-label-sm text-label-sm flex items-center gap-1 transition-colors" type="button">
+<span class="material-symbols-outlined text-[13px]">restart_alt</span>
+<span>Reset</span>
+</button>
+</div>
+<!-- MAIN SPLIT WORKSPACE: TOP VIEWPORT (2D/3D LIVING DRAFT) -->
+<div class="relative h-[480px] bg-[#0A0A0B] flex flex-col border-b border-[#26262A] overflow-hidden" id="living-draft-viewport">
+<!-- TOP DRAFTING CONTROL DECK & STAMPS -->
+<div class="absolute top-2 left-3 right-3 z-20 flex items-center justify-between pointer-events-none">
+<!-- Slider Control -->
+<div class="pointer-events-auto flex items-center gap-3 bg-[#121214]/95 border border-[#26262A] px-3 py-1.5 rounded shadow-xl">
+<div class="flex items-center gap-1.5 font-label-sm text-label-sm text-[#8E8D94] uppercase tracking-wider">
+<span>2D Orthographic</span>
+<span class="text-[#4E4E56]">←</span>
+</div>
+<div class="relative flex items-center w-36">
+<input class="w-full h-1 bg-[#232326] appearance-none rounded cursor-pointer accent-[#295982]" id="projection-slider" max="100" min="0" type="range" value="65">
+</div>
+<div class="flex items-center gap-1.5 font-label-sm text-label-sm text-[#F5F5F7] uppercase tracking-wider">
+<span class="text-[#4E4E56]">→</span>
+<span class="text-[#a4d0ff] font-semibold">3D Isometric Orbit</span>
+</div>
+<div class="h-3 w-px bg-[#26262A]"></div>
+<div class="flex items-center gap-1 px-1.5 py-0.5 bg-[#3e0500]/40 border border-[#dd5a3e]/40 rounded font-label-sm text-label-sm text-[#dd5a3e]">
+<span class="material-symbols-outlined text-[11px]">content_cut</span>
+<span>Cut A—A: 50% Section Plane</span>
+</div>
+</div>
+<!-- Server Verification Badge -->
+<div class="pointer-events-auto flex items-center gap-1.5 px-2 py-1 bg-[#121214]/95 border border-[#26262A] rounded shadow-xl">
+<span class="material-symbols-outlined text-[13px] text-emerald-400">verified</span>
+<span class="font-label-sm text-label-sm text-[#F5F5F7] tracking-wider uppercase font-medium">Server Verified Mesh</span>
+<span class="font-label-sm text-label-sm text-[#8E8D94] font-mono">B-Rep v7.8</span>
+</div>
+</div>
+<!-- CANVAS ORTHOGRAPHIC/ISOMETRIC VECTOR DRAFT ENGINE -->
+<div class="relative w-full h-full flex items-center justify-center p-4">
+<!-- Perimeter Calibration Marks (DIN ISO 5457 style) -->
+<div class="absolute inset-0 pointer-events-none border border-[#26262A]/40 m-2 flex flex-col justify-between p-1">
+<div class="flex justify-between font-label-sm text-[9px] text-[#4E4E56]">
+<span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span>
+</div>
+<div class="flex justify-between font-label-sm text-[9px] text-[#4E4E56] [writing-mode:vertical-rl] h-full py-4">
+<span>A</span><span>B</span><span>C</span><span>D</span>
+</div>
+<div class="flex justify-between font-label-sm text-[9px] text-[#4E4E56]">
+<span>+</span><span>+</span><span>+</span><span>+</span><span>+</span><span>+</span><span>+</span><span>+</span>
+</div>
+</div>
+<!-- SVG Precision Wireframe Display: 40x20x30 L-Bracket / Housing Enclosure -->
+<svg class="w-full h-full max-h-[420px] select-none" style="filter: drop-shadow(0 0 1px rgba(245,245,247,0.1));" viewBox="0 0 800 420">
+<defs>
+<!-- 45 Degree Crosshatch Section Cut Pattern -->
+<pattern height="8" id="sectionHatch" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse" width="8">
+<line stroke="#dd5a3e" stroke-opacity="0.8" stroke-width="1.2" x1="0" x2="0" y1="0" y2="8"></line>
+</pattern>
+<!-- Subtle Background Drafting Grid -->
+<pattern height="20" id="cadGrid" patternUnits="userSpaceOnUse" width="20">
+<path d="M 20 0 L 0 0 0 20" fill="none" stroke="#232326" stroke-width="0.75"></path>
+</pattern>
+</defs>
+<!-- Background Grid Layer -->
+<rect fill="url(#cadGrid)" height="100%" opacity="0.6" width="100%"></rect>
+<!-- 2H Construction Layout Projection Lines (Hairline) -->
+<g stroke="#323238" stroke-dasharray="3,3" stroke-width="0.8">
+<line x1="140" x2="660" y1="360" y2="360"></line>
+<line x1="220" x2="220" y1="90" y2="370"></line>
+<line x1="580" x2="580" y1="90" y2="370"></line>
+<line x1="160" x2="640" y1="210" y2="210"></line>
+</g>
+<!-- MAIN SOLID WIREFRAME: High-Rigidity Precision L-Bracket with Gusset Web -->
+<!-- Base Foot: 40mm wide, 8mm thick, 30mm deep -->
+<!-- Upright Leg: 20mm total height, 8mm thick -->
+<g fill="none" id="drafting-geometry" stroke="#F5F5F7" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4">
+<!-- Back Hidden Lines (dashed) -->
+<path d="M 270,170 L 450,110 L 590,180" stroke="#4E4E56" stroke-dasharray="3,2" stroke-width="1"></path>
+<path d="M 450,110 L 450,210" stroke="#4E4E56" stroke-dasharray="3,2" stroke-width="1"></path>
+<!-- Left Base Mounting Flange Profile -->
+<polygon fill="#121214" fill-opacity="0.85" points="270,270 410,200 410,225 270,295"></polygon>
+<!-- Primary Isometric Solid Extrusion -->
+<!-- Front Upright Face -->
+<polygon fill="#121214" fill-opacity="0.9" points="410,130 450,110 590,180 550,200" stroke="#F5F5F7"></polygon>
+<!-- Top L-Face -->
+<polygon fill="#18181B" fill-opacity="0.8" points="410,130 550,200 550,225 410,155" stroke="#F5F5F7"></polygon>
+<!-- Bottom Base Plate -->
+<polygon fill="#121214" fill-opacity="0.95" points="270,295 410,225 550,295 410,365" stroke="#F5F5F7"></polygon>
+<!-- Solid Contour Outlines -->
+<path d="M 270,270 L 410,130 L 410,200 L 270,270 Z" stroke="#F5F5F7"></path>
+<path d="M 410,130 L 450,110 L 590,180 L 590,250 L 550,295 L 410,365 L 270,295 L 270,270" stroke="#F5F5F7" stroke-width="1.8"></path>
+<path d="M 410,365 L 410,225 L 550,225 L 550,295" stroke="#F5F5F7"></path>
+<!-- Counterbored Fastener Clearance Hole (Left Ear) -->
+<ellipse cx="340" cy="275" fill="#0A0A0B" rx="16" ry="9" stroke="#9ecbfa" stroke-width="1" transform="rotate(-15 340 275)"></ellipse>
+<circle cx="340" cy="275" fill="#a4d0ff" r="4"></circle>
+<path d="M 334,275 L 346,275 M 340,269 L 340,281" stroke="#33628b" stroke-width="0.8"></path>
+<!-- Triangular Stiffening Gusset Web (8mm) -->
+<polygon fill="#1A1A1E" points="410,200 480,235 410,270" stroke="#F5F5F7" stroke-width="1.2"></polygon>
+</g>
+<!-- SECTION A—A CUTTING PLANE & HATCH FILL -->
+<g class="transition-opacity" id="section-plane-cut">
+<!-- Hatched Sectioned Face through Center YZ symmetry -->
+<polygon fill="url(#sectionHatch)" points="410,225 480,260 480,290 410,255" stroke="#dd5a3e" stroke-width="1.5"></polygon>
+<!-- Red Section Cut Datum Indicator Line -->
+<line stroke="#dd5a3e" stroke-dasharray="8,3,2,3" stroke-width="1.2" x1="230" x2="610" y1="210" y2="210"></line>
+<circle cx="230" cy="210" fill="#dd5a3e" r="3"></circle>
+<circle cx="610" cy="210" fill="#dd5a3e" r="3"></circle>
+<!-- Section Callout Flags -->
+<text fill="#dd5a3e" font-family="JetBrains Mono" font-size="11" font-weight="bold" x="215" y="213">A</text>
+<text fill="#dd5a3e" font-family="JetBrains Mono" font-size="11" font-weight="bold" x="620" y="213">A</text>
+</g>
+<!-- CAD DIMENSION CALLOUTS & EXTENSION LINES (Cyan & Graphite) -->
+<g fill="none" stroke="#33628b" stroke-width="1">
+<!-- Width Dimension: 40.00 mm (X) -->
+<line stroke="#4E4E56" stroke-width="0.8" x1="270" x2="270" y1="305" y2="385"></line>
+<line stroke="#4E4E56" stroke-width="0.8" x1="410" x2="410" y1="375" y2="400"></line>
+<line marker-end="url(#dot)" marker-start="url(#dot)" x1="270" x2="410" y1="380" y2="380"></line>
+<path d="M 270,378 L 276,380 L 270,382 Z M 410,378 L 404,380 L 410,382 Z" fill="#33628b"></path>
+<!-- Depth Dimension: 30.00 mm (Z) -->
+<line stroke="#4E4E56" stroke-width="0.8" x1="410" x2="410" y1="375" y2="400"></line>
+<line stroke="#4E4E56" stroke-width="0.8" x1="550" x2="550" y1="305" y2="385"></line>
+<line x1="410" x2="550" y1="380" y2="380"></line>
+<path d="M 410,378 L 416,380 L 410,382 Z M 550,378 L 544,380 L 550,382 Z" fill="#33628b"></path>
+<!-- Height Dimension: 20.00 mm (Y) -->
+<line stroke="#4E4E56" stroke-width="0.8" x1="600" x2="625" y1="180" y2="180"></line>
+<line stroke="#4E4E56" stroke-width="0.8" x1="600" x2="625" y1="250" y2="250"></line>
+<line x1="620" x2="620" y1="180" y2="250"></line>
+<path d="M 618,180 L 620,186 L 622,180 Z M 618,250 L 620,244 L 622,250 Z" fill="#33628b"></path>
+<!-- Thickness Callout Leader (t = 8.00 mm) -->
+<polyline points="470,120 495,95 530,95"></polyline>
+<!-- Fillet Radius Callout (R 4.00 TYP) -->
+<polyline points="332,270 310,240 260,240"></polyline>
+</g>
+<!-- Text Labels for Dimensions -->
+<g fill="#a4d0ff" font-family="JetBrains Mono" font-size="10">
+<text font-weight="600" text-anchor="middle" x="315" y="375">40.00 mm (X)</text>
+<text font-weight="600" text-anchor="middle" x="490" y="375">30.00 mm (Z)</text>
+<text font-weight="600" x="635" y="218">20.00 mm (Y)</text>
+<text fill="#F5F5F7" x="535" y="98">t = 8.00 mm</text>
+<text fill="#F5F5F7" x="255" y="236">R 4.00 TYP</text>
+</g>
+<!-- CSYS Coordinate Triad (Bottom Right) -->
+<g transform="translate(730, 370)">
+<!-- Axis lines -->
+<line stroke="#dd5a3e" stroke-width="1.8" x1="0" x2="35" y1="0" y2="0"></line> <!-- X Red -->
+<line stroke="#22c55e" stroke-width="1.8" x1="0" x2="0" y1="0" y2="-35"></line> <!-- Y Green -->
+<line stroke="#33628b" stroke-width="1.8" x1="0" x2="-22" y1="0" y2="18"></line> <!-- Z Blue -->
+<!-- Triad Head Arrows & Text -->
+<text fill="#dd5a3e" font-family="JetBrains Mono" font-size="9" font-weight="bold" x="40" y="4">X</text>
+<text fill="#22c55e" font-family="JetBrains Mono" font-size="9" font-weight="bold" x="-3" y="-40">Y</text>
+<text fill="#9ecbfa" font-family="JetBrains Mono" font-size="9" font-weight="bold" x="-32" y="28">Z</text>
+<circle cx="0" cy="0" fill="#F5F5F7" r="2.5"></circle>
+<text fill="#8E8D94" font-family="JetBrains Mono" font-size="8" x="-48" y="40">ISO 30° / WGS84 Ortho · ISO 128</text>
+</g>
+</svg>
+<!-- FLOATING DRAFTING HUD OVERLAY (Alt+Space Accelerator Widget) -->
+<div class="absolute bottom-12 left-4 z-20 w-80 bg-[#121214]/95 border border-[#26262A] p-2.5 rounded shadow-2xl backdrop-blur-sm">
+<div class="flex items-center justify-between pb-1.5 mb-2 border-b border-[#26262A]">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[13px] text-[#295982]">speed</span>
+<span class="font-label-sm text-label-sm uppercase font-semibold text-[#F5F5F7] tracking-wider">Slide-Rule Companion</span>
+</div>
+<span class="font-label-sm text-[8px] bg-[#232326] px-1 py-0.5 rounded text-[#8E8D94] font-mono">Alt+Space</span>
+</div>
+<div class="grid grid-cols-2 gap-1.5 font-label-sm text-label-sm mb-2">
+<div class="flex justify-between bg-[#0A0A0B] px-1.5 py-1 rounded border border-[#26262A]">
+<span class="text-[#8E8D94]">t_wall:</span>
+<span class="text-[#F5F5F7] font-mono font-medium">8.00 mm</span>
+</div>
+<div class="flex justify-between bg-[#0A0A0B] px-1.5 py-1 rounded border border-[#26262A]">
+<span class="text-[#8E8D94]">fillet_r:</span>
+<span class="text-[#F5F5F7] font-mono font-medium">4.00 mm</span>
+</div>
+<div class="flex justify-between bg-[#0A0A0B] px-1.5 py-1 rounded border border-[#26262A]">
+<span class="text-[#8E8D94]">material:</span>
+<span class="text-[#F5F5F7] font-mono font-medium truncate max-w-[70px]">6061-T6</span>
+</div>
+<div class="flex justify-between bg-[#0A0A0B] px-1.5 py-1 rounded border border-[#26262A]">
+<span class="text-[#8E8D94]">safety_f:</span>
+<span class="text-emerald-400 font-mono font-medium">2.45x</span>
+</div>
+</div>
+<button class="w-full flex items-center justify-center gap-1.5 py-1 bg-[#1A1A1E] hover:bg-[#232326] text-[#a4d0ff] border border-[#26262A] rounded font-label-sm text-label-sm transition-colors" type="button">
+<span class="material-symbols-outlined text-[12px]">bolt</span>
+<span>Quick-Spool STEP to FreeCAD</span>
+</button>
+</div>
+<!-- Bottom Camera HUD Strip -->
+<div class="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-[#121214]/90 border border-[#26262A] px-2 py-1 rounded shadow-lg">
+<span class="font-label-sm text-label-sm text-[#F5F5F7] font-mono px-1">40.0 × 20.0 × 30.0 mm</span>
+<div class="h-3 w-px bg-[#26262A]"></div>
+<button class="px-1.5 py-0.5 hover:bg-[#232326] rounded text-[#8E8D94] hover:text-[#F5F5F7] font-label-sm text-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">filter_center_focus</span>
+<span>Reset Cam</span>
+</button>
+<button class="px-1.5 py-0.5 hover:bg-[#232326] rounded text-[#8E8D94] hover:text-[#F5F5F7] font-label-sm text-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">content_cut</span>
+<span>Section Cut</span>
+</button>
+<button class="px-1.5 py-0.5 hover:bg-[#232326] rounded text-[#8E8D94] hover:text-[#F5F5F7] font-label-sm text-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">straighten</span>
+<span>Measure</span>
+</button>
+<button class="px-1.5 py-0.5 hover:bg-[#232326] rounded text-[#8E8D94] hover:text-[#F5F5F7] font-label-sm text-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">grid_4x4</span>
+<span>Wireframe</span>
+</button>
+</div>
+</div>
+</div>
+<!-- MAIN SPLIT WORKSPACE: BOTTOM AGENT CHAT & TELEMETRY THREAD -->
+<div class="flex-1 flex flex-col min-h-[380px] bg-[#0E0E10] overflow-hidden">
+<!-- ACTIVE GEOMETRY TELEMETRY BANNER -->
+<div class="bg-[#121214] border-b border-[#26262A] px-3 py-1.5 flex items-center justify-between text-label-sm font-label-sm overflow-x-auto">
+<div class="flex items-center gap-2">
+<span class="bg-[#232326] text-[#F5F5F7] px-1.5 py-0.5 rounded font-mono font-medium">[BOX]</span>
+<span class="text-[#8E8D94]">Dimensions:</span>
+<span class="text-[#F5F5F7] font-mono">40.0 × 20.0 × 30.0 mm</span>
+<span class="text-[#4E4E56]">|</span>
+<span class="text-[#8E8D94]">Volume:</span>
+<span class="text-[#a4d0ff] font-mono">24,000 mm³ (24.00 cm³)</span>
+<span class="text-[#4E4E56]">|</span>
+<span class="text-[#8E8D94]">Status:</span>
+<span class="text-emerald-400 font-mono flex items-center gap-0.5">
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              ISO 10303 READY
+            </span>
+</div>
+<span class="text-[#8E8D94] font-mono text-[9px] uppercase">Engine: OpenCASCADE 7.8</span>
+</div>
+<!-- QUICK STARTER PROMPT PILLS -->
+<div class="px-3 py-2 flex items-center gap-2 overflow-x-auto bg-[#0A0A0B]/60 border-b border-[#26262A]">
+<span class="font-label-sm text-label-sm text-[#8E8D94] whitespace-nowrap">Shortcuts:</span>
+<button class="px-2 py-0.5 bg-[#121214] hover:bg-[#1E1E22] text-[#8E8D94] hover:text-[#F5F5F7] border border-[#26262A] rounded font-label-sm text-label-sm whitespace-nowrap transition-colors">
+            + Size an L-bracket
+          </button>
+<button class="px-2 py-0.5 bg-[#121214] hover:bg-[#1E1E22] text-[#8E8D94] hover:text-[#F5F5F7] border border-[#26262A] rounded font-label-sm text-label-sm whitespace-nowrap transition-colors">
+            + Size a shaft
+          </button>
+<button class="px-2 py-0.5 bg-[#121214] hover:bg-[#1E1E22] text-[#8E8D94] hover:text-[#F5F5F7] border border-[#26262A] rounded font-label-sm text-label-sm whitespace-nowrap transition-colors">
+            + Estimate a housing
+          </button>
+<button class="px-2 py-0.5 bg-[#121214] hover:bg-[#1E1E22] text-[#8E8D94] hover:text-[#F5F5F7] border border-[#26262A] rounded font-label-sm text-label-sm whitespace-nowrap transition-colors">
+            + Plan STEP/STL handoff
+          </button>
+</div>
+<!-- CONVERSATIONAL AGENT MESSAGE LOG -->
+<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+<!-- USER MESSAGE -->
+<div class="flex gap-2.5 max-w-2xl">
+<div class="w-6 h-6 rounded bg-[#232326] border border-[#323238] flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[13px] text-[#F5F5F7]">person</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="font-label-sm text-label-sm text-[#F5F5F7] font-medium">Lead Mechanical Engineer</span>
+<span class="font-label-sm text-[9px] text-[#8E8D94]">10:42:08 UTC</span>
+</div>
+<div class="bg-[#161619] border border-[#26262A] p-2.5 rounded text-body-sm font-body-sm text-[#F5F5F7]">
+                Size an L-bracket for a 40 mm mounting plate with 8 mm wall thickness. Ensure safety factor &gt; 2.0 under 1.2 kN normal cantilever load.
+              </div>
+</div>
+</div>
+<!-- ASSISTANT RESPONSE WITH DETERMINISTIC CARD -->
+<div class="flex gap-2.5 max-w-3xl">
+<div class="w-6 h-6 rounded bg-[#2B5B84] border border-[#33628b] flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[13px] text-white">memory</span>
+</div>
+<div class="flex flex-col gap-2 flex-1">
+<div class="flex items-center gap-2">
+<span class="font-label-sm text-label-sm text-[#F5F5F7] font-semibold">Kala Mechanical Agent</span>
+<span class="font-label-sm text-[9px] text-[#9ecbfa] bg-[#121214] px-1 py-0.2 rounded border border-[#26262A]">OpenCASCADE v7.8 · gpt-4o-mini · Deterministic</span>
+<span class="font-label-sm text-[9px] text-[#8E8D94]">10:42:11 UTC (2.8s)</span>
+</div>
+<!-- Main Card Body -->
+<div class="bg-[#121214] border border-[#26262A] p-3 rounded flex flex-col gap-3">
+<div class="text-body-sm font-body-sm text-[#F5F5F7]">
+                  Resolved parametric envelope for 40.0 mm base plate. Wall thickness set to <code class="text-[#a4d0ff] bg-[#0A0A0B] px-1 py-0.5 rounded font-mono">t = 8.000 mm</code>. Structural bending analysis confirms compliance under ANSI/ASME B18:
+                </div>
+<!-- Structured Constraint Verification Box -->
+<div class="bg-[#0A0A0B] border border-[#26262A] p-2.5 rounded flex flex-col gap-2">
+<div class="flex items-center justify-between border-b border-[#26262A] pb-1.5">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-[#8E8D94]">Structural Constraint Evaluation</span>
+<span class="font-label-sm text-label-sm text-emerald-400 font-mono font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">check_circle</span>
+                      PASSED (SF = 2.45)
+                    </span>
+</div>
+<div class="grid grid-cols-3 gap-2 font-label-sm text-label-sm">
+<div>
+<span class="text-[#8E8D94] block text-[9px]">Flange Thickness:</span>
+<span class="text-[#F5F5F7] font-mono">8.000 mm ±0.05</span>
+</div>
+<div>
+<span class="text-[#8E8D94] block text-[9px]">Mounting Pitch:</span>
+<span class="text-[#F5F5F7] font-mono">28.000 mm</span>
+</div>
+<div>
+<span class="text-[#8E8D94] block text-[9px]">Max Bending Stress:</span>
+<span class="text-emerald-400 font-mono">112.4 MPa &lt; 276.0</span>
+</div>
+</div>
+</div>
+<!-- Quick Action Buttons -->
+<div class="flex items-center gap-2 pt-1">
+<button class="px-2.5 py-1 bg-[#232326] hover:bg-[#2B5B84] text-[#F5F5F7] border border-[#323238] rounded font-label-sm text-label-sm flex items-center gap-1.5 transition-colors" type="button">
+<span class="material-symbols-outlined text-[13px]">add_circle</span>
+<span>Apply 8mm Web Gusset</span>
+</button>
+<button class="px-2.5 py-1 bg-[#0A0A0B] hover:bg-[#1A1A1E] text-[#8E8D94] hover:text-[#F5F5F7] border border-[#26262A] rounded font-label-sm text-label-sm flex items-center gap-1.5 transition-colors" type="button">
+<span class="material-symbols-outlined text-[13px]">file_download</span>
+<span>Export to .STEP</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- FIXED BOTTOM COMPOSER & MODEL PICKER -->
+<div class="bg-[#121214] border-t border-[#26262A] p-2.5 flex flex-col gap-2">
+<div class="flex items-center justify-between text-label-sm font-label-sm">
+<div class="flex items-center gap-2">
+<div class="flex items-center gap-1 bg-[#0A0A0B] border border-[#26262A] px-2 py-0.5 rounded">
+<span class="text-[#8E8D94]">Provider:</span>
+<span class="text-[#F5F5F7] font-medium">OpenAI</span>
+<span class="text-[#4E4E56]">/</span>
+<span class="text-[#a4d0ff] font-mono">gpt-4o-mini</span>
+<span class="material-symbols-outlined text-[12px] text-[#8E8D94]">expand_more</span>
+</div>
+<label class="flex items-center gap-1.5 cursor-pointer">
+<input checked="" class="w-3 h-3 accent-[#33628b] rounded-none bg-[#0A0A0B] border border-[#26262A]" type="checkbox">
+<span class="text-[#8E8D94] text-[10px]">Consent to secure remote LLM inference</span>
+</label>
+</div>
+<span class="text-[#4E4E56] font-mono text-[9px]">Shift+Enter for newline</span>
+</div>
+<div class="flex gap-2">
+<div class="flex-1 relative">
+<textarea class="w-full bg-[#0A0A0B] border border-[#26262A] focus:border-[#33628b] text-[#F5F5F7] text-body-sm font-body-sm p-2 rounded outline-none resize-none placeholder:text-[#4E4E56]" placeholder="Describe mechanical constraints, tolerances, materials, or drafting operations..." rows="2"></textarea>
+</div>
+<button class="px-4 bg-[#232326] hover:bg-[#2B5B84] text-[#F5F5F7] border border-[#323238] rounded font-label-sm text-label-sm uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors self-end h-[58px]" type="button">
+<span>Send</span>
+<span class="material-symbols-outlined text-[14px]">send</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- ========================================================================= -->
+<!-- RIGHT RAIL (360px WIDE HIGH-CONTRAST DARK PANEL #121214)                  -->
+<!-- ========================================================================= -->
+<div class="w-full xl:w-[360px] bg-[#121214] flex flex-col justify-between shrink-0 overflow-y-auto">
+<div class="flex flex-col">
+<!-- SEGMENTED RIGHT TABS -->
+<div class="grid grid-cols-3 border-b border-[#26262A] bg-[#0A0A0B]">
+<button class="py-2.5 text-center font-label-sm text-label-sm uppercase font-semibold text-[#F5F5F7] border-b-2 border-[#2B5B84] bg-[#121214]">
+            Workbench
+          </button>
+<button class="py-2.5 text-center font-label-sm text-label-sm uppercase text-[#8E8D94] hover:text-[#F5F5F7] border-b-2 border-transparent transition-colors">
+            Export
+          </button>
+<button class="py-2.5 text-center font-label-sm text-label-sm uppercase text-[#8E8D94] hover:text-[#F5F5F7] border-b-2 border-transparent transition-colors">
+            Assistant
+          </button>
+</div>
+<!-- RAIL CONTENT ACCORDIONS / CARDS -->
+<div class="p-3 flex flex-col gap-3">
+<!-- CARD 1: INTERACTIVE PRECISION PARAMETERS -->
+<div class="bg-[#0A0A0B] border border-[#26262A] rounded p-3 flex flex-col gap-3">
+<div class="flex items-center justify-between pb-1.5 border-b border-[#26262A]">
+<span class="font-label-sm text-label-sm uppercase tracking-wider font-semibold text-[#F5F5F7]">Parametric Extents</span>
+<span class="font-label-sm text-[9px] text-[#8E8D94] font-mono">B-Rep Box</span>
+</div>
+<!-- Param: Width (size_x) -->
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-center text-label-sm font-label-sm">
+<span class="text-[#8E8D94]">Width (size_x):</span>
+<span class="text-[#F5F5F7] font-mono font-medium">40.0 mm</span>
+</div>
+<div class="flex items-center gap-2">
+<input class="flex-1 h-1 bg-[#232326] appearance-none rounded accent-[#33628b] cursor-pointer" max="100" min="10" type="range" value="40">
+<input class="w-14 bg-[#121214] border border-[#26262A] text-right px-1.5 py-0.5 rounded font-mono text-label-sm text-[#F5F5F7]" type="text" value="40.0">
+</div>
+</div>
+<!-- Param: Height (size_y) -->
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-center text-label-sm font-label-sm">
+<span class="text-[#8E8D94]">Height (size_y):</span>
+<span class="text-[#F5F5F7] font-mono font-medium">20.0 mm</span>
+</div>
+<div class="flex items-center gap-2">
+<input class="flex-1 h-1 bg-[#232326] appearance-none rounded accent-[#33628b] cursor-pointer" max="80" min="5" type="range" value="20">
+<input class="w-14 bg-[#121214] border border-[#26262A] text-right px-1.5 py-0.5 rounded font-mono text-label-sm text-[#F5F5F7]" type="text" value="20.0">
+</div>
+</div>
+<!-- Param: Depth (size_z) -->
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-center text-label-sm font-label-sm">
+<span class="text-[#8E8D94]">Depth (size_z):</span>
+<span class="text-[#F5F5F7] font-mono font-medium">30.0 mm</span>
+</div>
+<div class="flex items-center gap-2">
+<input class="flex-1 h-1 bg-[#232326] appearance-none rounded accent-[#33628b] cursor-pointer" max="100" min="10" type="range" value="30">
+<input class="w-14 bg-[#121214] border border-[#26262A] text-right px-1.5 py-0.5 rounded font-mono text-label-sm text-[#F5F5F7]" type="text" value="30.0">
+</div>
+</div>
+<!-- Subdivisions & Collapsible Primitives -->
+<div class="flex justify-between items-center pt-1 border-t border-[#26262A] text-label-sm font-label-sm">
+<span class="text-[#8E8D94]">Mesh Subdivisions:</span>
+<input class="w-10 bg-[#121214] border border-[#26262A] text-center px-1 py-0.5 rounded font-mono text-[#F5F5F7]" type="text" value="1">
+</div>
+<!-- Collapsible Drawer Triggers -->
+<div class="flex flex-col gap-1 pt-1">
+<button class="flex items-center justify-between px-2 py-1 bg-[#121214] rounded border border-[#26262A] text-label-sm font-label-sm text-[#8E8D94] hover:text-[#F5F5F7]" type="button">
+<span>Cylinder Parameters (R, H)</span>
+<span class="material-symbols-outlined text-[13px]">expand_more</span>
+</button>
+<button class="flex items-center justify-between px-2 py-1 bg-[#121214] rounded border border-[#26262A] text-label-sm font-label-sm text-[#8E8D94] hover:text-[#F5F5F7]" type="button">
+<span>Sphere Parameters (Radius)</span>
+<span class="material-symbols-outlined text-[13px]">expand_more</span>
+</button>
+</div>
+</div>
+<!-- CARD 2: OPENCASCADE ANALYTICAL ESTIMATE -->
+<div class="bg-[#0A0A0B] border border-[#26262A] rounded p-3 flex flex-col gap-2.5">
+<div class="flex items-center justify-between pb-1.5 border-b border-[#26262A]">
+<span class="font-label-sm text-label-sm uppercase tracking-wider font-semibold text-[#F5F5F7]">Nominal Calculations</span>
+<span class="font-label-sm text-[9px] text-[#33628b] font-mono">B-Rep Exact</span>
+</div>
+<div class="flex flex-col gap-1.5 font-label-sm text-label-sm">
+<div class="flex justify-between items-center">
+<span class="text-[#8E8D94]">Volume:</span>
+<span class="text-[#F5F5F7] font-mono font-medium">24,000 mm³ <span class="text-[#8E8D94]">(24.00 cm³)</span></span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-[#8E8D94]">Surface Area:</span>
+<span class="text-[#F5F5F7] font-mono font-medium">5,200 mm² <span class="text-[#8E8D94]">(52.00 cm²)</span></span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-[#8E8D94]">Bounding Envelope:</span>
+<span class="text-[#F5F5F7] font-mono font-medium">40.0 × 20.0 × 30.0 mm</span>
+</div>
+</div>
+<div class="p-2 bg-[#121214] rounded border border-[#26262A] text-[9px] font-label-sm text-[#8E8D94] leading-relaxed">
+              Estimated via analytical closed-form OpenCASCADE B-Rep solver kernel. Not certified structural compliance.
+            </div>
+</div>
+<!-- CARD 3: EXPORT & NEUTRAL CAD HANDOFF -->
+<div class="bg-[#0A0A0B] border border-[#26262A] rounded p-3 flex flex-col gap-3">
+<div class="flex items-center justify-between pb-1.5 border-b border-[#26262A]">
+<span class="font-label-sm text-label-sm uppercase tracking-wider font-semibold text-[#F5F5F7]">Neutral CAD Handoff</span>
+<span class="font-label-sm text-[9px] text-emerald-400 font-mono">ISO 10303</span>
+</div>
+<div class="flex flex-col gap-2 font-label-sm text-label-sm">
+<div class="flex flex-col gap-1">
+<span class="text-[#8E8D94]">Target Tool Suite:</span>
+<div class="flex items-center justify-between bg-[#121214] border border-[#26262A] px-2 py-1 rounded text-[#F5F5F7]">
+<span>FreeCAD (neutral file)</span>
+<span class="material-symbols-outlined text-[13px]">unfold_more</span>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-[#8E8D94]">Protocol:</span>
+<span class="text-[#a4d0ff] font-mono font-medium">STEP (.step / ISO 10303-21)</span>
+</div>
+<div class="text-[9px] font-label-sm text-[#8E8D94] leading-relaxed bg-[#121214] p-1.5 rounded border border-[#26262A]">
+                Native socket automation is unmounted for FreeCAD. Exporting packages a solid B-Rep STEP entity for direct manual import.
+              </div>
+</div>
+<div class="flex flex-col gap-1.5 pt-1">
+<button class="w-full py-1.5 bg-[#F5F5F7] hover:bg-[#EAE5D9] text-[#0A0A0B] font-label-sm text-label-sm font-semibold rounded flex items-center justify-center gap-1.5 transition-colors" type="button">
+<span class="material-symbols-outlined text-[14px]">download</span>
+<span>Download STEP (4,821 B)</span>
+</button>
+<button class="w-full py-1 bg-[#121214] hover:bg-[#1E1E22] text-[#8E8D94] hover:text-[#F5F5F7] border border-[#26262A] font-label-sm text-label-sm rounded flex items-center justify-center gap-1 transition-colors" type="button">
+<span class="material-symbols-outlined text-[12px]">content_copy</span>
+<span>Copy CLI Import Command</span>
+</button>
+</div>
+<div class="flex items-center justify-between text-[9px] font-label-sm text-[#4E4E56] font-mono pt-1 border-t border-[#26262A]">
+<span>CHECKSUM</span>
+<span class="text-[#8E8D94]">sha256:d84fe0...91c0</span>
+</div>
+</div>
+</div>
+</div>
+<!-- RIGHT RAIL BOTTOM STATUS / DIAGNOSTICS -->
+<div class="p-3 bg-[#0A0A0B] border-t border-[#26262A] flex flex-col gap-1">
+<div class="flex items-center justify-between text-label-sm font-label-sm text-[#8E8D94]">
+<span>RAM Working Set:</span>
+<span class="font-mono text-[#F5F5F7]">142.8 MB</span>
+</div>
+<div class="flex items-center justify-between text-label-sm font-label-sm text-[#8E8D94]">
+<span>GPU Render Core:</span>
+<span class="font-mono text-[#22c55e]">Metal / Vulkan Active</span>
+</div>
+</div>
+</div>
+</div>
+<!-- ========================================================================= -->
+<!-- FOOTER STATUS BAR (GLOBAL SYSTEM TELEMETRY)                               -->
+<!-- ========================================================================= -->
+<footer class="h-6 bg-[#0A0A0B] border-t border-[#26262A] px-3 flex items-center justify-between text-label-sm font-label-sm text-[#8E8D94]">
+<div class="flex items-center gap-2">
+<span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+<span class="text-[#F5F5F7] font-mono">Connected to http://127.0.0.1:8765 (desktop shell)</span>
+<span class="text-[#4E4E56]">|</span>
+<span class="text-[#8E8D94]">Socket Latency: 1.4ms</span>
+</div>
+<div class="flex items-center gap-3 font-mono text-[9px]">
+<span class="text-[#8E8D94]">Backend v0.1.0</span>
+<span class="text-[#4E4E56]">·</span>
+<span class="text-[#a4d0ff]">step available</span>
+<span class="text-[#4E4E56]">·</span>
+<span class="text-amber-400">memory only mode</span>
+</div>
+</footer>
+</div>
+<script>
+  // Interactive Slider: 2D Orthographic to 3D Isometric Viewport Dynamic Shift
+  const slider = document.getElementById('projection-slider');
+  const geom = document.getElementById('drafting-geometry');
+  const secCut = document.getElementById('section-plane-cut');
+  const btnAgent = document.getElementById('btn-view-agent');
+  const btn3D = document.getElementById('btn-view-3d');
+  const viewport = document.getElementById('living-draft-viewport');
+
+  if (slider && geom) {
+    slider.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      // Morph geometry perspective simulation via SVG rotation and skew
+      const skewVal = (val - 50) * 0.15;
+      geom.style.transform = `skewY(${skewVal}deg)`;
+      geom.style.transformOrigin = 'center';
+      if (secCut) {
+        secCut.style.opacity = val > 20 ? '1' : '0.2';
+      }
+    });
+  }
+
+  // View Mode Switcher
+  if (btnAgent && btn3D && viewport) {
+    btn3D.addEventListener('click', () => {
+      viewport.classList.remove('h-[480px]');
+      viewport.classList.add('h-[680px]');
+      btn3D.classList.add('bg-[#232326]', 'text-[#F5F5F7]');
+      btn3D.classList.remove('text-[#8E8D94]');
+      btnAgent.classList.remove('bg-[#232326]', 'text-[#F5F5F7]');
+      btnAgent.classList.add('text-[#8E8D94]');
+    });
+
+    btnAgent.addEventListener('click', () => {
+      viewport.classList.add('h-[480px]');
+      viewport.classList.remove('h-[680px]');
+      btnAgent.classList.add('bg-[#232326]', 'text-[#F5F5F7]');
+      btnAgent.classList.remove('text-[#8E8D94]');
+      btn3D.classList.remove('bg-[#232326]', 'text-[#F5F5F7]');
+      btn3D.classList.add('text-[#8E8D94]');
+    });
+  }
+
+  // Theme Toggle Interactive Feedback
+  const nightBtn = document.getElementById('theme-night-btn');
+  const paperBtn = document.getElementById('theme-paper-btn');
+  if (nightBtn && paperBtn) {
+    paperBtn.addEventListener('click', () => {
+      // Keep Night Mode primary design as requested
+      alert('Paper mode palette preview available in workspace settings.');
+    });
+  }
+</script></main></div></body></html>

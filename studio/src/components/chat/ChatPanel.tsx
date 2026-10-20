@@ -1,19 +1,24 @@
-// Mechanical engineering agent chat panel.
+// Mechanical engineering agent chat panel — the bound engineer's calculation
+// pad in the left zone.
 //
 // This is the primary workspace, not a side drawer: the operator sizes a
-// part by talking to it, and the OpenCascade workbench in the right rail
+// part by talking to it, and the OpenCascade workbench in the drafting sheet
 // answers with the geometry that talk produces.
 //
 // Honest about three things:
 //   1. The text shown is exactly what the backend returned; we do not
 //      simulate streaming, do not invent partial answers, and do not claim
-//      a model is "thinking" when one isn't.
+//      a model is "thinking" when one isn't. The backend's ChatResponse has
+//      no structured parameter/tool-call field, so no inline result tables
+//      or digest chips are fabricated here. The mono table at the top is the
+//      real active-geometry context the workbench is holding.
 //   2. Remote providers only run if the operator ticks the explicit consent
-//      checkbox. The state machine below refuses to send until consent is on.
+//      stamp. The state machine below refuses to send until consent is on.
 //   3. For the local helper, model is optional (the backend ignores it).
 //      For API routes, model is required.
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { KeyboardEvent, ReactElement } from 'react';
 import {
   postChat,
   StudioAbortError,
@@ -21,13 +26,18 @@ import {
   StudioAuthError,
   StudioNetworkError,
 } from '../../api/client';
-import { useUiState, dispatch } from '../../state/store';
+import type { ConnectionStatus } from '../../state/store';
+import { appendJournal, dispatch, selectActiveDesign, useUiState } from '../../state/store';
+import type { ChatMessage } from '../../state/store';
 import {
   computeGeometryEstimate,
   formatEnvelopeEstimate,
   formatVolumeEstimate,
 } from '../../viewer/localPrimitives';
 import { ProviderPanel } from '../panels/ProviderPanel';
+import { CadTargetSelector } from './CadTargetSelector';
+import { DesignAgentCard } from './DesignAgentCard';
+import { designSupport, measuredByLabel } from './designCard';
 import type { ChatRequest } from '../../types/studio';
 import type {
   BoxParameters,
@@ -36,34 +46,35 @@ import type {
   SphereParameters,
   StudioParameters,
 } from '../../types/studio';
-import type { ReactElement } from 'react';
+import '../../styles/chat.css';
 
 const REMOTE_PROVIDERS: ReadonlySet<string> = new Set(['openai', 'openrouter', 'codex']);
 
 // Starter prompts seed the composer; they never auto-send, so a stray click
-// can never spend a remote-provider call without the operator pressing Send.
+// can never spend a remote-provider call without the operator pressing the
+// drafting button.
 const STARTER_PROMPTS: ReadonlyArray<{ id: string; label: string; prompt: string }> = [
   {
     id: 'size-part',
-    label: 'Size a bracket',
+    label: 'Size L-Bracket',
     prompt:
       'Size an L-bracket for a 40 mm mounting plate: legs of 60 mm and 45 mm, 8 mm wall thickness. Give me the bounding envelope and the nominal volume I should expect before I model it in CAD.',
   },
   {
     id: 'size-shaft',
-    label: 'Size a shaft',
+    label: 'Size Stepped Shaft',
     prompt:
-      'I need a shaft spacer that is 25 mm diameter by 120 mm long. What is the nominal volume, the surface area, and the envelope for a quick mass and packaging estimate?',
+      'Size a stepped shaft spacer: 25 mm diameter by 120 mm long, with a 15 mm diameter shoulder 30 mm long. Give me the nominal volume, surface area, and envelope for a quick mass and packaging estimate.',
   },
   {
     id: 'estimate-housing',
-    label: 'Estimate a housing',
+    label: 'Housing Envelope',
     prompt:
       'I am quoting a cylindrical housing, 80 mm outer diameter and 60 mm tall. Give me the nominal OpenCascade volume and surface area so I can sanity-check the material cost before the detailed model exists.',
   },
   {
     id: 'plan-export',
-    label: 'Plan a STEP/STL handoff',
+    label: 'STEP Handoff',
     prompt:
       'Plan the handoff for the current primitive: which neutral file (STEP ISO-10303-21 or STL) should I export, what should the downstream CAD/CAE package check first, and what geometry numbers should travel with the file?',
   },
@@ -75,6 +86,8 @@ export function ChatPanel(): ReactElement {
   const chat = useUiState((s) => s.chat);
   const primitive = useUiState((s) => s.primitive);
   const parameters = useUiState((s) => s.parameters);
+  const activeDesign = useUiState(selectActiveDesign);
+  const cadProvider = useUiState((s) => s.cadProvider);
   const [providerId, setProviderId] = useState<string>('');
   const [model, setModel] = useState<string>('');
   const [prompt, setPrompt] = useState<string>('');
@@ -82,19 +95,49 @@ export function ChatPanel(): ReactElement {
   const [showKeySettings, setShowKeySettings] = useState<boolean>(false);
   const controllerRef = useRef<AbortController | null>(null);
   const promptRef = useRef<HTMLTextAreaElement | null>(null);
+  const threadRef = useRef<HTMLDivElement | null>(null);
+  const threadPinnedRef = useRef<boolean>(true);
 
   // The active geometry the OpenCascade workbench is holding right now. The
   // agent quotes these numbers back to the operator, so chat and workbench
   // never drift apart.
+  //
+  // When a compiled design is active the sheet shows that design, so the
+  // block quotes the design's PROVIDER-MEASURED values and says which
+  // provider reported them. A property the provider did not report is "—",
+  // never a closed-form substitute.
   const geometryContext = useMemo(() => {
+    if (activeDesign) {
+      const measured = activeDesign.measured;
+      const bounds = measured.bounds;
+      return {
+        primitive: 'design',
+        dimensions: activeDesign.label,
+        envelope: bounds
+          ? `${(bounds.max[0] - bounds.min[0]).toFixed(2)} × ${(bounds.max[1] - bounds.min[1]).toFixed(2)} × ${(bounds.max[2] - bounds.min[2]).toFixed(2)} mm`
+          : '—',
+        volume: measured.volume_mm3 === null
+          ? '—'
+          : `${measured.volume_mm3.toFixed(2)} mm³ (${(measured.volume_mm3 / 1000).toFixed(3)} cm³)`,
+        source: measuredByLabel(activeDesign),
+      };
+    }
     const estimate = computeGeometryEstimate(primitive, parameters);
     return {
       primitive,
       dimensions: describeParameters(primitive, parameters),
       envelope: formatEnvelopeEstimate(estimate),
       volume: formatVolumeEstimate(estimate),
+      source: 'nominal estimate (closed-form)',
     };
-  }, [primitive, parameters]);
+  }, [activeDesign, primitive, parameters]);
+
+  const connectionView = useMemo(() => describeConnection(connection), [connection]);
+
+  // The honest note for a backend that cannot compile a design. It appears
+  // only once the health probe has answered, so the panel never flashes a
+  // claim it cannot make yet.
+  const support = useMemo(() => designSupport(server), [server]);
 
   useEffect(() => {
     if (!providerId && server.providers[0]) {
@@ -109,11 +152,32 @@ export function ChatPanel(): ReactElement {
     }
   }, []);
 
+  // Keep the newest turn in view unless the operator has scrolled up to read
+  // an earlier answer. A cleared thread re-pins for the next turn. Layout
+  // effect so the measurement happens after the new card is laid out.
+  useLayoutEffect(() => {
+    if (chat.thread.length === 0) threadPinnedRef.current = true;
+    if (!threadPinnedRef.current) return;
+    const node = threadRef.current;
+    if (node) node.scrollTop = node.scrollHeight;
+  }, [chat.thread.length, chat.inFlight, chat.lastError, chat.lastErrorKind]);
+
+  function onThreadScroll(): void {
+    const node = threadRef.current;
+    if (!node) return;
+    const distance = node.scrollHeight - node.scrollTop - node.clientHeight;
+    threadPinnedRef.current = distance <= 24;
+  }
+
   const provider = server.providers.find((p) => p.id === providerId);
   const configured = provider?.configured === true;
   const isLocal = providerId === 'local' || providerId === 'local-helper';
   const requiresRemoteConsent = REMOTE_PROVIDERS.has(providerId);
   const requiresModel = !isLocal;
+  const providerLabel = provider?.name ?? (providerId.length > 0 ? providerId : 'No provider');
+  const providerStatusText = providerId.length === 0
+    ? 'No provider selected'
+    : `${providerLabel} · ${configured ? 'configured' : 'not configured'}${isLocal ? ' · loopback only' : ''}`;
 
   const canSend =
     connection.kind === 'ready' &&
@@ -136,6 +200,7 @@ export function ChatPanel(): ReactElement {
       model: trimmedModel.length > 0 ? trimmedModel : null,
       prompt: trimmedPrompt,
       allow_remote: allowRemote,
+      cad_provider: cadProvider,
     };
     setPrompt('');
     dispatch({
@@ -147,13 +212,33 @@ export function ChatPanel(): ReactElement {
         allowRemote: payload.allow_remote,
       },
     });
+    appendJournal({ kind: 'chat', message: `You · ${truncate(trimmedPrompt, 160)}` });
+    appendJournal({
+      kind: 'tool',
+      message: `POST /api/studio/chat · ${providerId}${trimmedModel ? ` · ${trimmedModel}` : ''}${cadProvider ? ` · CAD ${cadProvider}` : ' · CAD none'}`,
+    });
+    // The reply time is measured here, in the browser, from the moment the
+    // request left to the moment the answer arrived. It is a client-side
+    // measurement of a real round trip, not a backend-reported figure.
+    const startedAt = Date.now();
     try {
       const response = await postChat(connection.connection, payload, controller.signal);
       if (!controller.signal.aborted) {
         dispatch({
           type: 'chat/response',
-          response: { text: response.text, provider: response.provider, model: response.model },
+          response: {
+            text: response.text,
+            provider: response.provider,
+            model: response.model,
+            offline: response.offline,
+            durationMs: Date.now() - startedAt,
+            // A turn that compiled a design says which one. The design
+            // itself lives in the store, so the card never shows a stale
+            // copy of a measurement.
+            ...(response.design ? { designId: response.design.design_id } : {}),
+          },
         });
+        appendJournal({ kind: 'chat', message: `Agent · ${truncate(response.text, 160)}` });
       }
     } catch (cause) {
       if (controller.signal.aborted) {
@@ -163,6 +248,7 @@ export function ChatPanel(): ReactElement {
       }
       const desc = describeError(cause);
       dispatch({ type: 'chat/error', message: desc.message, kind: desc.kind });
+      appendJournal({ kind: 'chat', message: `Chat failed · ${desc.message}` });
     } finally {
       if (controllerRef.current === controller) controllerRef.current = null;
     }
@@ -177,15 +263,29 @@ export function ChatPanel(): ReactElement {
     dispatch({ type: 'chat/clear' });
   }
 
+  function onPromptKeyDown(event: KeyboardEvent<HTMLTextAreaElement>): void {
+    // Enter drafts; Shift+Enter keeps the newline the operator typed. An
+    // active IME composition is never treated as a send.
+    if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    if (canSend) void onSend();
+  }
+
   return (
-    <section className="chat-panel" aria-label="Mechanical engineering agent chat">
+    <section
+      className="chat-panel"
+      data-connection={connectionView.state}
+      aria-label="Mechanical engineering agent chat"
+    >
       <header className="chat-panel-header">
-        <div className="chat-panel-heading">
-          <h2>Mechanical Engineering Agent</h2>
-          <p className="chat-panel-subtitle">
-            Conversational mechanical sizing, parametric geometry estimation, and STEP/STL
-            workflow planning.
-          </p>
+        <div className="chat-panel-stamp">
+          <h2 className="chat-panel-stamp-title">
+            KALA <span className="chat-panel-stamp-slash" aria-hidden="true">//</span> MECHANICAL DESIGN AGENT
+          </h2>
+          <span className="chat-panel-connection" data-state={connectionView.state} role="status" title={connectionView.title}>
+            <span className="chat-panel-connection-dot" aria-hidden="true" />
+            {connectionView.label}
+          </span>
         </div>
         <div className="chat-panel-header-actions">
           <button
@@ -219,15 +319,6 @@ export function ChatPanel(): ReactElement {
         </section>
       ) : null}
       <div className="chat-panel-intro">
-        <section className="chat-panel-context" aria-label="Active OpenCascade geometry context">
-          <span className="chat-panel-context-label">Active geometry</span>
-          <code className="chat-panel-context-kind">{geometryContext.primitive}</code>
-          <span className="chat-panel-context-dims">{geometryContext.dimensions}</span>
-          <span className="chat-panel-context-envelope">
-            envelope {geometryContext.envelope}
-          </span>
-          <span className="chat-panel-context-volume">volume {geometryContext.volume}</span>
-        </section>
         <div className="chat-panel-starters" role="group" aria-label="Engineering starter prompts">
           {STARTER_PROMPTS.map((starter) => (
             <button
@@ -244,11 +335,49 @@ export function ChatPanel(): ReactElement {
             </button>
           ))}
         </div>
+        <section className="chat-panel-context" aria-label="Active OpenCascade geometry context">
+          <div className="chat-panel-context-head">
+            <span className="chat-panel-context-label">Active geometry</span>
+            <code className="chat-panel-context-kind">{geometryContext.primitive}</code>
+          </div>
+          <dl className="chat-panel-context-table">
+            <div className="chat-panel-context-row">
+              <dt>dims</dt>{' '}
+              <dd className="chat-panel-context-dims">{geometryContext.dimensions}</dd>
+            </div>
+            <div className="chat-panel-context-row">
+              <dt>envelope</dt>{' '}
+              <dd className="chat-panel-context-envelope">{geometryContext.envelope}</dd>
+            </div>
+            <div className="chat-panel-context-row">
+              <dt>volume</dt>{' '}
+              <dd className="chat-panel-context-volume">{geometryContext.volume}</dd>
+            </div>
+            <div className="chat-panel-context-row">
+              <dt>source</dt>{' '}
+              <dd className="chat-panel-context-source">{geometryContext.source}</dd>
+            </div>
+          </dl>
+        </section>
+        {support.unavailable && support.note ? (
+          <section className="chat-panel-agent-card" aria-label="Design turn support">
+            <p className="chat-panel-agent-card-note" role="note">
+              {support.note}
+            </p>
+          </section>
+        ) : null}
       </div>
-      <div className="chat-panel-thread" role="log" aria-live="polite">
+      <div
+        className="chat-panel-thread"
+        ref={threadRef}
+        onScroll={onThreadScroll}
+        role="log"
+        aria-live="polite"
+      >
         {chat.thread.length === 0 ? (
           <p className="chat-panel-empty">
-            Pick a configured provider, type a prompt, and send. Remote providers require the consent toggle.
+            Pick a configured provider, type a prompt, and send. Remote providers require the consent
+            stamp below.
           </p>
         ) : null}
         {chat.thread.map((entry, index) => (
@@ -256,11 +385,36 @@ export function ChatPanel(): ReactElement {
             key={`${entry.role}-${entry.at}-${index}`}
             className={`chat-panel-message chat-panel-message-${entry.role}`}
           >
-            <span className="chat-panel-message-role">{entry.role === 'user' ? 'You' : 'Assistant'}</span>
-            <p>{entry.text}</p>
+            <header className="chat-panel-message-meta">
+              <span className="chat-panel-message-role">{entry.role === 'user' ? 'You' : 'Agent'}</span>
+              {entry.role === 'assistant' ? (
+                <span
+                  className="chat-panel-message-badge"
+                  data-offline={entry.offline === true ? 'yes' : 'no'}
+                  title="The provider, model, and reply time the backend reported for this turn"
+                >
+                  {chatBadgeText(entry)}
+                </span>
+              ) : null}
+              {entry.role === 'assistant' && typeof entry.durationMs === 'number' ? (
+                <span className="chat-panel-message-elapsed">({formatElapsed(entry.durationMs)})</span>
+              ) : null}
+              <time className="chat-panel-message-time" dateTime={isoTime(entry.at)}>
+                {formatTime(entry.at)}
+              </time>
+            </header>
+            <p className="chat-panel-message-text">{entry.text}</p>
+            {entry.role === 'assistant' && entry.designId ? (
+              <DesignAgentCard designId={entry.designId} />
+            ) : null}
           </article>
         ))}
-        {chat.inFlight ? <p className="chat-panel-pending">Awaiting response…</p> : null}
+        {chat.inFlight ? (
+          <p className="chat-panel-pending" role="status">
+            <span className="chat-panel-pending-dot" aria-hidden="true" />
+            Awaiting response…
+          </p>
+        ) : null}
         {chat.lastError && chat.lastErrorKind !== 'cancelled' ? (
           <p className="chat-panel-error" role="alert">{chat.lastError}</p>
         ) : null}
@@ -275,49 +429,71 @@ export function ChatPanel(): ReactElement {
           void onSend();
         }}
       >
-        <label className="chat-panel-field">
-          <span>Provider</span>
-          <select
-            id="chat-provider-select"
-            value={providerId}
-            onChange={(event) => {
-              setProviderId(event.target.value);
-              setAllowRemote(false);
-            }}
-          >
-            <option value="" disabled>Select a provider</option>
-            {server.providers.map((provider) => (
-              <option key={provider.id} value={provider.id} disabled={!provider.configured}>
-                {provider.name}{provider.configured ? '' : ' (not configured)'}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="chat-panel-field">
-          <span>
-            Model{isLocal ? ' (optional for local helper)' : ''}
-          </span>
-          <input
-            id="chat-model-input"
-            type="text"
-            value={model}
-            onChange={(event) => setModel(event.target.value)}
-            placeholder={isLocal ? 'optional' : 'e.g. gpt-4o-mini'}
-          />
-        </label>
+        <div className="chat-panel-route">
+          <label className="chat-panel-field">
+            <span>Provider</span>
+            <select
+              id="chat-provider-select"
+              value={providerId}
+              onChange={(event) => {
+                setProviderId(event.target.value);
+                setAllowRemote(false);
+              }}
+            >
+              <option value="" disabled>Select a provider</option>
+              {server.providers.map((provider) => (
+                <option key={provider.id} value={provider.id} disabled={!provider.configured}>
+                  {provider.name}{provider.configured ? '' : ' (not configured)'}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="chat-panel-field">
+            <span>
+              Model{isLocal ? ' (optional for local helper)' : ''}
+            </span>
+            <input
+              id="chat-model-input"
+              type="text"
+              value={model}
+              onChange={(event) => setModel(event.target.value)}
+              placeholder={isLocal ? 'optional' : 'e.g. gpt-4o-mini'}
+            />
+          </label>
+        </div>
+        <CadTargetSelector />
         {requiresRemoteConsent ? (
-          <label className="chat-panel-consent">
+          <label
+            className="chat-panel-consent"
+            data-consent={allowRemote ? 'granted' : 'required'}
+          >
             <input
               type="checkbox"
               checked={allowRemote}
               onChange={(event) => setAllowRemote(event.target.checked)}
             />
-            <span>
-              I consent to this prompt being sent to a remote provider. Without this tick the request
-              will not leave the loopback backend.
+            <span className="chat-panel-consent-copy">
+              <span className="chat-panel-consent-stamp">
+                Remote egress consent · {providerLabel}
+              </span>
+              <span className="chat-panel-consent-text">
+                This prompt leaves the loopback backend for the selected remote provider only while
+                this consent stamp is ticked.
+              </span>
             </span>
           </label>
-        ) : null}
+        ) : (
+          <p
+            className="chat-panel-provider-status"
+            data-configured={configured ? 'yes' : 'no'}
+            data-route={isLocal ? 'local' : 'loopback'}
+          >
+            <span className="chat-panel-provider-status-label">Route</span>
+            <span className="chat-panel-provider-status-value" title={providerStatusText}>
+              {providerStatusText}
+            </span>
+          </p>
+        )}
         <label className="chat-panel-field chat-panel-field-grow">
           <span>Prompt</span>
           <textarea
@@ -326,12 +502,13 @@ export function ChatPanel(): ReactElement {
             value={prompt}
             rows={3}
             onChange={(event) => setPrompt(event.target.value)}
-            placeholder="Ask a short question about the current primitive, its envelope, or the STEP/STL handoff..."
+            onKeyDown={onPromptKeyDown}
+            placeholder="Describe geometry, tolerance, or prompt…"
           />
         </label>
         <div className="chat-panel-actions">
           <button type="submit" className="chat-panel-send" disabled={!canSend}>
-            {chat.inFlight ? 'Sending…' : 'Send'}
+            {chat.inFlight ? 'Drafting…' : '[Draft Part Geometry ↵]'}
           </button>
           {chat.inFlight ? (
             <button type="button" className="chat-panel-cancel" onClick={onCancel}>
@@ -347,6 +524,61 @@ export function ChatPanel(): ReactElement {
       </form>
     </section>
   );
+}
+
+interface ConnectionView {
+  label: string;
+  state: 'desktop' | 'browser' | 'connecting' | 'disconnected' | 'error';
+  title: string;
+}
+
+function describeConnection(status: ConnectionStatus): ConnectionView {
+  if (status.kind === 'ready') {
+    const desktop = status.connection.mode === 'desktop';
+    return {
+      label: desktop ? 'Desktop bridge' : 'Browser fallback',
+      state: desktop ? 'desktop' : 'browser',
+      title: `Connected to ${status.connection.baseUrl}`,
+    };
+  }
+  if (status.kind === 'connecting') {
+    return { label: 'Connecting', state: 'connecting', title: 'Loopback connection in progress' };
+  }
+  if (status.kind === 'error') {
+    return { label: 'Disconnected', state: 'error', title: status.message };
+  }
+  return { label: 'Disconnected', state: 'disconnected', title: 'No loopback connection' };
+}
+
+function formatTime(ts: number): string {
+  const date = new Date(ts);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+function isoTime(ts: number): string {
+  const date = new Date(ts);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString();
+}
+
+// The badge states what the backend actually answered with: the provider
+// and model from the response, or the offline local helper. No model name
+// is invented when the response carried none.
+function chatBadgeText(entry: ChatMessage): string {
+  if (entry.offline === true) return 'local · offline';
+  const provider = entry.provider ?? 'local';
+  const model = entry.model ?? null;
+  return model ? `${provider} · ${model}` : provider;
+}
+
+// Client-measured send-to-reply time, e.g. `1.2 s`. A reply that came back
+// in well under a tenth of a second is shown in milliseconds so the chip
+// never reads like a stuck value.
+function formatElapsed(durationMs: number): string {
+  if (!Number.isFinite(durationMs) || durationMs < 0) return '—';
+  if (durationMs < 100) return `${Math.round(durationMs)} ms`;
+  return `${(durationMs / 1000).toFixed(1)} s`;
 }
 
 // One-line, dimension-first summary of the active primitive. Only the
@@ -373,10 +605,21 @@ function mm(value: number): string {
   return `${value.toFixed(2)} mm`;
 }
 
+function truncate(text: string, limit: number): string {
+  const compact = text.replace(/\s+/g, ' ').trim();
+  return compact.length > limit ? `${compact.slice(0, limit - 1)}…` : compact;
+}
+
 function describeError(cause: unknown): { message: string; kind: 'cancelled' | 'timeout' | 'network' | 'server' } {
   if (cause instanceof StudioAbortError) return { message: 'cancelled', kind: 'cancelled' };
   if (cause instanceof StudioAuthError) return { message: `auth: ${cause.message} (${cause.status})`, kind: 'server' };
-  if (cause instanceof StudioApiError) return { message: `${cause.code}: ${cause.message}`, kind: 'server' };
+  if (cause instanceof StudioApiError) {
+    // A provider refusal carries its reason and the available provider ids
+    // in `details`. Rendering only the generic message would hide the exact
+    // facts the operator needs to pick a different target.
+    const details = cause.details.length > 0 ? ` — ${cause.details.join(' · ')}` : '';
+    return { message: `${cause.code}: ${cause.message}${details}`, kind: 'server' };
+  }
   if (cause instanceof StudioNetworkError) {
     if (cause.cause instanceof DOMException && cause.cause.name === 'AbortError') {
       return { message: 'cancelled', kind: 'cancelled' };

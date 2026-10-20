@@ -1,0 +1,191 @@
+name: solidedge
+
+# Checks for the Windows-only Solid Edge integration:
+# `adapters/solidedge-bridge` (protocol, bridge, probe, worker) and
+# `adapters/solidedge` (Windows-local client).
+#
+# What this workflow proves, and what it does not:
+# - It never provisions Windows silently: the bridge-only job runs on both
+#   Ubuntu and Windows; the Windows-local package job runs on Windows only.
+# - On the bridge-only Windows job, Kala core is never installed or imported.
+# - The Windows-local job installs root + bridge + client and runs the
+#   portable-import regression tests; those tests assert that importing on
+#   Windows does not pull the Linux application/tool plane. The strict Linux
+#   sandbox is explicitly NOT ported and no job claims it is.
+# - Live Solid Edge tests are skipped by default (`KALA_SOLIDEDGE_LIVE` is not
+#   set), so no hosted run claims native Solid Edge evidence.
+# - Hosted workflow definition only: this repository's development host ran
+#   the same commands locally; the remote runs are not claimed as executed.
+#
+# The "on" key is quoted so YAML loaders do not read it as a boolean.
+"on":
+  push:
+    branches: [main]
+    paths:
+      - "adapters/solidedge/**"
+      - "adapters/solidedge-bridge/**"
+      - "tests/unit/test_solidedge_boundaries.py"
+      - "tests/unit/test_portable_imports.py"
+      - ".github/workflows/solidedge.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "adapters/solidedge/**"
+      - "adapters/solidedge-bridge/**"
+      - "tests/unit/test_solidedge_boundaries.py"
+      - "tests/unit/test_portable_imports.py"
+      - ".github/workflows/solidedge.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: solidedge-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  bridge-only:
+    name: bridge only (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install bridge package
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          # The bridge declares pywin32 for win32 only. Kala core is NOT
+          # installed here: these tests must pass without it.
+          python -m pip install -e "adapters/solidedge-bridge[dev]"
+
+      - name: Run bridge test suite
+        working-directory: adapters/solidedge-bridge
+        shell: bash
+        run: python -m pytest -q
+
+      - name: Lint and type-check the bridge
+        working-directory: adapters/solidedge-bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m ruff check .
+          python -m ruff format --check .
+          python -m mypy
+
+  windows-local:
+    name: windows-local packages (windows)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install root, bridge, and client
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          # Root is installed because the client depends on the shared
+          # construction contract and the portable-import tests need Studio.
+          # `dev` brings pytest/httpx.
+          python -m pip install -e ".[dev]"
+          python -m pip install -e "adapters/solidedge-bridge[dev]"
+          python -m pip install -e "adapters/solidedge[dev]"
+
+      - name: Portable import regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Proves the Windows host does not import the Linux application or
+          # tool plane when the portable surfaces load, and that no C library
+          # is loaded at import time. The two tests that resolve the real
+          # Linux core executor objects declare themselves Linux-only and skip
+          # here with an explicit reason.
+          python -m pytest -q tests/unit/test_portable_imports.py
+
+      - name: Solidedge boundary tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest -q tests/unit/test_solidedge_boundaries.py
+
+      - name: Bridge package tests (separate process)
+        working-directory: adapters/solidedge-bridge
+        shell: bash
+        run: python -m pytest -q
+
+      - name: Client package tests (separate process)
+        working-directory: adapters/solidedge
+        shell: bash
+        run: python -m pytest -q
+
+  linux-development:
+    name: linux development checks (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install root, bridge, and client
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip install -e "adapters/solidedge-bridge[dev]"
+          python -m pip install -e "adapters/solidedge[dev]"
+
+      - name: Root boundary and portable-import tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest -q \
+            tests/unit/test_solidedge_boundaries.py \
+            tests/unit/test_portable_imports.py
+
+      - name: Bridge package tests (separate process)
+        working-directory: adapters/solidedge-bridge
+        shell: bash
+        run: python -m pytest -q
+
+      - name: Client package tests (separate process)
+        working-directory: adapters/solidedge
+        shell: bash
+        run: python -m pytest -q
+
+      - name: Lint and type-check both packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd adapters/solidedge-bridge
+          python -m ruff check .
+          python -m ruff format --check .
+          python -m mypy
+          cd ../solidedge
+          python -m ruff check .
+          python -m ruff format --check .
+          python -m mypy

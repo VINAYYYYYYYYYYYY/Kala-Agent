@@ -1,0 +1,338 @@
+<!DOCTYPE html><html class="h-full" lang="en"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><meta content="mobile_tab" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&amp;family=Newsreader:ital,wght@0,400;0,500;1,400&amp;family=Space+Grotesk:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{width:100vw;min-height:100%;margin:0;padding:0;}body{overscroll-behavior:none;background-color:#fcf9f2;background-image:linear-gradient(to right,rgba(181,175,162,0.18) 1px,transparent 1px),linear-gradient(to bottom,rgba(181,175,162,0.18) 1px,transparent 1px);background-size:16px 16px;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "surface-container": "#f1eee7", "secondary-fixed-dim": "#9ecbfa", "primary-fixed": "#e5e2de", "secondary-fixed": "#cfe5ff", "error": "#ba1a1a", "primary": "#000000", "on-error": "#ffffff", "on-tertiary-fixed": "#3e0500", "surface-variant": "#e5e2db", "tertiary-fixed": "#ffdad3", "on-secondary-fixed": "#001d33", "secondary-container": "#a4d0ff", "inverse-surface": "#31312c", "on-tertiary-container": "#dd5a3e", "primary-container": "#1c1c1a", "tertiary": "#000000", "inverse-on-surface": "#f3f0e9", "secondary": "#33628b", "surface-bright": "#fcf9f2", "on-error-container": "#93000a", "on-surface": "#1c1c18", "on-surface-variant": "#474741", "outline-variant": "#c8c7bf", "outline": "#777770", "surface-container-high": "#ebe8e1", "background": "#fcf9f2", "tertiary-fixed-dim": "#ffb4a4", "surface-container-low": "#f6f3ec", "surface-container-lowest": "#ffffff", "on-secondary-container": "#295982", "on-secondary": "#ffffff", "primary-fixed-dim": "#c9c6c3", "on-primary-fixed": "#1c1c1a", "on-tertiary": "#ffffff", "surface": "#fcf9f2", "surface-container-highest": "#e5e2db", "on-secondary-fixed-variant": "#154a72", "on-background": "#1c1c18", "inverse-primary": "#c9c6c3", "surface-tint": "#5f5e5b", "on-tertiary-fixed-variant": "#891e07", "on-primary-container": "#858481", "surface-dim": "#dcdad3", "tertiary-container": "#3e0500", "on-primary": "#ffffff", "on-primary-fixed-variant": "#474744", "error-container": "#ffdad6" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "margin": "1rem", "gutter": "0.75rem", "space-md": "0.75rem", "space-xs": "0.25rem", "space-xl": "2rem", "space-lg": "1.25rem", "margin-mobile": "0.75rem", "gutter-mobile": "0.5rem", "space-sm": "0.5rem" }, fontFamily: { "label-lg": ["JetBrains Mono"], "body-md": ["Space Grotesk"], "body-lg": ["Space Grotesk"], "body-sm": ["Space Grotesk"], "headline-md": ["Newsreader"], "headline-xl": ["Newsreader"], "label-sm": ["JetBrains Mono"], "headline-lg": ["Newsreader"], "headline-xl-mobile": ["Newsreader"], "label-md": ["JetBrains Mono"] }, fontSize: { "label-lg": ["13px", { lineHeight: "16px", letterSpacing: "0.04em", fontWeight: "600" }], "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }], "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }], "body-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }], "headline-md": ["22px", { lineHeight: "28px", fontWeight: "500" }], "headline-xl": ["38px", { lineHeight: "44px", letterSpacing: "-0.02em", fontWeight: "400" }], "label-sm": ["9px", { lineHeight: "12px", letterSpacing: "0.08em", fontWeight: "500" }], "headline-lg": ["28px", { lineHeight: "34px", letterSpacing: "-0.01em", fontWeight: "400" }], "headline-xl-mobile": ["30px", { lineHeight: "36px", letterSpacing: "-0.01em", fontWeight: "400" }], "label-md": ["11px", { lineHeight: "14px", letterSpacing: "0.06em", fontWeight: "500" }] } } } };</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-on-surface antialiased flex flex-col min-h-screen relative"><header class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-xl pt-safe"><div class="h-24 px-gutter-mobile flex flex-col justify-between py-space-xs"><div class="flex items-center justify-between"><div class="flex items-center gap-space-sm"><div class="font-label-sm text-label-sm text-outline tracking-widest">SEC. C4</div><div class="w-1.5 h-1.5 bg-outline/40"></div><div class="font-label-sm text-label-sm text-outline tracking-wider">COORD: 39°N / 104°W</div></div><div class="flex items-center gap-space-xs font-label-sm text-label-sm"><span class="w-1.5 h-1.5 bg-secondary"></span><span class="text-secondary font-medium tracking-tight">CALIPER: SYNCED [2H]</span><span class="text-outline ml-1">| SCALE 1:2.5</span></div></div><div class="flex items-center justify-between"><div class="flex items-center gap-space-sm"><div class="w-8 h-8 flex items-center justify-center bg-primary text-on-primary font-label-lg text-label-lg font-bold">K</div><div class="flex flex-col"><div class="flex items-center gap-space-xs"><span class="font-body-md text-body-md font-semibold tracking-wider text-primary uppercase">KALA PARAMETRICS</span><span class="text-outline text-label-sm font-label-sm">//</span><span class="font-headline-md text-headline-md italic text-on-surface leading-none">Audit</span></div><span class="font-label-sm text-label-sm text-on-surface-variant tracking-wider uppercase">SPEC: 8402-AE // REVISION: D.4</span></div></div><div class="flex items-center gap-space-sm"><button aria-label="Inspect Coordinate" class="w-11 h-11 flex items-center justify-center text-on-surface hover:text-primary"><span class="material-symbols-outlined text-[20px]">tune</span></button><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1XCrvUeh913A7fqVHSXlFDEg7h4yp2hXYoL_LBwxmFIczqlQRyQkOf261kEHCgn4bwPwU6CUYS3o5AFR3BAH1Z2uqZGDcW1maFJPcxNMw-znl0VP099irKlPkgRDIU91Cmlk5oaKMNkkJQruybhjsyW2IefZ1qBfup3hNsVOpBKdADk4E7WYPXWuw6UPKD7AKj3ocT2-ILJm3V2LZEo9lGWP4rzZgN_JXS3lrheQrw2v0K-HVozoz1GPg"></div></div></div></header><main class="flex flex-col relative w-full pt-24 pb-24 px-gutter-mobile bg-surface min-h-screen"><div class="flex flex-col w-full pb-10 space-y-space-md">
+<!-- Coordinate Margin Strip (DIN 5457 reference) -->
+<div class="w-full bg-surface-container-high px-space-sm py-space-xs flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-space-sm font-label-sm text-label-sm text-outline">
+<span class="text-primary font-bold">ZONE B-3</span>
+<span>|</span>
+<span>LEDGER: ED-25519-ARCHIVAL</span>
+</div>
+<div class="flex items-center gap-1 font-label-sm text-label-sm text-secondary">
+<span class="w-2 h-2 rounded-full bg-secondary inline-block animate-pulse"></span>
+<span>CHAIN SYNCHRONOUS</span>
+</div>
+</div>
+<!-- 1. Audit Title Block: Archival Title Plate -->
+<div class="relative w-full bg-surface-container-lowest p-space-md shadow-sm">
+<!-- Orthographic Corner Markings -->
+<div class="absolute top-1 left-1 font-label-sm text-label-sm text-outline select-none leading-none">+</div>
+<div class="absolute top-1 right-1 font-label-sm text-label-sm text-outline select-none leading-none">+</div>
+<div class="absolute bottom-1 left-1 font-label-sm text-label-sm text-outline select-none leading-none">+</div>
+<div class="absolute bottom-1 right-1 font-label-sm text-label-sm text-outline select-none leading-none">+</div>
+<div class="flex flex-col space-y-space-xs">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-outline">ARCHIVAL SPEC // LEDGER C7</span>
+<span class="font-label-sm text-label-sm bg-surface-container px-2 py-0.5 text-on-surface-variant font-medium">SQLITE v2 // BLK 1,048,291</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface italic leading-tight">
+        IMMUTABLE DRAFTING AUDIT
+      </h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+        Continuous topological trace for calibrated airframe spar D-8402. Cryptographic state validated under ISO 10303-242 ed.2 standard.
+      </p>
+<div class="pt-space-xs flex flex-wrap items-center gap-space-xs">
+<!-- Hash Integrity Badge -->
+<div class="inline-flex items-center gap-1.5 px-space-sm py-1 bg-surface-container text-on-surface font-label-md text-label-md">
+<span class="material-symbols-outlined text-[16px] text-secondary" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="tracking-tight text-on-surface font-semibold">CHAIN INTEGRITY 100% VALIDATED</span>
+</div>
+<div class="inline-flex items-center gap-1 px-space-xs py-1 bg-surface-container-low text-outline font-label-sm text-label-sm">
+<span>LATENCY: 12ms</span>
+<span>•</span>
+<span>PEERS: 06</span>
+</div>
+</div>
+</div>
+</div>
+<!-- 2. Real-Time Tool-Class Change Alert -->
+<div class="relative w-full bg-surface-container-high p-space-md shadow-sm">
+<!-- Visual Corner Crosshairs -->
+<div class="absolute top-1 left-1 font-label-sm text-label-sm text-error select-none leading-none">×</div>
+<div class="absolute top-1 right-1 font-label-sm text-label-sm text-error select-none leading-none">×</div>
+<div class="absolute bottom-1 left-1 font-label-sm text-label-sm text-error select-none leading-none">×</div>
+<div class="absolute bottom-1 right-1 font-label-sm text-label-sm text-error select-none leading-none">×</div>
+<div class="flex items-start gap-space-sm">
+<div class="p-1 bg-error-container text-on-error-container mt-0.5">
+<span class="material-symbols-outlined text-[20px] block">warning</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="font-label-lg text-label-lg uppercase tracking-wider text-error">
+            TOOL_CLASS_CHANGE DETECTED
+          </span>
+<span class="font-label-sm text-label-sm bg-error-container text-on-error-container px-1.5 py-0.5">CRIT-A1</span>
+</div>
+<div class="mt-space-xs bg-surface-container-lowest p-space-sm font-label-md text-label-md text-on-surface space-y-1">
+<div class="flex items-center justify-between text-outline font-label-sm text-label-sm">
+<span>TIMESTAMP: 14:22:08.411 UTC</span>
+<span>SEC_POLICY: 48-K</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface">
+            Autonomous Agent Kala-09 elevated authority:
+          </p>
+<div class="flex items-center gap-1.5 text-on-surface font-label-sm text-label-sm pt-0.5">
+<span class="px-1.5 py-0.5 bg-surface-container line-through text-outline">READ_ONLY_INSPECTOR</span>
+<span class="material-symbols-outlined text-[14px] text-error">arrow_forward</span>
+<span class="px-1.5 py-0.5 bg-primary text-on-primary font-bold">PARAMETRIC_MUTATOR</span>
+</div>
+</div>
+<div class="mt-space-sm flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-error">
+            REQUIRES SIGN-OFF (2H HARD LEAD STAMP)
+          </span>
+<button class="px-space-sm py-1 bg-primary text-on-primary font-label-sm text-label-sm hover:bg-secondary transition-colors" id="quick-signoff-btn">
+            ACKNOWLEDGE
+          </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Orthographic Divider with Telemetry Ticks -->
+<div class="flex items-center justify-between px-space-xs">
+<div class="font-label-sm text-label-sm text-outline tracking-wider uppercase">LEDGER FEED // MONOSPACE CARDS</div>
+<div class="flex items-center gap-1">
+<span class="font-label-sm text-label-sm text-outline">ORDER: DESC</span>
+<span class="w-1.5 h-1.5 bg-outline"></span>
+<span class="font-label-sm text-label-sm text-secondary">N=3 BLOCKS</span>
+</div>
+</div>
+<!-- 3. Chronological Hash-Chain Audit Feed -->
+<div class="flex flex-col space-y-space-sm">
+<!-- Card 1 (14:28:19 UTC) -->
+<div class="relative w-full bg-surface-container-lowest p-space-md shadow-sm">
+<div class="flex items-start justify-between pb-space-xs">
+<div class="flex flex-col">
+<div class="flex items-center gap-space-xs">
+<span class="font-label-sm text-label-sm bg-primary text-on-primary px-1 font-bold">#1048291</span>
+<span class="font-label-md text-label-md text-on-surface-variant font-medium">14:28:19 UTC</span>
+</div>
+<span class="font-label-sm text-label-sm text-outline tracking-tight mt-0.5">AUTHOR: Kala Agent (Deterministic v4)</span>
+</div>
+<!-- Physical Seal Stamp -->
+<div class="transform -rotate-2 bg-surface-container-highest px-2 py-0.5 text-on-surface">
+<span class="font-label-sm text-label-sm tracking-wider font-semibold text-error">
+            [ APPROVED: LEAD_ENGINEER_4B ]
+          </span>
+</div>
+</div>
+<div class="bg-surface-container p-space-sm mt-space-xs">
+<div class="font-label-sm text-label-sm uppercase text-outline">OPERATION_DESCRIPTOR</div>
+<div class="font-label-lg text-label-lg text-on-surface mt-0.5">
+          MUTATE_PARAM [D_BORE: 72.00mm <span class="text-secondary font-bold">→</span> 74.50mm]
+        </div>
+<div class="mt-space-xs flex items-center justify-between font-label-sm text-label-sm text-outline">
+<span>DELTA: +2.500 mm</span>
+<span>TOLERANCE: ±0.015 mm</span>
+</div>
+</div>
+<!-- Hash Row -->
+<div class="mt-space-sm pt-space-xs bg-surface-container-low px-space-sm py-1 flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-outline uppercase">SHA-256</span>
+<div class="flex items-center gap-1">
+<span class="font-label-sm text-label-sm text-secondary font-mono">3a9f1c7d4e0821b964fa...88e402</span>
+<button aria-label="Copy Hash" class="p-1 text-outline hover:text-on-surface" title="Copy Hash">
+<span class="material-symbols-outlined text-[14px] block">content_copy</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 2 (14:15:02 UTC) -->
+<div class="relative w-full bg-surface-container-lowest p-space-md shadow-sm">
+<div class="flex items-start justify-between pb-space-xs">
+<div class="flex flex-col">
+<div class="flex items-center gap-space-xs">
+<span class="font-label-sm text-label-sm bg-surface-container-highest text-on-surface px-1 font-bold">#1048290</span>
+<span class="font-label-md text-label-md text-on-surface-variant font-medium">14:15:02 UTC</span>
+</div>
+<span class="font-label-sm text-label-sm text-outline tracking-tight mt-0.5">AUTHOR: Nastran Solver v24 // Worker 03</span>
+</div>
+<span class="px-1.5 py-0.5 bg-surface-container font-label-sm text-label-sm text-secondary font-semibold">
+          STRESS_PASS
+        </span>
+</div>
+<div class="bg-surface-container p-space-sm mt-space-xs space-y-1">
+<div class="font-label-sm text-label-sm uppercase text-outline">SIMULATION MATRIX</div>
+<div class="font-label-md text-label-md text-on-surface font-semibold">
+          STRESS_SOLVER_RUN [ANISOTROPIC_CARBON_Ti6Al4V]
+        </div>
+<div class="grid grid-cols-2 gap-space-xs pt-space-xs">
+<div class="bg-surface-container-lowest p-space-xs">
+<span class="font-label-sm text-label-sm text-outline block">MAX CALCULATED</span>
+<span class="font-label-md text-label-md text-on-surface font-bold">284.1 MPa</span>
+</div>
+<div class="bg-surface-container-lowest p-space-xs">
+<span class="font-label-sm text-label-sm text-outline block">MATERIAL YIELD</span>
+<span class="font-label-md text-label-md text-on-surface">880.0 MPa</span>
+</div>
+</div>
+<div class="font-label-sm text-label-sm text-secondary flex items-center gap-1 pt-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+<span>SAFETY FACTOR: 3.097 (EXCEEDS MIN REQ 1.850)</span>
+</div>
+</div>
+<!-- Hash Row -->
+<div class="mt-space-sm pt-space-xs bg-surface-container-low px-space-sm py-1 flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-outline uppercase">SHA-256</span>
+<div class="flex items-center gap-1">
+<span class="font-label-sm text-label-sm text-secondary font-mono">e01b7a49df67320bc82a...19d452</span>
+<button aria-label="Copy Hash" class="p-1 text-outline hover:text-on-surface" title="Copy Hash">
+<span class="material-symbols-outlined text-[14px] block">content_copy</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 3 (13:58:44 UTC) -->
+<div class="relative w-full bg-surface-container-lowest p-space-md shadow-sm">
+<div class="flex items-start justify-between pb-space-xs">
+<div class="flex flex-col">
+<div class="flex items-center gap-space-xs">
+<span class="font-label-sm text-label-sm bg-surface-container-highest text-on-surface px-1 font-bold">#1048289</span>
+<span class="font-label-md text-label-md text-on-surface-variant font-medium">13:58:44 UTC</span>
+</div>
+<span class="font-label-sm text-label-sm text-outline tracking-tight mt-0.5">AUTHOR: SysAdmin // Master Caliper Core</span>
+</div>
+<span class="px-1.5 py-0.5 bg-surface-container-high font-label-sm text-label-sm text-outline">
+          GENESIS_BLOCK
+        </span>
+</div>
+<div class="bg-surface-container p-space-sm mt-space-xs">
+<div class="font-label-sm text-label-sm uppercase text-outline">TOPOLOGICAL ZERO</div>
+<div class="font-label-md text-label-md text-on-surface">
+          INITIALIZE_GEOMETRY_BASELINE
+        </div>
+<div class="mt-space-xs font-label-sm text-label-sm text-on-surface-variant">
+          Initial mesh generated with 18,420 dual-quad nodes. CSYS: WGS84 Cartesian Ortho.
+        </div>
+</div>
+<!-- Hash Row -->
+<div class="mt-space-sm pt-space-xs bg-surface-container-low px-space-sm py-1 flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-outline uppercase">SHA-256</span>
+<div class="flex items-center gap-1">
+<span class="font-label-sm text-label-sm text-secondary font-mono">7f99c2bb01c459ae34dc...410b89</span>
+<button aria-label="Copy Hash" class="p-1 text-outline hover:text-on-surface" title="Copy Hash">
+<span class="material-symbols-outlined text-[14px] block">content_copy</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Visual Asset Showcase: Archival Drafting Stamp Card -->
+<div class="relative w-full bg-surface-container-low p-space-md shadow-sm overflow-hidden">
+<div class="flex items-center justify-between mb-space-xs">
+<span class="font-label-sm text-label-sm uppercase text-outline">MICROFILM INSPECTION SCHEMATIC</span>
+<span class="font-label-sm text-label-sm text-secondary font-medium">ORTHOGRAPHIC 01</span>
+</div>
+<div class="relative w-full h-36 bg-surface-container-highest overflow-hidden flex items-center justify-center">
+<img class="w-full h-full object-cover" data-alt="Black and white archival blueprint isometric schematic of a titanium mechanical bore cylinder assembly, fine orthographic graphite drafting linework, white paper background with subtle millimeter grid overlay, technical aerospace drafting typography stamps and caliper dimension marks" src="https://lh3.googleusercontent.com/aida-public/AB6AXuChdTaq0geS0PmXS2AueCQ85TpM9YT-liesxl1t-bZlZ0nSnnQ6o7GrpzoGCI8aG3xM-ORFVJtRAK6Hon0qQvNxMNew3uLLOuT0UX8YS5B6LA9PicDiDciJQ8Qf9fuLnF-iqv_f7GxP3qgo7TjdWEvjL8dDArexdvNMItKMhfYM0A13kO8xy_yTzVvvWiliXPHhXag1BeK_AzNMdTsydnM0QZ9IpnxTZAfUYFwhvhNXQDNc648KCX8">
+<div class="absolute inset-0 bg-primary/10"></div>
+<!-- Coordinate Callout Overlay -->
+<div class="absolute top-2 left-2 bg-surface-container-lowest/90 px-1.5 py-0.5 text-on-surface font-label-sm text-label-sm shadow-sm">
+        SEC: D-D' // FLANGE THICKNESS: 14.2mm
+      </div>
+<div class="absolute bottom-2 right-2 bg-primary text-on-primary px-1.5 py-0.5 font-label-sm text-label-sm uppercase tracking-wider">
+        VERIFIED AIRWORTHY
+      </div>
+</div>
+</div>
+<!-- 4. Tactile Verification Keypad & Sign-off Tray -->
+<div class="relative w-full bg-surface-container-lowest p-space-md shadow-sm">
+<!-- Header of Sign-off Box -->
+<div class="flex items-center justify-between pb-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="w-2.5 h-2.5 bg-primary"></span>
+<span class="font-label-lg text-label-lg uppercase tracking-wider text-on-surface">HARD SIGN-OFF TERMINAL</span>
+</div>
+<span class="font-label-sm text-label-sm text-outline">HARDWARE KEY HSM-04</span>
+</div>
+<!-- Cryptographic Key Fingerprint -->
+<div class="bg-surface-container p-space-sm mt-space-xs">
+<div class="flex items-center justify-between font-label-sm text-label-sm text-outline uppercase">
+<span>FINGERPRINT REGISTRY</span>
+<span class="text-secondary font-bold">RSA-PSS / 4096-BIT</span>
+</div>
+<div class="font-label-md text-label-md text-on-surface font-mono tracking-widest mt-1">
+        9B04 F621 82CD 11A9 E355 4B88 0210 CA57
+      </div>
+<div class="flex items-center gap-space-sm pt-space-xs text-outline font-label-sm text-label-sm">
+<span>DEVICE: YubiKey 5 FIPS</span>
+<span>•</span>
+<span>SLOT: 9A (ARCHIVAL_SIGN)</span>
+</div>
+</div>
+<!-- Physical Style Stamp Pad Button -->
+<div class="mt-space-md">
+<button class="w-full relative py-space-md px-space-lg bg-surface-container-high hover:bg-surface-container-highest active:bg-secondary text-on-surface transition-all group flex flex-col items-center justify-center gap-1 shadow-sm" id="commit-seal-btn">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-error group-hover:scale-110 transition-transform">approval</span>
+<span class="font-body-md text-body-md font-semibold tracking-widest uppercase text-on-surface">
+            APPLY PRE_COMMIT SEAL
+          </span>
+</div>
+<span class="font-label-sm text-label-sm text-outline tracking-wider">
+          EMBED 2H GRAPHITE SIGNATURE &amp; ADVANCE HEAD
+        </span>
+</button>
+</div>
+<!-- Sign-off Metadata Quadrants -->
+<div class="grid grid-cols-2 gap-space-xs mt-space-sm pt-space-xs">
+<div class="bg-surface-container-low p-space-xs">
+<span class="font-label-sm text-label-sm text-outline block uppercase">CURRENT REV</span>
+<span class="font-label-md text-label-md text-on-surface font-mono">SPEC-8402 // D.4</span>
+</div>
+<div class="bg-surface-container-low p-space-xs">
+<span class="font-label-sm text-label-sm text-outline block uppercase">NEXT BLOCK STATE</span>
+<span class="font-label-md text-label-md text-secondary font-mono">1,048,292 [READY]</span>
+</div>
+</div>
+<div class="mt-space-xs flex items-center justify-between font-label-sm text-label-sm text-outline">
+<span>ENCRYPTION: HARD-SECURED</span>
+<span>LOG FORMAT: ARCHIVAL-V4</span>
+</div>
+</div>
+<!-- Interactive Feedback Banner (Hidden by default, triggered on click) -->
+<div class="hidden w-full bg-surface-container p-space-sm shadow-md transition-all" id="status-toast">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-[18px] text-secondary">check_box</span>
+<div class="flex flex-col min-w-0">
+<span class="font-label-sm text-label-sm text-on-surface font-bold uppercase tracking-wider">PRE_COMMIT SEAL ATTESTED</span>
+<span class="font-label-sm text-label-sm text-outline truncate">BLOCK #1048292 APPENDED // TX: 0x48ae190f77b</span>
+</div>
+</div>
+</div>
+</div>
+<script>
+  (function() {
+    const sealBtn = document.getElementById('commit-seal-btn');
+    const toast = document.getElementById('status-toast');
+    const ackBtn = document.getElementById('quick-signoff-btn');
+
+    if (sealBtn && toast) {
+      sealBtn.addEventListener('click', function() {
+        sealBtn.classList.add('bg-secondary', 'text-on-secondary');
+        setTimeout(() => {
+          sealBtn.classList.remove('bg-secondary', 'text-on-secondary');
+        }, 150);
+
+        toast.classList.remove('hidden');
+        toast.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        setTimeout(() => {
+          toast.classList.add('hidden');
+        }, 4000);
+      });
+    }
+
+    if (ackBtn) {
+      ackBtn.addEventListener('click', function() {
+        ackBtn.textContent = 'ACKNOWLEDGED';
+        ackBtn.classList.replace('bg-primary', 'bg-surface-container');
+        ackBtn.classList.replace('text-on-primary', 'text-outline');
+      });
+    }
+  })();
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-primary-container text-on-primary-container" data-active-classes="bg-surface-variant/20 text-inverse-on-surface"><div class="h-16 grid grid-cols-4 items-stretch px-gutter-mobile"><a class="flex flex-col items-center justify-center gap-0.5 text-on-surface-variant hover:text-inverse-on-surface transition-colors min-h-[44px]" data-path="canvas" href="#"><span class="material-symbols-outlined text-[20px]">grid_4x4</span><span class="font-label-sm text-label-sm uppercase tracking-wider">CANVAS</span></a><a class="flex flex-col items-center justify-center gap-0.5 text-on-surface-variant hover:text-inverse-on-surface transition-colors min-h-[44px]" data-path="params" href="#"><span class="material-symbols-outlined text-[20px]">linear_scale</span><span class="font-label-sm text-label-sm uppercase tracking-wider">PARAMS</span></a><a aria-current="page" class="flex flex-col items-center justify-center gap-0.5 transition-colors min-h-[44px] bg-surface-variant/20 text-inverse-on-surface" data-path="audit" href="#"><span class="material-symbols-outlined text-[20px]">verified</span><span class="font-label-sm text-label-sm uppercase tracking-wider">AUDIT</span></a><a class="flex flex-col items-center justify-center gap-0.5 text-on-surface-variant hover:text-inverse-on-surface transition-colors min-h-[44px]" data-path="sheets" href="#"><span class="material-symbols-outlined text-[20px]">architecture</span><span class="font-label-sm text-label-sm uppercase tracking-wider">SHEETS</span></a></div></nav></body></html>

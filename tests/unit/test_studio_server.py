@@ -549,13 +549,11 @@ def test_error_envelope_is_flat(client: TestClient) -> None:
     assert body["message"]
 
 
-def test_token_is_never_echoed_in_any_response(client: TestClient) -> None:
+def test_token_is_never_echoed_in_any_response(client: TestClient, data_dir: Path) -> None:
     from fastapi.testclient import TestClient as TC
 
     app = create_studio_app(
-        data_dir=client.app.extra.get("data_dir", Path(tempfile.gettempdir()) / "x")  # type: ignore[attr-defined]
-        if False
-        else None,
+        data_dir=data_dir,
         api_token=LAUNCH_TOKEN,
         max_body_bytes=4096,
         static_root=None,

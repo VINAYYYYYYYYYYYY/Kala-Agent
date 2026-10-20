@@ -1,0 +1,23 @@
+[workspace]
+resolver = "3"
+
+[package]
+name = "kala-design-intent"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+publish = false
+description = "Kala Studio design templates, DesignIntent validation and the strict local design-prompt parser"
+
+[dependencies]
+# Accepted crates consumed read-only through path dependencies. This cell keeps
+# its own workspace and lockfile so the parent workspace stays untouched.
+kala-contracts = { path = "../kala-contracts" }
+kala-json = { path = "../kala-json" }
+num-bigint = "0.4"
+num-traits = "0.2"
+regex = "1"
+
+[profile.release]
+strip = "symbols"

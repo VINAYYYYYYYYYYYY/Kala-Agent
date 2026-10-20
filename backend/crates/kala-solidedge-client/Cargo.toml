@@ -1,0 +1,30 @@
+[workspace]
+resolver = "3"
+
+[package]
+name = "kala-solidedge-client"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+publish = false
+description = "Native ConstructionScript lowering and loopback bridge client for the Kala Agent Solid Edge integration"
+
+# This crate is deliberately a standalone workspace with its own lock file. The
+# accepted root backend workspace is owned by another cell; adding a member or
+# editing its lock here would violate that ownership boundary.
+[dependencies]
+# Accepted read-only sibling crates. The shared construction script is already
+# modelled by `kala-contracts`, so this cell does not restate it.
+kala-contracts = { path = "../kala-contracts" }
+kala-json = { path = "../kala-json" }
+getrandom = "0.3.4"
+num-bigint = "0.4"
+num-traits = "0.2"
+sha2 = "0.10"
+
+[dev-dependencies]
+tempfile = "3.20"
+
+[profile.release]
+strip = "symbols"

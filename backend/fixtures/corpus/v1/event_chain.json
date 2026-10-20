@@ -1,0 +1,594 @@
+{
+  "chain": {
+    "algorithm": "sha256",
+    "covered_parts": [
+      "sequence",
+      "event_type",
+      "aggregate_id",
+      "workflow_id or empty",
+      "run_id or empty",
+      "occurred_at",
+      "payload_digest",
+      "previous_event_digest"
+    ],
+    "covers_domain": true,
+    "domain": "kala-agent.event-chain.v1.sha256",
+    "genesis_previous_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+    "length_prefix_byte_order": "big",
+    "length_prefix_bytes": 8,
+    "payload_digest_definition": "sha256(utf-8 bytes of payload_json)"
+  },
+  "corpus_schema_version": 1,
+  "database": {
+    "database_file": "schema_v2.sqlite3",
+    "database_sha256": "9d8b6556c99006ce287a52c65e2590ef5d2b485ec73bdd4079fb648191025832",
+    "database_sha256_role": "informational: SQLite file bytes are not asserted stable across SQLite library versions; logical rows and digests below are the contract",
+    "database_size_bytes": 131072,
+    "events": [
+      {
+        "aggregate_id": "design-corpus",
+        "digest": "b3ff35520a0a255a37fb5d2d578acc6581ccfb3ff50e61dfe93666064c237f49",
+        "event_digest": "322fc590f6ce00f91e53af719a16d5fe3b385b07c6b4a334dbfa257e40073208",
+        "event_type": "design.created",
+        "occurred_at": "2026-01-01T00:00:00.000000Z",
+        "payload_json": "{\"big_integer\":1180591620717411303424,\"name\":\"Corpus design\",\"negative_zero\":-0.0,\"ratio\":1e-05,\"unicode\":\"\\u03ba \\ud83d\\ude00\"}",
+        "previous_event_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "run_id": null,
+        "sequence": 1,
+        "workflow_id": null
+      },
+      {
+        "aggregate_id": "design-corpus",
+        "digest": "d5428e79b36f8741ae092a0f1608ed0491668337728f0241425520cc382858c1",
+        "event_digest": "d0b7e3f7f2ec253a7efa8afe931dc6e97f1b29207707225d66bf1dbdab660fd3",
+        "event_type": "domain.evaluated",
+        "occurred_at": "2026-01-01T00:00:01.000000Z",
+        "payload_json": "{\"blocked_step_id\":null,\"completed_step_ids\":[\"step.one\",\"step.two\"],\"evaluation_count\":2,\"passed\":true,\"score\":0.910823}",
+        "previous_event_digest": "322fc590f6ce00f91e53af719a16d5fe3b385b07c6b4a334dbfa257e40073208",
+        "run_id": null,
+        "sequence": 2,
+        "workflow_id": null
+      },
+      {
+        "aggregate_id": "flow-corpus",
+        "digest": "db7a2bb48288ad6f8d0c4b84f3b9fa9def2a4572f3cecf2c5308ba347d01ae49",
+        "event_digest": "a52e851b951ce95454a8b5012e6e51a16943e71bf0ea1b7d2824ba6f66c676e4",
+        "event_type": "workflow.started",
+        "occurred_at": "2026-01-01T00:00:02.000000Z",
+        "payload_json": "{\"definition_id\":\"mechanical.reference\",\"definition_version\":\"0.1.0\",\"offline\":true,\"provider\":\"local\",\"step_ids\":[\"step.one\",\"step.two\"]}",
+        "previous_event_digest": "d0b7e3f7f2ec253a7efa8afe931dc6e97f1b29207707225d66bf1dbdab660fd3",
+        "run_id": null,
+        "sequence": 3,
+        "workflow_id": "flow-corpus"
+      },
+      {
+        "aggregate_id": "flow-corpus",
+        "digest": "557506b73d39b67b0533023e0cfbf20595bbc5ac4107db34472b9ec1a90ac238",
+        "event_digest": "9566070efbc56e1e9645551b4d1dea15376f39e8e5c095f75912e97e062363f7",
+        "event_type": "tool.called",
+        "occurred_at": "2026-01-01T00:00:03.000000Z",
+        "payload_json": "{\"artifact_bytes\":0,\"call_id\":\"call-corpus-1\",\"nested\":{\"a\":[1,2.0,null],\"b\":false},\"tool_id\":\"reference.simulator\"}",
+        "previous_event_digest": "a52e851b951ce95454a8b5012e6e51a16943e71bf0ea1b7d2824ba6f66c676e4",
+        "run_id": "run-1",
+        "sequence": 4,
+        "workflow_id": "flow-corpus"
+      },
+      {
+        "aggregate_id": "flow-corpus",
+        "digest": "7674b0de3b35541b3bd1ac7d2143f106c84b0aba463249d13627d44605babfaa",
+        "event_digest": "143fed75e63b8fb67c9449b0fe353cf4d20fc1cb4223b20e5d70e95028999fc7",
+        "event_type": "workflow.completed",
+        "occurred_at": "2026-01-01T00:00:04.000000Z",
+        "payload_json": "{\"revision_id\":\"rev-corpus-design-r0\",\"status\":\"completed\"}",
+        "previous_event_digest": "9566070efbc56e1e9645551b4d1dea15376f39e8e5c095f75912e97e062363f7",
+        "run_id": "run-1",
+        "sequence": 5,
+        "workflow_id": "flow-corpus"
+      }
+    ],
+    "foreign_keys": 1,
+    "foreign_keys_note": "SQLite foreign_keys is a per-connection PRAGMA set by Database, not a property stored in the file; a reader must enable it itself",
+    "journal_mode": "wal",
+    "migrations": [
+      {
+        "applied_at": "2026-01-01T00:00:00.000000Z",
+        "name": "initial_persistence_schema",
+        "version": 1
+      },
+      {
+        "applied_at": "2026-01-01T00:00:00.000000Z",
+        "name": "journal_event_hash_chain",
+        "version": 2
+      }
+    ],
+    "normalizations": [
+      {
+        "field": "schema_migrations.applied_at",
+        "reason": "Database.initialize writes the wall clock at migration time; the fixture replaces both rows after migration so the file is stable",
+        "value": "2026-01-01T00:00:00.000000Z"
+      }
+    ],
+    "schema_digest": "a8b36de324421812e27eddcaa49487482b81e8293fbd4edb806b83dfbfb60b9a",
+    "schema_digest_definition": "sha256 of sorted [type,name,tbl_name,whitespace-normalized sql] entries",
+    "schema_entries": [
+      {
+        "name": "approval_requests_workflow_created_idx",
+        "sql": "CREATE INDEX approval_requests_workflow_created_idx\n            ON approval_requests(workflow_id, created_at, request_id)\n            ",
+        "sql_normalized": "CREATE INDEX approval_requests_workflow_created_idx ON approval_requests(workflow_id, created_at, request_id)",
+        "tbl_name": "approval_requests",
+        "type": "index"
+      },
+      {
+        "name": "design_revisions_design_sequence_idx",
+        "sql": "CREATE INDEX design_revisions_design_sequence_idx\n            ON design_revisions(design_id, sequence)\n            ",
+        "sql_normalized": "CREATE INDEX design_revisions_design_sequence_idx ON design_revisions(design_id, sequence)",
+        "tbl_name": "design_revisions",
+        "type": "index"
+      },
+      {
+        "name": "events_aggregate_sequence_idx",
+        "sql": "CREATE INDEX events_aggregate_sequence_idx\n            ON events(aggregate_id, sequence)\n            ",
+        "sql_normalized": "CREATE INDEX events_aggregate_sequence_idx ON events(aggregate_id, sequence)",
+        "tbl_name": "events",
+        "type": "index"
+      },
+      {
+        "name": "events_run_sequence_idx",
+        "sql": "CREATE INDEX events_run_sequence_idx\n            ON events(run_id, sequence)\n            ",
+        "sql_normalized": "CREATE INDEX events_run_sequence_idx ON events(run_id, sequence)",
+        "tbl_name": "events",
+        "type": "index"
+      },
+      {
+        "name": "events_type_sequence_idx",
+        "sql": "CREATE INDEX events_type_sequence_idx\n            ON events(event_type, sequence)\n            ",
+        "sql_normalized": "CREATE INDEX events_type_sequence_idx ON events(event_type, sequence)",
+        "tbl_name": "events",
+        "type": "index"
+      },
+      {
+        "name": "events_workflow_sequence_idx",
+        "sql": "CREATE INDEX events_workflow_sequence_idx\n            ON events(workflow_id, sequence)\n            ",
+        "sql_normalized": "CREATE INDEX events_workflow_sequence_idx ON events(workflow_id, sequence)",
+        "tbl_name": "events",
+        "type": "index"
+      },
+      {
+        "name": "memory_entries_expiry_idx",
+        "sql": "CREATE INDEX memory_entries_expiry_idx\n            ON memory_entries(expires_at)\n            ",
+        "sql_normalized": "CREATE INDEX memory_entries_expiry_idx ON memory_entries(expires_at)",
+        "tbl_name": "memory_entries",
+        "type": "index"
+      },
+      {
+        "name": "memory_entries_source_created_idx",
+        "sql": "CREATE INDEX memory_entries_source_created_idx\n            ON memory_entries(source, created_at, memory_id)\n            ",
+        "sql_normalized": "CREATE INDEX memory_entries_source_created_idx ON memory_entries(source, created_at, memory_id)",
+        "tbl_name": "memory_entries",
+        "type": "index"
+      },
+      {
+        "name": "sqlite_autoindex_approval_requests_1",
+        "sql": null,
+        "sql_normalized": null,
+        "tbl_name": "approval_requests",
+        "type": "index"
+      },
+      {
+        "name": "sqlite_autoindex_design_revisions_1",
+        "sql": null,
+        "sql_normalized": null,
+        "tbl_name": "design_revisions",
+        "type": "index"
+      },
+      {
+        "name": "sqlite_autoindex_design_revisions_2",
+        "sql": null,
+        "sql_normalized": null,
+        "tbl_name": "design_revisions",
+        "type": "index"
+      },
+      {
+        "name": "sqlite_autoindex_design_specs_1",
+        "sql": null,
+        "sql_normalized": null,
+        "tbl_name": "design_specs",
+        "type": "index"
+      },
+      {
+        "name": "sqlite_autoindex_memory_entries_1",
+        "sql": null,
+        "sql_normalized": null,
+        "tbl_name": "memory_entries",
+        "type": "index"
+      },
+      {
+        "name": "sqlite_autoindex_tool_calls_1",
+        "sql": null,
+        "sql_normalized": null,
+        "tbl_name": "tool_calls",
+        "type": "index"
+      },
+      {
+        "name": "sqlite_autoindex_tool_results_1",
+        "sql": null,
+        "sql_normalized": null,
+        "tbl_name": "tool_results",
+        "type": "index"
+      },
+      {
+        "name": "sqlite_autoindex_workflow_snapshots_1",
+        "sql": null,
+        "sql_normalized": null,
+        "tbl_name": "workflow_snapshots",
+        "type": "index"
+      },
+      {
+        "name": "tool_calls_tool_issued_idx",
+        "sql": "CREATE INDEX tool_calls_tool_issued_idx\n            ON tool_calls(tool_id, issued_at, call_id)\n            ",
+        "sql_normalized": "CREATE INDEX tool_calls_tool_issued_idx ON tool_calls(tool_id, issued_at, call_id)",
+        "tbl_name": "tool_calls",
+        "type": "index"
+      },
+      {
+        "name": "tool_results_tool_status_idx",
+        "sql": "CREATE INDEX tool_results_tool_status_idx\n            ON tool_results(tool_id, status, call_id)\n            ",
+        "sql_normalized": "CREATE INDEX tool_results_tool_status_idx ON tool_results(tool_id, status, call_id)",
+        "tbl_name": "tool_results",
+        "type": "index"
+      },
+      {
+        "name": "workflow_snapshots_workflow_sequence_idx",
+        "sql": "CREATE INDEX workflow_snapshots_workflow_sequence_idx\n            ON workflow_snapshots(workflow_id, sequence)\n            ",
+        "sql_normalized": "CREATE INDEX workflow_snapshots_workflow_sequence_idx ON workflow_snapshots(workflow_id, sequence)",
+        "tbl_name": "workflow_snapshots",
+        "type": "index"
+      },
+      {
+        "name": "approval_requests",
+        "sql": "CREATE TABLE approval_requests (\n                request_id TEXT PRIMARY KEY,\n                workflow_id TEXT NOT NULL,\n                status TEXT NOT NULL,\n                created_at TEXT NOT NULL,\n                model_json TEXT NOT NULL\n            )",
+        "sql_normalized": "CREATE TABLE approval_requests ( request_id TEXT PRIMARY KEY, workflow_id TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL, model_json TEXT NOT NULL )",
+        "tbl_name": "approval_requests",
+        "type": "table"
+      },
+      {
+        "name": "design_revisions",
+        "sql": "CREATE TABLE design_revisions (\n                revision_id TEXT PRIMARY KEY,\n                design_id TEXT NOT NULL,\n                sequence INTEGER NOT NULL,\n                model_json TEXT NOT NULL,\n                created_at TEXT NOT NULL,\n                UNIQUE(design_id, sequence)\n            )",
+        "sql_normalized": "CREATE TABLE design_revisions ( revision_id TEXT PRIMARY KEY, design_id TEXT NOT NULL, sequence INTEGER NOT NULL, model_json TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(design_id, sequence) )",
+        "tbl_name": "design_revisions",
+        "type": "table"
+      },
+      {
+        "name": "design_specs",
+        "sql": "CREATE TABLE design_specs (\n                id TEXT PRIMARY KEY,\n                model_json TEXT NOT NULL\n            )",
+        "sql_normalized": "CREATE TABLE design_specs ( id TEXT PRIMARY KEY, model_json TEXT NOT NULL )",
+        "tbl_name": "design_specs",
+        "type": "table"
+      },
+      {
+        "name": "events",
+        "sql": "CREATE TABLE events (\n                sequence INTEGER PRIMARY KEY AUTOINCREMENT,\n                event_type TEXT NOT NULL,\n                aggregate_id TEXT NOT NULL,\n                workflow_id TEXT,\n                run_id TEXT,\n                payload_json TEXT NOT NULL,\n                digest TEXT NOT NULL,\n                occurred_at TEXT NOT NULL\n            , previous_event_digest TEXT NOT NULL DEFAULT '', event_digest TEXT NOT NULL DEFAULT '')",
+        "sql_normalized": "CREATE TABLE events ( sequence INTEGER PRIMARY KEY AUTOINCREMENT, event_type TEXT NOT NULL, aggregate_id TEXT NOT NULL, workflow_id TEXT, run_id TEXT, payload_json TEXT NOT NULL, digest TEXT NOT NULL, occurred_at TEXT NOT NULL , previous_event_digest TEXT NOT NULL DEFAULT '', event_digest TEXT NOT NULL DEFAULT '')",
+        "tbl_name": "events",
+        "type": "table"
+      },
+      {
+        "name": "memory_entries",
+        "sql": "CREATE TABLE memory_entries (\n                memory_id TEXT PRIMARY KEY,\n                source TEXT NOT NULL,\n                provenance_id TEXT,\n                created_at TEXT NOT NULL,\n                expires_at TEXT,\n                model_json TEXT NOT NULL\n            )",
+        "sql_normalized": "CREATE TABLE memory_entries ( memory_id TEXT PRIMARY KEY, source TEXT NOT NULL, provenance_id TEXT, created_at TEXT NOT NULL, expires_at TEXT, model_json TEXT NOT NULL )",
+        "tbl_name": "memory_entries",
+        "type": "table"
+      },
+      {
+        "name": "schema_migrations",
+        "sql": "CREATE TABLE schema_migrations (\n                    version INTEGER PRIMARY KEY,\n                    name TEXT NOT NULL,\n                    applied_at TEXT NOT NULL\n                )",
+        "sql_normalized": "CREATE TABLE schema_migrations ( version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL )",
+        "tbl_name": "schema_migrations",
+        "type": "table"
+      },
+      {
+        "name": "sqlite_sequence",
+        "sql": "CREATE TABLE sqlite_sequence(name,seq)",
+        "sql_normalized": "CREATE TABLE sqlite_sequence(name,seq)",
+        "tbl_name": "sqlite_sequence",
+        "type": "table"
+      },
+      {
+        "name": "tool_calls",
+        "sql": "CREATE TABLE tool_calls (\n                call_id TEXT PRIMARY KEY,\n                tool_id TEXT NOT NULL,\n                issued_at TEXT NOT NULL,\n                model_json TEXT NOT NULL\n            )",
+        "sql_normalized": "CREATE TABLE tool_calls ( call_id TEXT PRIMARY KEY, tool_id TEXT NOT NULL, issued_at TEXT NOT NULL, model_json TEXT NOT NULL )",
+        "tbl_name": "tool_calls",
+        "type": "table"
+      },
+      {
+        "name": "tool_results",
+        "sql": "CREATE TABLE tool_results (\n                call_id TEXT PRIMARY KEY,\n                tool_id TEXT NOT NULL,\n                status TEXT NOT NULL,\n                model_json TEXT NOT NULL,\n                FOREIGN KEY(call_id) REFERENCES tool_calls(call_id)\n                    ON UPDATE RESTRICT ON DELETE RESTRICT\n            )",
+        "sql_normalized": "CREATE TABLE tool_results ( call_id TEXT PRIMARY KEY, tool_id TEXT NOT NULL, status TEXT NOT NULL, model_json TEXT NOT NULL, FOREIGN KEY(call_id) REFERENCES tool_calls(call_id) ON UPDATE RESTRICT ON DELETE RESTRICT )",
+        "tbl_name": "tool_results",
+        "type": "table"
+      },
+      {
+        "name": "workflow_snapshots",
+        "sql": "CREATE TABLE workflow_snapshots (\n                sequence INTEGER PRIMARY KEY AUTOINCREMENT,\n                snapshot_id TEXT NOT NULL UNIQUE,\n                workflow_id TEXT NOT NULL,\n                state_json TEXT NOT NULL,\n                digest TEXT NOT NULL,\n                created_at TEXT NOT NULL\n            )",
+        "sql_normalized": "CREATE TABLE workflow_snapshots ( sequence INTEGER PRIMARY KEY AUTOINCREMENT, snapshot_id TEXT NOT NULL UNIQUE, workflow_id TEXT NOT NULL, state_json TEXT NOT NULL, digest TEXT NOT NULL, created_at TEXT NOT NULL )",
+        "tbl_name": "workflow_snapshots",
+        "type": "table"
+      },
+      {
+        "name": "events_prevent_delete",
+        "sql": "CREATE TRIGGER events_prevent_delete\n    BEFORE DELETE ON events\n    BEGIN\n        SELECT RAISE(ABORT, 'events are append-only');\n    END",
+        "sql_normalized": "CREATE TRIGGER events_prevent_delete BEFORE DELETE ON events BEGIN SELECT RAISE(ABORT, 'events are append-only'); END",
+        "tbl_name": "events",
+        "type": "trigger"
+      },
+      {
+        "name": "events_prevent_update",
+        "sql": "CREATE TRIGGER events_prevent_update\n    BEFORE UPDATE ON events\n    BEGIN\n        SELECT RAISE(ABORT, 'events are append-only');\n    END",
+        "sql_normalized": "CREATE TRIGGER events_prevent_update BEFORE UPDATE ON events BEGIN SELECT RAISE(ABORT, 'events are append-only'); END",
+        "tbl_name": "events",
+        "type": "trigger"
+      },
+      {
+        "name": "events_require_event_chain",
+        "sql": "CREATE TRIGGER events_require_event_chain\n    BEFORE INSERT ON events\n    WHEN length(NEW.previous_event_digest) <> 64\n      OR length(NEW.event_digest) <> 64\n      OR NEW.previous_event_digest <> lower(NEW.previous_event_digest)\n      OR NEW.event_digest <> lower(NEW.event_digest)\n    BEGIN\n        SELECT RAISE(ABORT, 'events require a hash chain');\n    END",
+        "sql_normalized": "CREATE TRIGGER events_require_event_chain BEFORE INSERT ON events WHEN length(NEW.previous_event_digest) <> 64 OR length(NEW.event_digest) <> 64 OR NEW.previous_event_digest <> lower(NEW.previous_event_digest) OR NEW.event_digest <> lower(NEW.event_digest) BEGIN SELECT RAISE(ABORT, 'events require a hash chain'); END",
+        "tbl_name": "events",
+        "type": "trigger"
+      }
+    ],
+    "schema_version": 2,
+    "snapshot": {
+      "created_at": "2026-01-01T00:00:10.000000Z",
+      "digest": "cdacd3d40fd49ceebf7b644830690b5cece4229b127311691a526b08cf92ed9b",
+      "sequence": 1,
+      "snapshot_id": "snapshot-flow-corpus-000001",
+      "state_json": "{\"completed_step_ids\":[\"step.one\"],\"sequence\":1,\"status\":\"running\",\"workflow_id\":\"flow-corpus\"}",
+      "workflow_id": "flow-corpus"
+    },
+    "sqlite_library_version_at_generation": "3.54.0",
+    "sqlite_sequence_rows": [
+      {
+        "name": "events",
+        "seq": 5
+      },
+      {
+        "name": "workflow_snapshots",
+        "seq": 1
+      }
+    ],
+    "stored_design_spec_rows": [
+      {
+        "id": "design-corpus",
+        "model_json": "{\"id\":\"design-corpus\",\"name\":\"Corpus design\",\"summary\":\"Fixture design specification\",\"parameter_schema_digest\":null,\"attributes_json\":\"{\\\"domain\\\":\\\"mechanical\\\",\\\"nested\\\":{\\\"a\\\":1,\\\"b\\\":2}}\",\"requirement_ids\":[\"req-1\",\"req-2\"],\"constraints\":[\"c1\"]}"
+      }
+    ],
+    "stored_event_rows": [
+      {
+        "aggregate_id": "design-corpus",
+        "digest": "b3ff35520a0a255a37fb5d2d578acc6581ccfb3ff50e61dfe93666064c237f49",
+        "event_digest": "322fc590f6ce00f91e53af719a16d5fe3b385b07c6b4a334dbfa257e40073208",
+        "event_type": "design.created",
+        "occurred_at": "2026-01-01T00:00:00.000000Z",
+        "payload_json": "{\"big_integer\":1180591620717411303424,\"name\":\"Corpus design\",\"negative_zero\":-0.0,\"ratio\":1e-05,\"unicode\":\"\\u03ba \\ud83d\\ude00\"}",
+        "previous_event_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "run_id": null,
+        "sequence": 1,
+        "workflow_id": null
+      },
+      {
+        "aggregate_id": "design-corpus",
+        "digest": "d5428e79b36f8741ae092a0f1608ed0491668337728f0241425520cc382858c1",
+        "event_digest": "d0b7e3f7f2ec253a7efa8afe931dc6e97f1b29207707225d66bf1dbdab660fd3",
+        "event_type": "domain.evaluated",
+        "occurred_at": "2026-01-01T00:00:01.000000Z",
+        "payload_json": "{\"blocked_step_id\":null,\"completed_step_ids\":[\"step.one\",\"step.two\"],\"evaluation_count\":2,\"passed\":true,\"score\":0.910823}",
+        "previous_event_digest": "322fc590f6ce00f91e53af719a16d5fe3b385b07c6b4a334dbfa257e40073208",
+        "run_id": null,
+        "sequence": 2,
+        "workflow_id": null
+      },
+      {
+        "aggregate_id": "flow-corpus",
+        "digest": "db7a2bb48288ad6f8d0c4b84f3b9fa9def2a4572f3cecf2c5308ba347d01ae49",
+        "event_digest": "a52e851b951ce95454a8b5012e6e51a16943e71bf0ea1b7d2824ba6f66c676e4",
+        "event_type": "workflow.started",
+        "occurred_at": "2026-01-01T00:00:02.000000Z",
+        "payload_json": "{\"definition_id\":\"mechanical.reference\",\"definition_version\":\"0.1.0\",\"offline\":true,\"provider\":\"local\",\"step_ids\":[\"step.one\",\"step.two\"]}",
+        "previous_event_digest": "d0b7e3f7f2ec253a7efa8afe931dc6e97f1b29207707225d66bf1dbdab660fd3",
+        "run_id": null,
+        "sequence": 3,
+        "workflow_id": "flow-corpus"
+      },
+      {
+        "aggregate_id": "flow-corpus",
+        "digest": "557506b73d39b67b0533023e0cfbf20595bbc5ac4107db34472b9ec1a90ac238",
+        "event_digest": "9566070efbc56e1e9645551b4d1dea15376f39e8e5c095f75912e97e062363f7",
+        "event_type": "tool.called",
+        "occurred_at": "2026-01-01T00:00:03.000000Z",
+        "payload_json": "{\"artifact_bytes\":0,\"call_id\":\"call-corpus-1\",\"nested\":{\"a\":[1,2.0,null],\"b\":false},\"tool_id\":\"reference.simulator\"}",
+        "previous_event_digest": "a52e851b951ce95454a8b5012e6e51a16943e71bf0ea1b7d2824ba6f66c676e4",
+        "run_id": "run-1",
+        "sequence": 4,
+        "workflow_id": "flow-corpus"
+      },
+      {
+        "aggregate_id": "flow-corpus",
+        "digest": "7674b0de3b35541b3bd1ac7d2143f106c84b0aba463249d13627d44605babfaa",
+        "event_digest": "143fed75e63b8fb67c9449b0fe353cf4d20fc1cb4223b20e5d70e95028999fc7",
+        "event_type": "workflow.completed",
+        "occurred_at": "2026-01-01T00:00:04.000000Z",
+        "payload_json": "{\"revision_id\":\"rev-corpus-design-r0\",\"status\":\"completed\"}",
+        "previous_event_digest": "9566070efbc56e1e9645551b4d1dea15376f39e8e5c095f75912e97e062363f7",
+        "run_id": "run-1",
+        "sequence": 5,
+        "workflow_id": "flow-corpus"
+      }
+    ],
+    "stored_snapshot_rows": [
+      {
+        "created_at": "2026-01-01T00:00:10.000000Z",
+        "digest": "cdacd3d40fd49ceebf7b644830690b5cece4229b127311691a526b08cf92ed9b",
+        "sequence": 1,
+        "snapshot_id": "snapshot-flow-corpus-000001",
+        "state_json": "{\"completed_step_ids\":[\"step.one\"],\"sequence\":1,\"status\":\"running\",\"workflow_id\":\"flow-corpus\"}",
+        "workflow_id": "flow-corpus"
+      }
+    ],
+    "table_count": 10,
+    "table_counts": {
+      "approval_requests": 0,
+      "design_revisions": 0,
+      "design_specs": 1,
+      "events": 5,
+      "memory_entries": 0,
+      "schema_migrations": 2,
+      "tool_calls": 0,
+      "tool_results": 0,
+      "workflow_snapshots": 1
+    },
+    "triggers": [
+      {
+        "name": "events_prevent_delete",
+        "sql_normalized": "CREATE TRIGGER events_prevent_delete BEFORE DELETE ON events BEGIN SELECT RAISE(ABORT, 'events are append-only'); END"
+      },
+      {
+        "name": "events_prevent_update",
+        "sql_normalized": "CREATE TRIGGER events_prevent_update BEFORE UPDATE ON events BEGIN SELECT RAISE(ABORT, 'events are append-only'); END"
+      },
+      {
+        "name": "events_require_event_chain",
+        "sql_normalized": "CREATE TRIGGER events_require_event_chain BEFORE INSERT ON events WHEN length(NEW.previous_event_digest) <> 64 OR length(NEW.event_digest) <> 64 OR NEW.previous_event_digest <> lower(NEW.previous_event_digest) OR NEW.event_digest <> lower(NEW.event_digest) BEGIN SELECT RAISE(ABORT, 'events require a hash chain'); END"
+      }
+    ],
+    "verified_event_count": 5,
+    "verified_head_event_digest": "143fed75e63b8fb67c9449b0fe353cf4d20fc1cb4223b20e5d70e95028999fc7",
+    "verified_head_sequence": 5
+  },
+  "kind": "event_chain",
+  "preimage_cases": [
+    {
+      "as_preimage_parts": [
+        "1",
+        "design.created",
+        "design-corpus",
+        "",
+        "",
+        "2026-01-01T00:00:00.000000Z",
+        "0000000000000000000000000000000000000000000000000000000000000000",
+        "0000000000000000000000000000000000000000000000000000000000000000"
+      ],
+      "chain_digest": "f73047cb6c83dc870b23a391b623de115de9ec20d1c2beb4f8e44cb90fd02d31",
+      "fields": {
+        "aggregate_id": "design-corpus",
+        "event_type": "design.created",
+        "occurred_at": "2026-01-01T00:00:00.000000Z",
+        "payload_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "previous_event_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "run_id": null,
+        "sequence": 1,
+        "workflow_id": null
+      },
+      "id": "workflow_absent"
+    },
+    {
+      "as_preimage_parts": [
+        "1",
+        "design.created",
+        "design-corpus",
+        "",
+        "",
+        "2026-01-01T00:00:00.000000Z",
+        "0000000000000000000000000000000000000000000000000000000000000000",
+        "0000000000000000000000000000000000000000000000000000000000000000"
+      ],
+      "chain_digest": "f73047cb6c83dc870b23a391b623de115de9ec20d1c2beb4f8e44cb90fd02d31",
+      "fields": {
+        "aggregate_id": "design-corpus",
+        "event_type": "design.created",
+        "occurred_at": "2026-01-01T00:00:00.000000Z",
+        "payload_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "previous_event_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "run_id": "",
+        "sequence": 1,
+        "workflow_id": ""
+      },
+      "id": "workflow_empty_collapses_with_absent"
+    },
+    {
+      "as_preimage_parts": [
+        "2",
+        "workflow.started",
+        "flow-corpus",
+        "flow-corpus",
+        "run-1",
+        "2026-01-01T00:00:01.000000Z",
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      "chain_digest": "4eff1e1a16a696ce71f66685671fb6727a4537e65d94c1b5f61b6a16d3199c89",
+      "fields": {
+        "aggregate_id": "flow-corpus",
+        "event_type": "workflow.started",
+        "occurred_at": "2026-01-01T00:00:01.000000Z",
+        "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "previous_event_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "run_id": "run-1",
+        "sequence": 2,
+        "workflow_id": "flow-corpus"
+      },
+      "id": "workflow_and_run_present"
+    },
+    {
+      "as_preimage_parts": [
+        "7",
+        "\u4e8b\u4ef6.\u8bb0\u5f55",
+        "\u8bbe\u8ba1-\ud83d\ude00",
+        "\u6d41\u7a0b",
+        "\u8fd0\u884c",
+        "2026-01-01T00:00:07.000000Z",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      ],
+      "chain_digest": "d54e4f1ea5d0500afeee86c190c599421428e2442461acb7b57afdca8db0df31",
+      "fields": {
+        "aggregate_id": "\u8bbe\u8ba1-\ud83d\ude00",
+        "event_type": "\u4e8b\u4ef6.\u8bb0\u5f55",
+        "occurred_at": "2026-01-01T00:00:07.000000Z",
+        "payload_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "previous_event_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "run_id": "\u8fd0\u884c",
+        "sequence": 7,
+        "workflow_id": "\u6d41\u7a0b"
+      },
+      "id": "unicode_parts"
+    },
+    {
+      "as_preimage_parts": [
+        "9",
+        "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
+        "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww",
+        "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+        "2026-01-01T00:00:09.000000Z",
+        "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      ],
+      "chain_digest": "57d776c35268d9ae3583e95c365d7dc63a6a9dddff32c052661975b01ef0c84d",
+      "fields": {
+        "aggregate_id": "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
+        "event_type": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "occurred_at": "2026-01-01T00:00:09.000000Z",
+        "payload_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "previous_event_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "run_id": "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+        "sequence": 9,
+        "workflow_id": "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww"
+      },
+      "id": "long_parts_exercise_eight_byte_length_prefixes"
+    }
+  ],
+  "verification_recipe": {
+    "python": "Database(path); EventJournal(database).verify_chain(); compare the returned head digest with verified_head_event_digest",
+    "python_version_note": "The fixture was created by CPython 3.14.8 with sqlite3 3.54.0; the logical row values are the portable contract"
+  }
+}

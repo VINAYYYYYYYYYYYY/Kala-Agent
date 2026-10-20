@@ -25,6 +25,8 @@ from conftest import (
     make_request,
 )
 from kala_agent.contracts import ArtifactClassification, ToolRunStatus
+from kala_agent.contracts.construction import ConstructionScript
+from kala_agent.studio.design.templates import l_bracket
 from kala_agent.tools.protocol import (
     JSONValue,
     ToolErrorCode,
@@ -33,16 +35,20 @@ from kala_agent.tools.protocol import (
     validate_against_schema,
 )
 from kala_agent_freecad.availability import FreeCADAvailability
+from kala_agent_freecad.cad.compile import compile_construction
 from kala_agent_freecad.cad.runtime import (
     FREECAD_IMPORT_ORDER,
     LIB_ROOT_ENVIRONMENT_KEY,
     freecad_session,
 )
 from kala_agent_freecad.contracts import (
+    DESIGN_OUTPUT_SCHEMA,
+    DESIGN_TOOL_ID,
+    DESIGN_TOOL_VERSION,
     FEM_OUTPUT_SCHEMA,
     GEOMETRY_OUTPUT_SCHEMA,
 )
-from kala_agent_freecad.worker import invoke_fem, invoke_geometry
+from kala_agent_freecad.worker import invoke_design, invoke_fem, invoke_geometry
 
 pytestmark = pytest.mark.freecad
 
@@ -297,3 +303,44 @@ def test_the_session_reports_the_fem_modules_it_loaded(
         document = modules.freecad.newDocument("session-probe")
         assert modules.freecad.listDocuments()
         modules.freecad.closeDocument(document.Name)
+
+
+ADR_LBRACKET_VOLUME_MM3: Final[float] = 35_571.416047
+
+
+def test_design_entry_point_builds_the_long_l_bracket_call_list(
+    tmp_path: Path,
+    import_roots: tuple[Path, ...],
+) -> None:
+    """The ADR-0009 L-bracket has 85 calls, more than the old 64-entry cap."""
+    script: ConstructionScript = l_bracket(
+        width=60,
+        depth=45,
+        height=40,
+        wall=8,
+        bore_d=10,
+        hole_d=5.5,
+        hole_count=4,
+    ).script
+    calls = compile_construction(script)
+    assert len(calls) > 64
+
+    request = make_request(
+        {"calls_json": json.dumps(calls), "export_formats": ["step", "fcstd"]},
+        workspace=tmp_path,
+        tool_id=DESIGN_TOOL_ID,
+        tool_version=DESIGN_TOOL_VERSION,
+    )
+    response = invoke_design(request)
+    result = _result(response)
+    validate_against_schema(result, DESIGN_OUTPUT_SCHEMA, path="$")
+
+    trace = cast("list[JSONValue]", result["tool_trace"])
+    assert len(trace) == len(calls)
+    measurement = cast("Mapping[str, JSONValue]", result["measurement"])
+    assert measurement["volume_mm3"] == pytest.approx(ADR_LBRACKET_VOLUME_MM3, rel=1e-6)
+    assert measurement["solid"] is True
+    assert result["valid"] is True
+    assert result["stage"] == "solid"
+    step = tmp_path / "artifacts" / "kala-model.step"
+    assert step.read_bytes().startswith(b"ISO-10303-21;")

@@ -1,0 +1,505 @@
+/* Agent & Kernel Journal — right-bottom ledger.
+ *
+ * Scoped under `.studio-zone-right .journal-panel` so it overrides the shell
+ * sketch in layout.css regardless of stylesheet order. The ledger is a real
+ * six-column table (SEQ, UTC, TYPE, MESSAGE, DIGEST, CHAIN): the backend's
+ * hash-chained events carry a sequence and a digest, the local UI rows carry
+ * neither and say so ("—" and "local").
+ *
+ * No fake chain stamp: `SESSION LOG` is the neutral state until a backend
+ * reports an actual hash-chain verification, and the broken stamp names the
+ * first bad event.
+ *
+ * The column widths are a budget: SEQ fits its header and three digits, CHAIN
+ * fits "broken", and DIGEST fits an eight-character digest plus the copy
+ * button. MESSAGE takes the rest and is always one ellipsized line; the full
+ * text is in the cell's title. No cell may paint into its neighbour.
+ *
+ * The `.studio-copy-button` rules are the shared copy affordance of the
+ * workspace: the ledger's digest chip and the export receipt's sha256 line
+ * use the same control, so the styles live here with the ledger that
+ * introduced them.
+ */
+
+.studio-zone-right .journal-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--panel);
+  border-top: 1px solid var(--hairline);
+}
+
+.studio-zone-right .journal-panel .journal-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  min-height: 32px;
+  padding: 0 var(--space-md);
+  background: var(--margin);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.studio-zone-right .journal-panel .journal-panel-header h2 {
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-md);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studio-zone-right .journal-panel .journal-panel-stamp {
+  flex: 0 0 auto;
+  padding: 2px var(--space-sm);
+  border: 1px solid var(--hairline);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--construction);
+  white-space: nowrap;
+}
+
+.studio-zone-right .journal-panel .journal-panel-stamp[data-chain='verified'] {
+  color: var(--stamp);
+  border-color: var(--stamp);
+  font-weight: 700;
+}
+
+.studio-zone-right .journal-panel .journal-panel-stamp[data-chain='broken'] {
+  color: var(--redline-ink);
+  border-color: var(--redline);
+  font-weight: 700;
+}
+
+/* Toolbar: the ledger order toggle and the row count. */
+.studio-zone-right .journal-panel .journal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  min-height: 24px;
+  padding: 0 var(--space-md);
+  border-bottom: 0.5px solid var(--hairline);
+  background: var(--margin);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  color: var(--construction);
+}
+
+.studio-zone-right .journal-panel .journal-order-toggle {
+  padding: 1px var(--space-xs);
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.studio-zone-right .journal-panel .journal-order-toggle[aria-pressed='true'] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--sheet);
+}
+
+.studio-zone-right .journal-panel .journal-row-count {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* The honest degraded-mode note (a backend without the design routes). */
+.studio-zone-right .journal-panel .journal-panel-note {
+  margin: 0;
+  padding: var(--space-xs) var(--space-md);
+  border-bottom: 0.5px solid var(--hairline);
+  background: color-mix(in srgb, var(--prussian) 8%, transparent);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  line-height: 1.4;
+  color: var(--prussian);
+}
+
+.studio-zone-right .journal-panel .journal-body {
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* The scroll container of the ledger. At 1440 the six columns fit the rail.
+ * Below 1400px the panel switches to its compact four-column body (see the
+ * media query at the end of this file): UTC and CHAIN move into each row's
+ * title, and the ledger never scrolls sideways. */
+.studio-zone-right .journal-panel .journal-list {
+  display: block;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+  list-style: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+}
+
+.studio-zone-right .journal-panel .journal-empty {
+  margin: 0;
+  padding: var(--space-md) var(--space-md);
+  font-family: var(--font-note);
+  font-style: italic;
+  font-size: var(--text-body-sm);
+  line-height: 1.4;
+  color: var(--construction);
+}
+
+/* The six-column ledger. */
+.studio-zone-right .journal-panel .journal-ledger {
+  /* Column budget for the 320px rail at 1440. The five fixed columns leave
+   * the MESSAGE column the rest of the row; at 1280 the compact mode drops
+   * UTC and CHAIN and gives those pixels back to MESSAGE. */
+  --journal-col-seq: 28px;
+  --journal-col-utc: 52px;
+  --journal-col-type: 34px;
+  --journal-col-digest: 80px;
+  --journal-col-chain: 42px;
+  /* Leave the last few pixels for the sticky header's right rule; without
+   * this the CHAIN header is clipped by the vertical scrollbar gutter. */
+  width: calc(100% - 6px);
+  min-width: 0;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+/* The pre-ledger row style in layout.css still says `display: grid` for
+ * `.journal-entry`; a grid row would break the table column model (cells
+ * become blocks and the message column collapses to one character). The
+ * table row must stay a table row. */
+.studio-zone-right .journal-panel .journal-ledger tr.journal-entry {
+  display: table-row;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.studio-zone-right .journal-panel .journal-ledger-caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.studio-zone-right .journal-panel .journal-ledger thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 2px 3px;
+  background: var(--margin);
+  border-bottom: 1px solid var(--hairline);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: left;
+  color: var(--construction);
+  white-space: nowrap;
+}
+
+/* Fixed column widths live on the cells (not a colgroup) so the compact
+ * mode can hide UTC/CHAIN without the remaining cells shifting onto the
+ * hidden columns' widths. */
+.studio-zone-right .journal-panel .journal-ledger thead th:nth-child(1) {
+  width: var(--journal-col-seq);
+}
+
+.studio-zone-right .journal-panel .journal-ledger thead th:nth-child(2) {
+  width: var(--journal-col-utc);
+}
+
+.studio-zone-right .journal-panel .journal-ledger thead th:nth-child(3) {
+  width: var(--journal-col-type);
+}
+
+.studio-zone-right .journal-panel .journal-ledger thead th:nth-child(5) {
+  width: var(--journal-col-digest);
+}
+
+.studio-zone-right .journal-panel .journal-ledger thead th:nth-child(6) {
+  width: var(--journal-col-chain);
+}
+
+.studio-zone-right .journal-panel .journal-ledger tbody td {
+  padding: 2px 3px;
+  border-bottom: 0.5px dotted var(--hairline);
+  font-size: var(--text-label-sm);
+  line-height: 1.35;
+  vertical-align: top;
+  color: var(--construction);
+  overflow-wrap: anywhere;
+}
+
+.studio-zone-right .journal-panel .journal-entry-seq {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.studio-zone-right .journal-panel .journal-entry-utc {
+  white-space: nowrap;
+}
+
+.studio-zone-right .journal-panel .journal-entry-time {
+  font-size: var(--text-label-sm);
+  color: var(--construction);
+  white-space: nowrap;
+}
+
+.studio-zone-right .journal-panel .journal-entry-type {
+  overflow: hidden;
+}
+
+.studio-zone-right .journal-panel .journal-entry-tag {
+  display: block;
+  font-size: var(--text-label-sm);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--construction);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studio-zone-right .journal-panel .journal-entry-message {
+  min-width: 0;
+  font-size: var(--text-body-sm);
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+/* A server row's MESSAGE is a type-specific summary, not the whole payload.
+ * One line only: the full text stays in the cell (screen readers still read
+ * it) and in the title tooltip. Local operator notes use the same treatment
+ * so the ledger stays one row per event. */
+.studio-zone-right .journal-panel .journal-entry-message-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studio-zone-right .journal-panel .journal-entry-digest-cell {
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* The digest chip and its copy button are one flex line. The chip shrinks
+ * (and ellipsizes) before the button does, so the button can never spill
+ * into the CHAIN cell. */
+.studio-zone-right .journal-panel .journal-entry-digest-line {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.studio-zone-right .journal-panel .journal-entry-digest {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: calc(100% - 18px);
+  padding: 0 2px;
+  background: var(--sheet);
+  border: 0.5px solid var(--hairline);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  color: var(--construction);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+.studio-zone-right .journal-panel .journal-entry-chain {
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.04em;
+  color: var(--construction);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.studio-zone-right .journal-panel .journal-entry-chain[data-chain='ok'] {
+  color: var(--stamp);
+}
+
+.studio-zone-right .journal-panel .journal-entry-chain[data-chain='broken'] {
+  color: var(--redline-ink);
+  font-weight: 700;
+}
+
+/* Kind colours: preview/sketch events read as the stamp green, exports as
+ * redline, connection/policy rows as Prussian blue, plumbing as graphite. */
+.studio-zone-right .journal-panel .journal-entry[data-kind='connection'] .journal-entry-tag {
+  color: var(--prussian);
+}
+
+.studio-zone-right .journal-panel .journal-entry[data-kind='preview'] .journal-entry-tag {
+  color: var(--stamp);
+}
+
+.studio-zone-right .journal-panel .journal-entry[data-kind='export'] .journal-entry-tag {
+  color: var(--redline-ink);
+}
+
+.studio-zone-right .journal-panel .journal-entry[data-kind='chat'] .journal-entry-tag {
+  color: var(--ink);
+}
+
+.studio-zone-right .journal-panel .journal-entry[data-kind='tool'] .journal-entry-tag {
+  color: var(--construction);
+}
+
+.studio-zone-right .journal-panel .journal-entry[data-kind='system'] .journal-entry-tag {
+  color: var(--construction);
+}
+
+.studio-zone-right .journal-panel .journal-jump {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--prussian);
+  border-radius: 0;
+  background: var(--card);
+  color: var(--prussian);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.studio-zone-right .journal-panel .journal-jump:hover {
+  background: var(--sheet);
+}
+
+/* Visually hidden polite announcement region. */
+.studio-zone-right .journal-panel .journal-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.studio-zone-right .journal-panel .journal-panel-footer {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-md);
+  border-top: 1px solid var(--hairline);
+  background: var(--margin);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  color: var(--construction);
+}
+
+.studio-zone-right .journal-panel .journal-panel-connection {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studio-zone-right .journal-panel .journal-panel-version {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* The shared copy control. The clipboard is a permission, so the button
+ * states the real outcome instead of pretending. */
+.studio-copy-button {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0.5px solid var(--hairline);
+  border-radius: 0;
+  background: var(--sheet);
+  color: var(--construction);
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.studio-copy-button svg {
+  width: 10px;
+  height: 10px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
+.studio-copy-button:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.studio-copy-button[data-state='copied'] {
+  color: var(--stamp);
+  border-color: var(--stamp);
+}
+
+.studio-copy-button[data-state='failed'] {
+  color: var(--redline-ink);
+  border-color: var(--redline);
+}
+
+.studio-zone-right .journal-panel .journal-digest-copy {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 1400px) {
+  .studio-zone-right .journal-panel .journal-panel-header h2 {
+    font-size: var(--text-label-sm);
+  }
+
+  /* Compact ledger: SEQ | TYPE | MESSAGE | DIGEST. The UTC instant and the
+   * chain verdict stay available in every row's `title` (and the full digest
+   * and chain title stay on their cells), so no column is silently lost.
+   * The rail is 260px at 1280 and must not grow a horizontal scrollbar. */
+  .studio-zone-right .journal-panel .journal-list {
+    overflow-x: hidden;
+  }
+
+  .studio-zone-right .journal-panel .journal-ledger {
+    min-width: 0;
+  }
+
+  .studio-zone-right .journal-panel .journal-ledger thead th:nth-child(2),
+  .studio-zone-right .journal-panel .journal-ledger tbody td:nth-child(2),
+  .studio-zone-right .journal-panel .journal-ledger thead th:nth-child(6),
+  .studio-zone-right .journal-panel .journal-ledger tbody td:nth-child(6) {
+    display: none;
+  }
+}

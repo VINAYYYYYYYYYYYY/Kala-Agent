@@ -1,6 +1,9 @@
-// electron-builder configuration for Kala Studio. Backend binary is
-// prepared by the delivery worker and dropped at studio/backend/. The
-// bundled UI lives at studio/dist/. Both are pulled in via extraResources.
+// electron-builder configuration for Kala Studio. The native backend and
+// its static UI are prepared by `scripts/native-backend.cjs` at
+// studio/backend-native/ and copied to resources/backend/ intact
+// (kala-studio[.exe] + studio_dist/). The legacy Python/PyInstaller
+// staging directory studio/backend/ is never copied into the native
+// distribution.
 //
 // `linux.desktop` follows the `LinuxDesktopFile` schema from
 // app-builder-lib (entry object holding `[Desktop Entry]` metadata).
@@ -21,11 +24,7 @@
   ],
   "extraResources": [
     {
-      "from": "dist",
-      "to": "app/dist"
-    },
-    {
-      "from": "backend",
+      "from": "backend-native",
       "to": "backend"
     }
   ],

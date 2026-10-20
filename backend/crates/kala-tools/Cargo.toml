@@ -1,0 +1,57 @@
+[workspace]
+# This cell owns a standalone workspace and lockfile. The parent
+# `backend/Cargo.toml` and its lockfile are deliberately untouched.
+resolver = "3"
+
+[package]
+name = "kala-tools"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+publish = false
+description = "Native Kala tool protocol layer: bounded canonical JSON, schema validation, request and response envelopes, workspace paths and worker bootstrap"
+
+[dependencies]
+# Accepted read-only sibling crates. The accepted kala-json implementation owns
+# canonical JSON bytes and digests; the accepted kala-contracts models own the
+# typed tool call, descriptor, artifact and result shapes.
+kala-contracts = { path = "../kala-contracts" }
+kala-json = { path = "../kala-json" }
+# The executor consumes the accepted sandbox, process, budget and policy
+# crates read-only: kala-sandbox owns the strict jail and the probe,
+# kala-process owns the bounded supervisor, kala-budget owns the ledger and
+# kala-kernel owns the policy engine. None of them is patched here.
+kala-budget = { path = "../kala-budget" }
+kala-kernel = { path = "../kala-kernel" }
+kala-process = { path = "../kala-process" }
+kala-sandbox = { path = "../kala-sandbox" }
+num-bigint = "0.4"
+num-traits = "0.2"
+sha2 = "0.10"
+thiserror = "2.0"
+
+[target.'cfg(unix)'.dependencies]
+# `O_NOFOLLOW` for the single-descriptor artifact read. The crate forbids
+# unsafe code, so only the safe `OpenOptionsExt` surface is used.
+libc = "0.2"
+
+[dev-dependencies]
+tempfile = "3.20"
+
+[[bin]]
+# Native sandbox probe helper of the tools crate. It is a thin launcher over
+# the accepted `kala-sandbox` probe, so the jail the probe verifies is the
+# jail the production worker receives.
+name = "kala-tools-sandbox-probe"
+path = "src/bin/kala-tools-sandbox-probe.rs"
+
+[[bin]]
+# Native init helper of the tools crate. It is a thin launcher over the
+# accepted `kala-sandbox` init helper, so the strict worker jail keeps its
+# PID namespace.
+name = "kala-tools-sandbox-init"
+path = "src/bin/kala-tools-sandbox-init.rs"
+
+[profile.release]
+strip = "symbols"

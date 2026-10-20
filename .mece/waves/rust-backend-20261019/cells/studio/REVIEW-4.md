@@ -1,0 +1,9 @@
+# GPT-6.1-Sol Studio settings review — accepted for desktop integration
+
+Consumed terminal round4 result; no live child turns. Independently passed115locked offline release tests (including actual HTTP STEP/OCP solids), fmt/all-targetclippy-Dwarnings and268livePython differential cases, zero mismatch. Read the iterative settings projection, key/type/duplicate handling, number/string grammar, error propagation and retained fallback. Dead Windows helper is removed.
+
+Additional out-of-tree real releasebinary vs livePython probes checked duplicate+surrogate settings,4301digit failure and serde's privateNumbermarker placed alongside a supported key. For all three, GET/POST status/body and final settings bytes matched exactly. The4301digit write returned422 and left original bytes unchanged; its read returned sanitized500. The valid duplicate+surrogate and marker documents retained the original configured key through an unrelated write. Values were synthetic and not logged.
+
+This closes the required settings data-preservation objections and accepts the native nine-route Studio slice for workspace/desktop integration. Native analytic STEP default and truthful no-default-feature seam remain accepted. No Python/OCP production dependency. Exact STEP document bytes intentionally differ from OCP timestamps/ordering; actual solids/units/metrics are verified.
+
+Known residual Windows registry-proxy/store-location/SSL_CERT_DIR/runtime limits and request-surrogate diagnostic/MIME/networkclass/helpwording differences remain explicit. Full Windows compilation is blocked here by SDK/ringC prerequisites, and Windows/COM/installer execution remains unproven. Acceptance is for integration, not a complete corebackend cutover, fullWindowsreadiness or speedup claim. Do not delete the Python reference or userfiles.

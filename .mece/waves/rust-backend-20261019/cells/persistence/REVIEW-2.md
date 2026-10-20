@@ -1,0 +1,7 @@
+# GPT-6.1-Sol review — repaired persistence slice accepted
+
+Inspected raw identifier preservation/normalization split, TransactionState finalization/unwind cleanup, guarded-connection close refusal, and native timestamp parser/regressions. Independently reran cargo test --workspace --locked:76passed; fmt/workspace clippy -D warnings/release build clean. The new adversarial tests directly cover each prior reproducer, including un-rehashed whitespace tamper and correctly rehashed raw padded rows, failed COMMIT then real reuse, nested RELEASE/unwind cases and all8160live timestamp variants. Existing schema/cross-reader fixtures remain passing.
+
+Accept schema/journal/snapshot implementation and round2 defect repairs as scoped. Known deep persisted JSON>1024 gap is not waived for full cutover: separate foundation owner must replace recursive parser/normalization/serialization/lifecycle as needed, then reverify persistence read/append/snapshot/cross-reader behavior. Windows execution, typed repositories, secure CAS, core HTTP/runtime/CLI and packaging remain pending. Append tail-only verification retains source behavior, while every read/get still verifies all old rows. No benchmark/speedup measured.
+
+No active persistence writer after this terminal result. Root Cargo/lock ownership may transfer to next explicitly assigned foundation-compat cell; all other accepted code remains read-only unless named in that brief.

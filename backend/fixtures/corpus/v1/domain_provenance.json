@@ -1,0 +1,330 @@
+{
+  "corpus_schema_version": 1,
+  "implementation_digest_version": "evaluator-implementation-digest-v2",
+  "kind": "domain_provenance",
+  "packages": [
+    {
+      "catalog_step_ids": [
+        "building.storey-model",
+        "building.area-model",
+        "building.thermal-envelope"
+      ],
+      "domain": "building",
+      "evaluator_implementations": [
+        {
+          "digest": "17c7b04d7be4f4999e4bdd9ef0180aa3ed6ae5cd4aaf8702772db36e4d1aea74",
+          "module": "kala_agent.domains.building.evaluation",
+          "module_digest": "ca0391978b524084b830d34eeea7806c915e626c104c1ca14999de96022e0878",
+          "package_digest": "edc1f0e22feb3f7abc8d2d961667443d4185537b6816ad2da5d87c06bad0fd1c",
+          "qualified_name": "kala_agent.domains.building.evaluation.AreaModelEvaluator",
+          "required_capabilities": [],
+          "step_id": "building.area-model"
+        },
+        {
+          "digest": "6413241c2e547294b449ae570bfc2bac613ed1c47c36fa471bad69f52889b1ad",
+          "module": "kala_agent.domains.building.evaluation",
+          "module_digest": "ca0391978b524084b830d34eeea7806c915e626c104c1ca14999de96022e0878",
+          "package_digest": "edc1f0e22feb3f7abc8d2d961667443d4185537b6816ad2da5d87c06bad0fd1c",
+          "qualified_name": "kala_agent.domains.building.evaluation.StoreyModelEvaluator",
+          "required_capabilities": [],
+          "step_id": "building.storey-model"
+        },
+        {
+          "digest": "059e747203ac38c87d629e518ff5de4e686e6166aa42b1f15a91e1ac798f05fa",
+          "module": "kala_agent.domains.building.evaluation",
+          "module_digest": "ca0391978b524084b830d34eeea7806c915e626c104c1ca14999de96022e0878",
+          "package_digest": "edc1f0e22feb3f7abc8d2d961667443d4185537b6816ad2da5d87c06bad0fd1c",
+          "qualified_name": "kala_agent.domains.building.evaluation.ThermalEnvelopeEvaluator",
+          "required_capabilities": [],
+          "step_id": "building.thermal-envelope"
+        }
+      ],
+      "manifest": {
+        "description": "Building reference package for storey, area, and thermal envelope evaluation using a transmission-only surrogate and a non-authoritative code placeholder.",
+        "digest": "a6d193634794b7a0f28af54ea451924314d61e803ced03610efdbfd6570f40b7",
+        "package_id": "building.storey-envelope",
+        "policy_overlay_digest": null,
+        "required_capabilities": [],
+        "schema_digests": [
+          "059e747203ac38c87d629e518ff5de4e686e6166aa42b1f15a91e1ac798f05fa",
+          "17c7b04d7be4f4999e4bdd9ef0180aa3ed6ae5cd4aaf8702772db36e4d1aea74",
+          "6413241c2e547294b449ae570bfc2bac613ed1c47c36fa471bad69f52889b1ad",
+          "8ba15360e4e181e5a78686a84394039a27e176477c0edcb72197b4c104ad8b45"
+        ],
+        "signature_digest": null,
+        "signer_id": null,
+        "tool_ids": [],
+        "version": "0.1.0",
+        "workflow_definition_ids": [
+          "building.envelope-evaluation"
+        ]
+      },
+      "package_digest": "a6d193634794b7a0f28af54ea451924314d61e803ced03610efdbfd6570f40b7",
+      "package_id": "building.storey-envelope",
+      "provenance_kind": "legacy_python_source",
+      "schema_digests": [
+        "8ba15360e4e181e5a78686a84394039a27e176477c0edcb72197b4c104ad8b45"
+      ],
+      "source_files": [
+        {
+          "path": "src/kala_agent/domains/building/__init__.py",
+          "sha256": "d1e5b5f8b6e00d4b33d28a9dd48ba8aac455e68ddc9acfbd7049b1ca159eb780",
+          "size_bytes": 2523
+        },
+        {
+          "path": "src/kala_agent/domains/building/evaluation.py",
+          "sha256": "ca0391978b524084b830d34eeea7806c915e626c104c1ca14999de96022e0878",
+          "size_bytes": 12013
+        },
+        {
+          "path": "src/kala_agent/domains/building/parameters.py",
+          "sha256": "c4457715d4dfe404fbcbf4e53f5c08f54662171d52651986a48bde4fd035549f",
+          "size_bytes": 8457
+        },
+        {
+          "path": "src/kala_agent/domains/building/simulation.py",
+          "sha256": "9c71a2f3a7abcae70aae9b0540d9827dae96f2cf7b8911a40cb80cc07f98ec18",
+          "size_bytes": 5708
+        },
+        {
+          "path": "src/kala_agent/domains/building/workflow.py",
+          "sha256": "796f52a2ef697f6f4e2b5f7f5c7444764fbb70de5704c03aec44c15696db595c",
+          "size_bytes": 6684
+        },
+        {
+          "path": "src/kala_agent/__init__.py",
+          "sha256": "c43498ce9cb4ea39642a2a17de87b4cd6204b87b7938ec917419e6d2f6754b07",
+          "size_bytes": 1805
+        },
+        {
+          "path": "src/kala_agent/domains/__init__.py",
+          "sha256": "2de63c7b6730ab415462a0729e2d4ecc62d1960e73b6d75f62fc5ba130cb5a04",
+          "size_bytes": 37122
+        }
+      ],
+      "version": "0.1.0",
+      "workflow_definition_id": "building.envelope-evaluation",
+      "workflow_version": "0.1.0"
+    },
+    {
+      "catalog_step_ids": [
+        "mechanical.geometry-check",
+        "mechanical.material-check",
+        "mechanical.load-check",
+        "mechanical.constraint-evaluation"
+      ],
+      "domain": "mechanical",
+      "evaluator_implementations": [
+        {
+          "digest": "62281ffb23e7732669de991bc7bac6acf21b05404e8ec2ccbd3bdb68a01a419b",
+          "module": "kala_agent.domains.mechanical.evaluation",
+          "module_digest": "118387a2ccc113d5e515c5213bd193fb5038ed1797c97c763544155db5e6f940",
+          "package_digest": "f341e326d69190f894a96a065d44ad179bce9f2bd87c7192947f3a31dabdcf0b",
+          "qualified_name": "kala_agent.domains.mechanical.evaluation.StructuralEvaluator",
+          "required_capabilities": [],
+          "step_id": "mechanical.constraint-evaluation"
+        },
+        {
+          "digest": "a3c6ed56837677e22faff1206fb8dd5517e2c4b94e9932a84e540b3f91c5bc6b",
+          "module": "kala_agent.domains.mechanical.evaluation",
+          "module_digest": "118387a2ccc113d5e515c5213bd193fb5038ed1797c97c763544155db5e6f940",
+          "package_digest": "f341e326d69190f894a96a065d44ad179bce9f2bd87c7192947f3a31dabdcf0b",
+          "qualified_name": "kala_agent.domains.mechanical.evaluation.GeometryEvaluator",
+          "required_capabilities": [],
+          "step_id": "mechanical.geometry-check"
+        },
+        {
+          "digest": "f72ecbc5b34f7f18f0723a759954ea400e863ce619c776b8b994b3c8eb9bceba",
+          "module": "kala_agent.domains.mechanical.evaluation",
+          "module_digest": "118387a2ccc113d5e515c5213bd193fb5038ed1797c97c763544155db5e6f940",
+          "package_digest": "f341e326d69190f894a96a065d44ad179bce9f2bd87c7192947f3a31dabdcf0b",
+          "qualified_name": "kala_agent.domains.mechanical.evaluation.LoadCaseEvaluator",
+          "required_capabilities": [],
+          "step_id": "mechanical.load-check"
+        },
+        {
+          "digest": "acafdfa1334cfc090ae552f247384358f5f95d4acacacb4d709706ee839cdf35",
+          "module": "kala_agent.domains.mechanical.evaluation",
+          "module_digest": "118387a2ccc113d5e515c5213bd193fb5038ed1797c97c763544155db5e6f940",
+          "package_digest": "f341e326d69190f894a96a065d44ad179bce9f2bd87c7192947f3a31dabdcf0b",
+          "qualified_name": "kala_agent.domains.mechanical.evaluation.MaterialEvaluator",
+          "required_capabilities": [],
+          "step_id": "mechanical.material-check"
+        }
+      ],
+      "manifest": {
+        "description": "Mechanical reference package for a bracket-like component: dimensions, material, and a static load case evaluated by bounded closed-form surrogates.",
+        "digest": "97a2ebade1532e16864d81bc1f42b725c584c14250d1ae1f946eff1d4d5937b5",
+        "package_id": "mechanical.bracket",
+        "policy_overlay_digest": null,
+        "required_capabilities": [],
+        "schema_digests": [
+          "62281ffb23e7732669de991bc7bac6acf21b05404e8ec2ccbd3bdb68a01a419b",
+          "9fb3d2b068184cedff55fe47664f3cd98fabe0528e4324bdeb9bfc16de284721",
+          "a3c6ed56837677e22faff1206fb8dd5517e2c4b94e9932a84e540b3f91c5bc6b",
+          "acafdfa1334cfc090ae552f247384358f5f95d4acacacb4d709706ee839cdf35",
+          "f72ecbc5b34f7f18f0723a759954ea400e863ce619c776b8b994b3c8eb9bceba"
+        ],
+        "signature_digest": null,
+        "signer_id": null,
+        "tool_ids": [],
+        "version": "0.1.0",
+        "workflow_definition_ids": [
+          "mechanical.bracket-evaluation"
+        ]
+      },
+      "package_digest": "97a2ebade1532e16864d81bc1f42b725c584c14250d1ae1f946eff1d4d5937b5",
+      "package_id": "mechanical.bracket",
+      "provenance_kind": "legacy_python_source",
+      "schema_digests": [
+        "9fb3d2b068184cedff55fe47664f3cd98fabe0528e4324bdeb9bfc16de284721"
+      ],
+      "source_files": [
+        {
+          "path": "src/kala_agent/domains/mechanical/__init__.py",
+          "sha256": "82c6a95c0bc16d73f91afeeab594d04f3052b12b5a3b63ca3e6060fc4f3d9823",
+          "size_bytes": 2619
+        },
+        {
+          "path": "src/kala_agent/domains/mechanical/evaluation.py",
+          "sha256": "118387a2ccc113d5e515c5213bd193fb5038ed1797c97c763544155db5e6f940",
+          "size_bytes": 12344
+        },
+        {
+          "path": "src/kala_agent/domains/mechanical/parameters.py",
+          "sha256": "68282cc23e1fc33e15ea3a5f1755d13c10f70adee987a0d37d582d3266d9bc5c",
+          "size_bytes": 9272
+        },
+        {
+          "path": "src/kala_agent/domains/mechanical/simulation.py",
+          "sha256": "0676a9fc4bf150be1f17e3525221da78e3eea697b5fcfeb14e98e8204ba9d28d",
+          "size_bytes": 5238
+        },
+        {
+          "path": "src/kala_agent/domains/mechanical/workflow.py",
+          "sha256": "2379ffa871e3ba59bc743e1d12bc59414775cff5270f68f1ab1291709cd70536",
+          "size_bytes": 7240
+        },
+        {
+          "path": "src/kala_agent/__init__.py",
+          "sha256": "c43498ce9cb4ea39642a2a17de87b4cd6204b87b7938ec917419e6d2f6754b07",
+          "size_bytes": 1805
+        },
+        {
+          "path": "src/kala_agent/domains/__init__.py",
+          "sha256": "2de63c7b6730ab415462a0729e2d4ecc62d1960e73b6d75f62fc5ba130cb5a04",
+          "size_bytes": 37122
+        }
+      ],
+      "version": "0.1.0",
+      "workflow_definition_id": "mechanical.bracket-evaluation",
+      "workflow_version": "0.1.0"
+    },
+    {
+      "catalog_step_ids": [
+        "wing.planform-geometry",
+        "wing.span-load",
+        "wing.aerodynamic-surrogate"
+      ],
+      "domain": "wing",
+      "evaluator_implementations": [
+        {
+          "digest": "a038013612a991ab6da4caaf8290c61a2cadc40e6be1c2636e0486beb00c7d77",
+          "module": "kala_agent.domains.wing.evaluation",
+          "module_digest": "dbbf14259003620e34c7805b0d6c9a35e772621fca9459b37873a80f9de0b6b3",
+          "package_digest": "23aa1ef19285b79b6d2ae773c21f941f5aa7c73043b1ce802381adff0e470726",
+          "qualified_name": "kala_agent.domains.wing.evaluation.AerodynamicSurrogateEvaluator",
+          "required_capabilities": [],
+          "step_id": "wing.aerodynamic-surrogate"
+        },
+        {
+          "digest": "0935c2012b7086fd24941ead52d5370b167a9ce86dcc9970f108b13517afadc3",
+          "module": "kala_agent.domains.wing.evaluation",
+          "module_digest": "dbbf14259003620e34c7805b0d6c9a35e772621fca9459b37873a80f9de0b6b3",
+          "package_digest": "23aa1ef19285b79b6d2ae773c21f941f5aa7c73043b1ce802381adff0e470726",
+          "qualified_name": "kala_agent.domains.wing.evaluation.PlanformGeometryEvaluator",
+          "required_capabilities": [],
+          "step_id": "wing.planform-geometry"
+        },
+        {
+          "digest": "c0d4b43c4d5c66da474aa6b11440e22f544d0d3b2bbab9d57f5aa2cf4db7f75d",
+          "module": "kala_agent.domains.wing.evaluation",
+          "module_digest": "dbbf14259003620e34c7805b0d6c9a35e772621fca9459b37873a80f9de0b6b3",
+          "package_digest": "23aa1ef19285b79b6d2ae773c21f941f5aa7c73043b1ce802381adff0e470726",
+          "qualified_name": "kala_agent.domains.wing.evaluation.SpanLoadEvaluator",
+          "required_capabilities": [],
+          "step_id": "wing.span-load"
+        }
+      ],
+      "manifest": {
+        "description": "Wing reference package for span, chord, taper, and span load evaluation using geometric and aerodynamic surrogates that are not certified.",
+        "digest": "108cd68bf1ec08088f526e5ef0b8f2034199298fe7dc443e7c425e46d2358c71",
+        "package_id": "wing.parametric-tapered",
+        "policy_overlay_digest": null,
+        "required_capabilities": [],
+        "schema_digests": [
+          "0935c2012b7086fd24941ead52d5370b167a9ce86dcc9970f108b13517afadc3",
+          "898306c1388c1449d0049693aa66e90493f1aef7e84acaed160c8f48bc41d15e",
+          "a038013612a991ab6da4caaf8290c61a2cadc40e6be1c2636e0486beb00c7d77",
+          "c0d4b43c4d5c66da474aa6b11440e22f544d0d3b2bbab9d57f5aa2cf4db7f75d"
+        ],
+        "signature_digest": null,
+        "signer_id": null,
+        "tool_ids": [],
+        "version": "0.1.0",
+        "workflow_definition_ids": [
+          "wing.surrogate-evaluation"
+        ]
+      },
+      "package_digest": "108cd68bf1ec08088f526e5ef0b8f2034199298fe7dc443e7c425e46d2358c71",
+      "package_id": "wing.parametric-tapered",
+      "provenance_kind": "legacy_python_source",
+      "schema_digests": [
+        "898306c1388c1449d0049693aa66e90493f1aef7e84acaed160c8f48bc41d15e"
+      ],
+      "source_files": [
+        {
+          "path": "src/kala_agent/domains/wing/__init__.py",
+          "sha256": "41448083a21f816963d610bbb68d5128c7efdc0b9da7cb838ce045665c6db777",
+          "size_bytes": 2284
+        },
+        {
+          "path": "src/kala_agent/domains/wing/evaluation.py",
+          "sha256": "dbbf14259003620e34c7805b0d6c9a35e772621fca9459b37873a80f9de0b6b3",
+          "size_bytes": 9890
+        },
+        {
+          "path": "src/kala_agent/domains/wing/parameters.py",
+          "sha256": "b60f7b882cd51a9f626112a115de4e456be46a5b479bc57d992b02cec0ad78bf",
+          "size_bytes": 6684
+        },
+        {
+          "path": "src/kala_agent/domains/wing/simulation.py",
+          "sha256": "ad3b771324f3fcc843eaeb8e0e0e5d271776197bf6a40687b923211ef50d004e",
+          "size_bytes": 5698
+        },
+        {
+          "path": "src/kala_agent/domains/wing/workflow.py",
+          "sha256": "be73e22b396f3788e8cf03cc0a2ce9d6f223b95f85111d1338aff9fc7d74ac3e",
+          "size_bytes": 6544
+        },
+        {
+          "path": "src/kala_agent/__init__.py",
+          "sha256": "c43498ce9cb4ea39642a2a17de87b4cd6204b87b7938ec917419e6d2f6754b07",
+          "size_bytes": 1805
+        },
+        {
+          "path": "src/kala_agent/domains/__init__.py",
+          "sha256": "2de63c7b6730ab415462a0729e2d4ecc62d1960e73b6d75f62fc5ba130cb5a04",
+          "size_bytes": 37122
+        }
+      ],
+      "version": "0.1.0",
+      "workflow_definition_id": "wing.surrogate-evaluation",
+      "workflow_version": "0.1.0"
+    }
+  ],
+  "provenance_kind": "legacy_python_source",
+  "rust_identity_policy_required": true,
+  "warning": "These digests identify the current Python implementation and its source files. A Rust implementation cannot reproduce them from Rust sources. Pin them as explicit versioned legacy constants, or bump implementation_digest_version and accept a visible digest change. Silent drift is not acceptable."
+}

@@ -1,0 +1,30 @@
+[workspace]
+resolver = "3"
+
+[package]
+name = "kala-repositories"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+publish = false
+description = "Native typed repositories over the accepted Kala Agent persistence schema and contracts"
+
+[dependencies]
+# Accepted, reviewed crates. Path dependencies only: this cell keeps its own
+# workspace and lockfile so the parent workspace stays untouched.
+kala-contracts = { path = "../kala-contracts" }
+kala-json = { path = "../kala-json" }
+kala-persistence = { path = "../kala-persistence" }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+num-bigint = "0.4"
+num-traits = "0.2"
+rusqlite = { version = "0.40", default-features = false, features = ["bundled"] }
+thiserror = "2.0"
+
+[dev-dependencies]
+serde_json = "1.0"
+tempfile = "3.20"
+
+[profile.release]
+strip = "symbols"

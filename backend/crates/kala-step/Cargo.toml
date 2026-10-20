@@ -1,0 +1,17 @@
+[package]
+name = "kala-step"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Native exact analytic B-rep STEP export for Kala Studio primitives"
+
+[dependencies]
+# Reviewed geometry crate: canonical primitive kinds, dimension defaults,
+# validation messages and the JSON parameter adapter.
+kala-geometry = { path = "../kala-geometry" }
+serde_json = { workspace = true, features = ["arbitrary_precision"] }
+
+[dev-dependencies]
+serde = { workspace = true, features = ["derive"] }

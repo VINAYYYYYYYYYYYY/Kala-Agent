@@ -14,6 +14,17 @@ from typing import Annotated, Final
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from kala_agent.api.envelope import (
+    MAX_ERROR_DETAILS as MAX_ERROR_DETAILS,
+)
+from kala_agent.api.envelope import (
+    MAX_ERROR_MESSAGE_LENGTH as MAX_ERROR_MESSAGE_LENGTH,
+)
+from kala_agent.api.envelope import (
+    ErrorDetail,
+    ErrorResponse,
+    error_response,
+)
 from kala_agent.application import (
     CheckpointView,
     DomainEvaluationReport,
@@ -34,8 +45,6 @@ MAX_REASON_LENGTH: Final[int] = 512
 MAX_ACTOR_LENGTH: Final[int] = 64
 MAX_DESIGN_ID_LENGTH: Final[int] = 64
 MAX_IDENTIFIER_LENGTH: Final[int] = 128
-MAX_ERROR_DETAILS: Final[int] = 16
-MAX_ERROR_MESSAGE_LENGTH: Final[int] = 256
 MAX_LIST_LIMIT: Final[int] = 200
 DEFAULT_LIST_LIMIT: Final[int] = 50
 MAX_AFTER_SEQUENCE: Final[int] = 1_000_000_000
@@ -296,32 +305,6 @@ class RunResponse(_StrictModel):
     state: WorkflowStateView
     revision: RevisionRecord | None = None
     checkpoint: CheckpointView | None = None
-
-
-class ErrorDetail(_StrictModel):
-    code: str
-    message: str
-
-
-class ErrorResponse(_StrictModel):
-    """The only error shape this API returns. It never carries a traceback."""
-
-    error: ErrorDetail
-    details: tuple[str, ...] = ()
-
-
-def error_response(code: str, message: str, details: tuple[str, ...] = ()) -> ErrorResponse:
-    """Build a bounded, secret-free error body."""
-    bounded_details = tuple(
-        detail[:MAX_ERROR_MESSAGE_LENGTH] for detail in details[:MAX_ERROR_DETAILS]
-    )
-    return ErrorResponse(
-        error=ErrorDetail(
-            code=code,
-            message=message[:MAX_ERROR_MESSAGE_LENGTH],
-        ),
-        details=bounded_details,
-    )
 
 
 __all__ = (

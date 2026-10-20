@@ -1,0 +1,1041 @@
+{
+  "corpus_schema_version": 1,
+  "corpus_sha256": "53dcb9da105589b5a92d37b16d63c7fe2d5e60b7630549102127e019c95dff28",
+  "corpus_sha256_scope": "SHA-256 over the sorted (path, digest) list of the indexed fixture files; the SQLite fixture's file bytes are recorded as not-asserted because the SQLite library version changes them",
+  "coverage": {
+    "canonical_json_cases": 66,
+    "chain_events": 5,
+    "chain_preimage_cases": 5,
+    "cli_commands": 12,
+    "cli_executions": 9,
+    "core_http": {
+      "covered": [
+        {
+          "method": "GET",
+          "path": "/health"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/domains"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/domains/{domain}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/domains/{domain}/evaluations"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/events"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/revision-commits"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/revision-commits/{request_id}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/revision-commits/{request_id}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/revision-commits/{request_id}/reject"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/revisions"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/revisions"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/revisions/{revision_id}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/workflows/mechanical/reference"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/workflows/{workflow_id}"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/workflows/{workflow_id}/checkpoints"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/workflows/{workflow_id}/checkpoints/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/workflows/{workflow_id}/checkpoints/reject"
+        }
+      ],
+      "declared": [
+        {
+          "method": "GET",
+          "path": "/health"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/domains"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/domains/{domain}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/domains/{domain}/evaluations"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/events"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/revision-commits"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/revision-commits/{request_id}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/revision-commits/{request_id}/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/revision-commits/{request_id}/reject"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/revisions"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/revisions"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/revisions/{revision_id}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/workflows/mechanical/reference"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/workflows/{workflow_id}"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/workflows/{workflow_id}/checkpoints"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/workflows/{workflow_id}/checkpoints/approve"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/workflows/{workflow_id}/checkpoints/reject"
+        }
+      ],
+      "missing": []
+    },
+    "decimal_cases": 85,
+    "domain_packages": 3,
+    "geometry_meshes": 6,
+    "studio_body_comparisons": {
+      "exact": 50,
+      "fields": 4,
+      "structural": 2
+    },
+    "studio_http": {
+      "covered": [
+        {
+          "method": "POST",
+          "path": "/api/studio/chat"
+        },
+        {
+          "method": "POST",
+          "path": "/api/studio/design"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/design/{design_id}/drawing"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/design/{design_id}/section"
+        },
+        {
+          "method": "POST",
+          "path": "/api/studio/export"
+        },
+        {
+          "method": "POST",
+          "path": "/api/studio/handoff"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/health"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/integrations"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/journal"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/journal/verify"
+        },
+        {
+          "method": "POST",
+          "path": "/api/studio/preview"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/providers"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/providers/cad"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/settings"
+        },
+        {
+          "method": "POST",
+          "path": "/api/studio/settings"
+        }
+      ],
+      "declared": [
+        {
+          "method": "POST",
+          "path": "/api/studio/chat"
+        },
+        {
+          "method": "POST",
+          "path": "/api/studio/design"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/design/{design_id}/drawing"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/design/{design_id}/section"
+        },
+        {
+          "method": "POST",
+          "path": "/api/studio/export"
+        },
+        {
+          "method": "POST",
+          "path": "/api/studio/handoff"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/health"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/integrations"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/journal"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/journal/verify"
+        },
+        {
+          "method": "POST",
+          "path": "/api/studio/preview"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/providers"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/providers/cad"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/settings"
+        },
+        {
+          "method": "POST",
+          "path": "/api/studio/settings"
+        }
+      ],
+      "missing": []
+    }
+  },
+  "determinism": {
+    "corpus_byte_identical_across_runs": true,
+    "excluded_from_comparison": [
+      {
+        "path": "files",
+        "reason": "the per-file list is covered by the per-file comparison and by corpus_sha256"
+      },
+      {
+        "path": "source_state.git",
+        "reason": "the working-tree path list names every unrelated file in the repository, so it changes whenever any other worker edits anything; the commit and the product source pin are still compared"
+      },
+      {
+        "path": "oracle_environment.cad_providers",
+        "reason": "ADR-0011 makes CAD provider availability a live probe of the host, so the recorded result is a fact about this host and not about the product; it is recorded for the reader and never compared"
+      }
+    ],
+    "fixed_clock_start": "2026-01-01T00:00:00+00:00",
+    "json_fixtures_byte_identical_on_same_tree": true,
+    "normalisation": [
+      {
+        "field": "FILE_NAME header write timestamp",
+        "reason": "the OCP writer stamps the wall clock of the write",
+        "replacement": "2026-01-01T00:00:00"
+      },
+      {
+        "field": "Open CASCADE STEP translator product revision counter",
+        "reason": "OCCT numbers the translated product per process, so the value depends on how many STEP exports ran before it",
+        "replacement": "zero padded to the original digit width"
+      }
+    ],
+    "normalized_fields": [
+      "core GET /health data_dir",
+      "CLI temporary data directory",
+      "journal occurred_at via a fixture-only fixed clock",
+      "studio journal occurred_at via a fixture-only fixed clock",
+      "STEP writer timestamp and per-process translator counter",
+      "design result STEP digest and the journal digests that bind it",
+      "CAD provider probe result (availability, version and reason)"
+    ],
+    "sqlite_file_bytes_asserted": false,
+    "sqlite_logical_rows_asserted": true,
+    "step_bytes_asserted": false,
+    "stl_bytes_asserted": true
+  },
+  "files": [
+    {
+      "path": "canonical_json.json",
+      "sha256": "d8a2fefcd5d70f05556938896bada27affa2a1a8288d3d1a788d17b1fde4ba07",
+      "sha256_role": "exact",
+      "size_bytes": 61715
+    },
+    {
+      "path": "cli_launch.json",
+      "sha256": "40d10700d7fa182b59c50e989abc2f3221fd4f0f6cfa7880cc0f0aa6b979d592",
+      "sha256_role": "exact",
+      "size_bytes": 58801
+    },
+    {
+      "path": "core_http.json",
+      "sha256": "2e8dae93a48bf70751da40fa152e99cd35d63e0f081309a03dda242ee2e11cc6",
+      "sha256_role": "exact",
+      "size_bytes": 434623
+    },
+    {
+      "path": "decimal_budget.json",
+      "sha256": "7bdce1d559538f9b283414be67bba803a1a00a00e99743d9beef8945935bddaf",
+      "sha256_role": "exact",
+      "size_bytes": 38057
+    },
+    {
+      "path": "domain_provenance.json",
+      "sha256": "f7ebb75c2f093e035e5c08a2be7e95a24cb56b4b31e81176e192c51bf473bedb",
+      "sha256_role": "exact",
+      "size_bytes": 15175
+    },
+    {
+      "path": "event_chain.json",
+      "sha256": "4cc4dc39e3900ce0b22aa58230ed05e66290351b9be0005f0e0d51ecd93420c7",
+      "sha256_role": "exact",
+      "size_bytes": 31801
+    },
+    {
+      "path": "geometry_stl.json",
+      "sha256": "b92c1b16a195dc4e2349184b66b3c78e33ee85a9696afaddf17f39be28dd3ec5",
+      "sha256_role": "exact",
+      "size_bytes": 18512
+    },
+    {
+      "path": "schema_v2.sqlite3",
+      "sha256": "9d8b6556c99006ce287a52c65e2590ef5d2b485ec73bdd4079fb648191025832",
+      "sha256_role": "informational: SQLite file bytes are not asserted stable across SQLite library versions",
+      "size_bytes": 131072
+    },
+    {
+      "path": "stl/box_default.stl",
+      "sha256": "e6c04f2a46a0897aaa157a63b3efc89f0632201728753ce82c7ca0e7d2c7dfd5",
+      "sha256_role": "exact",
+      "size_bytes": 684
+    },
+    {
+      "path": "stl/cylinder_default.stl",
+      "sha256": "0c87786bde66b7cffd9a7c71ff7b501922c4d747eb8e768f4ae7469ca8548243",
+      "sha256_role": "exact",
+      "size_bytes": 9684
+    },
+    {
+      "path": "stl/sphere_default.stl",
+      "sha256": "ea50ff2ea4f09bffcee161e017f85565f0ad87434ea8c4743881d40f202419e3",
+      "sha256_role": "exact",
+      "size_bytes": 73684
+    },
+    {
+      "path": "studio_http.json",
+      "sha256": "9b313cd90a726182297ed0cc109bdb98a4cb2e195631e841457f4c5fdfbc7549",
+      "sha256_role": "exact",
+      "size_bytes": 268981
+    }
+  ],
+  "fixture_root": "backend/fixtures/corpus/v1",
+  "generator": {
+    "check_command": ".venv/bin/python backend/compat/generate_corpus.py --check",
+    "command": ".venv/bin/python backend/compat/generate_corpus.py",
+    "path": "backend/compat/generate_corpus.py",
+    "python_version": "3.14.8 (main, Oct  2 2026, 10:23:31) [GCC 16.2.1 20260810]",
+    "self_check_command": ".venv/bin/python backend/compat/self_check.py"
+  },
+  "kind": "python_compatibility_corpus",
+  "known_gaps": [
+    "No Rust implementation, Cargo workspace, packaging cutover, or benchmark is included.",
+    "No Windows host, COM, NSIS, or Windows CI evidence exists; Windows milestone remains pending.",
+    "The live core route table exposes 17 routes including root /health (16 under /api/v1). The audit and task text say 18; the extra route could not be located in the current code. All 17 are covered.",
+    "Journal timestamps are wall-clock in production. HTTP and CLI fixtures inject a fixed clock into kala_agent.persistence.journal.datetime so event digests are reproducible; this is a fixture override, not a change to product behavior.",
+    "The Studio session journal is wall-clock in production too. The studio fixtures inject a fixed clock into kala_agent.studio.session_journal.datetime for the same reason; this is a fixture override, not a change to product behavior.",
+    "The design result's STEP digest and the journal chain digests that bind it are masked with <VOLATILE>: the OCP STEP export embeds the wall clock of the write, so the product itself cannot reproduce them. The reproducible relations are frozen instead.",
+    "The CAD provider probe results are evidence from the host. The recorded reasons change with the host's FreeCAD installation and are also recorded in oracle_environment.cad_providers.",
+    "HTTP is captured through Starlette TestClient, not a real uvicorn socket; transport-generated Date/Server headers are not frozen.",
+    "The studio STEP 503-unavailable branch is not captured because OCP 8.0.1.1.0 is installed on this host.",
+    "STEP is captured structurally for the default box only; cylinder and sphere STEP exports are not in the corpus.",
+    "Core HTTP uses a fresh temporary database; it does not include a frozen core data-directory snapshot.",
+    "The CLI serve command is resolved but not started; no live socket launch is recorded.",
+    "Static-file traversal and symlink edge cases rely on existing Python security tests, not this corpus.",
+    "The documented KALA_STUDIO_MESH_LIMIT knob is absent from the implementation and is not frozen.",
+    "Timing and RSS are deliberately excluded; comparison is deferred until a release Rust build exists.",
+    "Pydantic validation message text is frozen for the recorded package versions and may drift on upgrade."
+  ],
+  "oracle_environment": {
+    "cad_providers": [
+      {
+        "available": true,
+        "id": "opencascade",
+        "mode": "opt-in",
+        "reason": null,
+        "version": "8.0.1.1"
+      },
+      {
+        "available": true,
+        "id": "freecad",
+        "mode": "external",
+        "reason": null,
+        "version": "1.1.4"
+      },
+      {
+        "available": false,
+        "id": "solidedge",
+        "mode": "bridge",
+        "reason": "Solid Edge build requires the Windows bridge (not reachable); this host is linux, so the ADR-0008 bridge cannot run here",
+        "version": null
+      }
+    ],
+    "decimal_context": {
+      "capitals": 1,
+      "clamp": 0,
+      "emax": 999999,
+      "emin": -999999,
+      "prec": 28,
+      "rounding": "ROUND_HALF_EVEN",
+      "traps": [
+        "DivisionByZero",
+        "InvalidOperation",
+        "Overflow"
+      ]
+    },
+    "json_module": "json",
+    "kala_agent_module_version": null,
+    "packages": {
+      "cadquery-ocp": "8.0.1.1.0",
+      "fastapi": "0.141.1",
+      "httpx": "0.28.1",
+      "kala-agent": "0.1.0",
+      "pydantic": "2.13.5",
+      "starlette": "1.7.0",
+      "uvicorn": "0.54.0"
+    },
+    "platform_machine": "x86_64",
+    "platform_system": "Linux",
+    "python_executable_basename": "python",
+    "python_implementation": "CPython",
+    "python_version": "3.14.8",
+    "sqlite3_library_version": "3.54.0"
+  },
+  "source_state": {
+    "git": {
+      "commit": "966c185bffa10f9d0524f3a2ee322c646729940a",
+      "dirty": true,
+      "tracked_changes": [
+        ".github/workflows/solidedge.yml",
+        ".github/workflows/studio.yml",
+        ".mece/waves/design-turns-20261019/",
+        ".mece/waves/rust-backend-20261019/",
+        ".mece/waves/solidedge-20261019/",
+        ".mece/waves/vellum-ui-20261019/",
+        "Rust+buid123/",
+        "adapters/freecad/src/kala_agent_freecad/cad/design.py",
+        "adapters/freecad/src/kala_agent_freecad/contracts.py",
+        "adapters/freecad/tests/test_cad_live.py",
+        "adapters/freecad/tests/test_design_assembly.py",
+        "adapters/freecad/tests/test_worker_envelopes.py",
+        "adapters/solidedge-bridge/",
+        "adapters/solidedge/",
+        "backend/",
+        "docs/adr/0008-solid-edge-windows-bridge.md",
+        "docs/adr/0009-studio-design-turns-ocp-construction-compiler.md",
+        "docs/adr/0010-rust-control-plane-cad-kernel-geometry-worker.md",
+        "docs/adr/0011-cad-provider-model-opencascade-viewer-and-opt-in-builder.md",
+        "docs/cad-providers.md",
+        "docs/construction-semantics.md",
+        "docs/rust-migration-status.md",
+        "docs/rust-studio.md",
+        "docs/solidedge.md",
+        "docs/studio-install.md",
+        "docs/studio-limitations.md",
+        "docs/studio-providers.md",
+        "docs/studio.md",
+        "docs/ui-screens-wireframes.md",
+        "packaging/native_studio_smoke.py",
+        "pyproject.toml",
+        "rust-implementation.md",
+        "src/kala_agent/__init__.py",
+        "src/kala_agent/api/__init__.py",
+        "src/kala_agent/api/envelope.py",
+        "src/kala_agent/api/errors.py",
+        "src/kala_agent/api/middleware.py",
+        "src/kala_agent/api/schemas.py",
+        "src/kala_agent/studio/cli.py",
+        "src/kala_agent/studio/design/",
+        "src/kala_agent/studio/internal_api.py",
+        "src/kala_agent/studio/providers/dispatch.py",
+        "src/kala_agent/studio/providers/local.py",
+        "src/kala_agent/studio/schemas.py",
+        "src/kala_agent/studio/server.py",
+        "src/kala_agent/studio/session_journal.py",
+        "src/kala_agent/studio/worker.py",
+        "studio/.gitignore",
+        "studio/README.md",
+        "studio/electron-builder.json",
+        "studio/electron/main.cjs",
+        "studio/electron/main.d.cts",
+        "studio/package-lock.json",
+        "studio/package.json",
+        "studio/scripts/desktop-pack.cjs",
+        "studio/scripts/desktop-pack.d.cts",
+        "studio/scripts/desktop.cjs",
+        "studio/scripts/native-backend.cjs",
+        "studio/scripts/native-backend.d.cts",
+        "studio/scripts/native-readiness.cjs",
+        "studio/scripts/native-readiness.d.cts",
+        "studio/src/App.tsx",
+        "studio/src/api/client.ts",
+        "studio/src/api/validators.ts",
+        "studio/src/components/bottombar/",
+        "studio/src/components/chat/CadTargetSelector.tsx",
+        "studio/src/components/chat/ChatPanel.tsx",
+        "studio/src/components/chat/DesignAgentCard.tsx",
+        "studio/src/components/chat/designCard.ts",
+        "studio/src/components/drafting/",
+        "studio/src/components/export/ExportPanel.tsx",
+        "studio/src/components/inspector/Inspector.tsx",
+        "studio/src/components/inspector/VernierSlider.tsx",
+        "studio/src/components/journal/",
+        "studio/src/components/options/",
+        "studio/src/components/panels/ProviderPanel.tsx",
+        "studio/src/components/panels/SurfaceMaterialControl.tsx",
+        "studio/src/components/shell/AppShell.tsx",
+        "studio/src/components/shell/BootGate.tsx",
+        "studio/src/components/shell/Header.tsx",
+        "studio/src/components/shell/RightRail.tsx",
+        "studio/src/components/shell/workspaceView.ts",
+        "studio/src/components/sidebar/Sidebar.tsx",
+        "studio/src/components/toolbar/Toolbar.tsx",
+        "studio/src/main.tsx",
+        "studio/src/state/designController.ts",
+        "studio/src/state/designs.ts",
+        "studio/src/state/journal.ts",
+        "studio/src/state/journalPoller.ts",
+        "studio/src/state/previewController.ts",
+        "studio/src/state/sectionCut.ts",
+        "studio/src/state/store.ts",
+        "studio/src/styles/base.css",
+        "studio/src/styles/bottombar.css",
+        "studio/src/styles/chat.css",
+        "studio/src/styles/drafting.css",
+        "studio/src/styles/journal.css",
+        "studio/src/styles/layout.css",
+        "studio/src/styles/studio.css",
+        "studio/src/styles/tokens.css",
+        "studio/src/types/studio.ts",
+        "studio/src/viewer/HlrDrawing.tsx",
+        "studio/src/viewer/SceneCanvas.tsx",
+        "studio/src/viewer/designSource.ts",
+        "studio/src/viewer/draftingGeometry.ts",
+        "studio/src/viewer/hlr.ts",
+        "studio/src/viewer/measure.ts",
+        "studio/src/viewer/raycast.ts",
+        "studio/test/AgentWorkspace.dom.test.tsx",
+        "studio/test/AppJournalPollerGate.dom.test.tsx",
+        "studio/test/AppShellMeshStability.dom.test.tsx",
+        "studio/test/AuxView.dom.test.tsx",
+        "studio/test/BottomBar.dom.test.tsx",
+        "studio/test/BottomBarDesignReadout.dom.test.tsx",
+        "studio/test/CadTargetSelector.dom.test.tsx",
+        "studio/test/ChatAgentCard.dom.test.tsx",
+        "studio/test/ChatPanel.dom.test.tsx",
+        "studio/test/DesignAgentCard.dom.test.tsx",
+        "studio/test/DraftingSheet.dom.test.tsx",
+        "studio/test/ExportPanel.dom.test.tsx",
+        "studio/test/HlrDrawing.dom.test.tsx",
+        "studio/test/ManualConnect.dom.test.tsx",
+        "studio/test/MeasureTool.dom.test.tsx",
+        "studio/test/OptionsDrawer.dom.test.tsx",
+        "studio/test/SurfaceMaterial.dom.test.tsx",
+        "studio/test/VernierSlider.dom.test.tsx",
+        "studio/test/chatJournal.dom.test.tsx",
+        "studio/test/designApi.test.ts",
+        "studio/test/designController.test.ts",
+        "studio/test/designExport.dom.test.tsx",
+        "studio/test/designFixtures.ts",
+        "studio/test/designStore.test.ts",
+        "studio/test/designSystem.test.ts",
+        "studio/test/draftingGeometry.test.ts",
+        "studio/test/electronMain.test.ts",
+        "studio/test/hlr.test.ts",
+        "studio/test/journalLedger.dom.test.tsx",
+        "studio/test/journalPoller.test.ts",
+        "studio/test/layoutCss.test.ts",
+        "studio/test/measure.test.ts",
+        "studio/test/nativeBackendPackaging.test.ts",
+        "studio/test/raycast.test.ts",
+        "studio/test/sectionCut.test.ts",
+        "studio/test/store.test.ts",
+        "studio/test/useDesignController.dom.test.tsx",
+        "studio/vite.config.ts",
+        "tests/conftest.py",
+        "tests/fixtures/",
+        "tests/unit/studio_design/",
+        "tests/unit/studio_worker/",
+        "tests/unit/test_api_error_statuses.py",
+        "tests/unit/test_data_dir_isolation.py",
+        "tests/unit/test_portable_imports.py",
+        "tests/unit/test_solidedge_boundaries.py",
+        "tests/unit/test_studio_server.py"
+      ]
+    },
+    "python_sources": {
+      "file_count": 95,
+      "files": [
+        {
+          "path": "src/kala_agent/__init__.py",
+          "sha256": "c43498ce9cb4ea39642a2a17de87b4cd6204b87b7938ec917419e6d2f6754b07"
+        },
+        {
+          "path": "src/kala_agent/api/__init__.py",
+          "sha256": "dd6c05f54c072d8845bd98d35b2ad57a5e60e1db1da4d6ff12b40736484d01d4"
+        },
+        {
+          "path": "src/kala_agent/api/app.py",
+          "sha256": "ad50221d67f09910a8cfb905ed532faa1e32b23ede017329071518eb5853ae52"
+        },
+        {
+          "path": "src/kala_agent/api/boundary.py",
+          "sha256": "2abdc34dce25abb9b2d019d99059ea05d6e430277060ae9546ff58fc35eaac0e"
+        },
+        {
+          "path": "src/kala_agent/api/dependencies.py",
+          "sha256": "7d366487de50e38e523539f1e7a62ae023d552fb9581c27343faf3fb3bf987c2"
+        },
+        {
+          "path": "src/kala_agent/api/envelope.py",
+          "sha256": "25df34a616a922650d7fdf6f45372a90abc7b39475f819001e076c77954bde43"
+        },
+        {
+          "path": "src/kala_agent/api/errors.py",
+          "sha256": "cd1f369fe4d178ac749beefad3afe113ab1ea2a1964e38f99d6a0c6467f45670"
+        },
+        {
+          "path": "src/kala_agent/api/middleware.py",
+          "sha256": "c8ca2de7690b455c34bd999e96b3d354c72845e14614447eb9016bb4fbe9e178"
+        },
+        {
+          "path": "src/kala_agent/api/schemas.py",
+          "sha256": "bbc82bddf04bd9eb48709bcec9feb5c869bff3707ec602c6332de4fca6db9d93"
+        },
+        {
+          "path": "src/kala_agent/application.py",
+          "sha256": "cd4b0a8f5fa768682c2f41be9ff9737f79bee9aa3365e90d866190b1a568b93a"
+        },
+        {
+          "path": "src/kala_agent/cli/__init__.py",
+          "sha256": "83d3c0b788e39a98874e414d5ff7768ce3ef1f1192391d74a3290f4ed2ea4dde"
+        },
+        {
+          "path": "src/kala_agent/cli/__main__.py",
+          "sha256": "c244d11a15744712be172eb46e0a67fa10c4b956a93909a0d0b518e2f0b2f0c1"
+        },
+        {
+          "path": "src/kala_agent/cli/main.py",
+          "sha256": "8b0d9c52a0e10f58ca389927049b1d040f6a08e2c8aeb73f1d337d608e8fcfd4"
+        },
+        {
+          "path": "src/kala_agent/config.py",
+          "sha256": "cf9d2087f9d1a25d4b6eae9a4f6954884ee00f6ea4a12415d95833224c47b496"
+        },
+        {
+          "path": "src/kala_agent/contracts/__init__.py",
+          "sha256": "f6c0d1e6583d1d2e92149789e8bbf26b0015b8f142774968e27a26bdcd264053"
+        },
+        {
+          "path": "src/kala_agent/contracts/construction.py",
+          "sha256": "b742475ebe0fc5a9632366e05d511f2a3f3de87d7517e526fa4b832be7936eea"
+        },
+        {
+          "path": "src/kala_agent/contracts/models.py",
+          "sha256": "f9eca6bc2cd860af4d4f78a5715595ba29a0d64a54b310f0ec2b5e83a2b576e4"
+        },
+        {
+          "path": "src/kala_agent/domains/__init__.py",
+          "sha256": "2de63c7b6730ab415462a0729e2d4ecc62d1960e73b6d75f62fc5ba130cb5a04"
+        },
+        {
+          "path": "src/kala_agent/domains/building/__init__.py",
+          "sha256": "d1e5b5f8b6e00d4b33d28a9dd48ba8aac455e68ddc9acfbd7049b1ca159eb780"
+        },
+        {
+          "path": "src/kala_agent/domains/building/evaluation.py",
+          "sha256": "ca0391978b524084b830d34eeea7806c915e626c104c1ca14999de96022e0878"
+        },
+        {
+          "path": "src/kala_agent/domains/building/parameters.py",
+          "sha256": "c4457715d4dfe404fbcbf4e53f5c08f54662171d52651986a48bde4fd035549f"
+        },
+        {
+          "path": "src/kala_agent/domains/building/simulation.py",
+          "sha256": "9c71a2f3a7abcae70aae9b0540d9827dae96f2cf7b8911a40cb80cc07f98ec18"
+        },
+        {
+          "path": "src/kala_agent/domains/building/workflow.py",
+          "sha256": "796f52a2ef697f6f4e2b5f7f5c7444764fbb70de5704c03aec44c15696db595c"
+        },
+        {
+          "path": "src/kala_agent/domains/mechanical/__init__.py",
+          "sha256": "82c6a95c0bc16d73f91afeeab594d04f3052b12b5a3b63ca3e6060fc4f3d9823"
+        },
+        {
+          "path": "src/kala_agent/domains/mechanical/evaluation.py",
+          "sha256": "118387a2ccc113d5e515c5213bd193fb5038ed1797c97c763544155db5e6f940"
+        },
+        {
+          "path": "src/kala_agent/domains/mechanical/parameters.py",
+          "sha256": "68282cc23e1fc33e15ea3a5f1755d13c10f70adee987a0d37d582d3266d9bc5c"
+        },
+        {
+          "path": "src/kala_agent/domains/mechanical/simulation.py",
+          "sha256": "0676a9fc4bf150be1f17e3525221da78e3eea697b5fcfeb14e98e8204ba9d28d"
+        },
+        {
+          "path": "src/kala_agent/domains/mechanical/workflow.py",
+          "sha256": "2379ffa871e3ba59bc743e1d12bc59414775cff5270f68f1ab1291709cd70536"
+        },
+        {
+          "path": "src/kala_agent/domains/wing/__init__.py",
+          "sha256": "41448083a21f816963d610bbb68d5128c7efdc0b9da7cb838ce045665c6db777"
+        },
+        {
+          "path": "src/kala_agent/domains/wing/evaluation.py",
+          "sha256": "dbbf14259003620e34c7805b0d6c9a35e772621fca9459b37873a80f9de0b6b3"
+        },
+        {
+          "path": "src/kala_agent/domains/wing/parameters.py",
+          "sha256": "b60f7b882cd51a9f626112a115de4e456be46a5b479bc57d992b02cec0ad78bf"
+        },
+        {
+          "path": "src/kala_agent/domains/wing/simulation.py",
+          "sha256": "ad3b771324f3fcc843eaeb8e0e0e5d271776197bf6a40687b923211ef50d004e"
+        },
+        {
+          "path": "src/kala_agent/domains/wing/workflow.py",
+          "sha256": "be73e22b396f3788e8cf03cc0a2ce9d6f223b95f85111d1338aff9fc7d74ac3e"
+        },
+        {
+          "path": "src/kala_agent/kernel/__init__.py",
+          "sha256": "914507765682d461e2642a36155eb0e0e1c3715a6d61cbab1d0016ce0bf5a87b"
+        },
+        {
+          "path": "src/kala_agent/kernel/budget.py",
+          "sha256": "446d9ee7660011e4b7f961327047e9b26e071dd15a475dd955d2d59ef5c311fc"
+        },
+        {
+          "path": "src/kala_agent/kernel/memory.py",
+          "sha256": "246b34ef11c5c277965b527bbb7119ee373e4ec0efe27ae71b680eb3c9db6bb4"
+        },
+        {
+          "path": "src/kala_agent/kernel/planning.py",
+          "sha256": "1a5251bab1d20d3c3c363e39b590c241924b2c4e7dab07f3de6a89927b64df6b"
+        },
+        {
+          "path": "src/kala_agent/kernel/policy.py",
+          "sha256": "997497a55bf18357c7a2dfab959092913079058873f39a44c99017f02c451983"
+        },
+        {
+          "path": "src/kala_agent/kernel/workflow.py",
+          "sha256": "18d0b15bbafaaa402f3654d64bdfc269fac9ee110c7bd0cdbfa3430472fda0a1"
+        },
+        {
+          "path": "src/kala_agent/persistence/__init__.py",
+          "sha256": "43f51093d4cc7ddb019a0e3921f7ac1e92681868d65f7884860a0bc822d513fa"
+        },
+        {
+          "path": "src/kala_agent/persistence/artifacts.py",
+          "sha256": "4a197dc7834a3ad2da930423a69759580791f0791c5680940581b79e00631b63"
+        },
+        {
+          "path": "src/kala_agent/persistence/chain.py",
+          "sha256": "4654cced9cd819da5834fbe0db7fcd820cfff5eeeb57e28bc3098d987ec065c9"
+        },
+        {
+          "path": "src/kala_agent/persistence/database.py",
+          "sha256": "d8d7c42a26165cf58d2e11f9fbc0155cc70912061feace277d11e2e805c9477c"
+        },
+        {
+          "path": "src/kala_agent/persistence/journal.py",
+          "sha256": "ae347c85f586c95dad626164327c187f748493dab4ba24d4fb400255b38d3eaa"
+        },
+        {
+          "path": "src/kala_agent/persistence/repositories.py",
+          "sha256": "4814a0c8ad513ed6749180ab9f43a5eac4d1c64d14dd75ee567772180b674e99"
+        },
+        {
+          "path": "src/kala_agent/runtime/__init__.py",
+          "sha256": "ae7f9c10f7c013de7630fdb5f9931a0f27f6b3cbe03d2bbf2887112bf76148f7"
+        },
+        {
+          "path": "src/kala_agent/runtime/agent.py",
+          "sha256": "142534bdd6cdea9c5bc887866a8474afba68e11fe32a62d73dc1722f0d7f290e"
+        },
+        {
+          "path": "src/kala_agent/runtime/model_gateway.py",
+          "sha256": "fbc25d1950690bb5a1c58d5990f95f7a5529e54b1d44907ef591ca1202be30f8"
+        },
+        {
+          "path": "src/kala_agent/studio/__init__.py",
+          "sha256": "9737755b65894727833a8518507989069f69062a770d7be76354ee8ae492f056"
+        },
+        {
+          "path": "src/kala_agent/studio/__main__.py",
+          "sha256": "44af69d0585245b06f46cfeab4710fbc34aad517fa1072d276e68186a25f3138"
+        },
+        {
+          "path": "src/kala_agent/studio/boundary.py",
+          "sha256": "fdb04a73d1cb39fdf439b17ecaa1bd4683f01ccec9c7a7c441257bfe46b8d66a"
+        },
+        {
+          "path": "src/kala_agent/studio/cli.py",
+          "sha256": "809d88e181c8ab478d458288ddf48ad07a67e4cc037d0bcae1f9fcf29e9f9b1f"
+        },
+        {
+          "path": "src/kala_agent/studio/design/__init__.py",
+          "sha256": "7ba484ba95f40773a7562b7e988f2490c075ade109be5d73277aa398db53435f"
+        },
+        {
+          "path": "src/kala_agent/studio/design/compile_ocp.py",
+          "sha256": "3401af76ccb5c8c2b9f9c4701bbdf78fdb0b6724742351b3b496d31444967652"
+        },
+        {
+          "path": "src/kala_agent/studio/design/drawing.py",
+          "sha256": "e29663328d56211030aa4f290cf687248587226da8cd3a6a4346a2cd4e0ac5d3"
+        },
+        {
+          "path": "src/kala_agent/studio/design/importer.py",
+          "sha256": "535ed687f63f678bb2214f9d6e5fad3251e2da8059e53a41d82593a2e32b56fa"
+        },
+        {
+          "path": "src/kala_agent/studio/design/intent.py",
+          "sha256": "a5a71e01bd3ece97c1ad0fc6f775b7c1909bef83bc7be258335b4ebe75d685d6"
+        },
+        {
+          "path": "src/kala_agent/studio/design/measure.py",
+          "sha256": "6b18a40852cb22de65fe39d156441107cbf8741807d2f3fcc9a02744acedd6a2"
+        },
+        {
+          "path": "src/kala_agent/studio/design/mesh.py",
+          "sha256": "f83c1d8a034010b2ae1f128bc0e4af12dfb069864f083d91b29bf450d69d5949"
+        },
+        {
+          "path": "src/kala_agent/studio/design/providers/__init__.py",
+          "sha256": "51b12882f3797ec225e0142f2a1b3e60e0fb210c9b9d33f44819d029713b8cc9"
+        },
+        {
+          "path": "src/kala_agent/studio/design/providers/base.py",
+          "sha256": "38a0ac46a9f5482f2821c7730bc38a21d2346f3305cf11963578075374345320"
+        },
+        {
+          "path": "src/kala_agent/studio/design/providers/freecad.py",
+          "sha256": "36872c8ca80d86e058831ba5d59853a6f2d599bb4bcb5d8b95f97308476345e4"
+        },
+        {
+          "path": "src/kala_agent/studio/design/providers/opencascade.py",
+          "sha256": "3ac531fedfd7caa70a794d48eb996be96355d310dd287f51201b39e4dfddea9d"
+        },
+        {
+          "path": "src/kala_agent/studio/design/providers/solidedge.py",
+          "sha256": "b34bcad4b90e538f5aec87a44805cf5ddf758a0efb2ae99971ed076c77c0b003"
+        },
+        {
+          "path": "src/kala_agent/studio/design/service.py",
+          "sha256": "c707ac7e097f9a1b12d6d4bfea40c256f1b551afd13d72c91a68c010b6e8e8ed"
+        },
+        {
+          "path": "src/kala_agent/studio/design/templates.py",
+          "sha256": "acf6e9f22447ecfa0bf14c34cc6aecc5c8bed5e05bbabfe6ccb68f9c04b45188"
+        },
+        {
+          "path": "src/kala_agent/studio/errors.py",
+          "sha256": "b4dfa07fabc0edea96f89dca5336b53b4466ce5fc974b28bb4aec8e2a997f0cf"
+        },
+        {
+          "path": "src/kala_agent/studio/geometry/__init__.py",
+          "sha256": "877cc1aaadbd65353d7c0c53d76b381e92680319365d2a23287aeb9318c28952"
+        },
+        {
+          "path": "src/kala_agent/studio/geometry/limits.py",
+          "sha256": "bd2749803541f83a1e5ab940d6c20b2d2f476ecf4cbe71144879049bf490b430"
+        },
+        {
+          "path": "src/kala_agent/studio/geometry/meshes.py",
+          "sha256": "f7a3a5501ea4e29d84bb5d64e622112082a9f50846b81cd0ff0a4ce4cea7a595"
+        },
+        {
+          "path": "src/kala_agent/studio/geometry/primitives.py",
+          "sha256": "5d631ef838be79b294766dd7581c1ea4802cd908c1f29a3ffc8349290396d363"
+        },
+        {
+          "path": "src/kala_agent/studio/geometry/step.py",
+          "sha256": "37d60ead56c038caef2d0dee310e811db1fc0d3de49c439259d58e022f12e079"
+        },
+        {
+          "path": "src/kala_agent/studio/geometry/stl.py",
+          "sha256": "7168e8a665c0e0591d0cf97e5a4de7467064c372f92e44307be347059ba88899"
+        },
+        {
+          "path": "src/kala_agent/studio/integrations/__init__.py",
+          "sha256": "14eaf750b1e2cd71cb6e85124d1f620821bb048ef2be8e651b9f483fc2f5f201"
+        },
+        {
+          "path": "src/kala_agent/studio/integrations/registry.py",
+          "sha256": "aae296b7e01671680586653ebbca1790956aca5814efc3e657807be6137695ea"
+        },
+        {
+          "path": "src/kala_agent/studio/internal_api.py",
+          "sha256": "0f59c91bca4d618db051e4ffc3dafe406926f7c004f5255678952e1bc69834b9"
+        },
+        {
+          "path": "src/kala_agent/studio/middleware.py",
+          "sha256": "9ed81eadc0f00231ec2dc71d28f4be285feb64d711f023f65991bafcde951b80"
+        },
+        {
+          "path": "src/kala_agent/studio/providers/__init__.py",
+          "sha256": "dad1bd7e12a56a9eb69a46f10549f8a9c0eec851a72b49b7e4826fceecd542d6"
+        },
+        {
+          "path": "src/kala_agent/studio/providers/base.py",
+          "sha256": "cf3fb1089f5c730c306fb27b8ff7faa846c68293ba17dea6fba9f97bd93aab7f"
+        },
+        {
+          "path": "src/kala_agent/studio/providers/codex.py",
+          "sha256": "cddae1531ad0977c7609a3004d7025a697dc27ff053ab797f759c662cbc234d1"
+        },
+        {
+          "path": "src/kala_agent/studio/providers/dispatch.py",
+          "sha256": "b2b82e612b6e1f80801172fa2e992929f1b7879d6665a8c0bda5382d93f07a8f"
+        },
+        {
+          "path": "src/kala_agent/studio/providers/local.py",
+          "sha256": "64b887d7257e5751a0c06555b025561b7979f2e96af0f43206e17f5d74c16ea6"
+        },
+        {
+          "path": "src/kala_agent/studio/providers/openai_compat.py",
+          "sha256": "57fc2cf65044b830daeaffcdc4f3a88e3d03398ec3ddeec33ea2f439b16555da"
+        },
+        {
+          "path": "src/kala_agent/studio/schemas.py",
+          "sha256": "817f6c2b00bb7a80cea82d9731cb22ab6cd1a19770934aa2bbc07c6487360b5e"
+        },
+        {
+          "path": "src/kala_agent/studio/server.py",
+          "sha256": "837fc8ebae84222ff4690cbd9a9891c18aa4c0a8ba78901fd91dde773d32c8bd"
+        },
+        {
+          "path": "src/kala_agent/studio/session_journal.py",
+          "sha256": "e49bd7654c08631ccaf1fdf9e9587c78a6cb6cb58b92253d4912a50fdddd9534"
+        },
+        {
+          "path": "src/kala_agent/studio/settings.py",
+          "sha256": "eca19cf0520267c35836ac40e7e65a1a284c8468daa19b435421f3ea63b2fc27"
+        },
+        {
+          "path": "src/kala_agent/studio/static.py",
+          "sha256": "1b0d5761a20038035a59b68024a37e9e4550868287935edc313d8c9ba420d456"
+        },
+        {
+          "path": "src/kala_agent/studio/worker.py",
+          "sha256": "7960d44b2c45e119fd3a0106e24aae97afe04cfb9f12344b659c626b046689c9"
+        },
+        {
+          "path": "src/kala_agent/tools/__init__.py",
+          "sha256": "429edc5220b7e26c101b20e44af281db2424ddb52ad60eddf3ef3f09743c3939"
+        },
+        {
+          "path": "src/kala_agent/tools/executor.py",
+          "sha256": "c052a55af8762b27cf35cab2ce189405738717f27c166a995e2469393c56d17f"
+        },
+        {
+          "path": "src/kala_agent/tools/protocol.py",
+          "sha256": "56921b314bbe077c8f1176aae1cd2d23e5618e82fc729cfd6afd501e8efccae3"
+        },
+        {
+          "path": "src/kala_agent/tools/registry.py",
+          "sha256": "8876158d18a8aeeef653367912861ad1207b25582100d789b1172e4b6cfa7afe"
+        },
+        {
+          "path": "src/kala_agent/tools/sandbox.py",
+          "sha256": "42656242eb4b37947b05d8f719c865e0bcabfd6acb9c4c309e477c73ed087423"
+        },
+        {
+          "path": "src/kala_agent/tools/simulator.py",
+          "sha256": "7e7457e54d3b2f08db258668f29b4345b3fbf8a2a7770468d19aba10cdc93b27"
+        }
+      ],
+      "root": "src/kala_agent",
+      "tree_digest": "754bc70c23dfae525770279c1e70b09fb1f9fd23ee4ee11017b9016962c23f91"
+    }
+  },
+  "status": "compatibility-fixture preparation only; no Rust product code and no packaging cutover is authorized by this corpus"
+}

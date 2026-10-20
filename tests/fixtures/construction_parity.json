@@ -1,0 +1,2268 @@
+{
+  "schema_version": 1,
+  "generator": {
+    "command": "PYTHONPATH=adapters/solidedge/src:src .venv/bin/python tests/fixtures/generate_construction_parity.py",
+    "oracle_module": "kala_agent_solidedge.oracle",
+    "oracle_source": "adapters/solidedge/src/kala_agent_solidedge/oracle.py",
+    "oracle_sha256": "1473586009080c0843acdf32af928796349d60bcf3a8d49c9e5ae42a90c12dbe",
+    "comparison": {
+      "volume_relative_tolerance": 1e-06,
+      "bounds_absolute_tolerance_mm": 0.001
+    }
+  },
+  "cases": [
+    {
+      "id": "rectangle_pad_xy_origin_forward",
+      "description": "4 x 5 mm rectangle on XY at (0, 0), extruded 6 mm forward",
+      "corpus": "rectangle_pad",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "plate",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "rectangle",
+                "width": 4.0,
+                "height": 5.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 6.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "plate",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 120.0,
+            "min_mm": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "max_mm": [
+              4.0,
+              5.0,
+              6.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": null
+    },
+    {
+      "id": "rectangle_pad_xy_origin_reversed",
+      "description": "4 x 5 mm rectangle on XY at (0, 0), extruded 6 mm reversed",
+      "corpus": "rectangle_pad",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "plate",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "rectangle",
+                "width": 4.0,
+                "height": 5.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 6.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": true
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "plate",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 120.0,
+            "min_mm": [
+              0.0,
+              0.0,
+              -6.0
+            ],
+            "max_mm": [
+              4.0,
+              5.0,
+              0.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": null
+    },
+    {
+      "id": "rectangle_pad_xy_offset_forward",
+      "description": "4 x 5 mm rectangle on XY at (2, 3), extruded 6 mm forward",
+      "corpus": "rectangle_pad",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "plate",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "rectangle",
+                "width": 4.0,
+                "height": 5.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 2.0,
+                "y": 3.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 6.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "plate",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 120.0,
+            "min_mm": [
+              2.0,
+              3.0,
+              0.0
+            ],
+            "max_mm": [
+              6.0,
+              8.0,
+              6.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": {
+        "source": "docs/construction-semantics.md#a-worked-example-offset-rectangle-pad-6",
+        "volume_mm3": 120.0,
+        "min_mm": [
+          2.0,
+          3.0,
+          0.0
+        ],
+        "max_mm": [
+          6.0,
+          8.0,
+          6.0
+        ]
+      }
+    },
+    {
+      "id": "rectangle_pad_xy_offset_reversed",
+      "description": "4 x 5 mm rectangle on XY at (2, 3), extruded 6 mm reversed",
+      "corpus": "rectangle_pad",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "plate",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "rectangle",
+                "width": 4.0,
+                "height": 5.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 2.0,
+                "y": 3.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 6.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": true
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "plate",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 120.0,
+            "min_mm": [
+              2.0,
+              3.0,
+              -6.0
+            ],
+            "max_mm": [
+              6.0,
+              8.0,
+              0.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": null
+    },
+    {
+      "id": "rectangle_pad_xz_origin_forward",
+      "description": "4 x 5 mm rectangle on XZ at (0, 0), extruded 6 mm forward",
+      "corpus": "rectangle_pad",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "plate",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XZ",
+                "profile": "rectangle",
+                "width": 4.0,
+                "height": 5.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 6.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "plate",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 120.0,
+            "min_mm": [
+              0.0,
+              -6.0,
+              0.0
+            ],
+            "max_mm": [
+              4.0,
+              -0.0,
+              5.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": null
+    },
+    {
+      "id": "rectangle_pad_xz_origin_reversed",
+      "description": "4 x 5 mm rectangle on XZ at (0, 0), extruded 6 mm reversed",
+      "corpus": "rectangle_pad",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "plate",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XZ",
+                "profile": "rectangle",
+                "width": 4.0,
+                "height": 5.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 6.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": true
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "plate",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 120.0,
+            "min_mm": [
+              0.0,
+              -0.0,
+              0.0
+            ],
+            "max_mm": [
+              4.0,
+              6.0,
+              5.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": null
+    },
+    {
+      "id": "rectangle_pad_xz_offset_forward",
+      "description": "4 x 5 mm rectangle on XZ at (2, 3), extruded 6 mm forward",
+      "corpus": "rectangle_pad",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "plate",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XZ",
+                "profile": "rectangle",
+                "width": 4.0,
+                "height": 5.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 2.0,
+                "y": 3.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 6.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "plate",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 120.0,
+            "min_mm": [
+              2.0,
+              -6.0,
+              3.0
+            ],
+            "max_mm": [
+              6.0,
+              -0.0,
+              8.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": {
+        "source": "docs/construction-semantics.md#a-worked-example-offset-rectangle-pad-6",
+        "volume_mm3": 120.0,
+        "min_mm": [
+          2.0,
+          -6.0,
+          3.0
+        ],
+        "max_mm": [
+          6.0,
+          0.0,
+          8.0
+        ]
+      }
+    },
+    {
+      "id": "rectangle_pad_xz_offset_reversed",
+      "description": "4 x 5 mm rectangle on XZ at (2, 3), extruded 6 mm reversed",
+      "corpus": "rectangle_pad",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "plate",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XZ",
+                "profile": "rectangle",
+                "width": 4.0,
+                "height": 5.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 2.0,
+                "y": 3.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 6.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": true
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "plate",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 120.0,
+            "min_mm": [
+              2.0,
+              -0.0,
+              3.0
+            ],
+            "max_mm": [
+              6.0,
+              6.0,
+              8.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": null
+    },
+    {
+      "id": "rectangle_pad_yz_origin_forward",
+      "description": "4 x 5 mm rectangle on YZ at (0, 0), extruded 6 mm forward",
+      "corpus": "rectangle_pad",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "plate",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "YZ",
+                "profile": "rectangle",
+                "width": 4.0,
+                "height": 5.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 6.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "plate",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 120.0,
+            "min_mm": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "max_mm": [
+              6.0,
+              4.0,
+              5.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": null
+    },
+    {
+      "id": "rectangle_pad_yz_origin_reversed",
+      "description": "4 x 5 mm rectangle on YZ at (0, 0), extruded 6 mm reversed",
+      "corpus": "rectangle_pad",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "plate",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "YZ",
+                "profile": "rectangle",
+                "width": 4.0,
+                "height": 5.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 6.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": true
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "plate",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 120.0,
+            "min_mm": [
+              -6.0,
+              0.0,
+              0.0
+            ],
+            "max_mm": [
+              0.0,
+              4.0,
+              5.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": null
+    },
+    {
+      "id": "rectangle_pad_yz_offset_forward",
+      "description": "4 x 5 mm rectangle on YZ at (2, 3), extruded 6 mm forward",
+      "corpus": "rectangle_pad",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "plate",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "YZ",
+                "profile": "rectangle",
+                "width": 4.0,
+                "height": 5.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 2.0,
+                "y": 3.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 6.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "plate",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 120.0,
+            "min_mm": [
+              0.0,
+              2.0,
+              3.0
+            ],
+            "max_mm": [
+              6.0,
+              6.0,
+              8.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": {
+        "source": "docs/construction-semantics.md#a-worked-example-offset-rectangle-pad-6",
+        "volume_mm3": 120.0,
+        "min_mm": [
+          0.0,
+          2.0,
+          3.0
+        ],
+        "max_mm": [
+          6.0,
+          6.0,
+          8.0
+        ]
+      }
+    },
+    {
+      "id": "rectangle_pad_yz_offset_reversed",
+      "description": "4 x 5 mm rectangle on YZ at (2, 3), extruded 6 mm reversed",
+      "corpus": "rectangle_pad",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "plate",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "YZ",
+                "profile": "rectangle",
+                "width": 4.0,
+                "height": 5.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 2.0,
+                "y": 3.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 6.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": true
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "plate",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 120.0,
+            "min_mm": [
+              -6.0,
+              2.0,
+              3.0
+            ],
+            "max_mm": [
+              0.0,
+              6.0,
+              8.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": null
+    },
+    {
+      "id": "circle_pad_xy_origin",
+      "description": "circle of diameter 4 mm on XY at (0, 0), extruded 5 mm forward",
+      "corpus": "circle_pad",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "pin",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "circle",
+                "width": null,
+                "height": null,
+                "diameter": 4.0,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 5.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "pin",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 62.831853,
+            "min_mm": [
+              -2.0,
+              -2.0,
+              0.0
+            ],
+            "max_mm": [
+              2.0,
+              2.0,
+              5.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": null
+    },
+    {
+      "id": "circle_pad_xy_offset",
+      "description": "circle of diameter 4 mm on XY at (1, 1), extruded 5 mm forward",
+      "corpus": "circle_pad",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "pin",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "circle",
+                "width": null,
+                "height": null,
+                "diameter": 4.0,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 1.0,
+                "y": 1.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 5.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "pin",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 62.831853,
+            "min_mm": [
+              -1.0,
+              -1.0,
+              0.0
+            ],
+            "max_mm": [
+              3.0,
+              3.0,
+              5.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": null
+    },
+    {
+      "id": "circle_pad_xz_origin",
+      "description": "circle of diameter 4 mm on XZ at (0, 0), extruded 5 mm forward",
+      "corpus": "circle_pad",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "pin",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XZ",
+                "profile": "circle",
+                "width": null,
+                "height": null,
+                "diameter": 4.0,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 5.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "pin",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 62.831853,
+            "min_mm": [
+              -2.0,
+              -5.0,
+              -2.0
+            ],
+            "max_mm": [
+              2.0,
+              -0.0,
+              2.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": null
+    },
+    {
+      "id": "circle_pad_xz_offset",
+      "description": "circle of diameter 4 mm on XZ at (1, 1), extruded 5 mm forward",
+      "corpus": "circle_pad",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "pin",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XZ",
+                "profile": "circle",
+                "width": null,
+                "height": null,
+                "diameter": 4.0,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 1.0,
+                "y": 1.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 5.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "pin",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 62.831853,
+            "min_mm": [
+              -1.0,
+              -5.0,
+              -1.0
+            ],
+            "max_mm": [
+              3.0,
+              -0.0,
+              3.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": null
+    },
+    {
+      "id": "circle_pad_yz_origin",
+      "description": "circle of diameter 4 mm on YZ at (0, 0), extruded 5 mm forward",
+      "corpus": "circle_pad",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "pin",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "YZ",
+                "profile": "circle",
+                "width": null,
+                "height": null,
+                "diameter": 4.0,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 5.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "pin",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 62.831853,
+            "min_mm": [
+              0.0,
+              -2.0,
+              -2.0
+            ],
+            "max_mm": [
+              5.0,
+              2.0,
+              2.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": null
+    },
+    {
+      "id": "circle_pad_yz_offset",
+      "description": "circle of diameter 4 mm on YZ at (1, 1), extruded 5 mm forward",
+      "corpus": "circle_pad",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "pin",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "YZ",
+                "profile": "circle",
+                "width": null,
+                "height": null,
+                "diameter": 4.0,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 1.0,
+                "y": 1.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 5.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "pin",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 62.831853,
+            "min_mm": [
+              0.0,
+              -1.0,
+              -1.0
+            ],
+            "max_mm": [
+              5.0,
+              3.0,
+              3.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": null
+    },
+    {
+      "id": "circle_revolve_xy_quirk",
+      "description": "circle revolve on XY is lowered to an extrusion of the diameter",
+      "corpus": "circle_revolve_quirk",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "pin",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "circle",
+                "width": null,
+                "height": null,
+                "diameter": 6.0,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "revolve",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": 360.0,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "pin",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 169.646003,
+            "min_mm": [
+              -3.0,
+              -3.0,
+              0.0
+            ],
+            "max_mm": [
+              3.0,
+              3.0,
+              6.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": null
+    },
+    {
+      "id": "circle_revolve_yz_quirk_with_length",
+      "description": "circle revolve on YZ with a length is lowered to that extrusion",
+      "corpus": "circle_revolve_quirk",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "pin",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "YZ",
+                "profile": "circle",
+                "width": null,
+                "height": null,
+                "diameter": 6.0,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "revolve",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 8.0,
+                "pitch": null,
+                "angle": 360.0,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "pin",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 226.194671,
+            "min_mm": [
+              0.0,
+              -3.0,
+              -3.0
+            ],
+            "max_mm": [
+              8.0,
+              3.0,
+              3.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": null
+    },
+    {
+      "id": "rectangle_revolve_xy",
+      "description": "4 x 5 mm rectangle at x = 2 on XY revolved 360 degrees about Y",
+      "corpus": "rectangle_revolve",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "bush",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "rectangle",
+                "width": 4.0,
+                "height": 5.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 2.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "revolve",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": 360.0,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "bush",
+            "checked": false,
+            "reason": "component 'bush' revolves a profile; revolve volumes are not part of the closed-form corpus",
+            "volume_mm3": null,
+            "min_mm": null,
+            "max_mm": null
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": "component 'bush' revolves a profile; revolve volumes are not part of the closed-form corpus"
+      },
+      "documented": null
+    },
+    {
+      "id": "rectangle_revolve_yz",
+      "description": "5 x 4 mm rectangle at z = 2 on YZ revolved 360 degrees about Y",
+      "corpus": "rectangle_revolve",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "bush",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "YZ",
+                "profile": "rectangle",
+                "width": 5.0,
+                "height": 4.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 2.0,
+                "reversed": false
+              },
+              {
+                "op": "revolve",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": 360.0,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "bush",
+            "checked": false,
+            "reason": "component 'bush' revolves a profile; revolve volumes are not part of the closed-form corpus",
+            "volume_mm3": null,
+            "min_mm": null,
+            "max_mm": null
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": "component 'bush' revolves a profile; revolve volumes are not part of the closed-form corpus"
+      },
+      "documented": null
+    },
+    {
+      "id": "rectangle_pad_20_20_10_xy",
+      "description": "20 x 20 mm rectangle on XY extruded 10 mm, the pocket reference pad",
+      "corpus": "rectangle_pad",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "plate",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "rectangle",
+                "width": 20.0,
+                "height": 20.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 10.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "plate",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 4000.0,
+            "min_mm": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "max_mm": [
+              20.0,
+              20.0,
+              10.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": {
+        "source": "docs/construction-semantics.md#cuts-and-pockets",
+        "volume_mm3": 4000.0,
+        "min_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max_mm": [
+          20.0,
+          20.0,
+          10.0
+        ]
+      }
+    },
+    {
+      "id": "pocket_circle_xy_finite",
+      "description": "diameter 2 mm circle at (5, 5) on XY cut 4 mm deep",
+      "corpus": "pocket",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "plate",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "rectangle",
+                "width": 20.0,
+                "height": 20.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 10.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "circle",
+                "width": null,
+                "height": null,
+                "diameter": 2.0,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 5.0,
+                "y": 5.0,
+                "reversed": false
+              },
+              {
+                "op": "pocket",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 4.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "plate",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 3987.433629,
+            "min_mm": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "max_mm": [
+              20.0,
+              20.0,
+              10.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": {
+        "source": "docs/construction-semantics.md#cuts-and-pockets",
+        "volume_mm3": 3987.433629,
+        "min_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max_mm": [
+          20.0,
+          20.0,
+          10.0
+        ]
+      }
+    },
+    {
+      "id": "pocket_circle_xy_through_all",
+      "description": "diameter 2 mm circle at (5, 5) on XY cut through all",
+      "corpus": "pocket",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "plate",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "rectangle",
+                "width": 20.0,
+                "height": 20.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 10.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "circle",
+                "width": null,
+                "height": null,
+                "diameter": 2.0,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 5.0,
+                "y": 5.0,
+                "reversed": false
+              },
+              {
+                "op": "pocket",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": []
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "plate",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 3968.584073,
+            "min_mm": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "max_mm": [
+              20.0,
+              20.0,
+              10.0
+            ]
+          }
+        ],
+        "assembly_expected": false,
+        "assembly_bounds": null,
+        "reason": ""
+      },
+      "documented": {
+        "source": "docs/construction-semantics.md#cuts-and-pockets",
+        "volume_mm3": 3968.584073,
+        "min_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max_mm": [
+          20.0,
+          20.0,
+          10.0
+        ]
+      }
+    },
+    {
+      "id": "assembly_two_parts_placed_once",
+      "description": "two 10 x 10 x 5 pads placed at (0, 0, 0) and (20, 0, 0)",
+      "corpus": "assembly",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "base",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "rectangle",
+                "width": 10.0,
+                "height": 10.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 5.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          },
+          {
+            "name": "riser",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "rectangle",
+                "width": 10.0,
+                "height": 10.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 5.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": [
+          {
+            "op": "place",
+            "component": "base",
+            "components": [],
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          {
+            "op": "place",
+            "component": "riser",
+            "components": [],
+            "x": 20.0,
+            "y": 0.0,
+            "z": 0.0
+          }
+        ]
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "base",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 500.0,
+            "min_mm": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "max_mm": [
+              10.0,
+              10.0,
+              5.0
+            ]
+          },
+          {
+            "name": "riser",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 500.0,
+            "min_mm": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "max_mm": [
+              10.0,
+              10.0,
+              5.0
+            ]
+          }
+        ],
+        "assembly_expected": true,
+        "assembly_bounds": {
+          "min_mm": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "max_mm": [
+            30.0,
+            10.0,
+            5.0
+          ]
+        },
+        "reason": ""
+      },
+      "documented": null
+    },
+    {
+      "id": "assembly_three_parts_placed_once",
+      "description": "three 10 x 10 x 2 pads placed at three translations",
+      "corpus": "assembly",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "a",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "rectangle",
+                "width": 10.0,
+                "height": 10.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 2.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          },
+          {
+            "name": "b",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "rectangle",
+                "width": 10.0,
+                "height": 10.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 2.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          },
+          {
+            "name": "c",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "rectangle",
+                "width": 10.0,
+                "height": 10.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 2.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": [
+          {
+            "op": "place",
+            "component": "a",
+            "components": [],
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          {
+            "op": "place",
+            "component": "b",
+            "components": [],
+            "x": 15.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          {
+            "op": "place",
+            "component": "c",
+            "components": [],
+            "x": 0.0,
+            "y": 20.0,
+            "z": 0.0
+          }
+        ]
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "a",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 200.0,
+            "min_mm": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "max_mm": [
+              10.0,
+              10.0,
+              2.0
+            ]
+          },
+          {
+            "name": "b",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 200.0,
+            "min_mm": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "max_mm": [
+              10.0,
+              10.0,
+              2.0
+            ]
+          },
+          {
+            "name": "c",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 200.0,
+            "min_mm": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "max_mm": [
+              10.0,
+              10.0,
+              2.0
+            ]
+          }
+        ],
+        "assembly_expected": true,
+        "assembly_bounds": {
+          "min_mm": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "max_mm": [
+            25.0,
+            30.0,
+            2.0
+          ]
+        },
+        "reason": ""
+      },
+      "documented": null
+    },
+    {
+      "id": "assembly_single_translated_part",
+      "description": "one 10 x 10 x 5 pad placed at (5, 6, 7)",
+      "corpus": "assembly",
+      "script": {
+        "summary": "construction-semantics parity corpus",
+        "components": [
+          {
+            "name": "base",
+            "steps": [
+              {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "rectangle",
+                "width": 10.0,
+                "height": 10.0,
+                "diameter": null,
+                "length": null,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              },
+              {
+                "op": "extrude",
+                "plane": "XY",
+                "profile": null,
+                "width": null,
+                "height": null,
+                "diameter": null,
+                "length": 5.0,
+                "pitch": null,
+                "angle": null,
+                "x": 0.0,
+                "y": 0.0,
+                "reversed": false
+              }
+            ]
+          }
+        ],
+        "assembly": [
+          {
+            "op": "place",
+            "component": "base",
+            "components": [],
+            "x": 5.0,
+            "y": 6.0,
+            "z": 7.0
+          }
+        ]
+      },
+      "oracle": {
+        "parts": [
+          {
+            "name": "base",
+            "checked": true,
+            "reason": "",
+            "volume_mm3": 500.0,
+            "min_mm": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "max_mm": [
+              10.0,
+              10.0,
+              5.0
+            ]
+          }
+        ],
+        "assembly_expected": true,
+        "assembly_bounds": {
+          "min_mm": [
+            5.0,
+            6.0,
+            7.0
+          ],
+          "max_mm": [
+            15.0,
+            16.0,
+            12.0
+          ]
+        },
+        "reason": ""
+      },
+      "documented": null
+    }
+  ]
+}

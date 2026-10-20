@@ -1,0 +1,1546 @@
+{
+  "clamp_cases": [
+    {
+      "expected": {
+        "ok": true,
+        "value": 0.0
+      },
+      "id": "clamp.00",
+      "input": {
+        "value": 0.0
+      }
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": 1.0
+      },
+      "id": "clamp.01",
+      "input": {
+        "value": 1.0
+      }
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": 0.0
+      },
+      "id": "clamp.02",
+      "input": {
+        "value": -1.0
+      }
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": 1.0
+      },
+      "id": "clamp.03",
+      "input": {
+        "value": 2.0
+      }
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": 0.123456
+      },
+      "id": "clamp.04",
+      "input": {
+        "value": 0.1234564
+      }
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": 0.123456
+      },
+      "id": "clamp.05",
+      "input": {
+        "value": 0.1234565
+      }
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": 0.123457
+      },
+      "id": "clamp.06",
+      "input": {
+        "value": 0.1234575
+      }
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": 1.0
+      },
+      "id": "clamp.07",
+      "input": {
+        "value": 0.9999995
+      }
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": 0.0
+      },
+      "id": "clamp.08",
+      "input": {
+        "value": 1e-07
+      }
+    },
+    {
+      "expected": {
+        "error_type": "DomainParameterError",
+        "message": "bounded terms must be finite numbers",
+        "ok": false
+      },
+      "id": "clamp.09",
+      "input": {
+        "float_literal": "inf"
+      }
+    },
+    {
+      "expected": {
+        "error_type": "DomainParameterError",
+        "message": "bounded terms must be finite numbers",
+        "ok": false
+      },
+      "id": "clamp.10",
+      "input": {
+        "float_literal": "nan"
+      }
+    }
+  ],
+  "corpus_schema_version": 1,
+  "decimal_strings": [
+    "0",
+    "0.0",
+    "0E-1000000",
+    "1",
+    "1.00",
+    "0.10",
+    "0.2",
+    "1E+3",
+    "100.000",
+    "1.2300",
+    "0.0000000000000000000000000000001",
+    "123456789012345678901234567890.12345",
+    "1.23456789012345678901234567890123456789",
+    "1e-30",
+    "1e+40",
+    "1e-999999",
+    "1e+999999"
+  ],
+  "decode_cases": [
+    {
+      "expected": {
+        "digits": [
+          0
+        ],
+        "exponent": 0,
+        "is_finite": true,
+        "sign": 0,
+        "str": "0"
+      },
+      "id": "decode.00",
+      "input": "0"
+    },
+    {
+      "expected": {
+        "digits": [
+          0
+        ],
+        "exponent": -1,
+        "is_finite": true,
+        "sign": 0,
+        "str": "0.0"
+      },
+      "id": "decode.01",
+      "input": "0.0"
+    },
+    {
+      "expected": {
+        "digits": [
+          0
+        ],
+        "exponent": -1000000,
+        "is_finite": true,
+        "sign": 0,
+        "str": "0E-1000000"
+      },
+      "id": "decode.02",
+      "input": "0E-1000000"
+    },
+    {
+      "expected": {
+        "digits": [
+          1
+        ],
+        "exponent": 0,
+        "is_finite": true,
+        "sign": 0,
+        "str": "1"
+      },
+      "id": "decode.03",
+      "input": "1"
+    },
+    {
+      "expected": {
+        "digits": [
+          1,
+          0,
+          0
+        ],
+        "exponent": -2,
+        "is_finite": true,
+        "sign": 0,
+        "str": "1.00"
+      },
+      "id": "decode.04",
+      "input": "1.00"
+    },
+    {
+      "expected": {
+        "digits": [
+          1,
+          0
+        ],
+        "exponent": -2,
+        "is_finite": true,
+        "sign": 0,
+        "str": "0.10"
+      },
+      "id": "decode.05",
+      "input": "0.10"
+    },
+    {
+      "expected": {
+        "digits": [
+          2
+        ],
+        "exponent": -1,
+        "is_finite": true,
+        "sign": 0,
+        "str": "0.2"
+      },
+      "id": "decode.06",
+      "input": "0.2"
+    },
+    {
+      "expected": {
+        "digits": [
+          1
+        ],
+        "exponent": 3,
+        "is_finite": true,
+        "sign": 0,
+        "str": "1E+3"
+      },
+      "id": "decode.07",
+      "input": "1E+3"
+    },
+    {
+      "expected": {
+        "digits": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "exponent": -3,
+        "is_finite": true,
+        "sign": 0,
+        "str": "100.000"
+      },
+      "id": "decode.08",
+      "input": "100.000"
+    },
+    {
+      "expected": {
+        "digits": [
+          1,
+          2,
+          3,
+          0,
+          0
+        ],
+        "exponent": -4,
+        "is_finite": true,
+        "sign": 0,
+        "str": "1.2300"
+      },
+      "id": "decode.09",
+      "input": "1.2300"
+    },
+    {
+      "expected": {
+        "digits": [
+          1
+        ],
+        "exponent": -31,
+        "is_finite": true,
+        "sign": 0,
+        "str": "1E-31"
+      },
+      "id": "decode.10",
+      "input": "0.0000000000000000000000000000001"
+    },
+    {
+      "expected": {
+        "digits": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "exponent": -5,
+        "is_finite": true,
+        "sign": 0,
+        "str": "123456789012345678901234567890.12345"
+      },
+      "id": "decode.11",
+      "input": "123456789012345678901234567890.12345"
+    },
+    {
+      "expected": {
+        "digits": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "exponent": -38,
+        "is_finite": true,
+        "sign": 0,
+        "str": "1.23456789012345678901234567890123456789"
+      },
+      "id": "decode.12",
+      "input": "1.23456789012345678901234567890123456789"
+    },
+    {
+      "expected": {
+        "digits": [
+          1
+        ],
+        "exponent": -30,
+        "is_finite": true,
+        "sign": 0,
+        "str": "1E-30"
+      },
+      "id": "decode.13",
+      "input": "1e-30"
+    },
+    {
+      "expected": {
+        "digits": [
+          1
+        ],
+        "exponent": 40,
+        "is_finite": true,
+        "sign": 0,
+        "str": "1E+40"
+      },
+      "id": "decode.14",
+      "input": "1e+40"
+    },
+    {
+      "expected": {
+        "digits": [
+          1
+        ],
+        "exponent": -999999,
+        "is_finite": true,
+        "sign": 0,
+        "str": "1E-999999"
+      },
+      "id": "decode.15",
+      "input": "1e-999999"
+    },
+    {
+      "expected": {
+        "digits": [
+          1
+        ],
+        "exponent": 999999,
+        "is_finite": true,
+        "sign": 0,
+        "str": "1E+999999"
+      },
+      "id": "decode.16",
+      "input": "1e+999999"
+    }
+  ],
+  "duration_cases": [
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "0",
+          "duration_seconds": 0.0,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "duration.00",
+      "note": "Durations are held on a whole-microsecond grid using round()",
+      "seconds": 0.0
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "0",
+          "duration_seconds": 0.0,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "duration.01",
+      "note": "Durations are held on a whole-microsecond grid using round()",
+      "seconds": 1e-07
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "0",
+          "duration_seconds": 0.0,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "duration.02",
+      "note": "Durations are held on a whole-microsecond grid using round()",
+      "seconds": 5e-07
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "0",
+          "duration_seconds": 2e-06,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "duration.03",
+      "note": "Durations are held on a whole-microsecond grid using round()",
+      "seconds": 1.5e-06
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "0",
+          "duration_seconds": 2e-06,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "duration.04",
+      "note": "Durations are held on a whole-microsecond grid using round()",
+      "seconds": 2.5e-06
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "0",
+          "duration_seconds": 2e-06,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "duration.05",
+      "note": "Durations are held on a whole-microsecond grid using round()",
+      "seconds": 1.5e-06
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "0",
+          "duration_seconds": 1.234568,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "duration.06",
+      "note": "Durations are held on a whole-microsecond grid using round()",
+      "seconds": 1.2345675
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "0",
+          "duration_seconds": 1.234568,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "duration.07",
+      "note": "Durations are held on a whole-microsecond grid using round()",
+      "seconds": 1.2345685
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "0",
+          "duration_seconds": 123.45679,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "duration.08",
+      "note": "Durations are held on a whole-microsecond grid using round()",
+      "seconds": 123.4567895
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "0",
+          "duration_seconds": 3600.0,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "duration.09",
+      "note": "Durations are held on a whole-microsecond grid using round()",
+      "seconds": 3600.0
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "0",
+          "duration_seconds": 0.0,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "duration.sum.00",
+      "seconds": [
+        5e-07,
+        5e-07
+      ]
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "0",
+          "duration_seconds": 0.3,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "duration.sum.01",
+      "seconds": [
+        0.1,
+        0.2
+      ]
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "0",
+          "duration_seconds": 3.580246,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "duration.sum.02",
+      "seconds": [
+        1.234567,
+        2.345679
+      ]
+    }
+  ],
+  "facts": {
+    "cost_state_representation": "str(Decimal) preserves stored scale and exponent",
+    "duration_grid": "whole microseconds via round(seconds * 1_000_000)",
+    "duration_rounding": "ties to even because round() has no ndigits argument",
+    "python_decimal_context_precision": 28,
+    "python_decimal_rounding": "ROUND_HALF_EVEN",
+    "rust_decimal_fixed_96_bit_is_insufficient": true,
+    "source_range": "arbitrary finite nonnegative Decimal; no fixed scale or magnitude bound"
+  },
+  "kind": "decimal_budget",
+  "ledger_cases": [
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "observations": [
+            {
+              "state": {
+                "budget": {
+                  "max_artifact_bytes": 10000,
+                  "max_cost": "1.00",
+                  "max_duration_seconds": 10.0,
+                  "max_model_calls": 4,
+                  "max_replanning_attempts": 2,
+                  "max_tool_calls": 5,
+                  "max_total_tokens": 1000
+                },
+                "next_reservation": 1,
+                "reservations": [],
+                "reserved": {
+                  "artifact_bytes": 0,
+                  "cost": "0",
+                  "duration_seconds": 0.0,
+                  "model_calls": 0,
+                  "replanning_attempts": 0,
+                  "tool_calls": 0,
+                  "total_tokens": 0
+                },
+                "usage": {
+                  "artifact_bytes": 0,
+                  "cost": "0",
+                  "duration_seconds": 0.0,
+                  "model_calls": 0,
+                  "replanning_attempts": 0,
+                  "tool_calls": 0,
+                  "total_tokens": 0
+                },
+                "version": 1
+              },
+              "step": "initial"
+            },
+            {
+              "step": "model_call",
+              "usage": {
+                "artifact_bytes": 0,
+                "cost": "0.10",
+                "duration_seconds": 0.0,
+                "model_calls": 1,
+                "replanning_attempts": 0,
+                "tool_calls": 0,
+                "total_tokens": 100
+              }
+            },
+            {
+              "step": "tool_call",
+              "usage": {
+                "artifact_bytes": 64,
+                "cost": "0.30",
+                "duration_seconds": 0.0,
+                "model_calls": 1,
+                "replanning_attempts": 0,
+                "tool_calls": 1,
+                "total_tokens": 100
+              }
+            },
+            {
+              "reservation": {
+                "reservation_id": "reservation-1",
+                "usage": {
+                  "artifact_bytes": 0,
+                  "cost": "0.25",
+                  "duration_seconds": 0.0,
+                  "model_calls": 0,
+                  "replanning_attempts": 0,
+                  "tool_calls": 0,
+                  "total_tokens": 200
+                }
+              },
+              "state": {
+                "budget": {
+                  "max_artifact_bytes": 10000,
+                  "max_cost": "1.00",
+                  "max_duration_seconds": 10.0,
+                  "max_model_calls": 4,
+                  "max_replanning_attempts": 2,
+                  "max_tool_calls": 5,
+                  "max_total_tokens": 1000
+                },
+                "next_reservation": 2,
+                "reservations": [
+                  {
+                    "reservation_id": "reservation-1",
+                    "usage": {
+                      "artifact_bytes": 0,
+                      "cost": "0.25",
+                      "duration_seconds": 0.0,
+                      "model_calls": 0,
+                      "replanning_attempts": 0,
+                      "tool_calls": 0,
+                      "total_tokens": 200
+                    }
+                  }
+                ],
+                "reserved": {
+                  "artifact_bytes": 0,
+                  "cost": "0.25",
+                  "duration_seconds": 0.0,
+                  "model_calls": 0,
+                  "replanning_attempts": 0,
+                  "tool_calls": 0,
+                  "total_tokens": 200
+                },
+                "usage": {
+                  "artifact_bytes": 64,
+                  "cost": "0.30",
+                  "duration_seconds": 0.0,
+                  "model_calls": 1,
+                  "replanning_attempts": 0,
+                  "tool_calls": 1,
+                  "total_tokens": 100
+                },
+                "version": 1
+              },
+              "step": "reserve"
+            },
+            {
+              "step": "commit_reservation",
+              "usage": {
+                "artifact_bytes": 64,
+                "cost": "0.40",
+                "duration_seconds": 0.0,
+                "model_calls": 1,
+                "replanning_attempts": 0,
+                "tool_calls": 1,
+                "total_tokens": 250
+              }
+            },
+            {
+              "state": {
+                "budget": {
+                  "max_artifact_bytes": 10000,
+                  "max_cost": "1.00",
+                  "max_duration_seconds": 10.0,
+                  "max_model_calls": 4,
+                  "max_replanning_attempts": 2,
+                  "max_tool_calls": 5,
+                  "max_total_tokens": 1000
+                },
+                "next_reservation": 2,
+                "reservations": [],
+                "reserved": {
+                  "artifact_bytes": 0,
+                  "cost": "0.00",
+                  "duration_seconds": 0.0,
+                  "model_calls": 0,
+                  "replanning_attempts": 0,
+                  "tool_calls": 0,
+                  "total_tokens": 0
+                },
+                "usage": {
+                  "artifact_bytes": 64,
+                  "cost": "0.40",
+                  "duration_seconds": 0.0,
+                  "model_calls": 1,
+                  "replanning_attempts": 0,
+                  "tool_calls": 1,
+                  "total_tokens": 250
+                },
+                "version": 1
+              },
+              "step": "final"
+            },
+            {
+              "equal_to_export": true,
+              "state": {
+                "budget": {
+                  "max_artifact_bytes": 10000,
+                  "max_cost": "1.00",
+                  "max_duration_seconds": 10.0,
+                  "max_model_calls": 4,
+                  "max_replanning_attempts": 2,
+                  "max_tool_calls": 5,
+                  "max_total_tokens": 1000
+                },
+                "next_reservation": 2,
+                "reservations": [],
+                "reserved": {
+                  "artifact_bytes": 0,
+                  "cost": "0.00",
+                  "duration_seconds": 0.0,
+                  "model_calls": 0,
+                  "replanning_attempts": 0,
+                  "tool_calls": 0,
+                  "total_tokens": 0
+                },
+                "usage": {
+                  "artifact_bytes": 64,
+                  "cost": "0.40",
+                  "duration_seconds": 0.0,
+                  "model_calls": 1,
+                  "replanning_attempts": 0,
+                  "tool_calls": 1,
+                  "total_tokens": 250
+                },
+                "version": 1
+              },
+              "step": "import_round_trip"
+            },
+            {
+              "expected": {
+                "error_type": "CostBudgetExhaustedError",
+                "message": "budget exhausted for cost: requested 1.40, remaining 0.60, limit 1.00",
+                "ok": false
+              },
+              "step": "exhaust_cost"
+            }
+          ]
+        }
+      },
+      "id": "ledger.scenario"
+    }
+  ],
+  "oracle_modules": [
+    "kala_agent.kernel.budget",
+    "kala_agent.contracts.models.RunBudget",
+    "kala_agent.domains.clamp_unit_interval"
+  ],
+  "run_budget_cases": [
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "max_artifact_bytes": 1000000000,
+          "max_cost": "0",
+          "max_duration_seconds": 3600.0,
+          "max_model_calls": 32,
+          "max_replanning_attempts": 3,
+          "max_tool_calls": 64,
+          "max_total_tokens": 100000
+        }
+      },
+      "id": "run_budget.00",
+      "max_cost": "0"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "max_artifact_bytes": 1000000000,
+          "max_cost": "0.0",
+          "max_duration_seconds": 3600.0,
+          "max_model_calls": 32,
+          "max_replanning_attempts": 3,
+          "max_tool_calls": 64,
+          "max_total_tokens": 100000
+        }
+      },
+      "id": "run_budget.01",
+      "max_cost": "0.0"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "max_artifact_bytes": 1000000000,
+          "max_cost": "0E-1000000",
+          "max_duration_seconds": 3600.0,
+          "max_model_calls": 32,
+          "max_replanning_attempts": 3,
+          "max_tool_calls": 64,
+          "max_total_tokens": 100000
+        }
+      },
+      "id": "run_budget.02",
+      "max_cost": "0E-1000000"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "max_artifact_bytes": 1000000000,
+          "max_cost": "1",
+          "max_duration_seconds": 3600.0,
+          "max_model_calls": 32,
+          "max_replanning_attempts": 3,
+          "max_tool_calls": 64,
+          "max_total_tokens": 100000
+        }
+      },
+      "id": "run_budget.03",
+      "max_cost": "1"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "max_artifact_bytes": 1000000000,
+          "max_cost": "1.00",
+          "max_duration_seconds": 3600.0,
+          "max_model_calls": 32,
+          "max_replanning_attempts": 3,
+          "max_tool_calls": 64,
+          "max_total_tokens": 100000
+        }
+      },
+      "id": "run_budget.04",
+      "max_cost": "1.00"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "max_artifact_bytes": 1000000000,
+          "max_cost": "0.10",
+          "max_duration_seconds": 3600.0,
+          "max_model_calls": 32,
+          "max_replanning_attempts": 3,
+          "max_tool_calls": 64,
+          "max_total_tokens": 100000
+        }
+      },
+      "id": "run_budget.05",
+      "max_cost": "0.10"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "max_artifact_bytes": 1000000000,
+          "max_cost": "0.2",
+          "max_duration_seconds": 3600.0,
+          "max_model_calls": 32,
+          "max_replanning_attempts": 3,
+          "max_tool_calls": 64,
+          "max_total_tokens": 100000
+        }
+      },
+      "id": "run_budget.06",
+      "max_cost": "0.2"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "max_artifact_bytes": 1000000000,
+          "max_cost": "1E+3",
+          "max_duration_seconds": 3600.0,
+          "max_model_calls": 32,
+          "max_replanning_attempts": 3,
+          "max_tool_calls": 64,
+          "max_total_tokens": 100000
+        }
+      },
+      "id": "run_budget.07",
+      "max_cost": "1E+3"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "max_artifact_bytes": 1000000000,
+          "max_cost": "100.000",
+          "max_duration_seconds": 3600.0,
+          "max_model_calls": 32,
+          "max_replanning_attempts": 3,
+          "max_tool_calls": 64,
+          "max_total_tokens": 100000
+        }
+      },
+      "id": "run_budget.08",
+      "max_cost": "100.000"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "max_artifact_bytes": 1000000000,
+          "max_cost": "1.2300",
+          "max_duration_seconds": 3600.0,
+          "max_model_calls": 32,
+          "max_replanning_attempts": 3,
+          "max_tool_calls": 64,
+          "max_total_tokens": 100000
+        }
+      },
+      "id": "run_budget.09",
+      "max_cost": "1.2300"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "max_artifact_bytes": 1000000000,
+          "max_cost": "1E-31",
+          "max_duration_seconds": 3600.0,
+          "max_model_calls": 32,
+          "max_replanning_attempts": 3,
+          "max_tool_calls": 64,
+          "max_total_tokens": 100000
+        }
+      },
+      "id": "run_budget.10",
+      "max_cost": "0.0000000000000000000000000000001"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "max_artifact_bytes": 1000000000,
+          "max_cost": "123456789012345678901234567890.12345",
+          "max_duration_seconds": 3600.0,
+          "max_model_calls": 32,
+          "max_replanning_attempts": 3,
+          "max_tool_calls": 64,
+          "max_total_tokens": 100000
+        }
+      },
+      "id": "run_budget.11",
+      "max_cost": "123456789012345678901234567890.12345"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "max_artifact_bytes": 1000000000,
+          "max_cost": "1.23456789012345678901234567890123456789",
+          "max_duration_seconds": 3600.0,
+          "max_model_calls": 32,
+          "max_replanning_attempts": 3,
+          "max_tool_calls": 64,
+          "max_total_tokens": 100000
+        }
+      },
+      "id": "run_budget.12",
+      "max_cost": "1.23456789012345678901234567890123456789"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "max_artifact_bytes": 1000000000,
+          "max_cost": "1E-30",
+          "max_duration_seconds": 3600.0,
+          "max_model_calls": 32,
+          "max_replanning_attempts": 3,
+          "max_tool_calls": 64,
+          "max_total_tokens": 100000
+        }
+      },
+      "id": "run_budget.13",
+      "max_cost": "1e-30"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "max_artifact_bytes": 1000000000,
+          "max_cost": "1E+40",
+          "max_duration_seconds": 3600.0,
+          "max_model_calls": 32,
+          "max_replanning_attempts": 3,
+          "max_tool_calls": 64,
+          "max_total_tokens": 100000
+        }
+      },
+      "id": "run_budget.14",
+      "max_cost": "1e+40"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "max_artifact_bytes": 1000000000,
+          "max_cost": "1E-999999",
+          "max_duration_seconds": 3600.0,
+          "max_model_calls": 32,
+          "max_replanning_attempts": 3,
+          "max_tool_calls": 64,
+          "max_total_tokens": 100000
+        }
+      },
+      "id": "run_budget.15",
+      "max_cost": "1e-999999"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "max_artifact_bytes": 1000000000,
+          "max_cost": "1E+999999",
+          "max_duration_seconds": 3600.0,
+          "max_model_calls": 32,
+          "max_replanning_attempts": 3,
+          "max_tool_calls": 64,
+          "max_total_tokens": 100000
+        }
+      },
+      "id": "run_budget.16",
+      "max_cost": "1e+999999"
+    },
+    {
+      "expected": {
+        "error_type": "ValidationError",
+        "message": "1 validation error for RunBudget\nmax_cost\n  Value error, cost must be finite and nonnegative [type=value_error, input_value=Decimal('-1'), input_type=Decimal]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error",
+        "ok": false
+      },
+      "id": "run_budget.reject.00",
+      "max_cost": "-1"
+    },
+    {
+      "expected": {
+        "error_type": "ValidationError",
+        "message": "1 validation error for RunBudget\nmax_cost\n  Value error, cost must be finite and nonnegative [type=value_error, input_value=Decimal('-0.0001'), input_type=Decimal]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error",
+        "ok": false
+      },
+      "id": "run_budget.reject.01",
+      "max_cost": "-0.0001"
+    },
+    {
+      "expected": {
+        "error_type": "ValidationError",
+        "message": "1 validation error for RunBudget\nmax_cost\n  Value error, cost must be finite and nonnegative [type=value_error, input_value=Decimal('NaN'), input_type=Decimal]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error",
+        "ok": false
+      },
+      "id": "run_budget.reject.02",
+      "max_cost": "NaN"
+    },
+    {
+      "expected": {
+        "error_type": "ValidationError",
+        "message": "1 validation error for RunBudget\nmax_cost\n  Value error, cost must be finite and nonnegative [type=value_error, input_value=Decimal('sNaN'), input_type=Decimal]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error",
+        "ok": false
+      },
+      "id": "run_budget.reject.03",
+      "max_cost": "sNaN"
+    },
+    {
+      "expected": {
+        "error_type": "ValidationError",
+        "message": "1 validation error for RunBudget\nmax_cost\n  Value error, cost must be finite and nonnegative [type=value_error, input_value=Decimal('Infinity'), input_type=Decimal]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error",
+        "ok": false
+      },
+      "id": "run_budget.reject.04",
+      "max_cost": "Infinity"
+    },
+    {
+      "expected": {
+        "error_type": "ValidationError",
+        "message": "1 validation error for RunBudget\nmax_cost\n  Value error, cost must be finite and nonnegative [type=value_error, input_value=Decimal('-Infinity'), input_type=Decimal]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error",
+        "ok": false
+      },
+      "id": "run_budget.reject.05",
+      "max_cost": "-Infinity"
+    }
+  ],
+  "usage_cases": [
+    {
+      "cost": "0",
+      "expected": {
+        "artifact_bytes": 0,
+        "cost": "0",
+        "duration_seconds": 0.0,
+        "model_calls": 0,
+        "replanning_attempts": 0,
+        "tool_calls": 0,
+        "total_tokens": 0
+      },
+      "id": "usage.single.00"
+    },
+    {
+      "cost": "0.0",
+      "expected": {
+        "artifact_bytes": 0,
+        "cost": "0.0",
+        "duration_seconds": 0.0,
+        "model_calls": 0,
+        "replanning_attempts": 0,
+        "tool_calls": 0,
+        "total_tokens": 0
+      },
+      "id": "usage.single.01"
+    },
+    {
+      "cost": "1.00",
+      "expected": {
+        "artifact_bytes": 0,
+        "cost": "1.00",
+        "duration_seconds": 0.0,
+        "model_calls": 0,
+        "replanning_attempts": 0,
+        "tool_calls": 0,
+        "total_tokens": 0
+      },
+      "id": "usage.single.02"
+    },
+    {
+      "cost": "0.10",
+      "expected": {
+        "artifact_bytes": 0,
+        "cost": "0.10",
+        "duration_seconds": 0.0,
+        "model_calls": 0,
+        "replanning_attempts": 0,
+        "tool_calls": 0,
+        "total_tokens": 0
+      },
+      "id": "usage.single.03"
+    },
+    {
+      "cost": "0.2",
+      "expected": {
+        "artifact_bytes": 0,
+        "cost": "0.2",
+        "duration_seconds": 0.0,
+        "model_calls": 0,
+        "replanning_attempts": 0,
+        "tool_calls": 0,
+        "total_tokens": 0
+      },
+      "id": "usage.single.04"
+    },
+    {
+      "cost": "1E+3",
+      "expected": {
+        "artifact_bytes": 0,
+        "cost": "1E+3",
+        "duration_seconds": 0.0,
+        "model_calls": 0,
+        "replanning_attempts": 0,
+        "tool_calls": 0,
+        "total_tokens": 0
+      },
+      "id": "usage.single.05"
+    },
+    {
+      "cost": "1e-30",
+      "expected": {
+        "artifact_bytes": 0,
+        "cost": "1E-30",
+        "duration_seconds": 0.0,
+        "model_calls": 0,
+        "replanning_attempts": 0,
+        "tool_calls": 0,
+        "total_tokens": 0
+      },
+      "id": "usage.single.06"
+    },
+    {
+      "cost": "1e+40",
+      "expected": {
+        "artifact_bytes": 0,
+        "cost": "1E+40",
+        "duration_seconds": 0.0,
+        "model_calls": 0,
+        "replanning_attempts": 0,
+        "tool_calls": 0,
+        "total_tokens": 0
+      },
+      "id": "usage.single.07"
+    },
+    {
+      "cost": "1e-999999",
+      "expected": {
+        "artifact_bytes": 0,
+        "cost": "1E-999999",
+        "duration_seconds": 0.0,
+        "model_calls": 0,
+        "replanning_attempts": 0,
+        "tool_calls": 0,
+        "total_tokens": 0
+      },
+      "id": "usage.single.08"
+    },
+    {
+      "cost": "1e+999999",
+      "expected": {
+        "artifact_bytes": 0,
+        "cost": "1E+999999",
+        "duration_seconds": 0.0,
+        "model_calls": 0,
+        "replanning_attempts": 0,
+        "tool_calls": 0,
+        "total_tokens": 0
+      },
+      "id": "usage.single.09"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "0.30",
+          "duration_seconds": 0.0,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "usage.sum.00",
+      "left": "0.10",
+      "note": "Decimal addition uses the live context; scale is not normalized",
+      "right": "0.2"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "0.3",
+          "duration_seconds": 0.0,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "usage.sum.01",
+      "left": "0.1",
+      "note": "Decimal addition uses the live context; scale is not normalized",
+      "right": "0.2"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "3.00",
+          "duration_seconds": 0.0,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "usage.sum.02",
+      "left": "1.00",
+      "note": "Decimal addition uses the live context; scale is not normalized",
+      "right": "2.00"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "1.000000000000000000000000000E+40",
+          "duration_seconds": 0.0,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "usage.sum.03",
+      "left": "1e+40",
+      "note": "Decimal addition uses the live context; scale is not normalized",
+      "right": "1e-30"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "1.000000000000000000000000000E+999999",
+          "duration_seconds": 0.0,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "usage.sum.04",
+      "left": "1e+999999",
+      "note": "Decimal addition uses the live context; scale is not normalized",
+      "right": "1e-999999"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "1.234567890123456789012345679",
+          "duration_seconds": 0.0,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "usage.sum.05",
+      "left": "1.23456789012345678901234567890123456789",
+      "note": "Decimal addition uses the live context; scale is not normalized",
+      "right": "1e-40"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "1.234567890123456789012345679E+29",
+          "duration_seconds": 0.0,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "usage.sum.06",
+      "left": "123456789012345678901234567890.12345",
+      "note": "Decimal addition uses the live context; scale is not normalized",
+      "right": "0.00001"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "1.0",
+          "duration_seconds": 0.0,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "usage.subtract_or_identity.00",
+      "left": "0.5",
+      "right": "0.5"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "3",
+          "duration_seconds": 0.0,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "usage.subtract_or_identity.01",
+      "left": "1",
+      "right": "2"
+    },
+    {
+      "expected": {
+        "ok": true,
+        "value": {
+          "artifact_bytes": 0,
+          "cost": "0.0000020",
+          "duration_seconds": 0.0,
+          "model_calls": 0,
+          "replanning_attempts": 0,
+          "tool_calls": 0,
+          "total_tokens": 0
+        }
+      },
+      "id": "usage.subtract_or_identity.02",
+      "left": "0.0000005",
+      "right": "0.0000015"
+    }
+  ]
+}

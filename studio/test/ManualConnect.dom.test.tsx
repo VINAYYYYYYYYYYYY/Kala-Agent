@@ -137,7 +137,7 @@ describe('Manual Connect without desktop bridge', () => {
     });
 
     await waitFor(() => {
-      expect(view.container.textContent).toContain('Connected to');
+      expect(view.container.querySelector('.journal-panel-footer')?.textContent).toContain(ORIGIN);
     });
 
     // The connection was authenticated with the QA token.
@@ -188,7 +188,7 @@ describe('Manual Connect without desktop bridge', () => {
     submitCredentials(view.container);
 
     await waitFor(() => {
-      expect(view.container.textContent).toContain('Connected to');
+      expect(view.container.querySelector('.journal-panel-footer')?.textContent).toContain(ORIGIN);
     });
   });
 

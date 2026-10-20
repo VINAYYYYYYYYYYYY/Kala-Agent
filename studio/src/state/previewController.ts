@@ -12,7 +12,7 @@
 import { postPreview, StudioAbortError, StudioApiError, StudioAuthError, StudioNetworkError } from '../api/client';
 import { PreviewResponse, StudioConnection, StudioParameters, PrimitiveKind } from '../types/studio';
 import { buildLocal, validateParameters } from '../viewer/localPrimitives';
-import { dispatch } from './store';
+import { appendJournal, dispatch } from './store';
 
 const DEBOUNCE_MS = 220;
 const REQUEST_TIMEOUT_MS = 8_000;
@@ -129,12 +129,17 @@ export function createPreviewController(connection: StudioConnection): PreviewCo
       controller.abort();
     }, REQUEST_TIMEOUT_MS);
     dispatch({ type: 'preview/request-start' });
+    appendJournal({ kind: 'tool', message: `POST /api/studio/preview · ${kind}` });
     storeLoading = true;
     try {
       const response: PreviewResponse = await postPreview(connection, { kind, parameters: p }, controller.signal);
       if (disposed || myGeneration !== generation || fp !== lastFingerprint.current) return;
       storeLoading = false;
       dispatch({ type: 'preview/request-success', preview: response });
+      appendJournal({
+        kind: 'preview',
+        message: `Server preview verified · ${response.engine} · ${Math.round(response.positions.length / 3)} vertices`,
+      });
     } catch (cause) {
       if (disposed || myGeneration !== generation) return;
       // The controller's own 8-second timeout MUST complete the request
@@ -145,6 +150,7 @@ export function createPreviewController(connection: StudioConnection): PreviewCo
       if (timedOut) {
         storeLoading = false;
         dispatch({ type: 'preview/request-error', message: 'request timed out', kind: 'timeout' });
+        appendJournal({ kind: 'preview', message: 'Preview failed · request timed out' });
         return;
       }
       // A deliberate abort (cancel/dispose/trigger superseding this
@@ -156,6 +162,7 @@ export function createPreviewController(connection: StudioConnection): PreviewCo
       if (desc.kind === 'cancelled') return;
       storeLoading = false;
       dispatch({ type: 'preview/request-error', message: desc.message, kind: desc.kind });
+      appendJournal({ kind: 'preview', message: `Preview failed · ${desc.message}` });
     } finally {
       clearTimeout(timeout);
       inFlight.delete(controller);

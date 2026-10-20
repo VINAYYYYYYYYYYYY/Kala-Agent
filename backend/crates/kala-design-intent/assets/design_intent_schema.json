@@ -1,0 +1,508 @@
+{
+  "$defs": {
+    "AssemblyStep": {
+      "additionalProperties": false,
+      "description": "Place a component, or fuse or compound several of them.",
+      "properties": {
+        "component": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Component"
+        },
+        "components": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Components",
+          "type": "array"
+        },
+        "op": {
+          "title": "Op",
+          "type": "string"
+        },
+        "x": {
+          "default": 0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "default": 0,
+          "title": "Y",
+          "type": "number"
+        },
+        "z": {
+          "default": 0,
+          "title": "Z",
+          "type": "number"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "AssemblyStep",
+      "type": "object"
+    },
+    "ComponentScript": {
+      "additionalProperties": false,
+      "description": "The operations that build one named solid.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/ComponentStep"
+          },
+          "maxItems": 12,
+          "minItems": 1,
+          "title": "Steps",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "steps"
+      ],
+      "title": "ComponentScript",
+      "type": "object"
+    },
+    "ComponentStep": {
+      "additionalProperties": false,
+      "description": "One operation inside a component.",
+      "properties": {
+        "angle": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Angle"
+        },
+        "diameter": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Diameter"
+        },
+        "height": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Height"
+        },
+        "length": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Length"
+        },
+        "op": {
+          "title": "Op",
+          "type": "string"
+        },
+        "pitch": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pitch"
+        },
+        "plane": {
+          "default": "XY",
+          "title": "Plane",
+          "type": "string"
+        },
+        "profile": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Profile"
+        },
+        "reversed": {
+          "default": false,
+          "title": "Reversed",
+          "type": "boolean"
+        },
+        "width": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Width"
+        },
+        "x": {
+          "default": 0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "default": 0,
+          "title": "Y",
+          "type": "number"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "ComponentStep",
+      "type": "object"
+    },
+    "ConstructionScript": {
+      "additionalProperties": false,
+      "description": "Components and the assembly steps that join them.",
+      "properties": {
+        "assembly": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/AssemblyStep"
+          },
+          "maxItems": 16,
+          "title": "Assembly",
+          "type": "array"
+        },
+        "components": {
+          "items": {
+            "$ref": "#/$defs/ComponentScript"
+          },
+          "maxItems": 8,
+          "minItems": 1,
+          "title": "Components",
+          "type": "array"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "summary",
+        "components"
+      ],
+      "title": "ConstructionScript",
+      "type": "object"
+    },
+    "HousingCall": {
+      "additionalProperties": false,
+      "description": "A call to :func:`kala_agent.studio.design.templates.housing_envelope`.",
+      "properties": {
+        "depth": {
+          "exclusiveMinimum": 0,
+          "maximum": 2000.0,
+          "title": "Depth",
+          "type": "number"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "maximum": 2000.0,
+          "title": "Height",
+          "type": "number"
+        },
+        "template": {
+          "const": "housing_envelope",
+          "default": "housing_envelope",
+          "title": "Template",
+          "type": "string"
+        },
+        "wall": {
+          "exclusiveMinimum": 0,
+          "maximum": 2000.0,
+          "title": "Wall",
+          "type": "number"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "maximum": 2000.0,
+          "title": "Width",
+          "type": "number"
+        }
+      },
+      "required": [
+        "width",
+        "depth",
+        "height",
+        "wall"
+      ],
+      "title": "HousingCall",
+      "type": "object"
+    },
+    "LbracketCall": {
+      "additionalProperties": false,
+      "description": "A call to :func:`kala_agent.studio.design.templates.l_bracket`.",
+      "properties": {
+        "bore_d": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 2000.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bore D"
+        },
+        "depth": {
+          "exclusiveMinimum": 0,
+          "maximum": 2000.0,
+          "title": "Depth",
+          "type": "number"
+        },
+        "edge": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 2000.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Edge"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "maximum": 2000.0,
+          "title": "Height",
+          "type": "number"
+        },
+        "hole_count": {
+          "default": 0,
+          "enum": [
+            0,
+            2,
+            4
+          ],
+          "title": "Hole Count",
+          "type": "integer"
+        },
+        "hole_d": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 2000.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hole D"
+        },
+        "template": {
+          "const": "l_bracket",
+          "default": "l_bracket",
+          "title": "Template",
+          "type": "string"
+        },
+        "wall": {
+          "exclusiveMinimum": 0,
+          "maximum": 2000.0,
+          "title": "Wall",
+          "type": "number"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "maximum": 2000.0,
+          "title": "Width",
+          "type": "number"
+        }
+      },
+      "required": [
+        "width",
+        "depth",
+        "height",
+        "wall"
+      ],
+      "title": "LbracketCall",
+      "type": "object"
+    },
+    "ShaftSegment": {
+      "additionalProperties": false,
+      "description": "One diameter/length pair of a stepped shaft.",
+      "properties": {
+        "diameter": {
+          "exclusiveMinimum": 0,
+          "maximum": 2000.0,
+          "title": "Diameter",
+          "type": "number"
+        },
+        "length": {
+          "exclusiveMinimum": 0,
+          "maximum": 2000.0,
+          "title": "Length",
+          "type": "number"
+        }
+      },
+      "required": [
+        "diameter",
+        "length"
+      ],
+      "title": "ShaftSegment",
+      "type": "object"
+    },
+    "SteppedShaftCall": {
+      "additionalProperties": false,
+      "description": "A call to :func:`kala_agent.studio.design.templates.stepped_shaft`.",
+      "properties": {
+        "segments": {
+          "items": {
+            "$ref": "#/$defs/ShaftSegment"
+          },
+          "maxItems": 8,
+          "minItems": 1,
+          "title": "Segments",
+          "type": "array"
+        },
+        "template": {
+          "const": "stepped_shaft",
+          "default": "stepped_shaft",
+          "title": "Template",
+          "type": "string"
+        }
+      },
+      "required": [
+        "segments"
+      ],
+      "title": "SteppedShaftCall",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A template call or a raw script, plus declared, non-measured metadata.",
+  "properties": {
+    "label": {
+      "anyOf": [
+        {
+          "maxLength": 120,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Label"
+    },
+    "material": {
+      "anyOf": [
+        {
+          "maxLength": 64,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Material"
+    },
+    "script": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ConstructionScript"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "template": {
+      "anyOf": [
+        {
+          "discriminator": {
+            "mapping": {
+              "housing_envelope": "#/$defs/HousingCall",
+              "l_bracket": "#/$defs/LbracketCall",
+              "stepped_shaft": "#/$defs/SteppedShaftCall"
+            },
+            "propertyName": "template"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/LbracketCall"
+            },
+            {
+              "$ref": "#/$defs/SteppedShaftCall"
+            },
+            {
+              "$ref": "#/$defs/HousingCall"
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Template"
+    },
+    "tolerances": {
+      "default": [],
+      "items": {
+        "maxLength": 64,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 16,
+      "title": "Tolerances",
+      "type": "array"
+    }
+  },
+  "title": "DesignIntent",
+  "type": "object"
+}

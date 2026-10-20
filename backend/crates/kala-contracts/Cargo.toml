@@ -1,0 +1,25 @@
+[workspace]
+resolver = "3"
+
+[package]
+name = "kala-contracts"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+publish = false
+description = "Typed Rust models for the Kala Agent design, workflow, tool and construction contracts"
+
+[dependencies]
+# Reviewed dependency crates. These are path dependencies only so this cell
+# keeps its own workspace and lockfile; the parent workspace stays untouched.
+kala-budget = { path = "../kala-budget" }
+kala-json = { path = "../kala-json" }
+idna = "1.1"
+num-bigint = "0.4"
+num-traits = "0.2"
+thiserror = "2.0"
+unicode-casefold = "0.2"
+
+[profile.release]
+strip = "symbols"

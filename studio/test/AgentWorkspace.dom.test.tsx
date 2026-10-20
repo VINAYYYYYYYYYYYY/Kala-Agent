@@ -1,18 +1,14 @@
 // @vitest-environment happy-dom
-// Chat-first workspace regression coverage.
+// Vellum drafting-board workspace regression coverage.
 //
-// The pivot under test: Kala Studio's main `.app-shell-viewport` belongs to
-// the Mechanical Engineering Agent, and the OpenCascade workbench (3D
-// preview, parametric sizing, nominal geometry estimates, STEP/STL export)
-// is live in the right rail. The toolbar's view switch flips into "3D Canvas
-// Focus" for close mesh inspection.
+// These drive the real shipped App through the real boot path (same mock
+// surface as AppBoot.dom.test.tsx), so a regression that re-buries the agent
+// or mounts a second WebGL canvas fails here.
 //
-// These drive the REAL shipped App through the real boot path (same mock
-// surface as AppBoot.dom.test.tsx) rather than a hand-assembled tree, so a
-// regression that re-buries the agent in a rail tab fails here.
-//
-// The WebGL discipline is asserted directly: exactly one `SceneCanvas` is
-// mounted at any moment, and which container holds it flips with the view.
+// The 4-zone contract under test:
+//   left chat · center drafting sheet + 48px ruler bar · right AuxView + journal
+// Everything that worked before (chat, preview, estimates, export, provider
+// keys) stays reachable; the workbench panels now live in the Options drawer.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
@@ -23,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   getProviders: vi.fn(),
   getSettings: vi.fn(),
   postPreview: vi.fn(),
+  postChat: vi.fn(),
   postSettings: vi.fn(),
   resolveConnectionFromBridge: vi.fn(),
 }));
@@ -36,6 +33,7 @@ vi.mock('../src/api/client', async (importOriginal) => {
     getProviders: mocks.getProviders,
     getSettings: mocks.getSettings,
     postPreview: mocks.postPreview,
+    postChat: mocks.postChat,
     postSettings: mocks.postSettings,
   };
 });
@@ -49,13 +47,20 @@ vi.mock('../src/api/connection', async (importOriginal) => {
 });
 
 import { App } from '../src/App';
-import { resetStore } from '../src/state/store';
+import { getState, resetStore, THEME_STORAGE_KEY } from '../src/state/store';
+
+const BASE_URL = 'http://127.0.0.1:8765';
 
 beforeEach(() => {
+  try {
+    localStorage.removeItem(THEME_STORAGE_KEY);
+  } catch {
+    // node environment without localStorage
+  }
   resetStore();
   vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('unexpected fetch in unit test'))));
   mocks.resolveConnectionFromBridge.mockResolvedValue({
-    baseUrl: 'http://127.0.0.1:8765',
+    baseUrl: BASE_URL,
     token: 'unit-test-token-aaaaaaaaaaaaaaaaaaaaaaaa',
     mode: 'desktop' as const,
   });
@@ -108,6 +113,12 @@ beforeEach(() => {
     engine: 'analytic',
     warnings: [],
   });
+  mocks.postChat.mockResolvedValue({
+    text: 'A 40 x 20 x 30 mm box has a nominal volume of 24000 mm3.',
+    provider: 'local',
+    model: null,
+    offline: true,
+  });
 });
 
 afterEach(() => {
@@ -118,123 +129,288 @@ afterEach(() => {
   mocks.getProviders.mockReset();
   mocks.getSettings.mockReset();
   mocks.postPreview.mockReset();
+  mocks.postChat.mockReset();
   mocks.postSettings.mockReset();
   mocks.resolveConnectionFromBridge.mockReset();
+  try {
+    localStorage.removeItem(THEME_STORAGE_KEY);
+    delete document.documentElement.dataset.theme;
+  } catch {
+    // ignore
+  }
   resetStore();
 });
 
 async function bootShell() {
   const view = render(<App />);
-  // Wait for BootGate to release the shell.
   await waitFor(() => {
-    expect(view.container.querySelector('.app-shell-viewport')).toBeTruthy();
+    expect(view.container.querySelector('.studio-shell')).toBeTruthy();
   });
   return view;
 }
 
-function viewport(container: HTMLElement): HTMLElement {
-  return container.querySelector<HTMLElement>('.app-shell-viewport')!;
+function left(container: HTMLElement): HTMLElement {
+  return container.querySelector<HTMLElement>('.studio-zone-left')!;
 }
 
-function rail(container: HTMLElement): HTMLElement {
-  return container.querySelector<HTMLElement>('.right-rail')!;
+function center(container: HTMLElement): HTMLElement {
+  return container.querySelector<HTMLElement>('.studio-zone-center')!;
 }
 
-// One SceneCanvas == one `.viewer-canvas` host element.
+function right(container: HTMLElement): HTMLElement {
+  return container.querySelector<HTMLElement>('.studio-zone-right')!;
+}
+
 function sceneCanvases(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>('.viewer-canvas'));
 }
 
-function viewButton(container: HTMLElement, mode: string): HTMLButtonElement {
-  return container.querySelector<HTMLButtonElement>(`button[data-view-mode="${mode}"]`)!;
+function bottomButton(container: HTMLElement, label: string): HTMLButtonElement {
+  return Array.from(container.querySelectorAll<HTMLButtonElement>('.bottom-bar button')).find(
+    (button) => button.getAttribute('aria-label') === label || button.textContent?.includes(label),
+  )!;
 }
 
-describe('chat-first workspace layout', () => {
-  it('puts the Mechanical Engineering Agent in the primary viewport by default', async () => {
-    const view = await bootShell();
-    const main = viewport(view.container);
+async function openOptions(container: HTMLElement): Promise<HTMLButtonElement> {
+  const trigger = container.querySelector<HTMLButtonElement>('button.bottom-bar-options')!;
+  trigger.focus();
+  fireEvent.click(trigger);
+  await waitFor(() => {
+    expect(container.querySelector('[role="dialog"]')).toBeTruthy();
+  });
+  return trigger;
+}
 
-    expect(main.getAttribute('data-view-mode')).toBe('agent');
-    expect(main.querySelector('.chat-panel')).toBeTruthy();
-    // The agent has the viewport: the 3D canvas is NOT mounted there.
-    expect(main.querySelector('.viewer-canvas')).toBeNull();
-    expect(main.textContent).toContain('Mechanical Engineering Agent');
+describe('Vellum 4-zone layout', () => {
+  it('puts the agent chat in the left zone and the drafting sheet in the center', async () => {
+    const view = await bootShell();
+
+    expect(left(view.container).querySelector('.chat-panel')).toBeTruthy();
+    expect(left(view.container).textContent).toContain('MECHANICAL DESIGN AGENT');
+
+    const sheet = center(view.container).querySelector('.drafting-sheet');
+    expect(sheet).toBeTruthy();
+    expect(sheet!.querySelector('.viewer-canvas')).toBeTruthy();
+    expect(center(view.container).querySelector('.bottom-bar')).toBeTruthy();
+
+    expect(view.container.querySelector('.app-header')).toBeNull();
+    expect(view.container.querySelector('.right-rail')).toBeNull();
   });
 
-  it('keeps the OpenCascade workbench live in the right rail at the same time', async () => {
+  it('keeps the AuxView and journal in the right zone, with real connection info', async () => {
     const view = await bootShell();
+    expect(right(view.container).querySelector('.aux-view')).toBeTruthy();
+    expect(right(view.container).querySelector('.journal-panel')).toBeTruthy();
 
-    expect(rail(view.container).getAttribute('aria-label')).toBe('OpenCascade geometry and CAD workbench');
-    expect(rail(view.container).querySelector('.right-rail-preview')).toBeTruthy();
-    expect(rail(view.container).querySelector('.inspector')).toBeTruthy();
-    // Exactly one WebGL context exists while the agent owns the viewport.
-    expect(sceneCanvases(view.container)).toHaveLength(1);
-    expect(sceneCanvases(view.container)[0]!.closest('.right-rail-preview')).toBeTruthy();
+    await waitFor(() => {
+      expect(right(view.container).querySelector('.journal-panel-footer')?.textContent).toContain(
+        BASE_URL,
+      );
+    });
+    // No cryptographic ledger is reported by the backend: neutral session
+    // stamp only, never a fake OK.
+    expect(right(view.container).textContent).toContain('SESSION LOG');
+    expect(right(view.container).textContent).not.toContain('HASH-CHAIN OK');
   });
 
-  it('opens the rail on the Workbench tab and still exposes Export and Assistant', async () => {
+  it('mounts exactly one SceneCanvas while the Options drawer opens and closes', async () => {
     const view = await bootShell();
-    const tabs = rail(view.container).querySelectorAll<HTMLButtonElement>('button.right-rail-tab');
-    expect(Array.from(tabs).map((t) => t.textContent)).toEqual(['Workbench', 'Export', 'Assistant']);
-    expect(tabs[0]!.getAttribute('aria-selected')).toBe('true');
-
-    // Export tab → the STEP/STL handoff panel.
-    fireEvent.click(tabs[1]!);
-    await waitFor(() => {
-      expect(rail(view.container).querySelector('.export-panel')).toBeTruthy();
-    });
-    expect(rail(view.container).textContent).toContain('Download');
-
-    // Assistant tab → a secondary view of the same agent thread.
-    fireEvent.click(tabs[2]!);
-    await waitFor(() => {
-      expect(rail(view.container).querySelector('.chat-panel')).toBeTruthy();
-    });
-  });
-
-  it('expands the 3D canvas into the viewport and keeps exactly one SceneCanvas mounted', async () => {
-    const view = await bootShell();
-
-    fireEvent.click(viewButton(view.container, 'canvas'));
-    await waitFor(() => {
-      expect(viewport(view.container).getAttribute('data-view-mode')).toBe('canvas');
-    });
-
-    const main = viewport(view.container);
-    expect(main.querySelector('.viewer-canvas')).toBeTruthy();
-    expect(main.querySelector('.chat-panel')).toBeNull();
-    // The rail drops its docked preview so the WebGL context count stays 1.
-    expect(rail(view.container).querySelector('.right-rail-preview')).toBeNull();
     expect(sceneCanvases(view.container)).toHaveLength(1);
 
-    // …and back again, with no canvas leak on either transition.
-    fireEvent.click(viewButton(view.container, 'agent'));
-    await waitFor(() => {
-      expect(viewport(view.container).querySelector('.chat-panel')).toBeTruthy();
-    });
+    await openOptions(view.container);
     expect(sceneCanvases(view.container)).toHaveLength(1);
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(view.container.querySelector('[role="dialog"]')).toBeNull());
+    expect(sceneCanvases(view.container)).toHaveLength(1);
+    expect(sceneCanvases(view.container)[0]!.closest('.drafting-sheet')).toBeTruthy();
   });
 
-  it('marks the active view mode for assistive tech, not colour alone', async () => {
+  it('shows the Kala Studio title block on the sheet', async () => {
     const view = await bootShell();
-    const agent = viewButton(view.container, 'agent');
-    const canvas = viewButton(view.container, 'canvas');
-    expect(agent.getAttribute('role')).toBe('radio');
-    expect(agent.getAttribute('aria-checked')).toBe('true');
-    expect(canvas.getAttribute('aria-checked')).toBe('false');
-
-    fireEvent.click(canvas);
-    await waitFor(() => {
-      expect(viewButton(view.container, 'canvas').getAttribute('aria-checked')).toBe('true');
-    });
-    expect(viewButton(view.container, 'agent').getAttribute('aria-checked')).toBe('false');
+    const titleBlock = center(view.container).querySelector('.drafting-title-block');
+    expect(titleBlock?.textContent).toContain('Kala Studio');
+    expect(titleBlock?.textContent).toContain('STUDIO-BOX');
+    expect(titleBlock?.textContent).toContain('METRIC (MM)');
   });
 });
 
-describe('OpenCascade geometry estimates in the workbench', () => {
+describe('bottom ruler bar', () => {
+  it('shows the real nominal readout and its source', async () => {
+    const view = await bootShell();
+    await waitFor(() => {
+      const readout = center(view.container).querySelector('.bottom-bar-readout');
+      expect(readout?.textContent).toContain('24.0 cm³');
+      expect(readout?.textContent).toContain('52.0 cm²');
+      expect(readout?.textContent).toContain('40×20×30 mm');
+    });
+    const source = center(view.container).querySelector('.bottom-bar-source');
+    expect(['local est.', 'server']).toContain(source?.getAttribute('data-source'));
+
+    await waitFor(() => {
+      expect(center(view.container).querySelector('.bottom-bar-source')?.getAttribute('data-source')).toBe('server');
+    });
+  });
+
+  it('wires Grid, Axes, Dims, Section, render mode, and Reset View to real state', async () => {
+    const view = await bootShell();
+    const bar = center(view.container);
+
+    const grid = bottomButton(bar, 'Grid');
+    expect(grid.getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(grid);
+    await waitFor(() => expect(getState().viewport.showGrid).toBe(false));
+    expect(bottomButton(bar, 'Grid').getAttribute('aria-checked')).toBe('false');
+
+    fireEvent.click(bottomButton(bar, 'Axes'));
+    fireEvent.click(bottomButton(bar, 'Dims'));
+    expect(getState().viewport.showAxes).toBe(false);
+    expect(getState().viewport.showDimensions).toBe(false);
+
+    fireEvent.click(bar.querySelector<HTMLButtonElement>('button[aria-label="Section A-A"]')!);
+    await waitFor(() => expect(getState().showSection).toBe(false));
+    expect(center(view.container).querySelector('.drafting-sheet')?.getAttribute('data-section')).toBe('off');
+
+    fireEvent.click(bar.querySelector<HTMLButtonElement>('button[data-render-mode="clay3d"]')!);
+    await waitFor(() => expect(getState().renderMode).toBe('clay3d'));
+    expect(center(view.container).querySelector('.drafting-sheet')?.getAttribute('data-render-mode')).toBe('clay3d');
+
+    const beforeReset = getState().viewResetToken;
+    fireEvent.click(bar.querySelector<HTMLButtonElement>('button[aria-label="Reset View"]')!);
+    expect(getState().viewResetToken).toBe(beforeReset + 1);
+  });
+
+  it('reports only the real FreeCAD integration status', async () => {
+    const view = await bootShell();
+    await waitFor(() => {
+      const pill = center(view.container).querySelector('.bottom-bar-freecad');
+      expect(pill?.textContent).toContain('FreeCAD');
+      expect(pill?.getAttribute('aria-label')).toContain('neutral');
+      expect(pill?.getAttribute('title')).toContain('neutral');
+      expect(pill?.getAttribute('data-status')).toBe('available_via_neutral_file');
+    });
+  });
+
+  it('opens the Options drawer on card 02 from Export STEP', async () => {
+    const view = await bootShell();
+    const trigger = center(view.container).querySelector<HTMLButtonElement>('.bottom-bar-export')!;
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(view.container.querySelector('#options-card-export')?.classList.contains('is-focused')).toBe(true);
+    });
+    expect(getState().optionsOpen).toBe(true);
+    expect(getState().optionsCard).toBe('export');
+  });
+});
+
+describe('Options drawer', () => {
+  it('renders the four drafted cards with the existing panels reachable', async () => {
+    const view = await bootShell();
+    await openOptions(view.container);
+
+    const dialog = view.container.querySelector('[role="dialog"]')!;
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(dialog.querySelectorAll('.options-card')).toHaveLength(4);
+    expect(dialog.querySelector('#options-card-inspector .inspector')).toBeTruthy();
+    expect(dialog.querySelector('#options-card-export .export-panel')).toBeTruthy();
+    expect(dialog.querySelector('#options-card-export .panel-list')).toBeTruthy();
+    expect(dialog.querySelector('#options-card-providers .panel-list')).toBeTruthy();
+    expect(dialog.querySelector('#options-card-connection')?.textContent).toContain(BASE_URL);
+    expect(dialog.querySelector('#options-card-connection')?.textContent).toContain(
+      'In memory only (not displayed)',
+    );
+  });
+
+  it('closes on Escape and returns focus to the trigger', async () => {
+    const view = await bootShell();
+    const trigger = await openOptions(view.container);
+    await waitFor(() => {
+      expect(document.activeElement?.classList.contains('options-drawer-close')).toBe(true);
+    });
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => {
+      expect(view.container.querySelector('[role="dialog"]')).toBeNull();
+    });
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('traps Tab inside the dialog', async () => {
+    const view = await bootShell();
+    await openOptions(view.container);
+    const dialog = view.container.querySelector<HTMLElement>('[role="dialog"]')!;
+    const focusables = Array.from(
+      dialog.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    );
+    const first = focusables[0]!;
+    const last = focusables[focusables.length - 1]!;
+    last.focus();
+    expect(document.activeElement).toBe(last);
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(document.activeElement).toBe(first);
+  });
+
+  it('switches between Vellum and Slate themes and persists only the theme name', async () => {
+    const view = await bootShell();
+    await openOptions(view.container);
+
+    const slate = Array.from(
+      view.container.querySelectorAll<HTMLButtonElement>('.options-theme-button'),
+    ).find((button) => button.textContent === 'Slate')!;
+    fireEvent.click(slate);
+
+    await waitFor(() => expect(getState().theme).toBe('slate'));
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe('slate'));
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('slate');
+
+    const vellum = Array.from(
+      view.container.querySelectorAll<HTMLButtonElement>('.options-theme-button'),
+    ).find((button) => button.textContent === 'Vellum')!;
+    fireEvent.click(vellum);
+    await waitFor(() => expect(getState().theme).toBe('vellum'));
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('vellum');
+  });
+
+  it('requests a real reconnect when Retry is pressed', async () => {
+    const view = await bootShell();
+    await openOptions(view.container);
+    const before = getState().connectionRetryToken;
+    const retry = Array.from(
+      view.container.querySelectorAll<HTMLButtonElement>('#options-card-connection button'),
+    ).find((button) => button.textContent?.includes('Reconnect'))!;
+    fireEvent.click(retry);
+    expect(getState().connectionRetryToken).toBe(before + 1);
+    expect(getState().journal.some((entry) => entry.message.includes('Reconnect / retry requested'))).toBe(true);
+  });
+});
+
+describe('AuxView tabs', () => {
+  it('switches the aux view in the store and marks the tab selected', async () => {
+    const view = await bootShell();
+    const tabs = right(view.container).querySelectorAll<HTMLButtonElement>('.aux-view-tab');
+    expect(Array.from(tabs).map((tab) => tab.textContent)).toEqual([
+      'Section A-A',
+      'Ortho 3-View',
+      'Tolerance',
+    ]);
+    expect(tabs[0]!.getAttribute('aria-selected')).toBe('true');
+
+    fireEvent.click(tabs[1]!);
+    await waitFor(() => expect(getState().auxView).toBe('ortho'));
+    expect(tabs[1]!.getAttribute('aria-selected')).toBe('true');
+    expect(right(view.container).querySelectorAll('.aux-ortho-view')).toHaveLength(3);
+    expect(right(view.container).textContent).toContain('THIRD-ANGLE');
+  });
+});
+
+describe('OpenCascade geometry estimates in the Options drawer', () => {
   it('shows nominal volume, area, and envelope for the active primitive', async () => {
     const view = await bootShell();
-    const estimates = rail(view.container).querySelector<HTMLElement>('.inspector-estimates');
+    await openOptions(view.container);
+    const estimates = view.container.querySelector<HTMLElement>('.inspector-estimates');
     expect(estimates).toBeTruthy();
 
     // Default box is 40 × 20 × 30 mm: V = 24000 mm³, A = 5200 mm².
@@ -249,33 +425,34 @@ describe('OpenCascade geometry estimates in the workbench', () => {
 
   it('states that the estimates are nominal geometry, not simulation output', async () => {
     const view = await bootShell();
-    const note = rail(view.container).querySelector('.inspector-estimates-note');
+    await openOptions(view.container);
+    const note = view.container.querySelector('.inspector-estimates-note');
     const text = note?.textContent ?? '';
-    expect(text).toContain('nominal');
+    expect(text).toContain('Closed-form nominal geometry for sizing & handoff.');
+    expect(text).toContain('Not a certified FEA solver result.');
     expect(text).toContain('CAD/CAE');
-    // Never dress a closed-form estimate up as an FEA result.
     expect(text).toContain('No stress, deflection, or tolerance');
   });
 
-  it('recomputes the estimate and the agent banner when the primitive changes', async () => {
+  it('recomputes the estimate and the chat banner when the primitive changes', async () => {
     const view = await bootShell();
+    await openOptions(view.container);
     const kindGroup = view.container.querySelector<HTMLElement>('[aria-label="Primitive kind"]')!;
-    const cylinder = Array.from(kindGroup.querySelectorAll('button')).find((b) => b.textContent === 'Cylinder')!;
+    const cylinder = Array.from(kindGroup.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Cylinder',
+    )!;
     fireEvent.click(cylinder);
 
-    // Default cylinder is r = 20, h = 40: V = πr²h = 16000π, envelope 40³.
     await waitFor(() => {
-      expect(rail(view.container).querySelector('.inspector-estimates')?.textContent).toContain(
+      expect(view.container.querySelector('.inspector-estimates')?.textContent).toContain(
         '50265.48 mm³ (50.265 cm³)',
       );
     });
-    expect(rail(view.container).querySelector('.inspector-estimates')?.textContent).toContain(
+    expect(view.container.querySelector('.inspector-estimates')?.textContent).toContain(
       '40.00 × 40.00 × 40.00 mm',
     );
 
-    // The agent's active-geometry banner tracks the same switch, so the
-    // conversation never quotes geometry the workbench is not holding.
-    const context = viewport(view.container).querySelector<HTMLElement>('.chat-panel-context');
+    const context = left(view.container).querySelector<HTMLElement>('.chat-panel-context');
     expect(context!.textContent).toContain('cylinder');
     expect(context!.textContent).toContain('envelope 40.00 × 40.00 × 40.00 mm');
     expect(context!.textContent).toContain('volume 50265.48 mm³ (50.265 cm³)');
@@ -285,7 +462,7 @@ describe('OpenCascade geometry estimates in the workbench', () => {
 describe('agent composer and geometry context', () => {
   it('shows the active OpenCascade primitive, dimensions, and nominal volume', async () => {
     const view = await bootShell();
-    const context = viewport(view.container).querySelector<HTMLElement>('.chat-panel-context');
+    const context = left(view.container).querySelector<HTMLElement>('.chat-panel-context');
     expect(context).toBeTruthy();
 
     const text = context!.textContent ?? '';
@@ -298,70 +475,66 @@ describe('agent composer and geometry context', () => {
 
   it('seeds the composer from an engineering starter prompt without sending it', async () => {
     const view = await bootShell();
-    const textarea = viewport(view.container).querySelector<HTMLTextAreaElement>('textarea.chat-panel-prompt')!;
+    const textarea = left(view.container).querySelector<HTMLTextAreaElement>('textarea.chat-panel-prompt')!;
     expect(textarea.value).toBe('');
 
-    const starter = viewport(view.container).querySelector<HTMLButtonElement>('button[data-starter="size-shaft"]')!;
+    const starter = left(view.container).querySelector<HTMLButtonElement>('button[data-starter="size-shaft"]')!;
     fireEvent.click(starter);
 
     expect(textarea.value).toContain('shaft spacer');
     expect(textarea.value).toContain('25 mm diameter by 120 mm long');
-    // Seeding is not sending: no request may leave the machine.
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('keeps the documented composer selectors in the viewport', async () => {
+  it('keeps the documented composer selectors in the left zone', async () => {
     const view = await bootShell();
-    const main = viewport(view.container);
+    const panel = left(view.container);
 
-    expect(main.querySelector('select#chat-provider-select')).toBeTruthy();
-    expect(main.querySelector('input#chat-model-input[type="text"]')).toBeTruthy();
-    expect(main.querySelector('textarea.chat-panel-prompt')).toBeTruthy();
-    expect(main.querySelector('textarea.chat-panel-prompt')!.getAttribute('placeholder'))
-      .toContain('Ask a short question about the current primitive');
-    expect(main.querySelector('button.chat-panel-send')!.textContent).toBe('Send');
-    expect(main.querySelector('button.chat-panel-clear')!.textContent).toBe('Clear');
-    expect(main.querySelector('.chat-panel-empty')).toBeTruthy();
-
-    // The consent checkbox only exists for a remote provider, and the first
-    // select / first textarea must still be the provider and the prompt.
-    const select = main.querySelector('select')!;
-    expect(select.id).toBe('chat-provider-select');
-    expect(main.querySelector('textarea')).toBe(main.querySelector('textarea.chat-panel-prompt'));
+    expect(panel.querySelector('select#chat-provider-select')).toBeTruthy();
+    expect(panel.querySelector('input#chat-model-input[type="text"]')).toBeTruthy();
+    expect(panel.querySelector('textarea.chat-panel-prompt')).toBeTruthy();
+    expect(panel.querySelector('textarea.chat-panel-prompt')!.getAttribute('placeholder'))
+      .toContain('Describe geometry, tolerance, or prompt');
+    expect(panel.querySelector('button.chat-panel-send')!.textContent).toContain(
+      'Draft Part Geometry',
+    );
+    expect(panel.querySelector('button.chat-panel-clear')!.textContent).toBe('Clear');
+    expect(panel.querySelector('.chat-panel-empty')).toBeTruthy();
+    expect(panel.querySelector('select')!.id).toBe('chat-provider-select');
+    expect(panel.querySelector('textarea')).toBe(panel.querySelector('textarea.chat-panel-prompt'));
   });
 
   it('requires explicit remote consent before a remote provider can send', async () => {
     const view = await bootShell();
-    const main = viewport(view.container);
+    const panel = left(view.container);
 
-    fireEvent.change(main.querySelector<HTMLSelectElement>('#chat-provider-select')!, {
+    fireEvent.change(panel.querySelector<HTMLSelectElement>('#chat-provider-select')!, {
       target: { value: 'openai' },
     });
     await waitFor(() => {
-      expect(main.querySelector('input[type="checkbox"]')).toBeTruthy();
+      expect(panel.querySelector('input[type="checkbox"]')).toBeTruthy();
     });
 
-    const textarea = main.querySelector<HTMLTextAreaElement>('textarea.chat-panel-prompt')!;
+    const textarea = panel.querySelector<HTMLTextAreaElement>('textarea.chat-panel-prompt')!;
     fireEvent.change(textarea, { target: { value: 'estimate the envelope' } });
 
-    // No model and no consent yet — the send stays locked.
-    expect(main.querySelector<HTMLButtonElement>('button.chat-panel-send')!.disabled).toBe(true);
+    expect(panel.querySelector<HTMLButtonElement>('button.chat-panel-send')!.disabled).toBe(true);
 
-    fireEvent.change(main.querySelector<HTMLInputElement>('#chat-model-input')!, {
+    fireEvent.change(panel.querySelector<HTMLInputElement>('#chat-model-input')!, {
       target: { value: 'gpt-4o-mini' },
     });
     await waitFor(() => {
-      expect(main.querySelector<HTMLButtonElement>('button.chat-panel-send')!.disabled).toBe(true);
+      expect(panel.querySelector<HTMLButtonElement>('button.chat-panel-send')!.disabled).toBe(true);
     });
 
-    fireEvent.click(main.querySelector<HTMLInputElement>('input[type="checkbox"]')!);
+    fireEvent.click(panel.querySelector<HTMLInputElement>('input[type="checkbox"]')!);
     await waitFor(() => {
-      expect(main.querySelector<HTMLButtonElement>('button.chat-panel-send')!.disabled).toBe(false);
+      expect(panel.querySelector<HTMLButtonElement>('button.chat-panel-send')!.disabled).toBe(false);
     });
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('lets the operator configure or clear provider API keys from the API Keys drawer', async () => {
+  it('lets the operator configure or clear provider API keys from the chat panel', async () => {
     mocks.postSettings.mockResolvedValue({
       credentials: [
         { provider: 'openai', env_var: 'OPENAI_API_KEY', configured: true, source: 'stored' },
@@ -376,46 +549,74 @@ describe('agent composer and geometry context', () => {
     });
 
     const view = await bootShell();
-    const main = viewport(view.container);
+    const panel = left(view.container);
 
-    // OpenRouter starts unconfigured in the dropdown
-    const openrouterOption = main.querySelector<HTMLOptionElement>(
+    const openrouterOption = panel.querySelector<HTMLOptionElement>(
       'select#chat-provider-select option[value="openrouter"]',
     )!;
     expect(openrouterOption.disabled).toBe(true);
 
-    // Toggle API Keys drawer open
-    const toggle = main.querySelector<HTMLButtonElement>('button.chat-panel-settings-toggle')!;
+    const toggle = panel.querySelector<HTMLButtonElement>('button.chat-panel-settings-toggle')!;
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
     fireEvent.click(toggle);
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
 
-    const settingsSection = main.querySelector<HTMLElement>('.chat-panel-settings')!;
-    expect(settingsSection).toBeTruthy();
-
+    const settingsSection = panel.querySelector<HTMLElement>('.chat-panel-settings')!;
     const keyInput = settingsSection.querySelector<HTMLInputElement>(
       'input[aria-label="OpenRouter API key"]',
     )!;
     fireEvent.change(keyInput, { target: { value: 'sk-or-test-key-123456' } });
-
-    const form = keyInput.closest('form')!;
-    fireEvent.submit(form);
+    fireEvent.submit(keyInput.closest('form')!);
 
     await waitFor(() => {
       expect(mocks.postSettings).toHaveBeenCalledWith(
-        expect.objectContaining({ baseUrl: 'http://127.0.0.1:8765' }),
+        expect.objectContaining({ baseUrl: BASE_URL }),
         { provider: 'openrouter', api_key: 'sk-or-test-key-123456' },
       );
     });
 
-    // Secret is cleared from input state and OpenRouter is now enabled in the dropdown
     await waitFor(() => {
       expect(keyInput.value).toBe('');
       expect(
-        main.querySelector<HTMLOptionElement>(
+        panel.querySelector<HTMLOptionElement>(
           'select#chat-provider-select option[value="openrouter"]',
         )!.disabled,
       ).toBe(false);
     });
+  });
+});
+
+describe('journal appenders', () => {
+  it('records connection, preview tool calls, preview results, and chat turns', async () => {
+    const view = await bootShell();
+
+    await waitFor(() => {
+      const text = right(view.container).querySelector('.journal-list')?.textContent ?? '';
+      expect(text).toContain('Loopback connected');
+      expect(text).toContain('POST /api/studio/preview');
+      expect(text).toContain('Server preview verified');
+    });
+
+    const panel = left(view.container);
+    fireEvent.change(panel.querySelector<HTMLSelectElement>('#chat-provider-select')!, {
+      target: { value: 'local' },
+    });
+    fireEvent.change(panel.querySelector<HTMLTextAreaElement>('textarea.chat-panel-prompt')!, {
+      target: { value: 'check journal' },
+    });
+    await waitFor(() => {
+      expect(panel.querySelector<HTMLButtonElement>('button.chat-panel-send')!.disabled).toBe(false);
+    });
+    fireEvent.click(panel.querySelector<HTMLButtonElement>('button.chat-panel-send')!);
+
+    await waitFor(() => {
+      expect(mocks.postChat).toHaveBeenCalled();
+      const text = right(view.container).querySelector('.journal-list')?.textContent ?? '';
+      expect(text).toContain('You · check journal');
+      expect(text).toContain('POST /api/studio/chat · local');
+      expect(text).toContain('Agent · A 40 x 20 x 30 mm box');
+    });
+
+    expect(getState().journal.length).toBeGreaterThan(0);
   });
 });

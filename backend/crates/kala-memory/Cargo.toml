@@ -1,0 +1,29 @@
+[workspace]
+resolver = "3"
+
+[package]
+name = "kala-memory"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+publish = false
+description = "Native working and durable memory manager for the Kala Agent kernel"
+
+[dependencies]
+# Accepted read-only sibling crates. This cell keeps its own workspace and
+# lockfile so it never writes the root backend manifest or lock.
+kala-contracts = { path = "../kala-contracts" }
+kala-json = { path = "../kala-json" }
+kala-persistence = { path = "../kala-persistence" }
+kala-repositories = { path = "../kala-repositories" }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+indexmap = "2.14"
+thiserror = "2.0"
+
+[profile.release]
+strip = "symbols"
+
+[dev-dependencies]
+num-bigint = "0.4"
+num-traits = "0.2"

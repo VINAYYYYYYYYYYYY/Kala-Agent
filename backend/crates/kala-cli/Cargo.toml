@@ -1,0 +1,43 @@
+# The Kala command line is a standalone workspace with its own lockfile, like
+# every other accepted crate in this wave. The parent `backend/Cargo.toml` is
+# owned by another cell and is never touched. The accepted sibling crates are
+# consumed READ-ONLY by path.
+[workspace]
+members = []
+resolver = "3"
+
+[package]
+name = "kala-cli"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+publish = false
+description = "The Kala local command line: JSON presentation over the native composition root"
+
+[[bin]]
+name = "kala-agent"
+path = "src/main.rs"
+
+[dependencies]
+kala-api = { path = "../kala-api" }
+kala-api-server = { path = "../kala-api/server" }
+kala-application = { path = "../kala-application" }
+kala-domains = { path = "../kala-domains" }
+kala-json = { path = "../kala-json" }
+num-bigint = "0.4"
+
+[target.'cfg(unix)'.dependencies]
+# Restoring the default disposition of SIGTERM before re-raising it, exactly
+# as the Python `serve` command's server does when it stops on that signal.
+signal-hook = "0.3"
+
+[dev-dependencies]
+libc = "0.2"
+regex = "1"
+rusqlite = { version = "0.40", default-features = false, features = ["bundled"] }
+serde_json = { version = "1", features = ["arbitrary_precision"] }
+tempfile = "3.20"
+
+[profile.release]
+strip = "symbols"

@@ -19,8 +19,18 @@ from __future__ import annotations
 import hashlib
 import math
 import re
+from dataclasses import dataclass
 from typing import Final
 
+from kala_agent.studio.design.intent import (
+    DEFAULT_BRACKET_DEPTH_MM,
+    DEFAULT_BRACKET_WIDTH_MM,
+    DesignIntent,
+    HousingCall,
+    LbracketCall,
+    ShaftSegment,
+    SteppedShaftCall,
+)
 from kala_agent.studio.providers.base import ChatOutcome, ProviderProtocolError
 
 DEFAULT_LOCAL_MODEL: Final[str] = "deterministic-paraphrase-v1"
@@ -31,6 +41,29 @@ _MM_PER_UNIT: Final[dict[str, float]] = {"mm": 1.0, "cm": 10.0, "m": 1000.0}
 _NUMBER: Final[str] = r"\d+(?:\.\d+)?"
 _UNIT: Final[str] = r"(mm|cm|m)?"
 _SEPARATOR: Final[str] = r"(?:x|\u00d7|\*|by)"
+
+# ISO 273 medium clearance holes for metric bolts: M5 -> 5.5 mm.
+_ISO_273_MEDIUM: Final[dict[float, float]] = {
+    3.0: 3.4,
+    4.0: 4.5,
+    5.0: 5.5,
+    6.0: 6.6,
+    8.0: 9.0,
+    10.0: 11.0,
+    12.0: 13.5,
+    16.0: 17.5,
+    20.0: 22.0,
+}
+_BRACKET_RE: Final[re.Pattern[str]] = re.compile(r"\b(?:l[\s-]?brackets?|brackets?)\b")
+_STEPPED_RE: Final[re.Pattern[str]] = re.compile(r"\bstepped[\s-]shafts?\b")
+_HOUSING_RE: Final[re.Pattern[str]] = re.compile(r"\b(?:housing|enclosure)\b")
+_CYLINDRICAL_RE: Final[re.Pattern[str]] = re.compile(r"\b(?:cylindrical|round|circular)\b")
+_FAMILY_LABELS: Final[dict[str, str]] = {
+    "l_bracket": "L-bracket",
+    "stepped_shaft": "stepped shaft",
+    "housing_envelope": "rectangular housing envelope",
+}
+
 
 _TRIPLE_RE: Final[re.Pattern[str]] = re.compile(
     rf"({_NUMBER})\s*{_SEPARATOR}\s*({_NUMBER})\s*{_SEPARATOR}\s*({_NUMBER})\s*{_UNIT}"
@@ -151,6 +184,323 @@ def _numbers(lowered: str) -> list[float]:
     return [_to_mm(float(match.group(1)), match.group(2)) for match in _NUMBER_RE.finditer(lowered)]
 
 
+# --------------------------------------------------------------- design parsing
+
+
+@dataclass(frozen=True, slots=True)
+class DesignPrompt:
+    """The strict design reading of one local-helper prompt.
+
+    ``intent`` is present only when every required value was stated (or is a
+    documented canonical template default). When it is ``None``, ``missing``
+    names exactly what the operator has to state; the helper never guesses a
+    dimension to fill the gap.
+    """
+
+    family: str
+    intent: DesignIntent | None
+    missing: tuple[str, ...] = ()
+    notes: tuple[str, ...] = ()
+
+
+def _normalise_lowered(prompt: str) -> str:
+    return re.sub(r"\s+", " ", prompt.strip().lower())
+
+
+def _mm_value(pattern: str, text: str) -> float | None:
+    match = re.search(pattern, text)
+    if match is None:
+        return None
+    return float(match.group(1))
+
+
+def _detect_material(lowered: str) -> str | None:
+    for keyword, material in (
+        ("stainless steel", "stainless steel"),
+        ("aluminium", "aluminium"),
+        ("aluminum", "aluminium"),
+        ("steel", "steel"),
+        ("brass", "brass"),
+        ("titanium", "titanium"),
+        ("nylon", "nylon"),
+        ("plastic", "plastic"),
+    ):
+        if re.search(rf"\b{re.escape(keyword)}\b", lowered):
+            return material
+    return None
+
+
+def detect_design_family(prompt: str) -> str | None:
+    """Return the template family a prompt asks for, or ``None``.
+
+    The match is deliberately narrow: a family keyword must be present, not
+    merely a loose noun. "Design a small clamp ... 12 mm shaft" is an
+    ordinary analytic reply, while "make me a bracket" is an L-bracket turn
+    that still has to ask for its dimensions. A cylindrical housing is not
+    the rectangular ``housing_envelope`` template, so it stays an analytic
+    reply rather than being forced into the wrong family.
+    """
+    lowered = _normalise_lowered(prompt)
+    if not lowered:
+        return None
+    if _BRACKET_RE.search(lowered):
+        return "l_bracket"
+    if _STEPPED_RE.search(lowered):
+        return "stepped_shaft"
+    if _HOUSING_RE.search(lowered) and not _CYLINDRICAL_RE.search(lowered):
+        return "housing_envelope"
+    return None
+
+
+def parse_design_prompt(prompt: str) -> DesignPrompt | None:
+    """Strictly parse one local prompt into a template call or a missing list."""
+    family = detect_design_family(prompt)
+    if family is None:
+        return None
+    lowered = _normalise_lowered(prompt)
+    if family == "l_bracket":
+        return _parse_lbracket(lowered)
+    if family == "stepped_shaft":
+        return _parse_stepped_shaft(lowered)
+    return _parse_housing(lowered)
+
+
+def _parse_lbracket(lowered: str) -> DesignPrompt:
+    notes: list[str] = []
+    missing: list[str] = []
+
+    wall = _mm_value(rf"({_NUMBER})\s*mm\s*(?:thick\s+)?wall", lowered)
+    if wall is None:
+        wall = _mm_value(rf"wall(?:\s+thickness)?\s*(?:of|is|:|=)?\s*({_NUMBER})\s*mm", lowered)
+
+    bore = _mm_value(
+        rf"({_NUMBER})\s*mm\s*(?:centered|centred|center|centre)?\s*bore",
+        lowered,
+    )
+    if bore is None:
+        bore = _mm_value(rf"bore\s*(?:of|is|:|=)?\s*({_NUMBER})\s*mm", lowered)
+
+    width: float | None = None
+    depth: float | None = None
+    height: float | None = None
+    triple = re.search(
+        rf"({_NUMBER})\s*[x\u00d7]\s*({_NUMBER})\s*[x\u00d7]\s*({_NUMBER})\s*mm",
+        lowered,
+    )
+    if triple is not None:
+        width, depth, height = (
+            float(triple.group(1)),
+            float(triple.group(2)),
+            float(triple.group(3)),
+        )
+    legs = re.search(
+        rf"legs?\s*(?:of|are|:)?\s*({_NUMBER})\s*mm\s*(?:and|,)\s*({_NUMBER})\s*mm",
+        lowered,
+    )
+    if legs is not None:
+        width, depth = float(legs.group(1)), float(legs.group(2))
+    if width is None:
+        width = _mm_value(rf"width\s*(?:of|is|:|=)?\s*({_NUMBER})\s*mm", lowered)
+    if width is None:
+        width = _mm_value(rf"({_NUMBER})\s*mm\s*(?:wide|across)", lowered)
+    if depth is None:
+        depth = _mm_value(rf"depth\s*(?:of|is|:|=)?\s*({_NUMBER})\s*mm", lowered)
+    if depth is None:
+        depth = _mm_value(rf"({_NUMBER})\s*mm\s*(?:deep|long)", lowered)
+    if height is None:
+        height = _mm_value(rf"({_NUMBER})\s*mm\s*mounting\s+plate", lowered)
+    if height is None:
+        height = _mm_value(rf"({_NUMBER})\s*mm\s*(?:tall|high)", lowered)
+    if height is None:
+        height = _mm_value(rf"(?:height|tall|high)\s*(?:of|is|:|=)?\s*({_NUMBER})\s*mm", lowered)
+
+    hole_count = 0
+    hole_d: float | None = None
+    metric = re.search(rf"(\d+)\s*[x\u00d7]\s*m\s*({_NUMBER})", lowered)
+    explicit = re.search(
+        rf"(\d+)\s*[x\u00d7]\s*(?:\u00f8|dia(?:meter)?\s*)?({_NUMBER})\s*mm\s*"
+        r"(?:corner\s+)?(?:mounting\s+)?(?:clearance\s+)?holes?",
+        lowered,
+    )
+    count_only = re.search(r"(\d+)\s+(?:corner\s+)?(?:mounting\s+)?holes?\b", lowered)
+    if metric is not None:
+        hole_count = int(metric.group(1))
+        nominal = float(metric.group(2))
+        clearance = _ISO_273_MEDIUM.get(nominal)
+        if clearance is None:
+            missing.append(f"hole diameter (no ISO 273 medium value for M{nominal:g})")
+        else:
+            hole_d = clearance
+            notes.append(
+                f"{hole_count}x M{nominal:g} mapped to {clearance:g} mm clearance holes "
+                "(ISO 273 medium)."
+            )
+    elif explicit is not None:
+        hole_count = int(explicit.group(1))
+        hole_d = float(explicit.group(2))
+    elif count_only is not None:
+        hole_count = int(count_only.group(1))
+        missing.append("hole diameter (mm) or an M-size")
+    if hole_count not in (0, 2, 4):
+        missing.append("2 or 4 holes")
+        hole_count = 0
+    if hole_count and hole_d is None and not missing:
+        missing.append("hole diameter (mm) or an M-size")
+
+    if (
+        width is None
+        and depth is None
+        and height is not None
+        and (wall is not None or bore is not None or hole_count)
+    ):
+        width = DEFAULT_BRACKET_WIDTH_MM
+        depth = DEFAULT_BRACKET_DEPTH_MM
+        notes.append(
+            f"Plate width {width:g} mm and depth {depth:g} mm are canonical template "
+            "defaults; state them to override."
+        )
+
+    if width is None:
+        missing.append("width (mm)")
+    if depth is None:
+        missing.append("depth (mm)")
+    if height is None:
+        missing.append("height (mm)")
+    if wall is None:
+        missing.append("wall thickness (mm)")
+    if missing or width is None or depth is None or height is None or wall is None:
+        return DesignPrompt(
+            family="l_bracket",
+            intent=None,
+            missing=tuple(dict.fromkeys(missing)),
+            notes=tuple(notes),
+        )
+
+    intent = DesignIntent(
+        template=LbracketCall(
+            width=width,
+            depth=depth,
+            height=height,
+            wall=wall,
+            bore_d=bore,
+            hole_d=hole_d,
+            hole_count=hole_count,
+        ),
+        material=_detect_material(lowered),
+    )
+    return DesignPrompt(family="l_bracket", intent=intent, notes=tuple(notes))
+
+
+def _parse_stepped_shaft(lowered: str) -> DesignPrompt:
+    notes: list[str] = []
+    segments: list[tuple[float, float]] = []
+    main = re.search(
+        rf"({_NUMBER})\s*mm\s*(?:diameter|dia)\s*(?:by|and|,|[\u00d7x])\s*"
+        rf"({_NUMBER})\s*mm\s*(?:long|length)",
+        lowered,
+    )
+    if main is None:
+        main = re.search(
+            rf"({_NUMBER})\s*mm\s*(?:diameter|dia)\s*(?:by|and|,|[\u00d7x])\s*({_NUMBER})\s*mm",
+            lowered,
+        )
+    if main is not None:
+        segments.append((float(main.group(1)), float(main.group(2))))
+    shoulder = re.search(
+        rf"({_NUMBER})\s*mm\s*(?:diameter\s*)?shoulder\s*(?:of\s*)?({_NUMBER})\s*mm\s*"
+        r"(?:long|length)",
+        lowered,
+    )
+    if shoulder is not None:
+        segments.append((float(shoulder.group(1)), float(shoulder.group(2))))
+
+    if not segments:
+        return DesignPrompt(
+            family="stepped_shaft",
+            intent=None,
+            missing=("segment diameters and lengths (mm)",),
+            notes=tuple(notes),
+        )
+    intent = DesignIntent(
+        template=SteppedShaftCall(
+            segments=tuple(
+                ShaftSegment(diameter=diameter, length=length) for diameter, length in segments
+            )
+        ),
+        material=_detect_material(lowered),
+    )
+    return DesignPrompt(family="stepped_shaft", intent=intent, notes=tuple(notes))
+
+
+def _parse_housing(lowered: str) -> DesignPrompt:
+    notes: list[str] = []
+    missing: list[str] = []
+    width: float | None = None
+    depth: float | None = None
+    height: float | None = None
+    triple = re.search(
+        rf"({_NUMBER})\s*[x\u00d7]\s*({_NUMBER})\s*[x\u00d7]\s*({_NUMBER})\s*mm",
+        lowered,
+    )
+    if triple is not None:
+        width, depth, height = (
+            float(triple.group(1)),
+            float(triple.group(2)),
+            float(triple.group(3)),
+        )
+    if width is None:
+        width = _mm_value(rf"width\s*(?:of|is|:|=)?\s*({_NUMBER})\s*mm", lowered)
+    if depth is None:
+        depth = _mm_value(rf"depth\s*(?:of|is|:|=)?\s*({_NUMBER})\s*mm", lowered)
+    if height is None:
+        height = _mm_value(rf"(?:height|tall|high)\s*(?:of|is|:|=)?\s*({_NUMBER})\s*mm", lowered)
+    wall = _mm_value(rf"wall(?:\s+thickness)?\s*(?:of|is|:|=)?\s*({_NUMBER})\s*mm", lowered)
+    if wall is None:
+        wall = _mm_value(rf"({_NUMBER})\s*mm\s*(?:thick\s+)?walls?", lowered)
+
+    if width is None:
+        missing.append("width (mm)")
+    if depth is None:
+        missing.append("depth (mm)")
+    if height is None:
+        missing.append("height (mm)")
+    if wall is None:
+        missing.append("wall thickness (mm)")
+    if missing or width is None or depth is None or height is None or wall is None:
+        return DesignPrompt(
+            family="housing_envelope",
+            intent=None,
+            missing=tuple(missing),
+            notes=tuple(notes),
+        )
+    intent = DesignIntent(
+        template=HousingCall(width=width, depth=depth, height=height, wall=wall),
+        material=_detect_material(lowered),
+    )
+    return DesignPrompt(family="housing_envelope", intent=intent, notes=tuple(notes))
+
+
+def _design_prompt_reply(parsed: DesignPrompt) -> str:
+    if parsed.intent is None:
+        family = _FAMILY_LABELS.get(parsed.family, parsed.family.replace("_", " "))
+        article = "an" if family[:1].lower() in "aeiou" else "a"
+        notes = " ".join(parsed.notes)
+        if notes:
+            notes = f" {notes}"
+        need = ", ".join(parsed.missing) or "a complete set of declared dimensions"
+        return (
+            f"Local helper. I can draft {article} {family}, but I need these declared "
+            f"values: {need}.{notes} No design was compiled."
+        )[:MAX_RESPONSE_LENGTH]
+    notes = " ".join(parsed.notes)
+    if notes:
+        notes += " "
+    return (
+        f"Local helper. Design intent parsed from declared values. {notes}"
+        "Compiling and measuring with OpenCASCADE."
+    )[:MAX_RESPONSE_LENGTH]
+
+
 def _box_estimate(size_x: float, size_y: float, size_z: float) -> str:
     volume = size_x * size_y * size_z
     area = 2 * (size_x * size_y + size_y * size_z + size_z * size_x)
@@ -261,6 +611,14 @@ def local_chat(prompt: str, *, model: str | None = None) -> ChatOutcome:
         raise ProviderProtocolError("prompt must be a string")
     if len(prompt) > MAX_PROMPT_LENGTH:
         raise ProviderProtocolError("prompt exceeds the local provider's bounded length")
+    design_prompt = parse_design_prompt(prompt)
+    if design_prompt is not None:
+        return ChatOutcome(
+            text=_design_prompt_reply(design_prompt),
+            provider="local",
+            model=model or DEFAULT_LOCAL_MODEL,
+            offline=True,
+        )
     summary = _first_sentences(prompt)
     if not summary:
         summary = "(empty prompt)"
@@ -284,5 +642,8 @@ __all__ = (
     "DEFAULT_LOCAL_MODEL",
     "MAX_PROMPT_LENGTH",
     "MAX_RESPONSE_LENGTH",
+    "DesignPrompt",
+    "detect_design_family",
     "local_chat",
+    "parse_design_prompt",
 )

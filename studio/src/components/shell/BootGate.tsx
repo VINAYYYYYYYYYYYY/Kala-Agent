@@ -29,7 +29,7 @@ import {
   StudioApiError,
   StudioNetworkError,
 } from '../../api/client';
-import { dispatch, useUiState } from '../../state/store';
+import { dispatch, appendJournal, useUiState } from '../../state/store';
 import type { StudioConnection } from '../../types/studio';
 import { ConnectionForm } from './ConnectionForm';
 
@@ -82,6 +82,7 @@ export function BootGate({ children }: { children: React.ReactNode }): ReactElem
   const [phase, setPhase] = useState<Phase>({ kind: 'connecting', message: 'Connecting to Kala Studio backend…' });
   const [retrySeed, setRetrySeed] = useState(0);
   const handleRef = useRef<RegistryHandle | null>(null);
+  const connectionRetryToken = useUiState((s) => s.connectionRetryToken);
 
   useEffect(() => {
     const handle = createRegistryHandle();
@@ -91,7 +92,7 @@ export function BootGate({ children }: { children: React.ReactNode }): ReactElem
       cancelHandle(handle);
       if (handleRef.current === handle) handleRef.current = null;
     };
-  }, [retrySeed]);
+  }, [retrySeed, connectionRetryToken]);
 
   const connection = useUiState((s) => s.connection);
   const health = useUiState((s) => s.server.health);
@@ -112,6 +113,7 @@ export function BootGate({ children }: { children: React.ReactNode }): ReactElem
     return (
       <div className="boot-gate" role="status" aria-busy="true">
         <div className="boot-gate-card">
+          <p className="boot-gate-kicker">KALA STUDIO // LOOPBACK BOOT GATE</p>
           <h1>Kala Studio</h1>
           <ConnectionForm
             onSubmit={(submitted) => {
@@ -133,12 +135,14 @@ export function BootGate({ children }: { children: React.ReactNode }): ReactElem
     return (
       <div className="boot-gate" role="alertdialog" aria-busy="false">
         <div className="boot-gate-card">
+          <p className="boot-gate-kicker">KALA STUDIO // LOOPBACK BOOT GATE</p>
           <h1>Kala Studio</h1>
           <p className="boot-gate-message">{phase.message}</p>
           <button
             type="button"
             className="boot-gate-retry"
             onClick={() => {
+              appendJournal({ kind: 'connection', message: 'Retry requested from boot gate' });
               dispatch({ type: 'server/reset' });
               setPhase({ kind: 'connecting', message: 'Reconnecting…' });
               setRetrySeed((n) => n + 1);
@@ -159,6 +163,7 @@ export function BootGate({ children }: { children: React.ReactNode }): ReactElem
   return (
     <div className="boot-gate" role="status" aria-busy="true">
       <div className="boot-gate-card">
+        <p className="boot-gate-kicker">KALA STUDIO // LOOPBACK BOOT GATE</p>
         <h1>Kala Studio</h1>
         <p className="boot-gate-message">{phase.message}</p>
       </div>
@@ -182,10 +187,15 @@ async function attemptBridge(
     const message = describeError(cause);
     setPhase({ kind: 'error', message });
     dispatch({ type: 'connection/error', message });
+    appendJournal({ kind: 'connection', message: `Connection failed · ${message}` });
     return;
   }
   if (!handle.alive) return;
   dispatch({ type: 'connection/ready', connection });
+  appendJournal({
+    kind: 'connection',
+    message: `Loopback connected · ${connection.mode === 'desktop' ? 'desktop shell' : 'browser fallback'} · ${connection.baseUrl}`,
+  });
   await loadRegistries(handle, connection, setPhase);
 }
 
@@ -212,6 +222,10 @@ function attemptManual(
     return;
   }
   dispatch({ type: 'connection/ready', connection });
+  appendJournal({
+    kind: 'connection',
+    message: `Loopback connected · browser fallback · ${connection.baseUrl}`,
+  });
   setPhase({ kind: 'connecting', message: 'Loading registries…' });
   void loadRegistries(handle, connection, setPhase);
 }
@@ -257,6 +271,10 @@ async function loadRegistries(
       stepAvailable: health.step_available,
     });
     dispatch({ type: 'server/integrations', integrations: integrations.integrations });
+    appendJournal({
+      kind: 'system',
+      message: `Registries loaded · ${integrations.integrations.length} integrations · ${providers.providers.length} providers`,
+    });
   } catch (cause) {
     if (superseded()) return;
     const message = describeError(cause);
@@ -268,6 +286,7 @@ async function loadRegistries(
       version: '',
       stepAvailable: false,
     });
+    appendJournal({ kind: 'connection', message: `Registry load failed · ${message}` });
     setPhase({ kind: 'error', message });
   } finally {
     for (const timer of timers) clearTimeout(timer);

@@ -1,0 +1,41 @@
+# The Kala local API server is a standalone workspace with its own lockfile.
+# It sits inside the `kala-api` crate because the routes it serves are the
+# routes of that crate; the composition root it serves them with is the
+# accepted `kala-application` crate, which is consumed read-only by path.
+[workspace]
+members = []
+resolver = "3"
+
+[package]
+name = "kala-api-server"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+publish = false
+description = "The Kala local API server: the routes of kala-api over the composition root of kala-application, with the launch contract of the Python core API entry point"
+
+[dependencies]
+# The connection layer and the routes.
+kala-api = { path = ".." }
+# The composition root the routes call.
+kala-application = { path = "../../kala-application" }
+# The wire value model the answers are written with.
+kala-contracts = { path = "../../kala-contracts" }
+# The canonical JSON value model the request bodies are read into.
+kala-json = { path = "../../kala-json" }
+# Arbitrary precision integers, which the answer documents carry.
+num-bigint = "0.4"
+# The JSON documents the launch prints.
+serde_json = { version = "1", features = ["arbitrary_precision"] }
+# The reactor the server runs on.
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "time", "sync", "signal"] }
+
+[dev-dependencies]
+# The signal that stops a launch, which the launch contract exercises.
+libc = "0.2"
+serde_json = { version = "1", features = ["arbitrary_precision"] }
+tempfile = "3"
+
+[profile.release]
+strip = "symbols"

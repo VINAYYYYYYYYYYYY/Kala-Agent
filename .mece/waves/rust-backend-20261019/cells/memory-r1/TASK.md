@@ -1,0 +1,2 @@
+# memory-r1: kala-memory
+Follow `../CONVENTIONS.md`. Port `src/kala_agent/kernel/memory.py` completely into NEW `backend/crates/kala-memory`, over accepted kala-repositories/kala-contracts/kala-json (read-only). Read the matching tests (`tests/unit/test_kernel_memory_planning.py` and any memory tests under tests/security and tests/integration) and the persistence semantics the memory module relies on. Differential: record, query, rank, evict and serialize sequences against the live Python, including bounds and limits.

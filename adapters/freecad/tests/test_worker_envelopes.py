@@ -8,6 +8,7 @@ the result has to satisfy, and the artifacts the kernel will re-verify.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Final, cast
@@ -35,9 +36,15 @@ from kala_agent.tools.protocol import (
     validate_against_schema,
 )
 from kala_agent_freecad import worker
-from kala_agent_freecad.cad import fem, geometry
+from kala_agent_freecad.cad import design, fem, geometry
 from kala_agent_freecad.cad.runtime import FreeCADModules
-from kala_agent_freecad.contracts import FEM_OUTPUT_SCHEMA, GEOMETRY_OUTPUT_SCHEMA
+from kala_agent_freecad.contracts import (
+    DESIGN_OUTPUT_SCHEMA,
+    DESIGN_TOOL_ID,
+    DESIGN_TOOL_VERSION,
+    FEM_OUTPUT_SCHEMA,
+    GEOMETRY_OUTPUT_SCHEMA,
+)
 from kala_agent_freecad.errors import FreeCADDependencyError
 
 SMALL_BUDGET: Final[int] = 4
@@ -255,3 +262,73 @@ def test_the_envelope_names_the_call_it_answers(
     assert response.kind.value == "response"
     entries = cast("list[JSONValue]", _result(response)["artifacts"])
     assert len(entries) == len(response.artifacts) == 3
+
+
+DESIGN_TRACE_LENGTH: Final[int] = 85
+DESIGN_RESULT: Final[dict[str, JSONValue]] = {
+    "analysis_detail": "analysis was not requested",
+    "analysis_status": "not_run",
+    "artifacts": [
+        {
+            "digest": "0" * 64,
+            "format": "step",
+            "media_type": "model/step",
+            "relative_path": "artifacts/kala-model.step",
+            "size_bytes": 2_048,
+        }
+    ],
+    "degrees_of_freedom": 0,
+    "document_name": "kala-freecad",
+    "freecad_version": "1.1.4",
+    "import_root": "/usr/lib/freecad/lib",
+    "measurement": {
+        "area_mm2": 11_889.101731,
+        "bounding_box_mm": [60.0, 45.0, 40.0],
+        "edge_count": 36,
+        "face_count": 24,
+        "solid": True,
+        "vertex_count": 72,
+        "volume_mm3": 35_571.416047,
+    },
+    "object_count": 1,
+    "object_names": ["Pad"],
+    "redesign_trace": [],
+    "stage": "solid",
+    "tool_trace": [f"call-{index}" for index in range(DESIGN_TRACE_LENGTH)],
+    "valid": True,
+    "warnings": [],
+}
+
+
+def test_the_design_schema_accepts_the_builder_trace_cap() -> None:
+    properties = cast("dict[str, Any]", DESIGN_OUTPUT_SCHEMA["properties"])
+    trace = cast("dict[str, Any]", properties["tool_trace"])
+    assert trace["maxItems"] == design.MAX_TRACE
+    assert design.MAX_TRACE > 64
+
+
+def test_invoke_design_accepts_a_trace_longer_than_sixty_four(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fake_run(*_args: object, **_kwargs: object) -> design.DesignOutcome:
+        return design.DesignOutcome(result=dict(DESIGN_RESULT), artifacts=())
+
+    monkeypatch.setattr(design, "run", fake_run)
+    request = make_request(
+        {
+            "calls_json": json.dumps(
+                [
+                    {"tool": "part.cylinder", "arguments": {"radius": 5, "height": 10}},
+                    {"tool": "partdesign.check"},
+                ]
+            )
+        },
+        workspace=tmp_path,
+        tool_id=DESIGN_TOOL_ID,
+        tool_version=DESIGN_TOOL_VERSION,
+    )
+    response = worker.invoke_design(request)
+    result = _result(response)
+    validate_against_schema(result, DESIGN_OUTPUT_SCHEMA, path="$")
+    assert len(cast("list[JSONValue]", result["tool_trace"])) == DESIGN_TRACE_LENGTH
+    assert response.error_code is None

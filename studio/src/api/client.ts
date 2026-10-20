@@ -12,20 +12,44 @@
 import {
   ChatRequest,
   ChatResponse,
+  DesignExportFormat,
+  DesignExportArtifact,
+  DesignRequest,
+  DesignResult,
+  DesignViewName,
+  DrawingResponse,
   ExportArtifact,
   ExportFormat,
   ExportRequest,
   HealthResponse,
   HandoffRequest,
   IntegrationsResponse,
+  CadProvidersResponse,
+  JournalPage,
+  JournalVerify,
   PreviewRequest,
   PreviewResponse,
   ProvidersResponse,
+  SectionPlane,
+  SectionResponse,
   StudioConnection,
   StudioSettingsResponse,
   UpdateProviderKeyRequest,
 } from '../types/studio';
 import type { ErrorResponse } from '../types/studio';
+import {
+  parseCadProviders,
+  parseChatResponse,
+  parseDesignResult,
+  parseDrawingResponse,
+  parseJournalPage,
+  parseJournalVerify,
+  parseSectionResponse,
+  requireCadProviderId,
+  requireDesignExportFormat,
+  StudioValidationError,
+} from './validators';
+import { dispatch } from '../state/store';
 
 const REDIRECT_MODE: RequestRedirect = 'error';
 
@@ -65,6 +89,68 @@ export class StudioAbortError extends Error {
     super('request aborted');
     this.name = 'StudioAbortError';
   }
+}
+
+/**
+ * The request exceeded its own budget and was aborted by the client.
+ * Distinct from a server error: the backend may still be working.
+ */
+export class StudioTimeoutError extends Error {
+  readonly path: string;
+
+  constructor(path: string) {
+    super(`request to ${path} timed out`);
+    this.name = 'StudioTimeoutError';
+    this.path = path;
+  }
+}
+
+// Bounds for the design-turn routes. A compile, a mesh, and an export are
+// slow; a journal page and a verification are not. Every request is
+// abandoned when its budget runs out so a wedged backend can never pin the
+// UI on a spinner forever.
+export const DESIGN_COMPILE_TIMEOUT_MS = 60_000;
+export const DESIGN_READ_TIMEOUT_MS = 20_000;
+export const DESIGN_EXPORT_TIMEOUT_MS = 60_000;
+export const JOURNAL_READ_TIMEOUT_MS = 10_000;
+
+/** The backend's own page limit for `/journal`. */
+export const JOURNAL_LIMIT_MAX = 500;
+/** The page size the poller asks for. */
+export const JOURNAL_LIMIT_DEFAULT = 200;
+
+interface BoundedRequest {
+  signal: AbortSignal;
+  timedOut(): boolean;
+  dispose(): void;
+}
+
+/**
+ * Compose the caller's abort signal with a timeout. The returned signal
+ * aborts when either the caller cancels or the budget expires; `timedOut()`
+ * tells the two apart so an expired budget is reported as a timeout rather
+ * than as a cancellation.
+ */
+function boundedSignal(external: AbortSignal | null, timeoutMs: number): BoundedRequest {
+  const controller = new AbortController();
+  let expired = false;
+  const timer = setTimeout(() => {
+    expired = true;
+    controller.abort();
+  }, timeoutMs);
+  const onExternalAbort = (): void => controller.abort();
+  if (external) {
+    if (external.aborted) controller.abort();
+    else external.addEventListener('abort', onExternalAbort);
+  }
+  return {
+    signal: controller.signal,
+    timedOut: () => expired,
+    dispose: () => {
+      clearTimeout(timer);
+      if (external) external.removeEventListener('abort', onExternalAbort);
+    },
+  };
 }
 
 async function readJsonError(response: Response): Promise<ErrorResponse> {
@@ -108,8 +194,22 @@ function buildInit(method: 'GET' | 'POST', body: unknown, signal: AbortSignal | 
   return init;
 }
 
-function authorizationHeader(method: 'GET' | 'POST', token: string): Record<string, string> {
-  return method === 'GET' ? {} : { Authorization: `Bearer ${token}` };
+function authorizationHeader(
+  method: 'GET' | 'POST',
+  token: string,
+  authenticated: boolean,
+): Record<string, string> {
+  // POST routes always carry the bearer. The design-turn GET routes
+  // (`/design/{id}/drawing`, `/design/{id}/section`, `/journal`,
+  // `/journal/verify`) are bearer-guarded too, so they ask for it
+  // explicitly; the older public GET routes keep their old behaviour.
+  if (method === 'GET' && !authenticated) return {};
+  return { Authorization: `Bearer ${token}` };
+}
+
+interface RequestOptions {
+  /** Send the bearer on a GET route (the design-turn routes require it). */
+  authenticated?: boolean;
 }
 
 async function sendRequest<TResponse>(
@@ -118,6 +218,7 @@ async function sendRequest<TResponse>(
   path: string,
   body: unknown,
   signal: AbortSignal | null,
+  options: RequestOptions = {},
 ): Promise<TResponse> {
   // Reject pre-aborted callers without touching the network. The browser
   // would surface an `AbortError` from `fetch` but the contract here is
@@ -127,7 +228,7 @@ async function sendRequest<TResponse>(
   const url = new URL(path, connection.baseUrl).toString();
   const baseHeaders: Record<string, string> = {
     Accept: 'application/json',
-    ...authorizationHeader(method, connection.token),
+    ...authorizationHeader(method, connection.token, options.authenticated === true),
   };
   if (body !== null) baseHeaders['Content-Type'] = 'application/json';
   const init = buildInit(method, body, signal);
@@ -158,8 +259,33 @@ async function sendRequest<TResponse>(
   }
 }
 
-export function getHealth(connection: StudioConnection, signal: AbortSignal | null = null): Promise<HealthResponse> {
-  return sendRequest<HealthResponse>(connection, 'GET', '/api/studio/health', null, signal);
+/**
+ * The health probe. The backend's `design_available` flag is the only
+ * signal the UI has that this backend carries the design-turn routes
+ * (`/design`, `/journal`, `/journal/verify`). The flag is recorded in the
+ * store so the journal poller only runs against a backend that has them;
+ * an older backend answers the probe without the flag and is left alone.
+ */
+export async function getHealth(
+  connection: StudioConnection,
+  signal: AbortSignal | null = null,
+): Promise<HealthResponse> {
+  const raw = (await sendRequest<unknown>(
+    connection,
+    'GET',
+    '/api/studio/health',
+    null,
+    signal,
+  )) as HealthResponse;
+  const designAvailable = readDesignAvailable(raw);
+  dispatch({ type: 'server/capabilities', designAvailable });
+  return raw;
+}
+
+function readDesignAvailable(raw: unknown): boolean | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const value = (raw as { design_available?: unknown }).design_available;
+  return typeof value === 'boolean' ? value : null;
 }
 
 export function getIntegrations(connection: StudioConnection, signal: AbortSignal | null = null): Promise<IntegrationsResponse> {
@@ -168,6 +294,30 @@ export function getIntegrations(connection: StudioConnection, signal: AbortSigna
 
 export function getProviders(connection: StudioConnection, signal: AbortSignal | null = null): Promise<ProvidersResponse> {
   return sendRequest<ProvidersResponse>(connection, 'GET', '/api/studio/providers', null, signal);
+}
+
+/**
+ * The CAD provider probe (ADR-0011). This is a design-turn route, so it
+ * carries the studio bearer and its payload is validated like every other
+ * response: an unavailable provider must arrive with its real reason, never
+ * be inferred from a missing row.
+ */
+export async function getCadProviders(
+  connection: StudioConnection,
+  signal: AbortSignal | null = null,
+): Promise<CadProvidersResponse> {
+  const path = '/api/studio/providers/cad';
+  const bounded = boundedSignal(signal, DESIGN_READ_TIMEOUT_MS);
+  try {
+    const raw = await sendRequest<unknown>(connection, 'GET', path, null, bounded.signal, {
+      authenticated: true,
+    });
+    return parseCadProviders(raw, 'providers/cad');
+  } catch (cause) {
+    throw translateFailure(cause, path, bounded);
+  } finally {
+    bounded.dispose();
+  }
 }
 
 export function getSettings(connection: StudioConnection, signal: AbortSignal | null = null): Promise<StudioSettingsResponse> {
@@ -183,11 +333,274 @@ export function postSettings(
 }
 
 export function postChat(connection: StudioConnection, payload: ChatRequest, signal: AbortSignal | null = null): Promise<ChatResponse> {
-  return sendRequest<ChatResponse>(connection, 'POST', '/api/studio/chat', payload, signal);
+  return sendChat(connection, payload, signal);
+}
+
+/**
+ * The chat turn is the only path by which a design can arrive without an
+ * explicit `/design` call, so the client is the single place that knows a
+ * reply carried one. The validated design is handed to the store; the chat
+ * thread itself is untouched (the panel still renders the reply text).
+ */
+async function sendChat(
+  connection: StudioConnection,
+  payload: ChatRequest,
+  signal: AbortSignal | null,
+): Promise<ChatResponse> {
+  const raw = await sendRequest<unknown>(connection, 'POST', '/api/studio/chat', payload, signal);
+  const response = parseChatResponse(raw);
+  if (response.design) {
+    dispatch({ type: 'design/received', design: response.design });
+  }
+  return response;
 }
 
 export function postPreview(connection: StudioConnection, payload: PreviewRequest, signal: AbortSignal | null = null): Promise<PreviewResponse> {
   return sendRequest<PreviewResponse>(connection, 'POST', '/api/studio/preview', payload, signal);
+}
+
+// --- Design turns (ADR-0009) --------------------------------------------------
+
+const DESIGN_ID_PATTERN = /^[0-9a-f]{64}$/;
+const SECTION_PLANE_VALUES: ReadonlyArray<SectionPlane> = ['XY', 'XZ', 'YZ'];
+/** The backend's own bound on a section offset, in millimetres. */
+export const MAX_SECTION_OFFSET_MM = 10_000;
+
+/**
+ * A design id is a sha256 digest, so it is safe to put in a path. Anything
+ * else is refused before it can become a path segment.
+ */
+function requireDesignId(value: string, path: string): string {
+  if (!DESIGN_ID_PATTERN.test(value)) {
+    throw new StudioValidationError(path, 'expected a 64-character lowercase hex sha256 design id');
+  }
+  return value;
+}
+
+function translateFailure(cause: unknown, path: string, bounded: BoundedRequest): unknown {
+  if (bounded.timedOut() && cause instanceof StudioAbortError) {
+    return new StudioTimeoutError(path);
+  }
+  return cause;
+}
+
+/**
+ * Compile, measure, and check a design intent with a named CAD provider.
+ * ADR-0011 has no default provider: the `provider` field is part of the
+ * request type and is checked before the network call, so an older caller
+ * cannot silently ask the backend to pick one.
+ *
+ * The response is validated against the frozen `DesignResult` contract
+ * before it is returned; a malformed payload is refused rather than
+ * rendered. A compiled design is handed to the store the same way a chat
+ * turn's design is: it becomes the active one.
+ */
+export async function postDesign(
+  connection: StudioConnection,
+  request: DesignRequest,
+  signal: AbortSignal | null = null,
+): Promise<DesignResult> {
+  const path = '/api/studio/design';
+  if (typeof request !== 'object' || request === null) {
+    throw new StudioValidationError('design', 'expected a design request');
+  }
+  requireCadProviderId(request.provider, 'provider');
+  const bounded = boundedSignal(signal, DESIGN_COMPILE_TIMEOUT_MS);
+  try {
+    const raw = await sendRequest<unknown>(connection, 'POST', path, request, bounded.signal);
+    const design = parseDesignResult(raw, 'design');
+    dispatch({ type: 'design/received', design });
+    return design;
+  } catch (cause) {
+    throw translateFailure(cause, path, bounded);
+  } finally {
+    bounded.dispose();
+  }
+}
+
+/**
+ * The HLR drawing of one stored design. `views` is the allow-listed view
+ * set; an empty list asks the backend for all four views.
+ */
+export async function getDesignDrawing(
+  connection: StudioConnection,
+  designId: string,
+  views: ReadonlyArray<DesignViewName> = [],
+  signal: AbortSignal | null = null,
+): Promise<DrawingResponse> {
+  requireDesignId(designId, 'design_id');
+  const path = `/api/studio/design/${designId}/drawing`;
+  const query = views.length > 0 ? `?views=${encodeURIComponent(views.join(','))}` : '';
+  const bounded = boundedSignal(signal, DESIGN_READ_TIMEOUT_MS);
+  try {
+    const raw = await sendRequest<unknown>(connection, 'GET', `${path}${query}`, null, bounded.signal, {
+      authenticated: true,
+    });
+    return parseDrawingResponse(raw, 'drawing');
+  } catch (cause) {
+    throw translateFailure(cause, path, bounded);
+  } finally {
+    bounded.dispose();
+  }
+}
+
+/**
+ * The section cut of one stored design. `offsetMm` is the signed distance
+ * of the cutting plane from the origin, in millimetres.
+ */
+export async function getDesignSection(
+  connection: StudioConnection,
+  designId: string,
+  plane: SectionPlane,
+  offsetMm?: number,
+  signal: AbortSignal | null = null,
+): Promise<SectionResponse> {
+  requireDesignId(designId, 'design_id');
+  if (!SECTION_PLANE_VALUES.includes(plane)) {
+    throw new StudioValidationError('plane', `expected one of ${SECTION_PLANE_VALUES.join(', ')}`);
+  }
+  if (offsetMm !== undefined && !Number.isFinite(offsetMm)) {
+    throw new StudioValidationError('offset', 'expected a finite offset in millimetres');
+  }
+  if (offsetMm !== undefined && Math.abs(offsetMm) > MAX_SECTION_OFFSET_MM) {
+    throw new StudioValidationError(
+      'offset',
+      `expected an offset within +/-${MAX_SECTION_OFFSET_MM} mm`,
+    );
+  }
+  const path = `/api/studio/design/${designId}/section`;
+  const query = offsetMm === undefined ? `?plane=${plane}` : `?plane=${plane}&offset=${offsetMm}`;
+  const bounded = boundedSignal(signal, DESIGN_READ_TIMEOUT_MS);
+  try {
+    const raw = await sendRequest<unknown>(connection, 'GET', `${path}${query}`, null, bounded.signal, {
+      authenticated: true,
+    });
+    return parseSectionResponse(raw, 'section');
+  } catch (cause) {
+    throw translateFailure(cause, path, bounded);
+  } finally {
+    bounded.dispose();
+  }
+}
+
+/** A bounded page of the Studio session journal, newest sequence last. */
+export async function getJournal(
+  connection: StudioConnection,
+  after = 0,
+  limit = JOURNAL_LIMIT_DEFAULT,
+  signal: AbortSignal | null = null,
+): Promise<JournalPage> {
+  if (!Number.isInteger(after) || after < 0) {
+    throw new StudioValidationError('after', 'expected a non-negative integer sequence');
+  }
+  const boundedLimit = Math.min(Math.max(1, Math.floor(limit)), JOURNAL_LIMIT_MAX);
+  const path = `/api/studio/journal?after=${after}&limit=${boundedLimit}`;
+  const bounded = boundedSignal(signal, JOURNAL_READ_TIMEOUT_MS);
+  try {
+    const raw = await sendRequest<unknown>(connection, 'GET', path, null, bounded.signal, {
+      authenticated: true,
+    });
+    return parseJournalPage(raw, 'journal');
+  } catch (cause) {
+    throw translateFailure(cause, path, bounded);
+  } finally {
+    bounded.dispose();
+  }
+}
+
+/**
+ * The hash-chain verdict. `ok: true` is the only thing that may light the
+ * HASH-CHAIN OK stamp; the UI never infers it.
+ */
+export async function getJournalVerify(
+  connection: StudioConnection,
+  signal: AbortSignal | null = null,
+): Promise<JournalVerify> {
+  const path = '/api/studio/journal/verify';
+  const bounded = boundedSignal(signal, JOURNAL_READ_TIMEOUT_MS);
+  try {
+    const raw = await sendRequest<unknown>(connection, 'GET', path, null, bounded.signal, {
+      authenticated: true,
+    });
+    return parseJournalVerify(raw, 'journal/verify');
+  } catch (cause) {
+    throw translateFailure(cause, path, bounded);
+  } finally {
+    bounded.dispose();
+  }
+}
+
+/**
+ * Export a compiled design. The response body IS the artefact; the backend
+ * reports the sha256 of those bytes in `x-studio-digest`.
+ */
+export async function exportDesign(
+  connection: StudioConnection,
+  designId: string,
+  format: DesignExportFormat,
+  signal: AbortSignal | null = null,
+): Promise<DesignExportArtifact> {
+  requireDesignId(designId, 'design_id');
+  const exportFormat = requireDesignExportFormat(format, 'format');
+  const path = '/api/studio/export';
+  const bounded = boundedSignal(signal, DESIGN_EXPORT_TIMEOUT_MS);
+  try {
+    const url = new URL(path, connection.baseUrl).toString();
+    const init: RequestInit = {
+      method: 'POST',
+      headers: {
+        Accept: 'model/stl, application/step, application/octet-stream',
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${connection.token}`,
+      },
+      body: JSON.stringify({ design_id: designId, format: exportFormat }),
+      redirect: REDIRECT_MODE,
+      cache: 'no-store',
+      credentials: 'omit',
+      referrerPolicy: 'no-referrer',
+      signal: bounded.signal,
+    };
+    let response: Response;
+    try {
+      response = await fetch(url, init);
+    } catch (cause) {
+      if (cause instanceof DOMException && cause.name === 'AbortError') {
+        throw new StudioAbortError();
+      }
+      throw new StudioNetworkError(`network request to ${path} failed`, cause);
+    }
+    if (!response.ok) {
+      const parsed = await readJsonError(response);
+      if (response.status === 401 || response.status === 403) {
+        throw new StudioAuthError(response.status, parsed);
+      }
+      throw new StudioApiError(response.status, parsed);
+    }
+    let blob: Blob;
+    try {
+      blob = await response.blob();
+    } catch (cause) {
+      throw new StudioNetworkError(`failed to read response bytes from ${path}`, cause);
+    }
+    const reported = response.headers.get('x-studio-design-id');
+    return {
+      blob,
+      filename: sanitizeDispositionFilename(
+        response.headers.get('content-disposition'),
+        `kala-studio-${designId.slice(0, 8)}.${exportFormat}`,
+      ),
+      bytes: blob.size,
+      format: exportFormat,
+      integrationId: null,
+      designId: reported && DESIGN_ID_PATTERN.test(reported) ? reported : designId,
+      digest: response.headers.get('x-studio-digest'),
+      artifactKind: exportFormat,
+    };
+  } catch (cause) {
+    throw translateFailure(cause, path, bounded);
+  } finally {
+    bounded.dispose();
+  }
 }
 
 // The export and handoff endpoints answer with the artefact bytes
@@ -318,3 +731,4 @@ export function postHandoff(connection: StudioConnection, payload: HandoffReques
 }
 
 export type { ExportFormat };
+export { StudioValidationError };

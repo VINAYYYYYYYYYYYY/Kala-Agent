@@ -1,0 +1,4 @@
+# windows-check: cross-check every crate for Windows (needs MinGW installed by the user)
+Verify `x86_64-w64-mingw32-gcc --version` first. If it is missing, STOP and report.
+For every crate under `backend/crates/**` (root workspace members and standalone workspaces, including `kala-api/server`): run `cargo check --target x86_64-pc-windows-gnu --all-targets --locked` and `cargo clippy --target x86_64-pc-windows-gnu --all-targets -- -D warnings`. kala-cad (OCCT) cannot link for Windows here: check it with the OCCT shim compile skipped only if build.rs supports a check-only mode; otherwise list it as "verified on Windows via build-windows.ps1".
+Fix Windows-only compile errors with minimal `cfg(windows)` changes in the owning crates. You own any crate's `cfg`-gated code paths for this purpose only, without behaviour changes on Linux (the Linux test suites must stay green). Report a table: crate → check / clippy / notes. USER DATA rule in every shell. REPORT.md.

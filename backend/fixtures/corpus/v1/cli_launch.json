@@ -1,0 +1,1134 @@
+{
+  "core": {
+    "default_event_limit": 50,
+    "exit_codes": {
+      "error": 1,
+      "failed_outcome": 3,
+      "ok": 0,
+      "usage": 2
+    },
+    "max_event_limit": 1000,
+    "module": "kala_agent.cli",
+    "parser": {
+      "commands": [
+        {
+          "help": "Approve the pending policy checkpoint of a workflow.",
+          "name": "approve",
+          "options": [
+            {
+              "choices": null,
+              "default": "==SUPPRESS==",
+              "dest": "help",
+              "help": "show this help message and exit",
+              "nargs": 0,
+              "option_strings": [
+                "-h",
+                "--help"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "workflow_id",
+              "help": "Workflow identifier whose checkpoint should be approved.",
+              "nargs": null,
+              "option_strings": [
+                "--workflow-id"
+              ],
+              "required": true,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "local-user",
+              "dest": "actor",
+              "help": "Local actor identifier recorded with the decision.",
+              "nargs": null,
+              "option_strings": [
+                "--actor"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "reason",
+              "help": "Optional operator reason recorded with the decision.",
+              "nargs": null,
+              "option_strings": [
+                "--reason"
+              ],
+              "required": false,
+              "type": null
+            }
+          ]
+        },
+        {
+          "help": "Approve or reject one prepared revision commit.",
+          "name": "commit-revision",
+          "options": [
+            {
+              "choices": null,
+              "default": "==SUPPRESS==",
+              "dest": "help",
+              "help": "show this help message and exit",
+              "nargs": 0,
+              "option_strings": [
+                "-h",
+                "--help"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "request_id",
+              "help": "Identifier of the prepared revision commit.",
+              "nargs": null,
+              "option_strings": [
+                "--request-id"
+              ],
+              "required": true,
+              "type": null
+            },
+            {
+              "choices": [
+                "approve",
+                "reject"
+              ],
+              "default": "approve",
+              "dest": "decision",
+              "help": "Record an approval or a rejection against the prepared digests.",
+              "nargs": null,
+              "option_strings": [
+                "--decision"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "state_digest",
+              "help": "State digest the operator reviewed. Refused when it is stale.",
+              "nargs": null,
+              "option_strings": [
+                "--state-digest"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "action_digest",
+              "help": "Action digest the operator reviewed. Refused when it is stale.",
+              "nargs": null,
+              "option_strings": [
+                "--action-digest"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "local-user",
+              "dest": "actor",
+              "help": "Local actor identifier recorded with the decision.",
+              "nargs": null,
+              "option_strings": [
+                "--actor"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "reason",
+              "help": "Optional operator reason recorded with the decision.",
+              "nargs": null,
+              "option_strings": [
+                "--reason"
+              ],
+              "required": false,
+              "type": null
+            }
+          ]
+        },
+        {
+          "help": "List every registered domain package and workflow definition.",
+          "name": "domains",
+          "options": [
+            {
+              "choices": null,
+              "default": "==SUPPRESS==",
+              "dest": "help",
+              "help": "show this help message and exit",
+              "nargs": 0,
+              "option_strings": [
+                "-h",
+                "--help"
+              ],
+              "required": false,
+              "type": null
+            }
+          ]
+        },
+        {
+          "help": "Evaluate one reference design of a domain package.",
+          "name": "evaluate",
+          "options": [
+            {
+              "choices": null,
+              "default": "==SUPPRESS==",
+              "dest": "help",
+              "help": "show this help message and exit",
+              "nargs": 0,
+              "option_strings": [
+                "-h",
+                "--help"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "domain",
+              "help": "Registered domain package name.",
+              "nargs": null,
+              "option_strings": [
+                "--domain"
+              ],
+              "required": true,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "design_id",
+              "help": "Design identifier to evaluate the reference parameters under.",
+              "nargs": null,
+              "option_strings": [
+                "--design-id"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": [],
+              "dest": "param",
+              "help": "Parameter override, repeatable. Values are parsed as JSON when possible.",
+              "nargs": null,
+              "option_strings": [
+                "--param"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "parameters_json",
+              "help": "A JSON object of parameter overrides.",
+              "nargs": null,
+              "option_strings": [
+                "--parameters-json"
+              ],
+              "required": false,
+              "type": null
+            }
+          ]
+        },
+        {
+          "help": "Print a bounded page of journal events.",
+          "name": "events",
+          "options": [
+            {
+              "choices": null,
+              "default": "==SUPPRESS==",
+              "dest": "help",
+              "help": "show this help message and exit",
+              "nargs": 0,
+              "option_strings": [
+                "-h",
+                "--help"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": 0,
+              "dest": "after_sequence",
+              "help": "Return events after this sequence number.",
+              "nargs": null,
+              "option_strings": [
+                "--after-sequence"
+              ],
+              "required": false,
+              "type": "int"
+            },
+            {
+              "choices": null,
+              "default": 50,
+              "dest": "limit",
+              "help": "Maximum number of events to return, 1 to 1000.",
+              "nargs": null,
+              "option_strings": [
+                "--limit"
+              ],
+              "required": false,
+              "type": "int"
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "workflow_id",
+              "help": "Restrict events to one workflow.",
+              "nargs": null,
+              "option_strings": [
+                "--workflow-id"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "event_type",
+              "help": "Restrict events to one event type.",
+              "nargs": null,
+              "option_strings": [
+                "--event-type"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "aggregate_id",
+              "help": "Restrict events to one aggregate.",
+              "nargs": null,
+              "option_strings": [
+                "--aggregate-id"
+              ],
+              "required": false,
+              "type": null
+            }
+          ]
+        },
+        {
+          "help": "Create or verify the local data directory and report local facts.",
+          "name": "init",
+          "options": [
+            {
+              "choices": null,
+              "default": "==SUPPRESS==",
+              "dest": "help",
+              "help": "show this help message and exit",
+              "nargs": 0,
+              "option_strings": [
+                "-h",
+                "--help"
+              ],
+              "required": false,
+              "type": null
+            }
+          ]
+        },
+        {
+          "help": "Prepare one revision commit and open its pre-commit checkpoint.",
+          "name": "prepare-revision",
+          "options": [
+            {
+              "choices": null,
+              "default": "==SUPPRESS==",
+              "dest": "help",
+              "help": "show this help message and exit",
+              "nargs": 0,
+              "option_strings": [
+                "-h",
+                "--help"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "design_id",
+              "help": "Stable design identifier the revision belongs to.",
+              "nargs": null,
+              "option_strings": [
+                "--design-id"
+              ],
+              "required": true,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "domain",
+              "help": "Registered domain package name.",
+              "nargs": null,
+              "option_strings": [
+                "--domain"
+              ],
+              "required": true,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "summary",
+              "help": "Optional summary recorded with the revision specification.",
+              "nargs": null,
+              "option_strings": [
+                "--summary"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "parent_revision_id",
+              "help": "Revision this commit extends. Defaults to the current head of the design.",
+              "nargs": null,
+              "option_strings": [
+                "--parent-revision-id"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": [],
+              "dest": "param",
+              "help": "Parameter override, repeatable. Values are parsed as JSON when possible.",
+              "nargs": null,
+              "option_strings": [
+                "--param"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "parameters_json",
+              "help": "A JSON object of parameter overrides.",
+              "nargs": null,
+              "option_strings": [
+                "--parameters-json"
+              ],
+              "required": false,
+              "type": null
+            }
+          ]
+        },
+        {
+          "help": "Reject the pending policy checkpoint of a workflow.",
+          "name": "reject",
+          "options": [
+            {
+              "choices": null,
+              "default": "==SUPPRESS==",
+              "dest": "help",
+              "help": "show this help message and exit",
+              "nargs": 0,
+              "option_strings": [
+                "-h",
+                "--help"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "workflow_id",
+              "help": "Workflow identifier whose checkpoint should be rejected.",
+              "nargs": null,
+              "option_strings": [
+                "--workflow-id"
+              ],
+              "required": true,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "local-user",
+              "dest": "actor",
+              "help": "Local actor identifier recorded with the decision.",
+              "nargs": null,
+              "option_strings": [
+                "--actor"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "reason",
+              "help": "Optional operator reason recorded with the decision.",
+              "nargs": null,
+              "option_strings": [
+                "--reason"
+              ],
+              "required": false,
+              "type": null
+            }
+          ]
+        },
+        {
+          "help": "Run the mechanical reference workflow to its policy checkpoint.",
+          "name": "run-mechanical",
+          "options": [
+            {
+              "choices": null,
+              "default": "==SUPPRESS==",
+              "dest": "help",
+              "help": "show this help message and exit",
+              "nargs": 0,
+              "option_strings": [
+                "-h",
+                "--help"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "mechanical-reference",
+              "dest": "design_id",
+              "help": "Design identifier the run belongs to.",
+              "nargs": null,
+              "option_strings": [
+                "--design-id"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "workflow_id",
+              "help": "Workflow identifier. Defaults to the identifier derived from the design.",
+              "nargs": null,
+              "option_strings": [
+                "--workflow-id"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "local-user",
+              "dest": "actor",
+              "help": "Local actor identifier recorded with the decision.",
+              "nargs": null,
+              "option_strings": [
+                "--actor"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "reason",
+              "help": "Optional operator reason recorded with the decision.",
+              "nargs": null,
+              "option_strings": [
+                "--reason"
+              ],
+              "required": false,
+              "type": null
+            }
+          ]
+        },
+        {
+          "help": "Serve the local API on the loopback interface until interrupted.",
+          "name": "serve",
+          "options": [
+            {
+              "choices": null,
+              "default": "==SUPPRESS==",
+              "dest": "help",
+              "help": "show this help message and exit",
+              "nargs": 0,
+              "option_strings": [
+                "-h",
+                "--help"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "127.0.0.1",
+              "dest": "host",
+              "help": "Loopback address to bind, either 127.0.0.1 or ::1. Any other address, including a wildcard, is refused.",
+              "nargs": null,
+              "option_strings": [
+                "--host"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": 8000,
+              "dest": "port",
+              "help": "TCP port to bind, 1 to 65535.",
+              "nargs": null,
+              "option_strings": [
+                "--port"
+              ],
+              "required": false,
+              "type": "int"
+            }
+          ]
+        },
+        {
+          "help": "Print the bearer token of the running local API launch.",
+          "name": "token",
+          "options": [
+            {
+              "choices": null,
+              "default": "==SUPPRESS==",
+              "dest": "help",
+              "help": "show this help message and exit",
+              "nargs": 0,
+              "option_strings": [
+                "-h",
+                "--help"
+              ],
+              "required": false,
+              "type": null
+            }
+          ]
+        },
+        {
+          "help": "Print the current state of one workflow.",
+          "name": "workflow-status",
+          "options": [
+            {
+              "choices": null,
+              "default": "==SUPPRESS==",
+              "dest": "help",
+              "help": "show this help message and exit",
+              "nargs": 0,
+              "option_strings": [
+                "-h",
+                "--help"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": null,
+              "dest": "workflow_id",
+              "help": "Workflow identifier to inspect.",
+              "nargs": null,
+              "option_strings": [
+                "--workflow-id"
+              ],
+              "required": true,
+              "type": null
+            }
+          ]
+        }
+      ],
+      "description": "Local, offline engineering design agent over the declarative domain packages. Every command prints one JSON document and returns an exit code. No authentication, no network access.",
+      "epilog": "Exit codes: 0 completed, 1 error, 2 usage, 3 completed with a failed outcome.",
+      "help_first_line": "usage: kala-agent [-h] [--data-dir DATA_DIR] command ...",
+      "help_length": 1603,
+      "help_sha256": "0ca256dfc795b6bc6b3293b237cf1d378614f38a6393a5d6dbd23d4b5cfedd8a",
+      "prog": "kala-agent",
+      "top_level_options": [
+        {
+          "choices": null,
+          "default": "==SUPPRESS==",
+          "dest": "help",
+          "help": "show this help message and exit",
+          "nargs": 0,
+          "option_strings": [
+            "-h",
+            "--help"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": null,
+          "dest": "data_dir",
+          "help": "Local data directory, absolute. Overrides KALA_AGENT_DATA_DIR for this invocation only.",
+          "nargs": null,
+          "option_strings": [
+            "--data-dir"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "usage_first_line": "usage: kala-agent [-h] [--data-dir DATA_DIR] command ..."
+    },
+    "program_name": "kala-agent",
+    "serve_targets": [
+      {
+        "expected": {
+          "ok": true,
+          "value": {
+            "host": "127.0.0.1",
+            "port": 8000,
+            "url": "http://127.0.0.1:8000"
+          }
+        },
+        "host": null,
+        "port": null
+      },
+      {
+        "expected": {
+          "ok": true,
+          "value": {
+            "host": "127.0.0.1",
+            "port": 8000,
+            "url": "http://127.0.0.1:8000"
+          }
+        },
+        "host": "127.0.0.1",
+        "port": 8000
+      },
+      {
+        "expected": {
+          "ok": true,
+          "value": {
+            "host": "::1",
+            "port": 9000,
+            "url": "http://[::1]:9000"
+          }
+        },
+        "host": "::1",
+        "port": 9000
+      },
+      {
+        "expected": {
+          "ok": true,
+          "value": {
+            "host": "localhost",
+            "port": 8123,
+            "url": "http://localhost:8123"
+          }
+        },
+        "host": "localhost",
+        "port": 8123
+      },
+      {
+        "expected": {
+          "error_type": "ApplicationError",
+          "message": "serve binds the loopback interface only; a routable or wildcard address is refused",
+          "ok": false
+        },
+        "host": "0.0.0.0",
+        "port": 8000
+      },
+      {
+        "expected": {
+          "error_type": "ApplicationError",
+          "message": "serve binds the loopback interface only; a routable or wildcard address is refused",
+          "ok": false
+        },
+        "host": "192.168.1.5",
+        "port": 8000
+      },
+      {
+        "expected": {
+          "error_type": "ApplicationError",
+          "message": "the port must be between 1 and 65535",
+          "ok": false
+        },
+        "host": "127.0.0.1",
+        "port": 0
+      },
+      {
+        "expected": {
+          "error_type": "ApplicationError",
+          "message": "the port must be between 1 and 65535",
+          "ok": false
+        },
+        "host": "127.0.0.1",
+        "port": 70000
+      }
+    ]
+  },
+  "corpus_schema_version": 1,
+  "deterministic_overrides": {
+    "application_clock": "fixed one-second sequence starting 2026-01-01T00:00:00Z",
+    "journal_clock": "EventJournal uses datetime.now(UTC) in production; the fixture harness substitutes a fixed clock for reproducible event timestamps and digests",
+    "temporary_paths": "replaced with <DATA_DIR>"
+  },
+  "executions": [
+    {
+      "argv": [
+        "init"
+      ],
+      "exit_code": 0,
+      "stderr_text": "",
+      "stdout_text": "{\n  \"command\": \"init\",\n  \"data\": {\n    \"api_token_path\": \"<DATA_DIR>/data/api-token\",\n    \"artifact_dir\": \"<DATA_DIR>/data/artifacts\",\n    \"created\": false,\n    \"data_dir\": \"<DATA_DIR>/data\",\n    \"database_path\": \"<DATA_DIR>/data/kala.sqlite3\",\n    \"disclaimer\": \"Bounded surrogate reference arithmetic only; not CAD, CAE, a code check, or an engineering certification. No authentication and no network access.\",\n    \"domains\": [\n      \"building\",\n      \"mechanical\",\n      \"wing\"\n    ],\n    \"egress_configured\": false,\n    \"model\": \"local\",\n    \"non_authoritative_finding\": \"Surrogate reference arithmetic only; not a certified analysis and not a substitute for a validated CAD or CAE model.\",\n    \"offline\": true,\n    \"provider\": \"local\",\n    \"provider_endpoint_declared\": false,\n    \"runs_dir\": \"<DATA_DIR>/data/runs\",\n    \"schema_version\": 2,\n    \"tools\": [\n      \"mechanical.reference-simulator\"\n    ],\n    \"worker_count\": 4\n  },\n  \"status\": \"ready\"\n}\n",
+      "system_exit": false
+    },
+    {
+      "argv": [
+        "domains"
+      ],
+      "exit_code": 0,
+      "stderr_text": "",
+      "stdout_text": "{\n  \"command\": \"domains\",\n  \"data\": {\n    \"domains\": [\n      \"building\",\n      \"mechanical\",\n      \"wing\"\n    ],\n    \"packages\": [\n      {\n        \"catalog_step_ids\": [\n          \"building.storey-model\",\n          \"building.area-model\",\n          \"building.thermal-envelope\"\n        ],\n        \"description\": \"Building reference package for storey, area, and thermal envelope evaluation using a transmission-only surrogate and a non-authoritative code placeholder.\",\n        \"digest\": \"a6d193634794b7a0f28af54ea451924314d61e803ced03610efdbfd6570f40b7\",\n        \"disclaimer\": \"This package performs arithmetic surrogates only. It contains no building code, determines no compliance, no occupancy classification, and no safety approval, and it is not an energy model.\",\n        \"domain\": \"building\",\n        \"package_id\": \"building.storey-envelope\",\n        \"reference_subject_id\": \"building-reference\",\n        \"required_capabilities\": [],\n        \"schema_digests\": [\n          \"8ba15360e4e181e5a78686a84394039a27e176477c0edcb72197b4c104ad8b45\"\n        ],\n        \"version\": \"0.1.0\",\n        \"workflow_definition_id\": \"building.envelope-evaluation\"\n      },\n      {\n        \"catalog_step_ids\": [\n          \"mechanical.geometry-check\",\n          \"mechanical.material-check\",\n          \"mechanical.load-check\",\n          \"mechanical.constraint-evaluation\"\n        ],\n        \"description\": \"Mechanical reference package for a bracket-like component: dimensions, material, and a static load case evaluated by bounded closed-form surrogates.\",\n        \"digest\": \"97a2ebade1532e16864d81bc1f42b725c584c14250d1ae1f946eff1d4d5937b5\",\n        \"disclaimer\": \"This package performs arithmetic surrogates only. It is not CAD or CAE, not finite element analysis, not a fastener or tolerance analysis, and not a certification of fitness for any purpose.\",\n        \"domain\": \"mechanical\",\n        \"package_id\": \"mechanical.bracket\",\n        \"reference_subject_id\": \"bracket-reference\",\n        \"required_capabilities\": [],\n        \"schema_digests\": [\n          \"9fb3d2b068184cedff55fe47664f3cd98fabe0528e4324bdeb9bfc16de284721\"\n        ],\n        \"version\": \"0.1.0\",\n        \"workflow_definition_id\": \"mechanical.bracket-evaluation\"\n      },\n      {\n        \"catalog_step_ids\": [\n          \"wing.planform-geometry\",\n          \"wing.span-load\",\n          \"wing.aerodynamic-surrogate\"\n        ],\n        \"description\": \"Wing reference package for span, chord, taper, and span load evaluation using geometric and aerodynamic surrogates that are not certified.\",\n        \"digest\": \"108cd68bf1ec08088f526e5ef0b8f2034199298fe7dc443e7c425e46d2358c71\",\n        \"disclaimer\": \"This package performs surrogate arithmetic only. It is not a lifting-line or panel method, not CFD, not a structural or fatigue analysis, and it certifies no airworthiness, stability, or control property.\",\n        \"domain\": \"wing\",\n        \"package_id\": \"wing.parametric-tapered\",\n        \"reference_subject_id\": \"wing-reference\",\n        \"required_capabilities\": [],\n        \"schema_digests\": [\n          \"898306c1388c1449d0049693aa66e90493f1aef7e84acaed160c8f48bc41d15e\"\n        ],\n        \"version\": \"0.1.0\",\n        \"workflow_definition_id\": \"wing.surrogate-evaluation\"\n      }\n    ],\n    \"workflows\": [\n      {\n        \"available_step_ids\": [\n          \"building.area-model\",\n          \"building.storey-model\",\n          \"building.thermal-envelope\"\n        ],\n        \"definition_id\": \"building.envelope-evaluation\",\n        \"description\": \"This package performs arithmetic surrogates only. It contains no building code, determines no compliance, no occupancy classification, and no safety approval, and it is not an energy model.\",\n        \"domain\": \"building\",\n        \"initial_state\": \"specified\",\n        \"max_replanning_attempts\": 1,\n        \"name\": \"Storey and thermal envelope reference evaluation\",\n        \"states\": [\n          \"assessed\",\n          \"planned\",\n          \"specified\",\n          \"storeyed\"\n        ],\n        \"transitions\": [\n          {\n            \"checkpoint_type\": null,\n            \"from_state\": \"specified\",\n            \"step_id\": \"building.storey-model\",\n            \"to_state\": \"storeyed\",\n            \"transition_id\": \"building.storey\"\n          },\n          {\n            \"checkpoint_type\": null,\n            \"from_state\": \"storeyed\",\n            \"step_id\": \"building.area-model\",\n            \"to_state\": \"planned\",\n            \"transition_id\": \"building.area\"\n          },\n          {\n            \"checkpoint_type\": \"pre_commit\",\n            \"from_state\": \"planned\",\n            \"step_id\": \"building.thermal-envelope\",\n            \"to_state\": \"assessed\",\n            \"transition_id\": \"building.envelope\"\n          }\n        ],\n        \"version\": \"0.1.0\"\n      },\n      {\n        \"available_step_ids\": [\n          \"mechanical.constraint-evaluation\",\n          \"mechanical.geometry-check\",\n          \"mechanical.load-check\",\n          \"mechanical.material-check\"\n        ],\n        \"definition_id\": \"mechanical.bracket-evaluation\",\n        \"description\": \"This package performs arithmetic surrogates only. It is not CAD or CAE, not finite element analysis, not a fastener or tolerance analysis, and not a certification of fitness for any purpose.\",\n        \"domain\": \"mechanical\",\n        \"initial_state\": \"specified\",\n        \"max_replanning_attempts\": 1,\n        \"name\": \"Bracket-like component reference evaluation\",\n        \"states\": [\n          \"assessed\",\n          \"load-cased\",\n          \"material-graded\",\n          \"sectioned\",\n          \"specified\"\n        ],\n        \"transitions\": [\n          {\n            \"checkpoint_type\": null,\n            \"from_state\": \"specified\",\n            \"step_id\": \"mechanical.geometry-check\",\n            \"to_state\": \"sectioned\",\n            \"transition_id\": \"mechanical.section\"\n          },\n          {\n            \"checkpoint_type\": null,\n            \"from_state\": \"sectioned\",\n            \"step_id\": \"mechanical.material-check\",\n            \"to_state\": \"material-graded\",\n            \"transition_id\": \"mechanical.grade\"\n          },\n          {\n            \"checkpoint_type\": null,\n            \"from_state\": \"material-graded\",\n            \"step_id\": \"mechanical.load-check\",\n            \"to_state\": \"load-cased\",\n            \"transition_id\": \"mechanical.load\"\n          },\n          {\n            \"checkpoint_type\": \"pre_commit\",\n            \"from_state\": \"load-cased\",\n            \"step_id\": \"mechanical.constraint-evaluation\",\n            \"to_state\": \"assessed\",\n            \"transition_id\": \"mechanical.assess\"\n          }\n        ],\n        \"version\": \"0.1.0\"\n      },\n      {\n        \"available_step_ids\": [\n          \"wing.aerodynamic-surrogate\",\n          \"wing.planform-geometry\",\n          \"wing.span-load\"\n        ],\n        \"definition_id\": \"wing.surrogate-evaluation\",\n        \"description\": \"This package performs surrogate arithmetic only. It is not a lifting-line or panel method, not CFD, not a structural or fatigue analysis, and it certifies no airworthiness, stability, or control property.\",\n        \"domain\": \"wing\",\n        \"initial_state\": \"specified\",\n        \"max_replanning_attempts\": 1,\n        \"name\": \"Parametric wing surrogate evaluation\",\n        \"states\": [\n          \"assessed\",\n          \"loaded\",\n          \"sized\",\n          \"specified\"\n        ],\n        \"transitions\": [\n          {\n            \"checkpoint_type\": null,\n            \"from_state\": \"specified\",\n            \"step_id\": \"wing.planform-geometry\",\n            \"to_state\": \"sized\",\n            \"transition_id\": \"wing.planform\"\n          },\n          {\n            \"checkpoint_type\": null,\n            \"from_state\": \"sized\",\n            \"step_id\": \"wing.span-load\",\n            \"to_state\": \"loaded\",\n            \"transition_id\": \"wing.load\"\n          },\n          {\n            \"checkpoint_type\": \"pre_commit\",\n            \"from_state\": \"loaded\",\n            \"step_id\": \"wing.aerodynamic-surrogate\",\n            \"to_state\": \"assessed\",\n            \"transition_id\": \"wing.aerodynamics\"\n          }\n        ],\n        \"version\": \"0.1.0\"\n      }\n    ]\n  },\n  \"status\": \"listed\"\n}\n",
+      "system_exit": false
+    },
+    {
+      "argv": [
+        "evaluate",
+        "--domain",
+        "mechanical",
+        "--param",
+        "length_mm=140"
+      ],
+      "exit_code": 0,
+      "stderr_text": "",
+      "stdout_text": "{\n  \"command\": \"evaluate\",\n  \"data\": {\n    \"blocked_step_id\": null,\n    \"completed_step_ids\": [\n      \"mechanical.geometry-check\",\n      \"mechanical.material-check\",\n      \"mechanical.load-check\",\n      \"mechanical.constraint-evaluation\"\n    ],\n    \"disclaimer\": \"This package performs arithmetic surrogates only. It is not CAD or CAE, not finite element analysis, not a fastener or tolerance analysis, and not a certification of fitness for any purpose.\",\n    \"domain\": \"mechanical\",\n    \"evaluations\": [\n      {\n        \"artifact_ids\": [],\n        \"evaluated_at\": \"2026-01-01T00:00:00Z\",\n        \"evaluation_id\": \"eval.mechanical.geometry-check\",\n        \"findings\": [\n          \"Surrogate reference arithmetic only; not a certified analysis and not a substitute for a validated CAD or CAE model.\"\n        ],\n        \"metrics\": [\n          {\n            \"name\": \"plate.length\",\n            \"passed\": null,\n            \"unit\": \"mm\",\n            \"value\": 140.0\n          },\n          {\n            \"name\": \"plate.width\",\n            \"passed\": null,\n            \"unit\": \"mm\",\n            \"value\": 80.0\n          },\n          {\n            \"name\": \"plate.thickness\",\n            \"passed\": true,\n            \"unit\": \"mm\",\n            \"value\": 8.0\n          },\n          {\n            \"name\": \"plate.minimum_thickness\",\n            \"passed\": null,\n            \"unit\": \"mm\",\n            \"value\": 2.0\n          },\n          {\n            \"name\": \"section.gross_area\",\n            \"passed\": null,\n            \"unit\": \"mm^2\",\n            \"value\": 11200.0\n          },\n          {\n            \"name\": \"section.hole_area\",\n            \"passed\": null,\n            \"unit\": \"mm^2\",\n            \"value\": 56.548667764616276\n          },\n          {\n            \"name\": \"section.net_area\",\n            \"passed\": null,\n            \"unit\": \"mm^2\",\n            \"value\": 11143.451332235383\n          },\n          {\n            \"name\": \"section.volume\",\n            \"passed\": null,\n            \"unit\": \"mm^3\",\n            \"value\": 89147.61065788307\n          },\n          {\n            \"name\": \"mass\",\n            \"passed\": null,\n            \"unit\": \"kg\",\n            \"value\": 0.2406985487762843\n          }\n        ],\n        \"passed\": true,\n        \"requirement_id\": null,\n        \"score\": null,\n        \"subject_id\": \"bracket-reference\"\n      },\n      {\n        \"artifact_ids\": [],\n        \"evaluated_at\": \"2026-01-01T00:00:00Z\",\n        \"evaluation_id\": \"eval.mechanical.material-check\",\n        \"findings\": [\n          \"Surrogate reference arithmetic only; not a certified analysis and not a substitute for a validated CAD or CAE model.\",\n          \"Material constants are illustrative placeholders with a declared reference status; they are not certified material data.\"\n        ],\n        \"metrics\": [\n          {\n            \"name\": \"material.density\",\n            \"passed\": null,\n            \"unit\": \"kg/m^3\",\n            \"value\": 2700.0\n          },\n          {\n            \"name\": \"material.yield_strength\",\n            \"passed\": null,\n            \"unit\": \"MPa\",\n            \"value\": 276.0\n          },\n          {\n            \"name\": \"material.elastic_modulus\",\n            \"passed\": null,\n            \"unit\": \"GPa\",\n            \"value\": 68.9\n          },\n          {\n            \"name\": \"material.thermal_expansion\",\n            \"passed\": null,\n            \"unit\": \"1/K\",\n            \"value\": 2.36e-05\n          },\n          {\n            \"name\": \"material.declared_count\",\n            \"passed\": null,\n            \"unit\": null,\n            \"value\": 3.0\n          },\n          {\n            \"name\": \"pattern.material_web\",\n            \"passed\": null,\n            \"unit\": \"mm\",\n            \"value\": 128.0\n          },\n          {\n            \"name\": \"pattern.edge_margin\",\n            \"passed\": true,\n            \"unit\": \"mm\",\n            \"value\": 64.0\n          },\n          {\n            \"name\": \"pattern.minimum_edge_margin\",\n            \"passed\": null,\n            \"unit\": \"mm\",\n            \"value\": 2.0\n          }\n        ],\n        \"passed\": true,\n        \"requirement_id\": null,\n        \"score\": null,\n        \"subject_id\": \"bracket-reference\"\n      },\n      {\n        \"artifact_ids\": [],\n        \"evaluated_at\": \"2026-01-01T00:00:00Z\",\n        \"evaluation_id\": \"eval.mechanical.load-check\",\n        \"findings\": [\n          \"Surrogate reference arithmetic only; not a certified analysis and not a substitute for a validated CAD or CAE model.\"\n        ],\n        \"metrics\": [\n          {\n            \"name\": \"load.applied\",\n            \"passed\": null,\n            \"unit\": \"kN\",\n            \"value\": 1.0\n          },\n          {\n            \"name\": \"load.applied_newtons\",\n            \"passed\": null,\n            \"unit\": \"N\",\n            \"value\": 1000.0\n          },\n          {\n            \"name\": \"load.points\",\n            \"passed\": null,\n            \"unit\": null,\n            \"value\": 2.0\n          },\n          {\n            \"name\": \"load.per_point\",\n            \"passed\": true,\n            \"unit\": \"N\",\n            \"value\": 500.0\n          },\n          {\n            \"name\": \"load.lever_arm\",\n            \"passed\": null,\n            \"unit\": \"mm\",\n            \"value\": 70.0\n          },\n          {\n            \"name\": \"load.bending_moment\",\n            \"passed\": null,\n            \"unit\": \"N*mm\",\n            \"value\": 70000.0\n          },\n          {\n            \"name\": \"load.bound_per_point\",\n            \"passed\": null,\n            \"unit\": \"kN\",\n            \"value\": 150.0\n          }\n        ],\n        \"passed\": true,\n        \"requirement_id\": null,\n        \"score\": null,\n        \"subject_id\": \"bracket-reference\"\n      },\n      {\n        \"artifact_ids\": [],\n        \"evaluated_at\": \"2026-01-01T00:00:00Z\",\n        \"evaluation_id\": \"eval.mechanical.constraint-evaluation\",\n        \"findings\": [\n          \"Surrogate reference arithmetic only; not a certified analysis and not a substitute for a validated CAD or CAE model.\"\n        ],\n        \"metrics\": [\n          {\n            \"name\": \"section.section_modulus\",\n            \"passed\": null,\n            \"unit\": \"mm^3\",\n            \"value\": 853.3333333333334\n          },\n          {\n            \"name\": \"stress.bending\",\n            \"passed\": null,\n            \"unit\": \"MPa\",\n            \"value\": 82.03125\n          },\n          {\n            \"name\": \"stress.shear\",\n            \"passed\": null,\n            \"unit\": \"MPa\",\n            \"value\": 0.78125\n          },\n          {\n            \"name\": \"stress.surrogate\",\n            \"passed\": true,\n            \"unit\": \"MPa\",\n            \"value\": 82.04240995515673\n          },\n          {\n            \"name\": \"stress.maximum\",\n            \"passed\": true,\n            \"unit\": \"MPa\",\n            \"value\": 150.0\n          },\n          {\n            \"name\": \"margin.utilisation\",\n            \"passed\": null,\n            \"unit\": null,\n            \"value\": 0.29725510853317655\n          },\n          {\n            \"name\": \"margin.safety_factor\",\n            \"passed\": true,\n            \"unit\": null,\n            \"value\": 3.364113757151428\n          },\n          {\n            \"name\": \"margin.target_safety_factor\",\n            \"passed\": null,\n            \"unit\": null,\n            \"value\": 2.0\n          },\n          {\n            \"name\": \"score.safety\",\n            \"passed\": null,\n            \"unit\": null,\n            \"value\": 0.910823\n          }\n        ],\n        \"passed\": true,\n        \"requirement_id\": null,\n        \"score\": 0.910823,\n        \"subject_id\": \"bracket-reference\"\n      }\n    ],\n    \"findings\": [\n      \"Surrogate reference arithmetic only; not a certified analysis and not a substitute for a validated CAD or CAE model.\",\n      \"Surrogate reference arithmetic only; not a certified analysis and not a substitute for a validated CAD or CAE model.\",\n      \"Material constants are illustrative placeholders with a declared reference status; they are not certified material data.\",\n      \"Surrogate reference arithmetic only; not a certified analysis and not a substitute for a validated CAD or CAE model.\",\n      \"Surrogate reference arithmetic only; not a certified analysis and not a substitute for a validated CAD or CAE model.\"\n    ],\n    \"package_digest\": \"97a2ebade1532e16864d81bc1f42b725c584c14250d1ae1f946eff1d4d5937b5\",\n    \"package_id\": \"mechanical.bracket\",\n    \"package_version\": \"0.1.0\",\n    \"parameters_digest\": \"3ba63e41a46e41838f9bf5865c02fcfbce5b359af323fd6a251d1d69167d6f84\",\n    \"passed\": true,\n    \"score\": 0.910823,\n    \"status\": \"completed\",\n    \"subject_id\": \"bracket-reference\"\n  },\n  \"status\": \"passed\"\n}\n",
+      "system_exit": false
+    },
+    {
+      "argv": [
+        "evaluate",
+        "--domain",
+        "mechanical",
+        "--param",
+        "thickness_mm=0.5",
+        "--param",
+        "minimum_thickness_mm=5.0"
+      ],
+      "exit_code": 3,
+      "stderr_text": "",
+      "stdout_text": "{\n  \"command\": \"evaluate\",\n  \"data\": {\n    \"blocked_step_id\": \"mechanical.geometry-check\",\n    \"completed_step_ids\": [],\n    \"disclaimer\": \"This package performs arithmetic surrogates only. It is not CAD or CAE, not finite element analysis, not a fastener or tolerance analysis, and not a certification of fitness for any purpose.\",\n    \"domain\": \"mechanical\",\n    \"evaluations\": [\n      {\n        \"artifact_ids\": [],\n        \"evaluated_at\": \"2026-01-01T00:00:00Z\",\n        \"evaluation_id\": \"eval.mechanical.geometry-check\",\n        \"findings\": [\n          \"Surrogate reference arithmetic only; not a certified analysis and not a substitute for a validated CAD or CAE model.\",\n          \"Hard constraint failed: thickness_below_minimum; the plate thickness is below the declared minimum thickness.\"\n        ],\n        \"metrics\": [\n          {\n            \"name\": \"plate.length\",\n            \"passed\": null,\n            \"unit\": \"mm\",\n            \"value\": 120.0\n          },\n          {\n            \"name\": \"plate.width\",\n            \"passed\": null,\n            \"unit\": \"mm\",\n            \"value\": 80.0\n          },\n          {\n            \"name\": \"plate.thickness\",\n            \"passed\": false,\n            \"unit\": \"mm\",\n            \"value\": 0.5\n          },\n          {\n            \"name\": \"plate.minimum_thickness\",\n            \"passed\": null,\n            \"unit\": \"mm\",\n            \"value\": 5.0\n          },\n          {\n            \"name\": \"section.gross_area\",\n            \"passed\": null,\n            \"unit\": \"mm^2\",\n            \"value\": 9600.0\n          },\n          {\n            \"name\": \"section.hole_area\",\n            \"passed\": null,\n            \"unit\": \"mm^2\",\n            \"value\": 56.548667764616276\n          },\n          {\n            \"name\": \"section.net_area\",\n            \"passed\": null,\n            \"unit\": \"mm^2\",\n            \"value\": 9543.451332235383\n          },\n          {\n            \"name\": \"section.volume\",\n            \"passed\": null,\n            \"unit\": \"mm^3\",\n            \"value\": 4771.725666117692\n          },\n          {\n            \"name\": \"mass\",\n            \"passed\": null,\n            \"unit\": \"kg\",\n            \"value\": 0.012883659298517768\n          }\n        ],\n        \"passed\": false,\n        \"requirement_id\": null,\n        \"score\": null,\n        \"subject_id\": \"bracket-reference\"\n      }\n    ],\n    \"findings\": [\n      \"Surrogate reference arithmetic only; not a certified analysis and not a substitute for a validated CAD or CAE model.\",\n      \"Hard constraint failed: thickness_below_minimum; the plate thickness is below the declared minimum thickness.\"\n    ],\n    \"package_digest\": \"97a2ebade1532e16864d81bc1f42b725c584c14250d1ae1f946eff1d4d5937b5\",\n    \"package_id\": \"mechanical.bracket\",\n    \"package_version\": \"0.1.0\",\n    \"parameters_digest\": \"611109b2bbfbf2571871be720f02319b470b3e159dc0f4cd8f60af82cbf1d4b6\",\n    \"passed\": false,\n    \"score\": null,\n    \"status\": \"failed\",\n    \"subject_id\": \"bracket-reference\"\n  },\n  \"status\": \"failed\"\n}\n",
+      "system_exit": false
+    },
+    {
+      "argv": [
+        "events",
+        "--limit",
+        "10"
+      ],
+      "exit_code": 0,
+      "stderr_text": "",
+      "stdout_text": "{\n  \"command\": \"events\",\n  \"data\": {\n    \"after_sequence\": 0,\n    \"count\": 2,\n    \"events\": [\n      {\n        \"aggregate_id\": \"bracket-reference\",\n        \"digest\": \"dcc3ce111a0c009a3f3cdf8f6a3751e4f9703fd029b9e429d3ffae987309df54\",\n        \"event_type\": \"domain.evaluated\",\n        \"occurred_at\": \"2026-01-01T00:00:00Z\",\n        \"payload\": {\n          \"blocked_step_id\": null,\n          \"completed_step_ids\": [\n            \"mechanical.geometry-check\",\n            \"mechanical.material-check\",\n            \"mechanical.load-check\",\n            \"mechanical.constraint-evaluation\"\n          ],\n          \"domain\": \"mechanical\",\n          \"evaluation_count\": 4,\n          \"package_digest\": \"97a2ebade1532e16864d81bc1f42b725c584c14250d1ae1f946eff1d4d5937b5\",\n          \"parameters_digest\": \"3ba63e41a46e41838f9bf5865c02fcfbce5b359af323fd6a251d1d69167d6f84\",\n          \"passed\": true,\n          \"status\": \"completed\"\n        },\n        \"payload_omitted\": false,\n        \"run_id\": null,\n        \"sequence\": 1,\n        \"workflow_id\": null\n      },\n      {\n        \"aggregate_id\": \"bracket-reference\",\n        \"digest\": \"9af956a6db1ecf78a14b3cc0467beecdc989866bb0a3cbe16f72ea35663936bb\",\n        \"event_type\": \"domain.evaluated\",\n        \"occurred_at\": \"2026-01-01T00:00:03Z\",\n        \"payload\": {\n          \"blocked_step_id\": \"mechanical.geometry-check\",\n          \"completed_step_ids\": [],\n          \"domain\": \"mechanical\",\n          \"evaluation_count\": 1,\n          \"package_digest\": \"97a2ebade1532e16864d81bc1f42b725c584c14250d1ae1f946eff1d4d5937b5\",\n          \"parameters_digest\": \"611109b2bbfbf2571871be720f02319b470b3e159dc0f4cd8f60af82cbf1d4b6\",\n          \"passed\": false,\n          \"status\": \"failed\"\n        },\n        \"payload_omitted\": false,\n        \"run_id\": null,\n        \"sequence\": 2,\n        \"workflow_id\": null\n      }\n    ],\n    \"next_after_sequence\": 2,\n    \"payload_truncated\": false\n  },\n  \"status\": \"listed\"\n}\n",
+      "system_exit": false
+    },
+    {
+      "argv": [
+        "workflow-status",
+        "--workflow-id",
+        "missing-workflow"
+      ],
+      "exit_code": 1,
+      "stderr_text": "{\n  \"error\": {\n    \"code\": \"unknown_workflow\",\n    \"message\": \"workflow missing-workflow has not been started\"\n  }\n}\n",
+      "stdout_text": "",
+      "system_exit": false
+    },
+    {
+      "argv": [
+        "commit-revision",
+        "--request-id",
+        "missing-commit"
+      ],
+      "exit_code": 1,
+      "stderr_text": "{\n  \"error\": {\n    \"code\": \"unknown_prepared_revision\",\n    \"message\": \"revision commit missing-commit has no recorded preparation\"\n  }\n}\n",
+      "stdout_text": "",
+      "system_exit": false
+    },
+    {
+      "argv": [],
+      "exit_code": 2,
+      "stderr_text": "usage: kala-agent [-h] [--data-dir DATA_DIR] command ...\nkala-agent: error: the following arguments are required: command\n",
+      "stdout_text": "",
+      "system_exit": true
+    },
+    {
+      "argv": [
+        "--help"
+      ],
+      "exit_code": 0,
+      "stderr_text": "",
+      "stdout_full_length": 1603,
+      "stdout_full_sha256": "0ca256dfc795b6bc6b3293b237cf1d378614f38a6393a5d6dbd23d4b5cfedd8a",
+      "stdout_text": "usage: kala-agent [-h] [--data-dir DATA_DIR] command ...\n\nLocal, offline engineering design agent over the declarative domain packages.\nEvery command prints one JSON document and returns an exit code. No\nauthentication, no network access.\n\npositional arguments:\n  command\n    init               Create or verify the local data directory and report\n                       local facts.\n    domains            List every registered domain package and workflow\n                       definition.\n    token              Print the bearer token of the running local API launch.\n    serve              Serve the local API on the loopback interface until\n                       interrupted.\n    evaluate           Evaluate one reference design of a domain package.\n    run-mechanical     Run the mechanical reference workflow to its policy\n                       checkpoint.\n    workflow-status    Print the current state of one workflow.\n    approve            Approve the pending policy checkpoint of a workflow.\n... (truncated; see stdout_full_sha256)",
+      "system_exit": true
+    }
+  ],
+  "kind": "cli_launch",
+  "normalizations": [
+    {
+      "field": "temporary data directory paths in stdout/stderr",
+      "reason": "the fixture never records the operator's filesystem paths",
+      "value": "<DATA_DIR>"
+    }
+  ],
+  "notes": [
+    "Commands run in-process with an injected fixed clock and a temporary data directory.",
+    "No serve command is started; only the resolved launch contract is recorded.",
+    "Help output is summarized by usage line, length, and digest; prose is not frozen."
+  ],
+  "studio": {
+    "default_host": "127.0.0.1",
+    "default_port": 8765,
+    "electron_launch_contract": {
+      "arguments": [
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "<port>"
+      ],
+      "authorization_environment_variable": "KALA_STUDIO_TOKEN",
+      "loopback_only": true,
+      "packaged_backend_path": "resources/backend/kala-studio[.exe]",
+      "readiness_timeout_seconds": 15,
+      "source": "migration audit inventory; not re-measured by this corpus",
+      "stdout": "one JSON launch banner before serving",
+      "termination": "SIGTERM, then SIGKILL after 3 seconds"
+    },
+    "exit_codes": {
+      "error": 1,
+      "ok": 0,
+      "usage": 2
+    },
+    "parser": {
+      "commands": [],
+      "description": "Run the Kala Studio standalone HTTP service on a loopback interface. The host defaults to 127.0.0.1 and is refused for anything else; the token is taken from KALA_STUDIO_TOKEN or minted into the studio data directory. With --worker the same command runs the internal geometry worker instead (ADR-0010).",
+      "epilog": "Exit codes: 0 served; 1 the uvicorn module is not installed; 2 a usage error occurred.",
+      "help_first_line": "usage: python -m kala_agent.studio [-h] [--host HOST] [--port PORT]",
+      "help_length": 1620,
+      "help_sha256": "c136b87c0dc4b7c11b1942e531d27c8a7bdb6bce31299316f60d4104d6b9ef27",
+      "prog": "python -m kala_agent.studio",
+      "top_level_options": [
+        {
+          "choices": null,
+          "default": "==SUPPRESS==",
+          "dest": "help",
+          "help": "show this help message and exit",
+          "nargs": 0,
+          "option_strings": [
+            "-h",
+            "--help"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "127.0.0.1",
+          "dest": "host",
+          "help": "loopback address; refused if not 127.0.0.1, ::1, or localhost",
+          "nargs": null,
+          "option_strings": [
+            "--host"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": 8765,
+          "dest": "port",
+          "help": "TCP port to bind, 1 to 65535",
+          "nargs": null,
+          "option_strings": [
+            "--port"
+          ],
+          "required": false,
+          "type": "int"
+        },
+        {
+          "choices": null,
+          "default": null,
+          "dest": "data_dir",
+          "help": "absolute path to the studio data directory; with --worker it is required (KALA_STUDIO_DATA_DIR is accepted instead); otherwise it defaults to the standard Kala data directory or the system temporary folder",
+          "nargs": null,
+          "option_strings": [
+            "--data-dir"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": null,
+          "dest": "static_dist",
+          "help": "override the static UI directory; otherwise the studio uses the frozen or repo-relative dist directory",
+          "nargs": null,
+          "option_strings": [
+            "--static-dist"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": false,
+          "dest": "worker",
+          "help": "run the internal geometry worker (ADR-0010): bind 127.0.0.1:0, require KALA_WORKER_TOKEN (at least 32 characters), and print one KALA_WORKER_READY line; --host, --port, and --static-dist are ignored",
+          "nargs": 0,
+          "option_strings": [
+            "--worker"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "usage_first_line": "usage: python -m kala_agent.studio [-h] [--host HOST] [--port PORT]"
+    },
+    "program_name": "python -m kala_agent.studio",
+    "targets": [
+      {
+        "expected": {
+          "ok": true,
+          "value": {
+            "host": "127.0.0.1",
+            "port": 8765,
+            "url": "http://127.0.0.1:8765"
+          }
+        },
+        "host": null,
+        "port": null
+      },
+      {
+        "expected": {
+          "ok": true,
+          "value": {
+            "host": "127.0.0.1",
+            "port": 8765,
+            "url": "http://127.0.0.1:8765"
+          }
+        },
+        "host": "127.0.0.1",
+        "port": 8765
+      },
+      {
+        "expected": {
+          "ok": true,
+          "value": {
+            "host": "::1",
+            "port": 9000,
+            "url": "http://[::1]:9000"
+          }
+        },
+        "host": "::1",
+        "port": 9000
+      },
+      {
+        "expected": {
+          "ok": true,
+          "value": {
+            "host": "localhost",
+            "port": 8123,
+            "url": "http://localhost:8123"
+          }
+        },
+        "host": "localhost",
+        "port": 8123
+      },
+      {
+        "expected": {
+          "error_type": "ValueError",
+          "message": "the studio binds and serves loopback interfaces only; expected one of: 127.0.0.1, ::1, localhost",
+          "ok": false
+        },
+        "host": "0.0.0.0",
+        "port": 8765
+      },
+      {
+        "expected": {
+          "error_type": "ValueError",
+          "message": "the studio binds and serves loopback interfaces only; expected one of: 127.0.0.1, ::1, localhost",
+          "ok": false
+        },
+        "host": "192.168.1.5",
+        "port": 8765
+      },
+      {
+        "expected": {
+          "error_type": "ValueError",
+          "message": "port must be between 1 and 65535",
+          "ok": false
+        },
+        "host": "127.0.0.1",
+        "port": 0
+      },
+      {
+        "expected": {
+          "error_type": "ValueError",
+          "message": "port must be between 1 and 65535",
+          "ok": false
+        },
+        "host": "127.0.0.1",
+        "port": 70000
+      }
+    ],
+    "token_environment_variable": "KALA_STUDIO_TOKEN",
+    "token_file_name": "studio-token",
+    "token_validation": [
+      {
+        "expected": {
+          "ok": true,
+          "value": "corpus-studio-token-0123456789abcdef"
+        },
+        "token_length": 36
+      },
+      {
+        "expected": {
+          "error_type": "ValueError",
+          "message": "the studio token must be between 16 and 128 characters",
+          "ok": false
+        },
+        "token_length": 5
+      },
+      {
+        "expected": {
+          "error_type": "ValueError",
+          "message": "the studio token must be between 16 and 128 characters",
+          "ok": false
+        },
+        "token_length": 129
+      },
+      {
+        "expected": {
+          "error_type": "ValueError",
+          "message": "the studio token contains unsupported characters",
+          "ok": false
+        },
+        "token_length": 27
+      },
+      {
+        "expected": {
+          "error_type": "ValueError",
+          "message": "the studio token must be between 16 and 128 characters",
+          "ok": false
+        },
+        "token_length": 0
+      }
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+# GPT-6.1-Sol independent review — narrow Windows repair required
+
+Consumed original terminal T3 task result; no live child turns. Actual independent checks on Linux: all40 locked offline release tests passed (including real Python cross-readers, threads/processes and hostile symlink/bucket swaps), fmt clean, all-target clippy `-D warnings` clean. Independent Windows all-target check and clippy for x86_64-pc-windows-msvc also passed. Read actual library, Unix syscall and Windows NT implementation, plus attack tests. No full Windows runtime claim.
+
+Linux behavior/security is acceptable in this slice. Holding the root capability and rejecting a replaced objects identity is an intentional strengthening: keep it and document that a root rename does not redirect existing store operations. Existing creation-mode/inherited-Windows-ACL and directory-flush limitations are explicit; do not claim private Windows DACLs or Linux-equivalent directory durability.
+
+## Required P2 Windows create-path validation
+
+`sys/windows.rs::Dir::open_bucket` validates reparse attributes and directory type for the read branch and one fallback handle, but the successful `FILE_OPEN_IF` branch returns its handle directly and the fallback reopens another handle with write access without checking that final handle. Thus the handle actually used as publication parent has not been subjected to the same reparse/directory checks. `FILE_OPEN_REPARSE_POINT` opens the final reparse object rather than making the explicit attribute check unnecessary. Put final validation after all branch selections and before constructing Bucket, so every selected writable/readable bucket parent is verified. Keep the tests' exact symlink refusal contract and add/extend Windows coverage for successful existing-directory create/open and replacement at the fallback reopen boundary. Production validation must be unconditional; do not rely on an assumed later NT error or compile success.
+
+## Windows rename review question to resolve in this repair
+
+`rename_by_handle` uses SetFileInformationByHandle/FileRenameInfo with RootDirectory=NULL and a bare digest name. Confirm, from a reliable Windows API contract or local source, the target is always the opened bucket, independent of process cwd and bucket/root renames. This is a review question, not a confirmed claim that the current API is broken. Prefer an explicit supported directory-handle-relative operation if ambiguity remains; no absolute path re-resolution. Add Windows production-path ordinary put/get/idempotence tests with cwd different from the store and a held-bucket rename/swap scenario. RootDirectory/file layout and flags must match the API actually used. Cross-check compilation; explicitly retain runtime proof pending without a Windows host.
+
+External documentation lookup through Firecrawl developer index/scrape was unavailable: keyless requests rejected this host IP as VPN/proxy and require an API key. No reference passage was fetched, and no inferred rename semantic was presented as proven. Local implementation/source reasoning and worker's explicit evidence must decide the question; do not log or request credentials.
+
+Original brief and delivery report remain applicable. No Linux source change needed unless a concrete shared regression is reproduced. No unrelated source, root manifest/lock, user files or accepted crate edits. Return final reviewable repair and exact verification in REPORT.md/SESSION-R2.md.

@@ -1,0 +1,10 @@
+# cad-r2: kala-cad, the Rust → OpenCascade adapter core (ADR-0010 phase 2)
+Read `../../WAVE.md`, ADR-0009/0010/0011, `/home/v9i/Projects/Kala-Agent/.mece/waves/rust-backend-20261019/cells/cad/{TASK.md,LAUNCH.md}` and anything the interrupted cad-r1 left in `backend/crates/kala-cad` (it reportedly has 64 passing tests: inspect them and keep what is sound), plus the Python reference you must match: `src/kala_agent/studio/design/{compile_ocp.py,measure.py,mesh.py,importer.py}` and their tests.
+Own: `backend/crates/kala-cad/**` (standalone workspace and lock). OCCT 7.9 headers are at `/usr/include/opencascade`; the libs (TKernel, TKPrim, TKBO, TKHLR, TKDESTEP/TKSTEP, TKMesh, …) are in `/usr/lib`. Use a NARROW C++ shim (`cxx` or `cc` + `extern "C"`) that only calls OCCT. All geometry is computed by OCCT. Discover OCCT via pkg-config/cmake or env `OCCT_INCLUDE_DIR`/`OCCT_LIB_DIR`, so the Windows (MSVC + vcpkg) build can reuse the same build.rs; document the Windows env.
+Implement, with the exact semantics of the Python modules:
+- compile a ConstructionScript (sketch/extrude/revolve/pocket/place/fuse; refusals with identical messages);
+- measure (volume, area, centroid, optimal bounds, BRepCheck validity, solid count);
+- tessellate within the existing mesh limits (BRepMesh, coarser retry);
+- STEP write (with the timestamp/counter normalisation option used by the corpus) and STEP read/import (view-only, size-limited).
+Parity tests: all 28 corpus cases (volume 1e-6 rel, bounds 0.001 mm); the L-bracket 35571.416047; import of a Python-written STEP and of a Rust-written STEP giving identical bounds; refusal messages identical to Python for every unsupported op; a live differential against the Python functions (test-only) over a randomized deterministic script corpus.
+Full Rust gates. Memory safety: no OCCT exception crosses FFI (catch Standard_Failure in C++ and return typed errors), no leaks (handles freed and measured over 1000 compile cycles), Send/Sync only where OCCT objects are not shared across threads. REPORT.md, including the Windows build notes.

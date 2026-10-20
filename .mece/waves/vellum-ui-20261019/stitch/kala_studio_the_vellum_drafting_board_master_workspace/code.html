@@ -1,0 +1,1575 @@
+<!DOCTYPE html><html lang="en" style=""><head></head><body><svg class="inline-defs-container" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"></svg>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440, height=900, initial-scale=1.0">
+<title>Kala Studio // The Vellum Drafting Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&amp;family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&amp;family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+  :root {
+    --vellum-sheet: #F6F3EB;
+    --vellum-margin: #EFECE4;
+    --vellum-card: #FAF8F2;
+    --graphite-2b: #23211E;
+    --graphite-2h: #7A756C;
+    --graphite-hairline: #C8C2B6;
+    --grid-major: #DFDBD0;
+    --grid-minor: #EAE6DC;
+    --redline: #C84B31;
+    --prussian-blue: #2B5B84;
+    --stamp-green: #2A6B4C;
+    --boxwood-ruler: #E8E1CE;
+    --boxwood-border: #BDAF95;
+    --font-heading: 'Space Grotesk', -apple-system, sans-serif;
+    --font-handwritten: 'Architects Daughter', cursive;
+    --font-sans: 'Inter', -apple-system, sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body, html {
+    width: 1440px;
+    height: 900px;
+    overflow: hidden;
+    background-color: var(--vellum-margin);
+    font-family: var(--font-sans);
+    color: var(--graphite-2b);
+  }
+
+  /* Workbench Master 4-Zone Grid (1440x900) */
+  .workbench-container {
+    display: grid;
+    grid-template-columns: 340px 800px 300px;
+    grid-template-rows: 900px;
+    width: 1440px;
+    height: 900px;
+    position: relative;
+    background: #E8E4DA;
+  }
+
+  /* Paper textures and noise */
+  .paper-grain {
+    background-color: var(--vellum-sheet);
+    background-image: 
+      radial-gradient(#d3cec0 0.5px, transparent 0.5px),
+      radial-gradient(#e0dbce 0.5px, var(--vellum-sheet) 0.5px);
+    background-size: 20px 20px;
+    background-position: 0 0, 10px 10px;
+  }
+
+  /* ================= ZONE 1: LEFT SIDEBAR (340px) ================= */
+  .zone-left-margin {
+    width: 340px;
+    height: 900px;
+    background: var(--vellum-margin);
+    border-right: 1px solid var(--graphite-hairline);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 10;
+    box-shadow: 2px 0 12px rgba(35, 33, 30, 0.04);
+  }
+
+  /* Engineer pad binding edge with punch-holes & perforation */
+  .pad-binding-header {
+    padding: 16px 20px 14px 24px;
+    border-bottom: 1px dashed var(--graphite-hairline);
+    background: #EBE7DD;
+    position: relative;
+  }
+  .pad-binding-header::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 8px;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #D5CEBE;
+    border: 1px solid #BAAF9C;
+  }
+
+  .agent-title-stamp {
+    font-family: var(--font-heading);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--graphite-2b);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .status-stamp-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 600;
+    color: var(--stamp-green);
+    background: rgba(42, 107, 76, 0.08);
+    border: 1px solid rgba(42, 107, 76, 0.3);
+    padding: 2px 6px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .status-dot-green {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--stamp-green);
+    box-shadow: 0 0 4px rgba(42, 107, 76, 0.6);
+  }
+
+  /* Taped starter chips */
+  .starter-chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--graphite-hairline);
+    background: rgba(246, 243, 235, 0.6);
+  }
+  .tape-chip {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--graphite-2b);
+    background: #FAF7EE;
+    border: 1px solid #D5CEBD;
+    padding: 4px 8px;
+    border-radius: 2px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .tape-chip::before {
+    content: "";
+    position: absolute;
+    top: -3px;
+    left: 20%;
+    width: 14px;
+    height: 6px;
+    background: rgba(230, 215, 175, 0.55);
+    border: 0.5px solid rgba(190, 175, 140, 0.5);
+    transform: rotate(-3deg);
+  }
+  .tape-chip:hover {
+    background: #FFF;
+    border-color: var(--graphite-2b);
+    transform: translateY(-1px);
+  }
+
+  /* Ruled note thread */
+  .chat-thread-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    /* Faint blue/gray lined paper effect */
+    background: linear-gradient(to bottom, transparent 23px, #E6E2D8 24px);
+    background-size: 100% 24px;
+    line-height: 24px;
+  }
+  .chat-thread-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+  .chat-thread-scroll::-webkit-scrollbar-thumb {
+    background: var(--graphite-hairline);
+  }
+
+  .message-block {
+    position: relative;
+    padding-left: 10px;
+    border-left: 2px solid var(--graphite-hairline);
+  }
+  .message-block.user-entry {
+    border-left-color: var(--prussian-blue);
+  }
+  .message-block.agent-entry {
+    border-left-color: var(--graphite-2b);
+  }
+
+  .message-meta-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    height: 20px;
+  }
+  .message-author {
+    font-family: var(--font-heading);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--graphite-2h);
+  }
+  .message-time {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: #969085;
+  }
+
+  .user-speech-bubble {
+    font-family: var(--font-sans);
+    font-size: 11.5px;
+    color: var(--graphite-2b);
+    line-height: 1.45;
+    background: #FAF7EF;
+    border: 1px solid #DCD5C6;
+    padding: 8px 10px;
+    border-radius: 2px;
+  }
+
+  .agent-speech-bubble {
+    font-family: var(--font-sans);
+    font-size: 11.5px;
+    color: var(--graphite-2b);
+    line-height: 1.5;
+    background: #FDFBF5;
+    border: 1px solid #D4CCC0;
+    padding: 10px;
+    border-radius: 2px;
+  }
+  .agent-speech-bubble p {
+    margin-bottom: 8px;
+  }
+
+  /* Inline mini drafted dimension table */
+  .inline-draft-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    margin: 8px 0;
+    background: #F4F0E4;
+    border: 1px solid #CBC3B3;
+  }
+  .inline-draft-table th {
+    text-align: left;
+    padding: 4px 6px;
+    background: #EBE4D5;
+    color: var(--graphite-2h);
+    font-weight: 600;
+    font-size: 9px;
+    border-bottom: 1px solid #CBC3B3;
+  }
+  .inline-draft-table td {
+    padding: 4px 6px;
+    border-bottom: 1px dotted #DCD6C8;
+    color: var(--graphite-2b);
+  }
+  .inline-draft-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .prussian-note-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    color: var(--prussian-blue);
+    background: rgba(43, 91, 132, 0.08);
+    border: 1px dashed rgba(43, 91, 132, 0.35);
+    padding: 3px 6px;
+    border-radius: 2px;
+    margin-top: 4px;
+  }
+
+  /* Bottom composer */
+  .zone-left-composer {
+    padding: 12px 16px 14px 16px;
+    background: #EBE6DA;
+    border-top: 1px solid var(--graphite-hairline);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .tactile-input-wrapper {
+    position: relative;
+    background: #FFFDF8;
+    border: 1px solid #B8B0A0;
+    border-radius: 2px;
+    padding: 8px 10px;
+    box-shadow: inset 0 1px 3px rgba(35, 33, 30, 0.05);
+  }
+  .tactile-textarea {
+    width: 100%;
+    height: 48px;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: var(--font-sans);
+    font-size: 11.5px;
+    color: var(--graphite-2b);
+    resize: none;
+    line-height: 1.4;
+  }
+  .tactile-textarea::placeholder {
+    color: #9E988D;
+    font-style: italic;
+  }
+
+  .composer-tools-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 4px;
+    border-top: 1px dotted #DCD4C4;
+  }
+  .tool-icon-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tool-glyph-btn {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #F3EFE4;
+    border: 1px solid #CCC5B5;
+    border-radius: 2px;
+    color: var(--graphite-2b);
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.1s ease;
+  }
+  .tool-glyph-btn:hover {
+    background: #FFF;
+    border-color: var(--graphite-2b);
+  }
+
+  .consent-stamp-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 8.5px;
+    color: var(--graphite-2h);
+    cursor: pointer;
+  }
+  .consent-stamp-label input[type="checkbox"] {
+    accent-color: var(--stamp-green);
+    cursor: pointer;
+  }
+
+  .draft-part-btn {
+    width: 100%;
+    height: 30px;
+    background: var(--graphite-2b);
+    color: #F6F3EB;
+    border: none;
+    font-family: var(--font-heading);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.15s ease;
+  }
+  .draft-part-btn:hover {
+    background: #393632;
+  }
+
+  /* ================= ZONE 2: CENTER MAIN VIEWPORT (800px) ================= */
+  .zone-center-viewport {
+    width: 800px;
+    height: 900px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    background: var(--vellum-sheet);
+    overflow: hidden;
+  }
+
+  /* Starts directly at the VERY TOP EDGE (NO HEADER BAR ABOVE) */
+  .vellum-canvas-surface {
+    width: 800px;
+    height: 852px; /* 900 - 48px bottom bar */
+    position: relative;
+    background-color: var(--vellum-sheet);
+    overflow: hidden;
+  }
+
+  /* Outer Drafting Coordinate Border (Zone Coordinates A-F, 1-8) */
+  .drafting-coordinate-frame {
+    position: absolute;
+    inset: 14px 14px 14px 14px;
+    border: 1.5px solid var(--graphite-2b);
+    pointer-events: none;
+    z-index: 5;
+  }
+  .drafting-coordinate-frame::after {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border: 0.5px solid var(--graphite-hairline);
+  }
+
+  /* Coordinate ticks labels */
+  .coord-tick-h {
+    position: absolute;
+    top: -12px;
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0 40px;
+    font-family: var(--font-mono);
+    font-size: 8px;
+    font-weight: 600;
+    color: var(--graphite-2h);
+  }
+  .coord-tick-h.bottom {
+    top: auto;
+    bottom: -12px;
+  }
+  .coord-tick-v {
+    position: absolute;
+    left: -12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    padding: 40px 0;
+    font-family: var(--font-mono);
+    font-size: 8px;
+    font-weight: 600;
+    color: var(--graphite-2h);
+  }
+  .coord-tick-v.right {
+    left: auto;
+    right: -12px;
+  }
+
+  /* Delicate hand-drawn pencil isometric/ortho grid SVG overlay */
+  .vellum-grid-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.75;
+  }
+
+  /* Floating mode toggle pill */
+  .center-view-toggle-pill {
+    position: absolute;
+    top: 26px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 15;
+    background: rgba(253, 251, 246, 0.95);
+    border: 1px solid var(--graphite-2b);
+    padding: 3px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    box-shadow: 0 2px 6px rgba(35, 33, 30, 0.08);
+  }
+  .pill-tab-item {
+    font-family: var(--font-heading);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 4px 10px;
+    border-radius: 1px;
+    color: var(--graphite-2h);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .pill-tab-item.active {
+    background: var(--graphite-2b);
+    color: #F6F3EB;
+  }
+
+  /* Top Right Status Badge on Canvas */
+  .canvas-top-right-meta {
+    position: absolute;
+    top: 28px;
+    right: 26px;
+    z-index: 15;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .stamp-badge {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 3px 8px;
+    border-radius: 1px;
+    text-transform: uppercase;
+  }
+  .stamp-badge.prussian {
+    color: var(--prussian-blue);
+    background: rgba(43, 91, 132, 0.08);
+    border: 1px solid rgba(43, 91, 132, 0.3);
+  }
+  .stamp-badge.forest {
+    color: var(--stamp-green);
+    background: rgba(42, 107, 76, 0.08);
+    border: 1px solid rgba(42, 107, 76, 0.35);
+  }
+
+  /* Centerpiece: Mechanical L-Bracket SVG Drafting Stage */
+  .cad-draft-stage {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4;
+  }
+
+  /* Classical drafted Title Block watermark in bottom-left corner */
+  .drafted-title-block {
+    position: absolute;
+    bottom: 24px;
+    left: 24px;
+    z-index: 10;
+    background: rgba(250, 248, 242, 0.92);
+    border: 1.5px solid var(--graphite-2b);
+    display: grid;
+    grid-template-columns: 120px 80px 80px 80px;
+    grid-template-rows: auto auto;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--graphite-2b);
+  }
+  .title-cell {
+    padding: 4px 6px;
+    border-right: 1px solid var(--graphite-hairline);
+    border-bottom: 1px solid var(--graphite-hairline);
+  }
+  .title-cell:last-child {
+    border-right: none;
+  }
+  .title-label {
+    font-size: 7.5px;
+    text-transform: uppercase;
+    color: var(--graphite-2h);
+    display: block;
+    margin-bottom: 1px;
+  }
+  .title-val {
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  /* Alt+Space Floating Companion Indicator */
+  .slide-rule-watermark {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    z-index: 10;
+    background: rgba(246, 243, 235, 0.9);
+    border: 1px dashed var(--graphite-hairline);
+    padding: 4px 8px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--graphite-2h);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .kbd-key {
+    background: #E8E3D5;
+    border: 1px solid #C4BCAB;
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-weight: 600;
+    color: var(--graphite-2b);
+  }
+
+  /* ================= ZONE 3: BOTTOM END BAR (48px) ================= */
+  .zone-bottom-bar {
+    width: 800px;
+    height: 48px;
+    background: var(--boxwood-ruler);
+    border-top: 1.5px solid var(--graphite-2b);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    position: relative;
+    z-index: 20;
+    /* Boxwood ruler hairline measurement markings on top edge */
+    background-image: 
+      linear-gradient(to right, var(--graphite-2h) 1px, transparent 1px),
+      linear-gradient(to right, var(--graphite-hairline) 1px, transparent 1px);
+    background-size: 20px 8px, 4px 4px;
+    background-repeat: repeat-x;
+    background-position: top left, top left;
+  }
+
+  .ruler-cluster-left {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .ruler-tool-btn {
+    height: 28px;
+    padding: 0 7px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #F4EFE2;
+    border: 1px solid var(--boxwood-border);
+    color: var(--graphite-2b);
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    cursor: pointer;
+    border-radius: 1px;
+    transition: all 0.1s ease;
+  }
+  .ruler-tool-btn.active {
+    background: var(--graphite-2b);
+    color: #F6F3EB;
+    border-color: var(--graphite-2b);
+  }
+  .ruler-tool-btn:hover:not(.active) {
+    background: #FFF;
+    border-color: var(--graphite-2b);
+  }
+
+  .ruler-cluster-center {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--graphite-2b);
+  }
+  .readout-item {
+    font-weight: 500;
+  }
+  .readout-separator {
+    color: #9C9482;
+  }
+
+  .ruler-cluster-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .options-drawer-btn {
+    height: 30px;
+    padding: 0 10px;
+    background: var(--graphite-2b);
+    color: #F6F3EB;
+    border: none;
+    font-family: var(--font-heading);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.15s ease;
+  }
+  .options-drawer-btn:hover {
+    background: #3E3B37;
+  }
+
+  /* ================= ZONE 4: RIGHT COLUMN (300px) ================= */
+  .zone-right-column {
+    width: 300px;
+    height: 900px;
+    background: var(--vellum-margin);
+    border-left: 1px solid var(--graphite-hairline);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 10;
+  }
+
+  /* TOP-RIGHT PANEL (250px tall) — SECONDARY AUXILIARY DISPLAY */
+  .aux-display-panel {
+    width: 300px;
+    height: 250px;
+    background: #FAF7F0;
+    border-bottom: 1px solid var(--graphite-hairline);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .aux-header-bar {
+    height: 34px;
+    background: #EAE5D9;
+    border-bottom: 1px solid #D5CEBE;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .aux-tabs-group {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .aux-tab-pill {
+    font-family: var(--font-heading);
+    font-size: 9.5px;
+    font-weight: 600;
+    padding: 3px 7px;
+    border-radius: 1px;
+    color: var(--graphite-2h);
+    cursor: pointer;
+  }
+  .aux-tab-pill.active {
+    background: var(--graphite-2b);
+    color: #F6F3EB;
+  }
+
+  .aux-canvas-view {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #FAF7F0;
+    overflow: hidden;
+  }
+
+  /* Classical drafting cross-hatching pattern definition */
+  .hatch-canvas-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .aux-footer-note {
+    position: absolute;
+    bottom: 6px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 8.5px;
+    color: var(--graphite-2h);
+  }
+
+  /* BOTTOM-RIGHT PANEL (650px tall) — AGENT & KERNEL LOGS */
+  .kernel-journal-panel {
+    width: 300px;
+    height: 650px;
+    background: #EFECE4;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .journal-header {
+    height: 34px;
+    background: #E8E3D6;
+    border-bottom: 1px solid var(--graphite-hairline);
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .journal-title {
+    font-family: var(--font-heading);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--graphite-2b);
+    text-transform: uppercase;
+  }
+
+  .journal-log-stream {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #EFECE4;
+  }
+  .journal-log-stream::-webkit-scrollbar {
+    width: 4px;
+  }
+  .journal-log-stream::-webkit-scrollbar-thumb {
+    background: #D0C9BA;
+  }
+
+  .log-line {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 6px;
+    border-bottom: 1px dotted #D6D0C2;
+  }
+  .log-line:last-child {
+    border-bottom: none;
+  }
+  .log-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .log-time {
+    color: #8C867A;
+    font-size: 9px;
+  }
+  .log-tag {
+    font-weight: 600;
+    font-size: 9.5px;
+  }
+  .log-tag.plan { color: var(--prussian-blue); }
+  .log-tag.sketch { color: #6E4A8E; }
+  .log-tag.cad { color: var(--graphite-2b); }
+  .log-tag.ocp { color: #8A5B20; }
+  .log-tag.policy { color: var(--stamp-green); }
+  .log-tag.bridge { color: #1F7078; }
+
+  .log-detail {
+    color: var(--graphite-2b);
+    font-size: 9.5px;
+    word-break: break-all;
+    margin-top: 1px;
+  }
+  .sha-highlight {
+    color: var(--graphite-2h);
+    background: #E5DFD1;
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-size: 8.5px;
+  }
+
+  .journal-audit-footer {
+    height: 38px;
+    background: #E6E1D2;
+    border-top: 1px solid var(--graphite-hairline);
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--graphite-2h);
+  }
+
+  /* Pushpins decoration on vellum corners */
+  .drafting-pin {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #FFF 0%, #D4C9B4 40%, #8C7F6A 100%);
+    box-shadow: 1px 2px 4px rgba(35, 33, 30, 0.2);
+    z-index: 30;
+    border: 0.5px solid #736754;
+  }
+  .drafting-pin.top-left { top: 6px; left: 6px; }
+  .drafting-pin.top-right { top: 6px; right: 6px; }
+</style>
+
+
+
+<div class="workbench-container">
+
+  <!-- ================= ZONE 1: LEFT SIDEBAR (340px) ================= -->
+  <aside class="zone-left-margin">
+    <!-- Engineer pad binding edge -->
+    <div class="pad-binding-header">
+      <div class="agent-title-stamp">
+        <span class="">KALA // MECHANICAL DESIGN AGENT</span>
+        <div class="status-stamp-pill">
+          <span class="status-dot-green"></span>
+          LOCAL LOOPBACK
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick starter chips styled as taped paper tabs -->
+    <div class="starter-chips-container">
+      <div class="tape-chip">[Size L-Bracket]</div>
+      <div class="tape-chip">[Size Stepped Shaft]</div>
+      <div class="tape-chip">[Housing Envelope]</div>
+      <div class="tape-chip">[STEP Handoff]</div>
+    </div>
+
+    <!-- Scrollable conversation thread with graphite notes -->
+    <div class="chat-thread-scroll"><!-- User Query Card -->
+<div style="background: rgb(255, 255, 255); border-top: 1px solid rgba(35, 33, 30, 0.08); border-right: 1px solid rgba(35, 33, 30, 0.08); border-bottom: 1px solid rgba(35, 33, 30, 0.08); border-image: none; border-radius: 8px; padding: 12px 14px; box-shadow: rgba(35, 33, 30, 0.04) 0px 1px 3px; position: relative; border-left: 3px solid var(--prussian-blue);">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--prussian-blue);"></span>
+      <span style="font-family: var(--font-heading); font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: var(--graphite-2b); text-transform: uppercase;" class="">Lead Mechanical Eng</span>
+    </div>
+    <span style="font-family: var(--font-mono); font-size: 9px; color: rgb(143, 136, 124);" class="">16:04:10</span>
+  </div>
+  <div style="font-family: var(--font-sans); font-size: 12px; line-height: 1.5; color: var(--graphite-2b); font-weight: 450;" class="">
+    Design a machined aluminum L-bracket for a 40 mm mounting plate, 8 mm wall thickness, with a 10 mm centered bore and 4x M5 corner mounting holes.
+  </div>
+</div>
+
+<!-- Agent Technical Response Card -->
+<div style="background: rgb(252, 250, 246); border-top: 1px solid rgba(35, 33, 30, 0.09); border-right: 1px solid rgba(35, 33, 30, 0.09); border-bottom: 1px solid rgba(35, 33, 30, 0.09); border-image: none; border-radius: 8px; padding: 12px 14px; box-shadow: rgba(35, 33, 30, 0.03) 0px 1px 4px; position: relative; border-left: 3px solid var(--graphite-2b);">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <span style="width: 6px; height: 6px; border-radius: 50%; background: #2A6B4C; box-shadow: 0 0 4px rgba(42, 107, 76, 0.4);"></span>
+      <span style="font-family: var(--font-heading); font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: var(--graphite-2b); text-transform: uppercase;" class="">Kala Agent Kernel</span>
+      <span style="font-family: var(--font-mono); font-size: 8.5px; background: rgba(35, 33, 30, 0.06); padding: 1px 5px; border-radius: 3px; color: var(--graphite-2h); font-weight: 500;" class="">v1.2 // B-REP</span>
+    </div>
+    <span style="font-family: var(--font-mono); font-size: 9px; color: rgb(143, 136, 124);" class="">16:04:15</span>
+  </div>
+
+  <p style="font-family: var(--font-sans); font-size: 11.5px; line-height: 1.5; color: var(--graphite-2b); margin-bottom: 10px;" class="">
+    Parametric B-Rep synthesized. OpenCASCADE closed-form geometry verified with nominal deflection bounds.
+  </p>
+
+  <!-- Modern Inline Spec Matrix -->
+  <div style="background: #F4EFE5; border: 1px solid #DFD7C7; border-radius: 6px; overflow: hidden; margin-bottom: 10px;">
+    <div style="background: #EBE4D6; padding: 5px 8px; font-family: var(--font-mono); font-size: 9px; font-weight: 600; color: var(--graphite-2h); letter-spacing: 0.05em; display: flex; justify-content: space-between; border-bottom: 1px solid #DFD7C7;">
+      <span class="">PARAMETRIC SPEC</span>
+      <span class="">RESOLVED</span>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #DFD7C7; font-family: var(--font-mono); font-size: 9.5px;">
+      <div style="background: rgb(248, 245, 238); padding: 4px 8px; color: rgb(105, 99, 86);" class="">Envelope (X×Y×Z)</div>
+      <div style="background: rgb(248, 245, 238); padding: 4px 8px; font-weight: 600; color: var(--graphite-2b); text-align: right;" class="">60.0 × 45.0 × 40.0</div>
+      <div style="background: rgb(250, 247, 241); padding: 4px 8px; color: rgb(105, 99, 86);" class="">Wall Thickness</div>
+      <div style="background: rgb(250, 247, 241); padding: 4px 8px; font-weight: 600; color: var(--graphite-2b); text-align: right;" class="">8.00 mm</div>
+      <div style="background: rgb(248, 245, 238); padding: 4px 8px; color: rgb(105, 99, 86);" class="">Upright Height</div>
+      <div style="background: rgb(248, 245, 238); padding: 4px 8px; font-weight: 600; color: var(--graphite-2b); text-align: right;" class="">45.00 mm</div>
+      <div style="background: rgb(250, 247, 241); padding: 4px 8px; color: rgb(105, 99, 86);" class="">Central Bore</div>
+      <div style="background: rgb(250, 247, 241); padding: 4px 8px; font-weight: 600; color: var(--graphite-2b); text-align: right;" class="">Ø 10.00 mm H7</div>
+      <div style="background: rgb(248, 245, 238); padding: 4px 8px; color: rgb(105, 99, 86);" class="">Volume / Mass</div>
+      <div style="background: rgb(248, 245, 238); padding: 4px 8px; font-weight: 600; color: var(--graphite-2b); text-align: right;" class="">28.16 cm³ (Al 6061)</div>
+    </div>
+  </div>
+
+  <!-- Pill Status Footers -->
+  <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+    <div style="display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: 9px; color: var(--prussian-blue); background: rgba(43, 91, 132, 0.08); border: 1px solid rgba(43, 91, 132, 0.25); padding: 3px 7px; border-radius: 4px; font-weight: 500;" class="">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"></path></svg>
+      Section A-A updated in aux view
+    </div>
+    <div style="display: inline-flex; align-items: center; gap: 3px; font-family: var(--font-mono); font-size: 8.5px; color: var(--graphite-2h); background: #EFEAE0; padding: 2px 6px; border-radius: 4px;">
+      <span class="">sha256:8f3a9e...</span>
+    </div>
+  </div>
+</div>
+
+<!-- Second Agent Daemon Status -->
+<div style="background: rgb(248, 245, 237); border: 1px dashed rgb(214, 206, 192); border-radius: 6px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+  <div style="display: flex; align-items: center; gap: 7px;">
+    <span style="display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 3px; background: rgb(229, 223, 209); color: var(--graphite-2b); font-family: var(--font-mono); font-size: 8.5px; font-weight: 700;" class="">ISO</span>
+    <span style="font-family: var(--font-mono); font-size: 9.5px; color: var(--graphite-2b); font-weight: 500;" class="">STEP 10303-21 Serialized (14.8 KB)</span>
+  </div>
+  <span style="font-family: var(--font-mono); font-size: 8.5px; color: rgb(42, 107, 76); font-weight: 600; background: rgba(42, 107, 76, 0.08); padding: 1px 5px; border-radius: 3px;" class="">0.000 DRIFT</span>
+</div></div>
+
+    <!-- Bottom Input Composer -->
+    <div class="zone-left-composer"><!-- Modern Elevated Composer Card -->
+<div style="background: rgb(255, 255, 255); border: 1px solid rgba(35, 33, 30, 0.12); border-radius: 10px; padding: 10px 12px; box-shadow: rgba(35, 33, 30, 0.07) 0px 4px 14px -2px; display: flex; flex-direction: column; gap: 8px;">
+  
+  <!-- Seamless High-Precision Textarea -->
+  <div style="position: relative;">
+    <textarea class="tactile-textarea" style="width: 100%; height: 52px; border: none; outline: none; background: transparent; font-family: var(--font-sans); font-size: 12px; color: var(--graphite-2b); resize: none; line-height: 1.45; padding: 0;" placeholder="Describe geometry, tolerance, or prompt (e.g. increase web fillet to 6mm)..."></textarea>
+  </div>
+
+  <!-- Modern Bottom Action Bar inside composer -->
+  <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 6px; border-top: 1px solid #F0ECE3;">
+    <!-- Micro Tool Glyphs -->
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <button type="button" title="Pencil Vector Sketch Mode" style="width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid rgb(228, 221, 209); background: rgb(250, 247, 240); color: var(--graphite-2b); cursor: pointer; transition: 0.15s; font-size: 11px;" class="">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+      </button>
+      <button type="button" title="Voice Dictation" style="width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid rgb(228, 221, 209); background: rgb(250, 247, 240); color: var(--graphite-2b); cursor: pointer; transition: 0.15s; font-size: 11px;" class="">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+      </button>
+      <button type="button" title="Attach STEP / FreeCAD / DXF File" style="width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid rgb(228, 221, 209); background: rgb(250, 247, 240); color: var(--graphite-2b); cursor: pointer; transition: 0.15s; font-size: 11px;" class="">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+      </button>
+    </div>
+
+    <!-- Sleek Egress Toggle Pill -->
+    <label style="display: inline-flex; align-items: center; gap: 5px; background: rgb(246, 242, 233); border: 1px solid rgb(224, 217, 203); border-radius: 12px; padding: 2px 7px; cursor: pointer; font-family: var(--font-mono); font-size: 8.5px; font-weight: 500; color: var(--graphite-2h); user-select: none;" class="">
+      <span style="width: 5px; height: 5px; border-radius: 50%; background: #2A6B4C; box-shadow: 0 0 4px rgba(42,107,76,0.6);"></span>
+      <span class="">Remote Egress: Air-Gapped</span>
+    </label>
+  </div>
+</div>
+
+<!-- Sleek Primary Draft Button with Keyboard Shortcut Badge -->
+<button type="button" class="draft-part-btn" style="width: 100%; height: 34px; background: rgb(28, 26, 23); color: rgb(250, 247, 240); border: medium; font-family: var(--font-heading); font-size: 11px; font-weight: 700; letter-spacing: 0.05em; display: flex; align-items: center; justify-content: space-between; padding: 0px 14px; border-radius: 8px; cursor: pointer; box-shadow: rgba(28, 26, 23, 0.18) 0px 2px 6px; transition: background 0.15s;">
+  <div style="display: flex; align-items: center; gap: 7px;">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    <span class="">DRAFT PART GEOMETRY</span>
+  </div>
+  <span style="font-family: var(--font-mono); font-size: 10px; background: rgba(255, 255, 255, 0.14); padding: 1px 6px; border-radius: 4px; font-weight: 600;" class="">↵ Enter</span>
+</button></div>
+  </aside>
+
+  <!-- ================= ZONE 2: CENTER MAIN VIEWPORT (800px) ================= -->
+  <!-- NO TOP BAR ABOVE VIEWPORT — STARTS AT WINDOW TOP EDGE -->
+  <main class="zone-center-viewport">
+    
+    <div class="vellum-canvas-surface paper-grain">
+      
+      <!-- Four classic drafting corner pins -->
+      <div class="drafting-pin top-left"></div>
+      <div class="drafting-pin top-right"></div>
+
+      <!-- Outer Technical Coordinate Border (A–F, 1–8) -->
+      <div class="drafting-coordinate-frame">
+        <div class="coord-tick-h">
+          <span class="">1</span><span class="">2</span><span class="">3</span><span class="">4</span><span class="">5</span><span class="">6</span><span class="">7</span><span class="">8</span>
+        </div>
+        <div class="coord-tick-h bottom">
+          <span class="">1</span><span class="">2</span><span class="">3</span><span class="">4</span><span class="">5</span><span class="">6</span><span class="">7</span><span class="">8</span>
+        </div>
+        <div class="coord-tick-v">
+          <span class="">A</span><span class="">B</span><span class="">C</span><span class="">D</span><span class="">E</span><span class="">F</span>
+        </div>
+        <div class="coord-tick-v right">
+          <span class="">A</span><span class="">B</span><span class="">C</span><span class="">D</span><span class="">E</span><span class="">F</span>
+        </div>
+      </div>
+
+      <!-- Delicate hand-drawn pencil isometric/orthographic grid SVG overlay -->
+      <svg class="vellum-grid-layer" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="vellum-minor-grid" width="10" height="10" patternUnits="userSpaceOnUse">
+            <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#EAE6DC" stroke-width="0.5"></path>
+          </pattern>
+          <pattern id="vellum-major-grid" width="50" height="50" patternUnits="userSpaceOnUse">
+            <rect width="50" height="50" fill="url(#vellum-minor-grid)"></rect>
+            <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#DFDBD0" stroke-width="0.9"></path>
+            <!-- Hand-ticked crosshair intersections (+) -->
+            <path d="M 23 25 L 27 25 M 25 23 L 25 27" fill="none" stroke="#C4BDB0" stroke-width="0.8"></path>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#vellum-major-grid)"></rect>
+      </svg>
+
+      <!-- Centerpiece Mode Switch Pill Floating Subtly on Vellum -->
+      <div style="position: absolute; top: 18px; left: 74px; z-index: 15; display: flex; align-items: center; gap: 4px;" class=""><div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(253, 251, 246, 0.96); border: 1px solid var(--graphite-2b); border-bottom: 2px solid var(--graphite-2b); padding: 4px 9px 3px 9px; font-family: var(--font-heading); font-size: 10px; font-weight: 700; color: var(--graphite-2b); border-radius: 2px 2px 0 0; box-shadow: 0 1px 3px rgba(35,33,30,0.05); cursor: pointer;"><span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--stamp-green);"></span><span class="">Sheet 1: L-Bracket</span><span style="margin-left: 2px; font-size: 10px; opacity: 0.6; cursor: pointer;" class="">✕</span></div><div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(240, 236, 226, 0.8); border: 1px solid var(--graphite-hairline); padding: 4px 9px 3px 9px; font-family: var(--font-heading); font-size: 10px; font-weight: 600; color: var(--graphite-2h); border-radius: 2px 2px 0 0; cursor: pointer; transition: all 0.15s ease;"><span class="">Sheet 2: Stepped Shaft</span></div><div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(240, 236, 226, 0.8); border: 1px solid var(--graphite-hairline); padding: 4px 9px 3px 9px; font-family: var(--font-heading); font-size: 10px; font-weight: 600; color: var(--graphite-2h); border-radius: 2px 2px 0 0; cursor: pointer; transition: all 0.15s ease;"><span class="">Sheet 3: Flange Housing</span></div><button type="button" title="Create new drawing sheet" style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; background: rgba(244, 240, 231, 0.9); border: 1px dashed var(--graphite-hairline); color: var(--graphite-2h); border-radius: 2px; cursor: pointer; font-size: 11px; font-weight: 600; font-family: var(--font-mono);" class="">+</button></div><div class="vertical-tool-rail" style="position: absolute; top: 58px; left: 24px; z-index: 25; display: flex; flex-direction: column; gap: 5px; background: rgb(250, 247, 238); border: 1px solid var(--graphite-2b); padding: 5px; border-radius: 4px; box-shadow: rgba(35, 33, 30, 0.08) 0px 4px 14px;">
+  <!-- 1. 2D / 3D Mode Toggle Switch -->
+  <button type="button" title="Mode: 2D Pencil Vector (Click to switch 3D)" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: rgb(35, 33, 30); color: rgb(246, 243, 235); border: 1px solid rgb(35, 33, 30); border-radius: 3px; cursor: pointer; transition: 0.15s;" class="">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+  </button>
+  
+  <div style="width: 100%; height: 1px; background: #D5CEBE; margin: 1px 0;"></div>
+
+  <!-- 2. Select Tool (Active) -->
+  <button type="button" title="Select / Pointer Tool" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: rgb(35, 33, 30); color: rgb(246, 243, 235); border: 1px solid rgb(35, 33, 30); border-radius: 3px; cursor: pointer;" class="">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M4 0l16 12.279-6.951 1.17 4.325 8.817-3.596 1.734-4.35-8.879-5.428 5.143v-20.264z"></path>
+    </svg>
+  </button>
+
+  <!-- 3. Mark Tool (Terracotta Red Accent) -->
+  <button type="button" title="Mark / Redline Callout Tool" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: rgb(255, 253, 248); color: rgb(200, 75, 49); border: 1px solid rgba(200, 75, 49, 0.4); border-radius: 3px; cursor: pointer; transition: 0.15s;" class="">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+  </button>
+
+  <!-- 4. Measure Tool -->
+  <button type="button" title="Measure / Caliper Tool" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: rgb(255, 253, 248); color: rgb(35, 33, 30); border: 1px solid rgb(213, 206, 189); border-radius: 3px; cursor: pointer; transition: 0.15s;" class="">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20M2 12v5M22 12v5M6 12v3M10 12v3M14 12v3M18 12v3"></path></svg>
+  </button>
+
+  <!-- 5. Eraser Tool -->
+  <button type="button" title="Eraser / Clear Markups Tool" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: rgb(255, 253, 248); color: rgb(122, 117, 108); border: 1px solid rgb(213, 206, 189); border-radius: 3px; cursor: pointer; transition: 0.15s;" class="">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"></path><path d="M22 21H7"></path><path d="m5 11 9 9"></path></svg>
+  </button>
+</div>
+
+      <!-- Top Right Verification Badges on Sheet -->
+      
+
+      <!-- Center CAD Vector Illustration Stage: Precision Mechanical L-Bracket -->
+      <div class="cad-draft-stage">
+        <svg width="720" height="680" viewBox="0 0 720 680" fill="none" xmlns="http://www.w3.org/2000/svg" style="overflow: visible;">
+          
+          <!-- Definitions for markers and hatching -->
+          <defs>
+            <!-- Terracotta dimension arrowheads -->
+            <marker id="arrow-red-start" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 8 2 L 2 5 L 8 8 z" fill="#C84B31"></path>
+            </marker>
+            <marker id="arrow-red-end" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 2 2 L 8 5 L 2 8 z" fill="#C84B31"></path>
+            </marker>
+            <!-- 2H Construction arrowheads -->
+            <marker id="arrow-graphite-end" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M 2 2 L 8 5 L 2 8 z" fill="#7A756C"></path>
+            </marker>
+          </defs>
+
+          <!-- 1. Coordinate Centerlines & Axes (— · —) in Muted Lead & Redline -->
+          <g id="centerlines" opacity="0.85">
+            <!-- X/Y origin lines -->
+            <line x1="80" y1="480" x2="640" y2="480" stroke="#7A756C" stroke-width="0.75" stroke-dasharray="14, 3, 3, 3"></line>
+            <line x1="360" y1="80" x2="360" y2="580" stroke="#7A756C" stroke-width="0.75" stroke-dasharray="14, 3, 3, 3"></line>
+            <!-- Axis labels -->
+            <text x="645" y="483" font-family="'IBM Plex Mono', monospace" font-size="9" fill="#7A756C" font-weight="600">+X (WIDTH)</text>
+            <text x="355" y="75" font-family="'IBM Plex Mono', monospace" font-size="9" fill="#7A756C" font-weight="600" text-anchor="end">+Y (HEIGHT)</text>
+          </g>
+
+          <!-- 2. Section Cut Plane Indicator A ——— A in Terracotta Redline (#C84B31) -->
+          <g id="section-cutting-plane">
+            <line x1="160" y1="210" x2="560" y2="210" stroke="#C84B31" stroke-width="1.8" stroke-dasharray="18, 5, 4, 5"></line>
+            <!-- Left cutting flag -->
+            <line x1="160" y1="210" x2="160" y2="185" stroke="#C84B31" stroke-width="2.5"></line>
+            <polygon points="156,185 160,172 164,185" fill="#C84B31"></polygon>
+            <text x="145" y="180" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="14" fill="#C84B31">A</text>
+
+            <!-- Right cutting flag -->
+            <line x1="560" y1="210" x2="560" y2="185" stroke="#C84B31" stroke-width="2.5"></line>
+            <polygon points="556,185 560,172 564,185" fill="#C84B31"></polygon>
+            <text x="570" y="180" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="14" fill="#C84B31">A</text>
+            <text x="360" y="202" font-family="'Space Grotesk', sans-serif" font-weight="600" font-size="10" fill="#C84B31" text-anchor="middle" letter-spacing="0.1em">CUTTING PLANE A ——— A</text>
+          </g>
+
+          <!-- 3. Isometric / Orthographic Drafted Geometry of L-Bracket -->
+          <!-- Isometric projection angles: 30 deg left/right -->
+          <!-- Base corner at (360, 440) -->
+          <g id="bracket-solid-draft">
+
+            <!-- Faint 2H construction lines extending to vanishing tangents -->
+            <line x1="200" y1="520" x2="520" y2="360" stroke="#9E988A" stroke-width="0.5" stroke-dasharray="2, 4"></line>
+            <line x1="360" y1="440" x2="360" y2="140" stroke="#9E988A" stroke-width="0.5" stroke-dasharray="2, 4"></line>
+
+            <!-- Hidden lines (2H dashed lead #7A756C) -->
+            <!-- Inner corner & rear wall passes -->
+            <path d="M 220 370 L 220 230 L 320 180" stroke="#7A756C" stroke-width="1.2" stroke-dasharray="5, 3" fill="none"></path>
+            <path d="M 220 370 L 360 440" stroke="#7A756C" stroke-width="1.2" stroke-dasharray="5, 3" fill="none"></path>
+            <!-- Centered bore cylinder pass-through hidden lines -->
+            <ellipse cx="360" cy="300" rx="35" ry="18" stroke="#7A756C" stroke-width="1" stroke-dasharray="4, 3" fill="none"></ellipse>
+            <line x1="325" y1="300" x2="325" y2="340" stroke="#7A756C" stroke-width="1" stroke-dasharray="4, 3"></line>
+            <line x1="395" y1="300" x2="395" y2="340" stroke="#7A756C" stroke-width="1" stroke-dasharray="4, 3"></line>
+            <ellipse cx="360" cy="340" rx="35" ry="18" stroke="#7A756C" stroke-width="1" stroke-dasharray="4, 3" fill="none"></ellipse>
+
+            <!-- Solid Visible Faces (Subtle Warm Tint with Hand Drafted 2B Graphite #23211E strokes) -->
+            
+            <!-- Horizontal Base Plate (Top Face) -->
+            <polygon points="360,400 480,340 380,290 260,350" fill="#FAF6ED" stroke="#23211E" stroke-width="1.8" stroke-linejoin="round"></polygon>
+            
+            <!-- Vertical Leg Upright (Front Face) -->
+            <polygon points="260,350 360,400 360,210 260,160" fill="#F4EFE2" stroke="#23211E" stroke-width="2.2" stroke-linejoin="round"></polygon>
+            
+            <!-- Vertical Leg Upright (Side Face / Thickness) -->
+            <polygon points="360,400 410,375 410,185 360,210" fill="#EDE6D7" stroke="#23211E" stroke-width="2.2" stroke-linejoin="round"></polygon>
+            
+            <!-- Vertical Leg (Top Flange Face) -->
+            <polygon points="260,160 360,210 410,185 310,135" fill="#FAF7EE" stroke="#23211E" stroke-width="2.2" stroke-linejoin="round"></polygon>
+
+            <!-- Horizontal Base Plate (Front Lower Lip) -->
+            <polygon points="260,350 360,400 360,440 260,390" fill="#EDE7D8" stroke="#23211E" stroke-width="2.2" stroke-linejoin="round"></polygon>
+            
+            <!-- Horizontal Base Plate (Right Outer Flange) -->
+            <polygon points="360,400 500,330 500,370 360,440" fill="#E4DDCB" stroke="#23211E" stroke-width="2.2" stroke-linejoin="round"></polygon>
+
+            <!-- Triangular Reinforcement Web / Gusset (8mm) -->
+            <polygon points="310,325 360,350 360,240" fill="#EDE4D2" stroke="#23211E" stroke-width="2.0" stroke-linejoin="round"></polygon>
+
+            <!-- Centered Through-Bore (Visible Ellipse in Upright Leg) -->
+            <g id="bore-opening">
+              <!-- Centerline cross in bore -->
+              <line x1="290" y1="270" x2="330" y2="290" stroke="#C84B31" stroke-width="0.8" stroke-dasharray="8, 2, 2, 2"></line>
+              <line x1="310" y1="260" x2="310" y2="300" stroke="#C84B31" stroke-width="0.8" stroke-dasharray="8, 2, 2, 2"></line>
+              <!-- Ellipse bore rim with depth shadow -->
+              <ellipse cx="310" cy="280" rx="24" ry="18" fill="#DFD8C7" stroke="#23211E" stroke-width="2.0" transform="rotate(-15 310 280)"></ellipse>
+              <path d="M 295 285 A 24 18 0 0 0 325 275" fill="none" stroke="#7A756C" stroke-width="1.2"></path>
+            </g>
+
+            <!-- 4x Corner M5 Mounting Holes in Base Plate -->
+            <ellipse cx="455" cy="340" rx="9" ry="5" fill="#DFD9C9" stroke="#23211E" stroke-width="1.4"></ellipse>
+            <ellipse cx="385" cy="415" rx="9" ry="5" fill="#DFD9C9" stroke="#23211E" stroke-width="1.4"></ellipse>
+            <ellipse cx="480" cy="360" rx="9" ry="5" fill="#DFD9C9" stroke="#23211E" stroke-width="1.4"></ellipse>
+
+            <!-- Fillet Radius Callout (R 4.0) with Carmine Leader Line -->
+            <path d="M 360 380 Q 363 388 375 395 L 430 420" stroke="#C84B31" stroke-width="1.2" fill="none" marker-start="url(#arrow-red-start)"></path>
+            <line x1="430" y1="420" x2="475" y2="420" stroke="#C84B31" stroke-width="1.2"></line>
+            <text x="440" y="415" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="600" fill="#C84B31">R 4.0 TYP</text>
+
+            <!-- Bore Specification Callout (Ø 10.00 H7) -->
+            <path d="M 310 270 L 250 220 L 170 220" stroke="#C84B31" stroke-width="1.2" fill="none" marker-start="url(#arrow-red-start)"></path>
+            <text x="175" y="214" font-family="'IBM Plex Mono', monospace" font-size="10.5" font-weight="600" fill="#C84B31">Ø 10.00 H7 THRU</text>
+            <text x="175" y="233" font-family="'Inter', sans-serif" font-size="8.5" fill="#7A756C">REAMED FINISH 1.6 Ra</text>
+
+          </g>
+
+          <!-- 4. Dimension Lines & Extension Ticks (Carmine Pencil #C84B31) -->
+          <g id="drafted-dimensions">
+            
+            <!-- OVERALL LENGTH (60.00 mm) -->
+            <!-- Extension lines -->
+            <line x1="260" y1="390" x2="260" y2="520" stroke="#7A756C" stroke-width="0.8"></line>
+            <line x1="500" y1="370" x2="500" y2="500" stroke="#7A756C" stroke-width="0.8"></line>
+            <!-- Dimension line with arrows -->
+            <line x1="260" y1="490" x2="500" y2="470" stroke="#C84B31" stroke-width="1.2" marker-start="url(#arrow-red-start)" marker-end="url(#arrow-red-end)"></line>
+            <rect x="350" y="468" width="80" height="18" fill="#F6F3EB"></rect>
+            <text x="390" y="481" font-family="'IBM Plex Mono', monospace" font-size="11" font-weight="600" fill="#C84B31" text-anchor="middle">← 60.00 mm →</text>
+
+            <!-- OVERALL HEIGHT (45.00 mm) -->
+            <!-- Extension lines -->
+            <line x1="260" y1="160" x2="160" y2="160" stroke="#7A756C" stroke-width="0.8"></line>
+            <line x1="260" y1="390" x2="160" y2="390" stroke="#7A756C" stroke-width="0.8"></line>
+            <!-- Dimension line with arrows -->
+            <line x1="180" y1="160" x2="180" y2="390" stroke="#C84B31" stroke-width="1.2" marker-start="url(#arrow-red-start)" marker-end="url(#arrow-red-end)"></line>
+            <rect x="145" y="265" width="70" height="18" fill="#F6F3EB"></rect>
+            <text x="180" y="278" font-family="'IBM Plex Mono', monospace" font-size="11" font-weight="600" fill="#C84B31" text-anchor="middle">45.00 mm</text>
+
+            <!-- WALL THICKNESS (8.00 mm) -->
+            <line x1="360" y1="210" x2="410" y2="185" stroke="#7A756C" stroke-width="0.8"></line>
+            <path d="M 385 198 L 440 140 L 485 140" stroke="#C84B31" stroke-width="1.2" fill="none" marker-start="url(#arrow-red-start)"></path>
+            <text x="445" y="134" font-family="'IBM Plex Mono', monospace" font-size="10.5" font-weight="600" fill="#C84B31">t = 8.00 mm</text>
+
+            <!-- DEPTH (40.00 mm) -->
+            <line x1="410" y1="185" x2="550" y2="185" stroke="#7A756C" stroke-width="0.8"></line>
+            <line x1="500" y1="330" x2="580" y2="330" stroke="#7A756C" stroke-width="0.8"></line>
+            <line x1="530" y1="185" x2="570" y2="330" stroke="#C84B31" stroke-width="1.2" marker-start="url(#arrow-red-start)" marker-end="url(#arrow-red-end)"></line>
+            <rect x="535" y="245" width="65" height="18" fill="#F6F3EB"></rect>
+            <text x="567" y="258" font-family="'IBM Plex Mono', monospace" font-size="10.5" font-weight="600" fill="#C84B31" text-anchor="middle">40.00 mm</text>
+
+          </g>
+
+        </svg>
+      </div>
+
+      <!-- Bottom-Left Classic Drafted Title Block Watermark -->
+      <div class="drafted-title-block">
+        <div class="title-cell" style="grid-column: span 2;">
+          <span class="title-label">SUBJECT // PART ID</span>
+          <span class="title-val">KALA-BRKT-01 (AL-6061)</span>
+        </div>
+        <div class="title-cell">
+          <span class="title-label">SCALE</span>
+          <span class="title-val">1 : 1</span>
+        </div>
+        <div class="title-cell">
+          <span class="title-label">UNITS</span>
+          <span class="title-val">METRIC (MM)</span>
+        </div>
+        <div class="title-cell">
+          <span class="title-label">PROJECTION</span>
+          <span class="title-val">3RD ANGLE</span>
+        </div>
+        <div class="title-cell">
+          <span class="title-label">TOLERANCE</span>
+          <span class="title-val">ISO 2768-m</span>
+        </div>
+        <div class="title-cell">
+          <span class="title-label">REV</span>
+          <span class="title-val">03 [STABLE]</span>
+        </div>
+        <div class="title-cell">
+          <span class="title-label">AUTHOR</span>
+          <span class="title-val">KALA KERNEL</span>
+        </div>
+      </div>
+
+      <!-- Slide-Rule Alt+Space Watermark Indicator -->
+      <div class="slide-rule-watermark">
+        <span class="kbd-key">Alt</span> + <span class="kbd-key">Space</span>
+        <span class="">Slide-Rule Companion Overlay</span>
+      </div>
+
+    </div>
+
+    <!-- ================= ZONE 3: BOTTOM END BAR (48px) ================= -->
+    <footer class="zone-bottom-bar"><!-- Left cluster: Draughtsman's Canvas & Mode Toggle Tools -->
+<div class="ruler-cluster-left" style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
+  <button class="ruler-tool-btn active" title="Toggle 2D Pencil / 3D Solid Mode" style="height: 26px; padding: 0px 6px; font-size: 9px; white-space: nowrap;">
+    <span class="">✎ 2D/3D</span>
+  </button>
+  <button class="ruler-tool-btn active" title="Toggle Pencil Grid" style="height: 26px; padding: 0px 6px; font-size: 9px; white-space: nowrap;">
+    <span class="">⊞ Grid</span>
+  </button>
+  <button class="ruler-tool-btn active" title="Toggle Center Axes" style="height: 26px; padding: 0px 6px; font-size: 9px; white-space: nowrap;">
+    <span class="">✛ Axes</span>
+  </button>
+  <button class="ruler-tool-btn active" title="Toggle Redline Dimensions" style="height: 26px; padding: 0px 6px; font-size: 9px; white-space: nowrap;">
+    <span class="">📏 Dims</span>
+  </button>
+  <button class="ruler-tool-btn active" title="Toggle Section Cut A-A" style="height: 26px; padding: 0px 6px; font-size: 9px; white-space: nowrap;">
+    <span class="">✂ Cut A-A</span>
+  </button>
+  <button class="ruler-tool-btn" title="Reset Viewport" style="height: 26px; padding: 0px 6px; font-size: 9px; white-space: nowrap;">
+    <span class="">↺ Reset</span>
+  </button>
+</div>
+
+<!-- Center cluster: Streamlined telemetry readout with clear dividers and no wrapping -->
+<div class="ruler-cluster-center" style="display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 9.5px; white-space: nowrap; flex-shrink: 0; color: var(--graphite-2b);"><span class="readout-item"><span style="color: var(--graphite-2h); font-size: 8.5px; font-weight: 600;" class="">SCALE:</span> 1:1 METRIC</span><span class="readout-separator" style="color: rgb(181, 173, 156);">|</span><span class="readout-item"><span style="color: var(--graphite-2h); font-size: 8.5px; font-weight: 600;" class="">ENV:</span> 60×45×40mm</span><span class="readout-separator" style="color: rgb(181, 173, 156);">|</span><span class="readout-item"><span style="color: var(--graphite-2h); font-size: 8.5px; font-weight: 600;" class="">VOL:</span> 28.16cm³</span><span class="readout-separator" style="color: rgb(181, 173, 156);">|</span><span style="color: var(--stamp-green); font-weight: 600; font-size: 9px; background: rgba(42, 107, 76, 0.08); border: 0.5px solid rgba(42, 107, 76, 0.3); padding: 1px 4px; border-radius: 2px;" class="">[✓ B-Rep Verified]</span></div>
+
+<!-- Right cluster: Precision action buttons with distinct visual hierarchy -->
+<div class="ruler-cluster-right" style="display: flex; align-items: center; gap: 5px; flex-shrink: 0;">
+  <button class="ruler-tool-btn" style="height: 26px; padding: 0px 7px; font-size: 9px; font-weight: 600; white-space: nowrap; background: rgb(250, 247, 239); border-color: rgb(200, 191, 173);" title="Export ISO 10303 STEP">
+    <span class="">[Export STEP]</span>
+  </button>
+  <button class="ruler-tool-btn" style="height: 26px; padding: 0px 7px; font-size: 9px; color: var(--prussian-blue); font-weight: 600; white-space: nowrap; background: rgb(243, 247, 250); border-color: rgba(43, 91, 132, 0.35);" title="Live FreeCAD 1.1 Bridge">
+    <span style="display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--prussian-blue); margin-right: 2px;"></span>
+    <span class="">FreeCAD Live</span>
+  </button>
+  <button class="options-drawer-btn" style="height: 26px; padding: 0px 8px; font-size: 9.5px; font-weight: 700; white-space: nowrap;" title="Open Engineering Drawer &amp; Modal Tools">
+    <span class="">⚙ Options &amp; Tools</span>
+  </button>
+</div></footer>
+
+  </main>
+
+  <!-- ================= ZONE 4: RIGHT COLUMN (300px) ================= -->
+  <aside class="zone-right-column">
+    
+    <!-- TOP-RIGHT PANEL (250px tall) — SECONDARY AUXILIARY DISPLAY -->
+    <section class="aux-display-panel">
+      
+      <!-- Panel Header with tab selectors -->
+      <div class="aux-header-bar">
+        <div class="aux-tabs-group">
+          <div class="aux-tab-pill active">Section A-A</div>
+          <div class="aux-tab-pill">Ortho 3-View</div>
+          <div class="aux-tab-pill">Tolerance</div>
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 8.5px; color: var(--redline); font-weight: 600;" class="">
+          CUT: 45° ANSI
+        </div>
+      </div>
+
+      <!-- Auxiliary 2D Cross-Section SVG (Section A-A) with 45° ANSI Hatching -->
+      <div class="aux-canvas-view">
+        <svg class="hatch-canvas-svg" viewBox="0 0 300 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <!-- Classic 45° ANSI 31 Cast Iron / Aluminum Pencil Cross-Hatching -->
+            <pattern id="ansi-45-hatch" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="8" stroke="#23211E" stroke-width="0.8"></line>
+            </pattern>
+          </defs>
+
+          <!-- Background Faint Grid -->
+          <g opacity="0.4">
+            <line x1="20" y1="50" x2="280" y2="50" stroke="#DFDBD0" stroke-width="0.5"></line>
+            <line x1="20" y1="100" x2="280" y2="100" stroke="#DFDBD0" stroke-width="0.5"></line>
+            <line x1="20" y1="150" x2="280" y2="150" stroke="#DFDBD0" stroke-width="0.5"></line>
+            <line x1="150" y1="20" x2="150" y2="180" stroke="#DFDBD0" stroke-width="0.5"></line>
+          </g>
+
+          <!-- Centerline of cross section (— · —) -->
+          <line x1="50" y1="100" x2="250" y2="100" stroke="#7A756C" stroke-width="0.8" stroke-dasharray="10, 2, 2, 2"></line>
+          <line x1="150" y1="40" x2="150" y2="160" stroke="#C84B31" stroke-width="0.8" stroke-dasharray="10, 2, 2, 2"></line>
+
+          <!-- Cross-Section Cut Face Profile of L-Bracket through Central Bore -->
+          <!-- Vertical leg cut (thickness 8mm) + Horizontal base cut (thickness 8mm) with bore cutout -->
+          <!-- Base plate: from x=70 to x=230, y=130 to y=150 -->
+          <!-- Upright: from x=70 to x=90, y=50 to y=130 -->
+          <path d="M 70 50 
+                   L 94 50 
+                   L 94 126 
+                   L 135 126 
+                   L 135 150 
+                   L 70 150 Z" fill="url(#ansi-45-hatch)" stroke="#23211E" stroke-width="1.8"></path>
+
+          <!-- Right cut section of base plate beyond the central bore -->
+          <path d="M 165 126 
+                   L 230 126 
+                   L 230 150 
+                   L 165 150 Z" fill="url(#ansi-45-hatch)" stroke="#23211E" stroke-width="1.8"></path>
+
+          <!-- Central bore void boundaries (10mm diameter reamed bore) -->
+          <line x1="135" y1="126" x2="135" y2="150" stroke="#23211E" stroke-width="1.6"></line>
+          <line x1="165" y1="126" x2="165" y2="150" stroke="#23211E" stroke-width="1.6"></line>
+          <!-- Bore centerline -->
+          <line x1="150" y1="115" x2="150" y2="160" stroke="#C84B31" stroke-width="0.8" stroke-dasharray="6, 2, 2, 2"></line>
+
+          <!-- Uncut web silhouette behind section cut (thin 2H lines) -->
+          <line x1="94" y1="50" x2="170" y2="126" stroke="#7A756C" stroke-width="1.0" stroke-dasharray="3, 2"></line>
+
+          <!-- Redline dimension arrows inside Aux Cut -->
+          <!-- Wall thickness arrow (8.00 mm) -->
+          <line x1="70" y1="40" x2="94" y2="40" stroke="#C84B31" stroke-width="1.0" marker-start="url(#arrow-red-start)" marker-end="url(#arrow-red-end)"></line>
+          <text x="82" y="34" font-family="'IBM Plex Mono', monospace" font-size="8.5" font-weight="600" fill="#C84B31" text-anchor="middle">8.00</text>
+
+          <!-- Bore diameter callout (Ø 10.00 mm) -->
+          <line x1="135" y1="162" x2="165" y2="162" stroke="#C84B31" stroke-width="1.0" marker-start="url(#arrow-red-start)" marker-end="url(#arrow-red-end)"></line>
+          <text x="150" y="174" font-family="'IBM Plex Mono', monospace" font-size="8.5" font-weight="600" fill="#C84B31" text-anchor="middle">Ø 10.00 H7</text>
+
+          <!-- Cut plane notation label -->
+          <text x="70" y="185" font-family="'Space Grotesk', sans-serif" font-size="9" font-weight="700" fill="#23211E">SECTION A—A (1:1)</text>
+          <text x="230" y="185" font-family="'IBM Plex Mono', monospace" font-size="8" fill="#7A756C" text-anchor="end">ANSI 45° CAST</text>
+        </svg>
+      </div>
+
+      <div class="aux-footer-note">
+        <span class="">DETAIL LOUPE: ACTIVE BORE PASS</span>
+        <span class="">DRIVE: DETERMINISTIC</span>
+      </div>
+
+    </section>
+
+    <!-- BOTTOM-RIGHT PANEL (650px tall) — AGENT & KERNEL LOGS -->
+    <section class="kernel-journal-panel">
+      
+      <!-- Journal Header -->
+      <div class="journal-header">
+        <span class="journal-title">AGENT &amp; KERNEL JOURNAL</span>
+        <span class="status-stamp-pill" style="font-size: 8.5px; padding: 1px 5px;">
+          HASH-CHAIN OK
+        </span>
+      </div>
+
+      <!-- Scrollable Monospace Event Log Stream -->
+      <div class="journal-log-stream">
+
+        <div class="log-line">
+          <div class="log-top-row">
+            <span class="log-tag plan">[plan.created]</span>
+            <span class="log-time">16:04:12</span>
+          </div>
+          <div class="log-detail">Parsed bracket spec (60x45x40 mm, t=8mm, bore=10mm)</div>
+        </div>
+
+        <div class="log-line">
+          <div class="log-top-row">
+            <span class="log-tag sketch">[sketch.new]</span>
+            <span class="log-time">16:04:13</span>
+          </div>
+          <div class="log-detail">Sketch001 on XY_Plane (6 geometric constraints resolved)</div>
+        </div>
+
+        <div class="log-line">
+          <div class="log-top-row">
+            <span class="log-tag cad">[partdesign.pad]</span>
+            <span class="log-time">16:04:14</span>
+          </div>
+          <div class="log-detail">Pad001 length=8.00 mm (Base flange extrusion)</div>
+        </div>
+
+        <div class="log-line">
+          <div class="log-top-row">
+            <span class="log-tag cad">[partdesign.pad]</span>
+            <span class="log-time">16:04:14</span>
+          </div>
+          <div class="log-detail">Pad002 height=45.00 mm (Upright mounting rib)</div>
+        </div>
+
+        <div class="log-line">
+          <div class="log-top-row">
+            <span class="log-tag cad">[partdesign.pocket]</span>
+            <span class="log-time">16:04:14</span>
+          </div>
+          <div class="log-detail">Bore Ø10.00 mm ThroughAll normal to XZ plane</div>
+        </div>
+
+        <div class="log-line">
+          <div class="log-top-row">
+            <span class="log-tag cad">[partdesign.fillet]</span>
+            <span class="log-time">16:04:15</span>
+          </div>
+          <div class="log-detail">Fillet001 R=4.00 mm on internal juncture seam</div>
+        </div>
+
+        <div class="log-line">
+          <div class="log-top-row">
+            <span class="log-tag ocp">[ocp.brepgprop]</span>
+            <span class="log-time">16:04:15</span>
+          </div>
+          <div class="log-detail">Vol=28160.0 mm³ · Area=9420.0 mm² | Drift=0.000 mm</div>
+        </div>
+
+        <div class="log-line">
+          <div class="log-top-row">
+            <span class="log-tag policy">[policy.checkpoint]</span>
+            <span class="log-time">16:04:16</span>
+          </div>
+          <div class="log-detail">
+            PRE_COMMIT approved <span class="sha-highlight">sha256:8f3a9e...c91b</span>
+          </div>
+        </div>
+
+        <div class="log-line">
+          <div class="log-top-row">
+            <span class="log-tag bridge">[freecad.bridge]</span>
+            <span class="log-time">16:04:17</span>
+          </div>
+          <div class="log-detail">Synced to FreeCAD 1.1.3 (Workspace 3 / Doc_001)</div>
+        </div>
+
+        <div class="log-line">
+          <div class="log-top-row">
+            <span class="log-tag plan">[audit.merkle]</span>
+            <span class="log-time">16:04:18</span>
+          </div>
+          <div class="log-detail">Block #0482 appended. Parent: e41b72...88a1</div>
+        </div>
+
+        <div class="log-line">
+          <div class="log-top-row">
+            <span class="log-tag ocp">[export.step]</span>
+            <span class="log-time">16:04:19</span>
+          </div>
+          <div class="log-detail">bracket-60x45x40.step (14,820 B) cached in SHA store</div>
+        </div>
+
+        <div class="log-line">
+          <div class="log-top-row">
+            <span class="log-tag policy">[policy.egress]</span>
+            <span class="log-time">16:04:20</span>
+          </div>
+          <div class="log-detail">Loopback isolation active. 0 external network packets.</div>
+        </div>
+
+      </div>
+
+      <!-- Journal Cryptographic Audit Ledger Footer -->
+      <div class="journal-audit-footer">
+        <span class="">KEYTAR: IN-MEMORY (LOCKED)</span>
+        <span style="font-weight: 600; color: var(--graphite-2b);" class="">SHA-256 STORE: OK</span>
+      </div>
+
+    </section>
+
+  </aside>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body></html>

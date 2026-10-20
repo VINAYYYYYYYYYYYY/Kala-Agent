@@ -1,0 +1,47 @@
+[package]
+name = "kala-process"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+publish = false
+description = "Native bounded process supervision, process-tree containment and Linux sandbox boundary for the Kala Agent backend"
+
+# This crate is deliberately a standalone workspace with its own lock.  The
+# accepted six-crate root workspace is owned by another cell; adding a member
+# or editing its lock here would violate that ownership boundary.
+[workspace]
+members = []
+
+[dependencies]
+serde_json = "1.0"
+tempfile = "3.20"
+thiserror = "2.0"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+    "Win32_System_JobObjects",
+    "Win32_System_Pipes",
+    "Win32_System_Threading",
+] }
+
+[[bin]]
+name = "kala-process-probe"
+path = "src/bin/kala-process-probe.rs"
+
+# Native fixture used by the integration tests.  It is not a product entry
+# point and is never invoked by library code.
+[[bin]]
+name = "kala-process-fixture"
+path = "tests/fixtures/kala_process_fixture.rs"
+test = false
+
+[profile.release]
+strip = "symbols"

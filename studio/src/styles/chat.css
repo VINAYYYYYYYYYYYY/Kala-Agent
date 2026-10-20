@@ -1,0 +1,989 @@
+/* Chat panel — the bound engineer's calculation pad (left 340px zone).
+ *
+ * Rules are scoped under `.chat-panel` so they override the earlier shell
+ * sketch in studio.css regardless of stylesheet order. The visual language is
+ * taped paper tabs, stamped headers, and ruled-paper notes — 1px drafted
+ * borders and 0.5px hairlines, no shadows, gradients, or glow.
+ */
+
+.studio-zone-left .chat-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  background: var(--margin);
+  border: none;
+  border-radius: 0;
+}
+
+/* Header stamp ---------------------------------------------------------- */
+
+.chat-panel .chat-panel-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-md) var(--space-sm);
+  background: var(--panel);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.chat-panel .chat-panel-stamp {
+  position: relative;
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 0;
+  padding: var(--space-sm) var(--space-sm) var(--space-sm);
+  border: 1px solid var(--ink);
+  background: var(--card);
+}
+
+.chat-panel .chat-panel-stamp::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border: 0.5px solid var(--hairline);
+  pointer-events: none;
+}
+
+.chat-panel .chat-panel-stamp-title {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.chat-panel .chat-panel-stamp-slash {
+  color: var(--redline-ink);
+}
+
+.chat-panel .chat-panel-connection {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--construction);
+}
+
+.chat-panel .chat-panel-connection-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 1px solid var(--construction);
+  background: transparent;
+}
+
+.chat-panel[data-connection='desktop'] .chat-panel-connection-dot {
+  border-color: var(--stamp);
+  background: var(--stamp);
+}
+
+.chat-panel[data-connection='browser'] .chat-panel-connection-dot {
+  border-color: var(--prussian);
+  background: var(--prussian);
+}
+
+.chat-panel[data-connection='connecting'] .chat-panel-connection-dot {
+  border-color: var(--construction);
+  background: var(--boxwood);
+}
+
+.chat-panel[data-connection='error'] .chat-panel-connection-dot {
+  border-color: var(--redline);
+  background: var(--redline);
+}
+
+.chat-panel .chat-panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.chat-panel .chat-panel-settings-toggle,
+.chat-panel .chat-panel-clear {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  color: var(--ink);
+}
+
+.chat-panel .chat-panel-settings-toggle[aria-expanded='true'] {
+  border-color: var(--prussian);
+  color: var(--prussian);
+}
+
+.chat-panel .chat-panel-settings {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--card);
+  display: grid;
+  gap: var(--space-sm);
+  max-height: 36vh;
+  overflow: auto;
+}
+
+.chat-panel .chat-panel-settings-header h3 {
+  font-size: var(--text-label-lg);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.chat-panel .chat-panel-settings-header p {
+  margin-top: 2px;
+  font-family: var(--font-note);
+  font-style: italic;
+  font-size: var(--text-body-sm);
+  color: var(--construction);
+}
+
+/* Tape-tab starters and calculation pad --------------------------------- */
+
+.chat-panel .chat-panel-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-md) var(--space-sm);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--panel);
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 38vh;
+  min-width: 0;
+}
+
+.chat-panel .chat-panel-starters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-sm);
+  min-width: 0;
+}
+
+.chat-panel .chat-panel-starter {
+  position: relative;
+  flex: 0 1 auto;
+  max-width: 100%;
+  padding: var(--space-sm) var(--space-sm) var(--space-sm);
+  border: 1px solid var(--hairline);
+  border-radius: 0;
+  background: var(--card);
+  font-family: var(--font-ui);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: normal;
+  color: var(--ink);
+}
+
+/* A strip of drafting tape holds each paper tab to the board. */
+.chat-panel .chat-panel-starter::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  width: 20px;
+  height: 7px;
+  transform: translateX(-50%) rotate(-1.5deg);
+  background: color-mix(in srgb, var(--boxwood) 78%, transparent);
+  border-left: 0.5px dashed var(--boxwood-border);
+  border-right: 0.5px dashed var(--boxwood-border);
+  pointer-events: none;
+}
+
+.chat-panel .chat-panel-starter:nth-child(odd) {
+  transform: rotate(-0.4deg);
+}
+
+.chat-panel .chat-panel-starter:nth-child(even) {
+  transform: rotate(0.5deg);
+}
+
+.chat-panel .chat-panel-starter:hover {
+  border-color: var(--ink);
+  background: var(--sheet);
+}
+
+.chat-panel .chat-panel-context {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  min-width: 0;
+}
+
+.chat-panel .chat-panel-context-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-bottom: 0.5px solid var(--hairline);
+  background: color-mix(in srgb, var(--boxwood) 32%, var(--card));
+}
+
+.chat-panel .chat-panel-context-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--construction);
+}
+
+.chat-panel .chat-panel-context-kind {
+  font-family: var(--font-mono);
+  font-size: var(--text-label-md);
+  text-transform: uppercase;
+  color: var(--prussian);
+}
+
+.chat-panel .chat-panel-context-table {
+  display: grid;
+  margin: 0;
+}
+
+.chat-panel .chat-panel-context-row {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: var(--space-xs);
+  padding: 2px var(--space-sm);
+  border-bottom: 0.5px dotted var(--hairline);
+}
+
+.chat-panel .chat-panel-context-row:last-child {
+  border-bottom: none;
+}
+
+.chat-panel .chat-panel-context-row dt {
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--construction);
+}
+
+.chat-panel .chat-panel-context-row dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-md);
+  text-align: right;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* Thread ---------------------------------------------------------------- */
+
+.chat-panel .chat-panel-thread {
+  padding: var(--space-md) var(--space-md) var(--space-md);
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-sm);
+  align-content: start;
+  background-color: var(--sheet);
+  background-image: var(--rule-pattern);
+  background-repeat: repeat;
+  background-size: 100% 24px;
+}
+
+.chat-panel .chat-panel-empty {
+  margin: 0;
+  font-family: var(--font-note);
+  font-style: italic;
+  font-size: var(--text-body-sm);
+  color: var(--construction);
+}
+
+.chat-panel .chat-panel-message {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-sm) var(--space-sm);
+  border: 0.5px solid var(--hairline);
+  border-left: 2px solid var(--construction);
+  background: var(--card);
+}
+
+.chat-panel .chat-panel-message-user {
+  border-left-color: var(--prussian);
+}
+
+.chat-panel .chat-panel-message-assistant {
+  border-left-color: var(--ink);
+}
+
+.chat-panel .chat-panel-message-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.chat-panel .chat-panel-message-role {
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--construction);
+}
+
+.chat-panel .chat-panel-message-time {
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  color: var(--construction);
+}
+
+/* The real provider/model the backend answered with, plus the
+   client-measured reply time. */
+.chat-panel .chat-panel-message-badge {
+  padding: 0 var(--space-xs);
+  border: 0.5px solid var(--hairline);
+  background: var(--sheet);
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.chat-panel .chat-panel-message-badge[data-offline='yes'] {
+  color: var(--prussian);
+  border-color: var(--prussian);
+}
+
+.chat-panel .chat-panel-message-elapsed {
+  margin-left: auto;
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chat-panel .chat-panel-message-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+.chat-panel .chat-panel-message-user .chat-panel-message-text {
+  font-family: var(--font-note);
+  font-style: italic;
+  font-size: var(--text-body-sm);
+}
+
+.chat-panel .chat-panel-message-assistant .chat-panel-message-text {
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+}
+
+.chat-panel .chat-panel-pending {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.04em;
+  color: var(--construction);
+}
+
+.chat-panel .chat-panel-pending-dot {
+  width: 4px;
+  height: 4px;
+  flex: 0 0 auto;
+  background: var(--construction);
+}
+
+.chat-panel .chat-panel-error {
+  margin: 0;
+  padding: var(--space-sm) var(--space-sm);
+  border: 0.5px solid var(--redline);
+  border-left-width: 2px;
+  background: color-mix(in srgb, var(--redline) 5%, var(--card));
+  font-family: var(--font-mono);
+  font-size: var(--text-label-md);
+  color: var(--error);
+  overflow-wrap: anywhere;
+}
+
+/* Composer -------------------------------------------------------------- */
+
+.chat-panel .chat-panel-form {
+  border-top: 1px solid var(--hairline);
+  background: var(--panel);
+  padding: var(--space-sm) var(--space-md) var(--space-md);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-sm);
+}
+
+.chat-panel .chat-panel-route {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.chat-panel .chat-panel-field {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--construction);
+}
+
+.chat-panel .chat-panel-field input,
+.chat-panel .chat-panel-field select,
+.chat-panel .chat-panel-field textarea {
+  min-width: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+}
+
+.chat-panel .chat-panel-field-grow {
+  align-self: stretch;
+}
+
+/* CAD target selector (ADR-0011). There is no default option; an
+   unavailable provider is disabled and carries its reason in the tooltip. */
+.chat-panel .chat-panel-cad-target {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--construction);
+}
+
+.chat-panel .chat-panel-cad-target-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.chat-panel .chat-panel-cad-target-option {
+  display: inline-flex;
+  min-width: 0;
+}
+
+.chat-panel .chat-panel-cad-target-button {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  padding: 3px 7px;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  cursor: pointer;
+}
+
+.chat-panel .chat-panel-cad-target-button.is-active {
+  color: var(--card);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.chat-panel .chat-panel-cad-target-button:disabled {
+  color: var(--construction);
+  background: transparent;
+  border-style: dashed;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.chat-panel .chat-panel-cad-target-version {
+  color: var(--construction);
+  font-size: var(--text-label-sm);
+}
+
+.chat-panel .chat-panel-cad-target-button.is-active .chat-panel-cad-target-version {
+  color: var(--card);
+}
+
+.chat-panel .chat-panel-cad-target-unavailable {
+  color: var(--redline-ink);
+  text-transform: lowercase;
+}
+
+.chat-panel .chat-panel-cad-target-note,
+.chat-panel .chat-panel-cad-target-hint,
+.chat-panel .chat-panel-cad-target-error {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-label-sm);
+  line-height: 1.35;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--construction);
+}
+
+.chat-panel .chat-panel-cad-target-error {
+  color: var(--redline-ink);
+}
+
+.chat-panel .chat-panel-cad-target-retry {
+  padding: 0 4px;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  color: var(--redline-ink);
+  background: transparent;
+  border: 1px solid var(--redline-ink);
+  cursor: pointer;
+}
+
+.chat-panel .chat-panel-prompt {
+  min-height: 48px;
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.chat-panel .chat-panel-provider-status {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  margin: 0;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--construction);
+}
+
+.chat-panel .chat-panel-provider-status-label {
+  flex: 0 0 auto;
+  color: var(--construction);
+}
+
+.chat-panel .chat-panel-provider-status-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.chat-panel .chat-panel-provider-status[data-configured='no'] .chat-panel-provider-status-value {
+  color: var(--redline-ink);
+}
+
+/* Remote-egress consent stamp. */
+.chat-panel .chat-panel-consent {
+  display: grid;
+  grid-template-columns: 15px minmax(0, 1fr);
+  gap: var(--space-sm);
+  align-items: start;
+  padding: var(--space-sm) var(--space-sm);
+  border: 1px dashed var(--redline);
+  background: color-mix(in srgb, var(--redline) 5%, var(--card));
+  font-size: var(--text-label-sm);
+  line-height: 1.35;
+  color: var(--construction);
+}
+
+.chat-panel .chat-panel-consent[data-consent='granted'] {
+  border-style: solid;
+  border-color: var(--stamp);
+  background: color-mix(in srgb, var(--stamp) 5%, var(--card));
+}
+
+.chat-panel .chat-panel-consent input {
+  margin: 1px 0 0;
+  accent-color: var(--redline);
+}
+
+.chat-panel .chat-panel-consent[data-consent='granted'] input {
+  accent-color: var(--stamp);
+}
+
+.chat-panel .chat-panel-consent-copy {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.chat-panel .chat-panel-consent-stamp {
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--redline-ink);
+}
+
+.chat-panel .chat-panel-consent[data-consent='granted'] .chat-panel-consent-stamp {
+  color: var(--stamp);
+}
+
+.chat-panel .chat-panel-consent-text {
+  color: var(--construction);
+}
+
+.chat-panel .chat-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.chat-panel .chat-panel-send {
+  flex: 1 1 auto;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: var(--ink);
+  color: var(--sheet);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-md);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.chat-panel .chat-panel-send:hover:not(:disabled) {
+  background: var(--prussian);
+  border-color: var(--prussian);
+}
+
+.chat-panel .chat-panel-cancel {
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+}
+
+.chat-panel .chat-panel-warning {
+  flex: 1 1 100%;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  color: var(--redline-ink);
+}
+
+/* Agent card — the compiled design a turn produced ---------------------- */
+
+.chat-panel .chat-panel-agent-card {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+  border: 1px solid var(--redline);
+  background: color-mix(in srgb, var(--redline) 5%, var(--card));
+}
+
+.chat-panel .chat-panel-agent-card-note {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-md);
+  line-height: 1.45;
+  color: var(--redline-ink);
+  overflow-wrap: anywhere;
+}
+
+/* The design card. A drafted sheet of its own, pinned under the reply. */
+.chat-panel .chat-panel-design-card {
+  display: grid;
+  gap: var(--space-sm);
+  justify-items: stretch;
+  margin-top: var(--space-xs);
+  padding: var(--space-sm);
+  border: 1px solid var(--ink);
+  background: var(--card);
+  min-width: 0;
+}
+
+.chat-panel .chat-panel-design-card-missing {
+  border-style: dashed;
+  border-color: var(--hairline);
+}
+
+.chat-panel .chat-panel-design-missing {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-md);
+  color: var(--construction);
+}
+
+.chat-panel .chat-panel-design-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-xs) var(--space-sm);
+  padding-bottom: var(--space-xs);
+  border-bottom: 0.5px solid var(--hairline);
+}
+
+.chat-panel .chat-panel-design-card-label {
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.chat-panel .chat-panel-design-card-id {
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.08em;
+  color: var(--construction);
+}
+
+/* The Prussian "B-Rep Verified" stamp. It is drawn only when every
+   backend check passed; a failed set gets the count instead. */
+.chat-panel .chat-panel-design-stamp {
+  margin-left: auto;
+  padding: 0 var(--space-xs);
+  border: 1px solid var(--prussian);
+  color: var(--prussian);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.chat-panel .chat-panel-design-stamp.is-failed {
+  border-color: var(--redline);
+  color: var(--redline-ink);
+  letter-spacing: 0.06em;
+  text-transform: none;
+}
+
+/* The measured table. */
+.chat-panel .chat-panel-design-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-md);
+}
+
+.chat-panel .chat-panel-design-caption {
+  caption-side: top;
+  padding-bottom: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--construction);
+  text-align: left;
+}
+
+.chat-panel .chat-panel-design-provider {
+  margin: 0;
+  padding: 0 0 4px;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.04em;
+}
+
+.chat-panel .chat-panel-design-warnings {
+  margin: 0;
+  padding: 0 0 0 16px;
+  color: var(--redline-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  line-height: 1.35;
+}
+
+.chat-panel .chat-panel-design-table th {
+  padding: 1px var(--space-xs) 1px 0;
+  font-weight: 400;
+  text-align: left;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--construction);
+  white-space: nowrap;
+}
+
+.chat-panel .chat-panel-design-table td {
+  padding: 1px 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.chat-panel .chat-panel-design-table tr + tr th,
+.chat-panel .chat-panel-design-table tr + tr td {
+  border-top: 0.5px dotted var(--hairline);
+}
+
+/* The backend's checks. */
+.chat-panel .chat-panel-design-checks {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 0.5px solid var(--hairline);
+  padding-top: var(--space-xs);
+}
+
+.chat-panel .chat-panel-design-check {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 1px var(--space-xs);
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-md);
+}
+
+.chat-panel .chat-panel-design-check-mark {
+  text-align: center;
+}
+
+.chat-panel .chat-panel-design-check[data-passed='yes'] .chat-panel-design-check-mark {
+  color: var(--stamp);
+}
+
+.chat-panel .chat-panel-design-check[data-passed='no'] .chat-panel-design-check-mark {
+  color: var(--redline);
+}
+
+.chat-panel .chat-panel-design-check-label {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.chat-panel .chat-panel-design-check-values {
+  grid-column: 2;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-sm);
+  justify-content: flex-start;
+  color: var(--construction);
+  text-align: left;
+}
+
+.chat-panel .chat-panel-design-check-measured {
+  color: var(--ink);
+}
+
+/* The digest chips. */
+.chat-panel .chat-panel-design-digests {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.chat-panel .chat-panel-design-digest {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 0 var(--space-xs);
+  border: 0.5px solid var(--hairline);
+  background: var(--sheet);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+}
+
+.chat-panel .chat-panel-design-digest-label {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--construction);
+}
+
+.chat-panel .chat-panel-design-digest-value {
+  color: var(--ink);
+  letter-spacing: 0.04em;
+}
+
+.chat-panel .chat-panel-design-digest-copy {
+  padding: 0 var(--space-xs);
+  border: 0.5px solid var(--boxwood-border);
+  background: var(--card);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--construction);
+  cursor: pointer;
+}
+
+.chat-panel .chat-panel-design-digest-copy:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.chat-panel .chat-panel-design-digest-copy[data-copied='yes'] {
+  border-color: var(--stamp);
+  color: var(--stamp);
+}
+
+.chat-panel .chat-panel-design-digest-copy[data-copy-failed='yes'] {
+  border-color: var(--redline);
+  color: var(--redline-ink);
+}
+
+/* The jump-to-section pill. */
+.chat-panel .chat-panel-design-section-pill {
+  justify-self: start;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--prussian);
+  background: var(--card);
+  color: var(--prussian);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-md);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chat-panel .chat-panel-design-section-pill:hover {
+  background: var(--prussian);
+  color: var(--sheet);
+}
+
+/* Narrow workbench columns --------------------------------------------- */
+
+@media (max-width: 1400px) {
+  .chat-panel .chat-panel-header {
+    padding: var(--space-sm) var(--space-md) var(--space-sm);
+  }
+
+  .chat-panel .chat-panel-intro,
+  .chat-panel .chat-panel-thread,
+  .chat-panel .chat-panel-form {
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+  }
+
+  .chat-panel .chat-panel-route {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

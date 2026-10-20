@@ -1,0 +1,5 @@
+# Process repair round 2
+
+Read original TASK.md, REPORT.md, SESSION.md and REVIEW-1.md in this cell. Original scope and ownership remain unchanged: ONLY backend/crates/kala-process/** and this cell's REPORT.md/SESSION.md. No other crate, root manifest/lock, Python, UI, fixture corpus, packaging or adapters edits. The original worker claims 38 passing tests and cross-target checks; Sol independently confirmed Linux release/fmt/clippy/strict evidence but identified four concrete API/platform defects and one liveness guarantee gap.
+
+Repair every REVIEW-1 item with focused meaningful regression tests, then run fmt, locked debug/release tests, all-target clippy-Dwarnings, release build, MSVC/GNU Windows all-target check/clippy, live Python oracle, and the opt-in strict sandbox checks. Preserve honest unsupported controls and Windows execution pending. Do not delegate, switch provider/model, commit/push/deploy, install unrelated software or delete user/reference source. Implementation remains OpenCode Go DeepSeek V4.1 Flash max. Return actual counts and remaining limitations.

@@ -9,11 +9,17 @@ surface can never widen, rename, or reinterpret a result.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from enum import StrEnum
-from typing import Annotated, Final
+from typing import Annotated, Final, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from kala_agent.studio.design.intent import DesignIntent
+from kala_agent.studio.design.providers.base import (
+    ALLOWED_PROVIDER_IDS,
+    CadProviderId,
+)
 from kala_agent.studio.geometry.limits import (
     MAX_DIMENSION_MM,
     MIN_DIMENSION_MM,
@@ -30,6 +36,7 @@ MAX_PROVIDER_NAME_LENGTH: Final[int] = 128
 MAX_PLATFORM_LENGTH: Final[int] = 64
 MAX_CAPABILITY_LENGTH: Final[int] = 64
 MAX_NOTES_LENGTH: Final[int] = 1_024
+MAX_LABEL_LENGTH: Final[int] = 120
 MAX_PARAMETERS_ENTRIES: Final[int] = 32
 MAX_PARAMETER_KEY_LENGTH: Final[int] = 64
 MAX_PARAMETER_STRING_VALUE_LENGTH: Final[int] = 128
@@ -37,7 +44,22 @@ MAX_BBOX_NUMBER: Final[float] = 1_000_000.0
 INTEGRATION_ID_PATTERN: Final[str] = r"^[a-z0-9][a-z0-9._-]{0,63}$"
 PROVIDER_ID_PATTERN: Final[str] = r"^[a-z0-9][a-z0-9._-]{0,63}$"
 MODEL_ID_PATTERN: Final[str] = r"^[A-Za-z0-9._:/-]{1,256}$"
+DESIGN_ID_PATTERN: Final[str] = r"^[0-9a-f]{64}$"
 SERVICE_NAME: Final[str] = "kala-studio"
+MAX_JOURNAL_LIMIT: Final[int] = 500
+MAX_DRAWING_VIEWS: Final[int] = 4
+MAX_SECTION_OFFSET_MM: Final[float] = 10_000.0
+
+DesignId = Annotated[
+    str,
+    Field(
+        min_length=64,
+        max_length=64,
+        pattern=DESIGN_ID_PATTERN,
+        description="The sha256 of the canonical ConstructionScript JSON.",
+    ),
+]
+CheckValue = bool | float | tuple[float, float]
 
 
 class PrimitiveKind(StrEnum):
@@ -114,6 +136,25 @@ class _RequestModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 
 
+class DesignRequest(DesignIntent):
+    """A design intent plus the provider that must build it.
+
+    ``provider`` is a required field by ADR-0011. A missing value is a 422
+    whose detail names every allowed value, which a plain "field required"
+    framework error would not.
+    """
+
+    provider: CadProviderId
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_provider_selected(cls, data: object) -> object:
+        if isinstance(data, Mapping) and "provider" not in data:
+            allowed = ", ".join(ALLOWED_PROVIDER_IDS)
+            raise ValueError(f"provider is required (choose {allowed})")
+        return data
+
+
 def _validate_parameters_block(value: dict[str, object] | None) -> dict[str, object] | None:
     """Validate a primitive parameters block.
 
@@ -168,16 +209,30 @@ class PreviewRequest(_RequestModel):
 
 
 class ExportRequest(_RequestModel):
-    """Ask the studio to render a parametric preview into a downloadable file."""
+    """Ask the studio to render a primitive or a stored design into a file.
 
-    kind: PrimitiveKind
+    Exactly one source is required: a primitive ``kind`` with optional
+    ``parameters``, or a stored ``design_id``. Mixing the two is refused
+    rather than silently preferring one.
+    """
+
+    kind: PrimitiveKind | None = None
     parameters: ParametersField = None
     format: ExportFormat
+    design_id: DesignId | None = None
 
     @field_validator("parameters")
     @classmethod
     def check_parameters(cls, value: dict[str, object] | None) -> dict[str, object] | None:
         return _validate_parameters_block(value)
+
+    @model_validator(mode="after")
+    def check_source(self) -> ExportRequest:
+        if (self.kind is None) == (self.design_id is None):
+            raise ValueError("exactly one of kind or design_id is required")
+        if self.design_id is not None and self.parameters is not None:
+            raise ValueError("parameters are only valid together with a primitive kind")
+        return self
 
 
 class HandoffRequest(_RequestModel):
@@ -225,6 +280,7 @@ class ChatRequest(_RequestModel):
         Field(min_length=1, max_length=MAX_PROMPT_LENGTH),
     ]
     allow_remote: bool = False
+    cad_provider: CadProviderId | None = None
 
 
 class UpdateProviderKeyRequest(BaseModel):
@@ -321,12 +377,17 @@ class PreviewResponse(_StrictModel):
 
 
 class ChatResponse(_StrictModel):
-    """A short model reply, never a credential or a long traceback."""
+    """A short model reply, never a credential or a long traceback.
+
+    ``design`` is present only when the turn produced a compiled, measured,
+    verified design. Its absence is the honest "no design was built" signal.
+    """
 
     text: Annotated[str, Field(min_length=0, max_length=MAX_PROMPT_LENGTH)]
     provider: ProviderId
     model: Annotated[str | None, Field(default=None, max_length=MAX_MODEL_ID_LENGTH)] = None
     offline: bool
+    design: DesignResult | None = None
 
 
 class HealthResponse(_StrictModel):
@@ -337,8 +398,240 @@ class HealthResponse(_StrictModel):
     version: Annotated[str, Field(min_length=1, max_length=64)]
     offline: bool
     step_available: bool
+    design_available: bool = False
     integrations: tuple[str, ...]
     providers: tuple[str, ...]
+
+
+class DesignBounds(_StrictModel):
+    """An axis-aligned envelope in millimetres."""
+
+    min: Annotated[tuple[float, float, float], Field(min_length=3, max_length=3)]
+    max: Annotated[tuple[float, float, float], Field(min_length=3, max_length=3)]
+
+    @field_validator("min", "max")
+    @classmethod
+    def check_finite(cls, value: tuple[float, float, float]) -> tuple[float, float, float]:
+        for component in value:
+            if isinstance(component, bool) or not isinstance(component, (int, float)):
+                raise ValueError("envelope coordinates must be finite numbers")
+            if abs(float(component)) > MAX_BBOX_NUMBER:
+                raise ValueError("envelope coordinates are out of range")
+        return (float(value[0]), float(value[1]), float(value[2]))
+
+
+class DesignMeasured(_StrictModel):
+    """Every provider-measured number of one design.
+
+    A provider that does not report a property leaves it ``null``. The UI
+    shows an em dash for that value; OpenCascade never substitutes one.
+    """
+
+    volume_mm3: float | None = None
+    surface_area_mm2: float | None = None
+    centroid_mm: Annotated[tuple[float, float, float], Field(min_length=3, max_length=3)] | None = (
+        None
+    )
+    bounds: DesignBounds | None = None
+    size_mm: Annotated[tuple[float, float, float], Field(min_length=3, max_length=3)] | None = None
+    valid: bool | None = None
+    solid_count: Annotated[int, Field(ge=0)] | None = None
+    mass_g: float | None = None
+
+
+class DesignCheck(_StrictModel):
+    """One declared-versus-measured check row.
+
+    ``status`` distinguishes an actual failure from a value the provider did
+    not report. ``passed`` is false in both cases so a single boolean remains
+    safe for a client that ignores ``status``.
+    """
+
+    id: Annotated[str, Field(min_length=1, max_length=64)]
+    label: Annotated[str, Field(min_length=1, max_length=128)]
+    expected: CheckValue
+    measured: CheckValue | None = None
+    tolerance: float
+    unit: Annotated[str, Field(min_length=1, max_length=16)]
+    passed: bool
+    status: Literal["passed", "failed", "not_reported"] = "passed"
+
+
+class DesignMesh(_StrictModel):
+    """A bounded OCP triangulation of the compiled shape."""
+
+    positions: tuple[float, ...]
+    normals: tuple[float, ...]
+    indices: tuple[int, ...]
+    vertex_count: Annotated[int, Field(ge=0)]
+    triangle_count: Annotated[int, Field(ge=0)]
+    deflection_mm: float
+    engine: Annotated[str, Field(min_length=1, max_length=32)]
+
+
+class DesignView(DesignMesh):
+    """The display view imported from the provider's exact STEP bytes."""
+
+    bounds: DesignBounds
+    solids: Annotated[int, Field(ge=0)]
+    warnings: tuple[Annotated[str, Field(min_length=1, max_length=256)], ...] = ()
+
+
+class DesignArtifacts(_StrictModel):
+    """The content digests stored for a design.
+
+    ``step_sha256`` is the provider's STEP export. ``native_sha256`` is the
+    provider's native file (``fcstd`` for FreeCAD); it is null for the
+    OpenCascade builder, which has no separate native format.
+    """
+
+    script_sha256: DesignId
+    step_sha256: Annotated[str | None, Field(default=None, max_length=64)] = None
+    native_sha256: Annotated[str | None, Field(default=None, max_length=64)] = None
+    native_kind: Annotated[str | None, Field(default=None, max_length=16)] = None
+
+
+class DesignResult(_StrictModel):
+    """The complete, provider-measured response to a design turn."""
+
+    design_id: DesignId
+    label: Annotated[str, Field(min_length=1, max_length=MAX_LABEL_LENGTH)]
+    provider: CadProviderId
+    provider_version: Annotated[str | None, Field(default=None, max_length=64)] = None
+    measured_by: Annotated[str, Field(min_length=1, max_length=64)]
+    script: dict[str, object]
+    measured: DesignMeasured
+    checks: tuple[DesignCheck, ...]
+    verified: bool
+    view: DesignView
+    artifacts: DesignArtifacts
+    journal_head: Annotated[str | None, Field(default=None, max_length=64)] = None
+    material: Annotated[str | None, Field(default=None, max_length=64)] = None
+    tolerances: tuple[Annotated[str, Field(min_length=1, max_length=64)], ...] = ()
+    declared_envelope: DesignBounds | None = None
+    cached: bool = False
+    warnings: tuple[Annotated[str, Field(min_length=1, max_length=256)], ...] = ()
+    component_count: Annotated[int, Field(ge=0)] = 0
+    fused: bool = False
+
+
+class DrawingPolyline(_StrictModel):
+    """One HLR polyline in view-plane millimetres."""
+
+    points: tuple[tuple[float, float], ...]
+    closed: bool
+    point_count: Annotated[int, Field(ge=0)]
+
+
+class DrawingView(_StrictModel):
+    """The visible and hidden lines of one view."""
+
+    name: Annotated[str, Field(min_length=1, max_length=16)]
+    visible: tuple[DrawingPolyline, ...]
+    hidden: tuple[DrawingPolyline, ...]
+    truncated: bool
+    point_count: Annotated[int, Field(ge=0)]
+    polyline_count: Annotated[int, Field(ge=0)]
+
+
+class DrawingResponse(_StrictModel):
+    """The HLR drawing of one stored design."""
+
+    design_id: DesignId
+    views: tuple[DrawingView, ...]
+    chord_tolerance_mm: float
+    max_points: Annotated[int, Field(ge=1)]
+    point_count: Annotated[int, Field(ge=0)]
+
+
+class SectionBounds2D(_StrictModel):
+    """An axis-aligned box in section-plane millimetres."""
+
+    min_u: float
+    min_v: float
+    max_u: float
+    max_v: float
+    width: float
+    height: float
+    center_u: float
+    center_v: float
+
+
+class SectionLoopResponse(_StrictModel):
+    """One closed loop of a section cut."""
+
+    points: tuple[tuple[float, float], ...]
+    area_mm2: float
+    area_exact: bool
+    outer: bool
+    bounds: SectionBounds2D
+    centroid: tuple[float, float]
+    point_count: Annotated[int, Field(ge=0)]
+
+
+class SectionResponse(_StrictModel):
+    """The closed loops and measured net area of one section cut."""
+
+    design_id: DesignId
+    plane: Annotated[str, Field(min_length=2, max_length=2)]
+    offset_mm: float
+    loops: tuple[SectionLoopResponse, ...]
+    area_mm2: float
+    area_exact: bool
+    chord_tolerance_mm: float
+    truncated: bool
+    outer_loop_count: Annotated[int, Field(ge=0)]
+    inner_loop_count: Annotated[int, Field(ge=0)]
+    point_count: Annotated[int, Field(ge=0)]
+
+
+class JournalEventRecord(_StrictModel):
+    """One stored Studio journal event without its raw payload text."""
+
+    sequence: Annotated[int, Field(ge=1)]
+    event_type: Annotated[str, Field(min_length=1, max_length=64)]
+    aggregate_id: Annotated[str, Field(min_length=1, max_length=64)]
+    payload: dict[str, object] | None
+    digest: Annotated[str, Field(min_length=64, max_length=64)]
+    occurred_at: Annotated[str, Field(min_length=1, max_length=64)]
+    previous_event_digest: Annotated[str, Field(min_length=64, max_length=64)]
+    event_digest: Annotated[str, Field(min_length=64, max_length=64)]
+
+
+class JournalPageResponse(_StrictModel):
+    """A bounded page of Studio journal events."""
+
+    events: tuple[JournalEventRecord, ...]
+    next_after: Annotated[int, Field(ge=0)]
+    has_more: bool
+    limit: Annotated[int, Field(ge=1, le=MAX_JOURNAL_LIMIT)]
+
+
+class JournalVerifyResponse(_StrictModel):
+    """The hash-chain verdict for the Studio journal."""
+
+    ok: bool
+    event_count: Annotated[int, Field(ge=0)]
+    head_digest: Annotated[str | None, Field(default=None, max_length=64)] = None
+    first_bad_sequence: Annotated[int | None, Field(default=None, ge=1)] = None
+
+
+class CadProviderRecord(_StrictModel):
+    """One provider row: a live probe result plus static identity."""
+
+    id: CadProviderId
+    name: Annotated[str, Field(min_length=1, max_length=64)]
+    available: bool
+    version: Annotated[str | None, Field(default=None, max_length=64)] = None
+    reason: Annotated[str | None, Field(default=None, max_length=512)] = None
+    measured_by: Annotated[str, Field(min_length=1, max_length=64)]
+    mode: Annotated[str, Field(min_length=1, max_length=16)]
+
+
+class CadProvidersResponse(_StrictModel):
+    """The probe result of every CAD provider, in a fixed order."""
+
+    providers: tuple[CadProviderRecord, ...]
 
 
 class HandoffResponse(_StrictModel):
@@ -388,9 +681,12 @@ __all__ = (
     "MAX_BBOX_COUNT",
     "MAX_BBOX_NUMBER",
     "MAX_CAPABILITY_LENGTH",
+    "MAX_DRAWING_VIEWS",
     "MAX_FORMAT_LENGTH",
     "MAX_INTEGRATION_NAME_LENGTH",
+    "MAX_JOURNAL_LIMIT",
     "MAX_KIND_LENGTH",
+    "MAX_LABEL_LENGTH",
     "MAX_MODEL_ID_LENGTH",
     "MAX_NOTES_LENGTH",
     "MAX_PARAMETERS_ENTRIES",
@@ -400,12 +696,29 @@ __all__ = (
     "MAX_PROMPT_LENGTH",
     "MAX_PROVIDER_ID_LENGTH",
     "MAX_PROVIDER_NAME_LENGTH",
+    "MAX_SECTION_OFFSET_MM",
     "SERVICE_NAME",
     "BBox",
+    "CadProviderId",
+    "CadProviderRecord",
+    "CadProvidersResponse",
     "ChatRequest",
     "ChatResponse",
+    "CheckValue",
     "CredentialProviderId",
     "CredentialSource",
+    "DesignArtifacts",
+    "DesignBounds",
+    "DesignCheck",
+    "DesignId",
+    "DesignMeasured",
+    "DesignMesh",
+    "DesignRequest",
+    "DesignResult",
+    "DesignView",
+    "DrawingPolyline",
+    "DrawingResponse",
+    "DrawingView",
     "ErrorResponse",
     "ExportFormat",
     "ExportRequest",
@@ -416,6 +729,9 @@ __all__ = (
     "IntegrationRecord",
     "IntegrationStatus",
     "IntegrationsResponse",
+    "JournalEventRecord",
+    "JournalPageResponse",
+    "JournalVerifyResponse",
     "PreviewRequest",
     "PreviewResponse",
     "PrimitiveKind",
@@ -423,6 +739,9 @@ __all__ = (
     "ProviderId",
     "ProviderRecord",
     "ProvidersResponse",
+    "SectionBounds2D",
+    "SectionLoopResponse",
+    "SectionResponse",
     "StudioSettingsResponse",
     "UpdateProviderKeyRequest",
     "_StrictModel",

@@ -24,6 +24,32 @@ export interface BackendProcessOptions {
   token: string;
 }
 
+export type BackendMode =
+  | 'packaged-native'
+  | 'native'
+  | 'python-override'
+  | 'python-reference'
+  | 'invalid';
+
+export interface ResolvedBackend {
+  command: string;
+  args: string[];
+  cwd: string;
+  env: NodeJS.ProcessEnv;
+  exists: boolean;
+  mode: BackendMode;
+  instructions: string;
+}
+
+export interface ResolveBackendOptions {
+  isPackaged?: boolean;
+  platform?: NodeJS.Platform;
+  resourcesPath?: string;
+  repoRoot?: string;
+  devBackend?: string;
+  python?: string;
+}
+
 export interface BackendExitInfo {
   code: number | null;
   signal: NodeJS.Signals | null;
@@ -56,7 +82,12 @@ export interface FakeEvent {
 
 export function bootstrap(): Promise<void>;
 export function buildBackendInvocation(options: BackendProcessOptions): BackendInvocation;
-export function resolveBackendCommand(): { command: string; args: string[]; cwd?: string; env?: NodeJS.ProcessEnv; exists: boolean };
+export function resolveBackendCommand(options?: ResolveBackendOptions): ResolvedBackend;
+export function packagedBackendEnvironment(options?: {
+  resourcesPath: string;
+  environ?: NodeJS.ProcessEnv;
+  platform?: NodeJS.Platform;
+}): NodeJS.ProcessEnv;
 export function validateIpcSender(event: FakeEvent, win: FakeWin, trustedOrigin: string): void;
 export function pickFreePort(): Promise<number>;
 export function generateToken(): string;
@@ -67,6 +98,8 @@ export function registerIpc(win: unknown, trustedOrigin: string, baseUrl: string
 export const TRUSTED_HOST: string;
 export const PRELOAD_PATH: string;
 export const REPO_ROOT: string;
+export const NATIVE_STAGE_DIR: string;
+export const DEV_BACKEND_ENV: string;
 
 // Mark these as ambient so unused-variable analysis does not flag them
 // when the consumer imports only the helpers.

@@ -3,9 +3,22 @@
 > Scope: which language model providers the chat-first studio agent
 > exposes, how each is configured, the consent and isolation rules,
 > and the primary sources the studio's behaviour is anchored to.
+>
+> This document is about **language-model** providers. The **CAD**
+> providers — the engines that actually build the model — are a different
+> thing and are documented in [cad-providers.md](cad-providers.md).
+>
+> **Current state (2026-10-20).** The studio is **Rust-only** (ADR-0010
+> phase 2): the product runs the native `kala-studio` service, and the
+> provider set, the consent gate, the credential handling and the
+> refusals are the same there as in the Python reference server, which
+> survives as the differential oracle. Nothing in this document depends on
+> a Python process being present.
 
-The studio chat surface accepts one of four provider identifiers
-defined by `kala_agent.studio.schemas.ProviderId`:
+The studio chat surface accepts one of four provider identifiers. The native
+service defines them in `backend/crates/kala-studio/src/schemas.rs`
+(`ProviderId`); the Python reference server defines the same four in
+`kala_agent.studio.schemas.ProviderId`:
 
 - `local` — deterministic offline helper. No network, no prompt
   context beyond the request body itself.
@@ -18,11 +31,16 @@ defined by `kala_agent.studio.schemas.ProviderId`:
   endpoint. Requires `OPENROUTER_API_KEY` configured in Studio settings or the backend environment.
 
 The `chat` request schema is bounded: `provider`, optional `model`,
-required `prompt`, and `allow_remote: bool = False`. The studio
-does not attach geometry, preview context, nominal geometry estimates,
-model entitlement messages, or any client-side context to a chat
+required `prompt`, `allow_remote: bool = False`, and the optional
+`cad_provider` (the CAD target — see [cad-providers.md](cad-providers.md)).
+The studio does not attach geometry, preview context, nominal geometry
+estimates, model entitlement messages, or any client-side context to a chat
 request. The `allow_remote` field is opt-in and gates every external
 HTTPS request.
+
+The response is `{text, provider, model, offline}` plus an optional
+`design` — the `DesignResult` — when the turn produced a real, measured
+design. The `design` is `null` whenever nothing was built.
 
 ## Local helper (`provider: "local"`)
 
@@ -30,13 +48,30 @@ The local provider is the default. It returns a deterministic,
 templated response derived from the prompt string alone: it extracts
 any numeric dimensions from the prompt, computes nominal analytic
 volume and surface-area estimates for a box, cylinder, or sphere, and
-restates the OpenCascade (OCP) estimate / neutral-handoff workflow. It
+restates the OpenCascade estimate / neutral-handoff workflow. It
 does not issue network requests and does not look at the active preview
 geometry, the active mesh, or the integration registry. It never
 invents engineering facts (material strength, factor of safety,
 fatigue life, etc.); when the prompt asks for those, it returns an
 honest refusal naming the limitation. The local helper is suitable
 for offline drafting and unit-test scenarios.
+
+For a **design** prompt the local helper does one extra thing: it runs
+the **strict intent parser**. In the native build that parser is
+`kala-design-intent` (Rust); the Python reference server runs the same
+contract from `src/kala_agent/studio/design/intent.py`. Either returns a
+complete intent, or it returns the exact list of values it still needs:
+
+```
+Local helper. I can draft a L-bracket, but I need these declared values:
+width (mm), depth (mm), height (mm), wall thickness (mm)
+```
+
+It never guesses a dimension. When the intent *is* complete, the turn
+continues into the CAD-provider step; see
+[cad-providers.md](cad-providers.md) for what happens next when no CAD
+target has been chosen.
+
 
 ## Codex CLI (`provider: "codex"`)
 
@@ -74,10 +109,16 @@ Consequences the studio states honestly:
   request into a paid API call and never reuses an inherited
   `OPENAI_API_KEY` for the subscription path.
 
+The refusal is the same in the native build and in the Python reference:
+`provider=codex is not available in this studio build; the verified Codex
+CLI subprocess integration is not shipped yet, so no request is sent. Use
+provider=openai or provider=openrouter with an API key for remote chat.`
+
 ## OpenAI (`provider: "openai"`)
 
-The studio backend makes a direct HTTPS request to the OpenAI
-chat-completions endpoint. It does not follow redirects, does not
+The native studio service makes a direct HTTPS request to the OpenAI
+chat-completions endpoint (`https://api.openai.com/v1/chat/completions`).
+It does not follow redirects, does not
 proxy through any third party, and rejects a body that does not
 match the schema. It truncates the response to a bounded size and
 rejects a non-success HTTP status.
@@ -97,7 +138,8 @@ quota as a substitute for a paid plan.
 
 ## OpenRouter (`provider: "openrouter"`)
 
-Same shape as OpenAI, with `OPENROUTER_API_KEY` configurable via the Studio **API Keys** settings UI (`POST /api/studio/settings`) or the backend environment. OpenRouter is an
+Same shape as OpenAI, with `OPENROUTER_API_KEY` configurable via the Studio **API Keys** settings UI (`POST /api/studio/settings`) or the backend environment, and a fixed endpoint
+(`https://openrouter.ai/api/v1/chat/completions`). OpenRouter is an
 HTTP aggregator; the studio backend treats it identically to
 OpenAI: fixed endpoint, no redirects, bounded body, bounded
 timeout. The studio does not pre-approve any specific model on
@@ -128,15 +170,23 @@ are met.
 - Invokes the Codex CLI at all in this build: the `codex` route
   refuses before any child process, argv, or environment is
   constructed, so no CLI flag is ever passed.
-- Auto-selects a provider. The renderer's default is `local`. A
-  remote provider must be picked explicitly.
+- Auto-selects a **language-model** provider. The renderer's default is
+  `local`. A remote provider must be picked explicitly.
+- Auto-selects a **CAD** provider. The CAD target starts empty and
+  must be chosen in the composer; with no choice the design turn asks
+  which provider to use and builds nothing. See
+  [cad-providers.md](cad-providers.md).
 - Sends geometry or estimates to a provider. The workbench's nominal
   volume, surface-area, and bounding-envelope estimates are computed
   locally from validated parameters; a chat prompt carries only its
-  text.
+  text. A **design** result is the opposite case and is stated
+  plainly: the measured numbers come from the CAD provider that built
+  the model, and the card says which one.
 - Caches prompts or responses on disk. Each call is stateless.
 - Sends telemetry to a third party. The studio makes no outbound
-  connection other than the chosen provider call.
+  connection other than the chosen provider call; the CAD-provider
+  probes are local (`FreeCADCmd` runs as a child process, the Solid Edge
+  bridge is a loopback address).
 
 ## Primary sources
 
@@ -160,17 +210,25 @@ eligibility is the provider's decision, not the studio's.
 ## Trust model recap
 
 - The hardened core (`src/kala_agent/`) does not import
-  `kala_agent.studio`. The studio backend is the only place a
+  `kala_agent.studio`. The studio service is the only place a
   provider call exists.
 - Only the `openai` and `openrouter` routes make an outbound
   request, and only when `allow_remote=true` and the matching key is
   configured. The `codex` route never leaves the process.
+- The **CAD** providers are a separate trust domain. The FreeCAD
+  provider runs a `FreeCADCmd` subprocess with a **scrubbed**
+  environment: the credential-shaped keys (`TOKEN`, `API_KEY`,
+  `SECRET`, `PASSWORD`, `CREDENTIAL`) are removed before the driver
+  starts, so the CAD engine never inherits the chat API key (nor, in
+  the development fallback, the geometry-worker token). The Solid Edge
+  provider reaches only a
+  loopback bridge and reads its token without logging it.
 - The desktop shell only injects a bearer token. It has no access
   to provider credentials.
 - The renderer has no access to `process.env`, `fs`, or
   `child_process` in Electron production builds (sandbox: true,
   nodeIntegration: false, contextIsolation: true).
-- The CI matrix does not upload any environment variable, does
+- The release workflow does not upload any environment variable, does
   not authenticate against any provider, and does not enable any
   API/credentials workflow. See
   [studio-limitations.md](studio-limitations.md).

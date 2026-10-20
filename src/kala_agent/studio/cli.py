@@ -5,6 +5,12 @@ starts the ASGI server through ``uvicorn``. The server is bound only to
 the loopback interface; a wildcard or routable address is refused before
 a socket exists. ``uvicorn`` is started without proxy headers because
 trusting ``X-Forwarded-Host`` would defeat the Host guard.
+
+In ``--worker`` mode the data directory is mandatory: it must be named by
+``--data-dir`` or ``KALA_STUDIO_DATA_DIR``. The geometry worker refuses to
+start without one instead of falling back to the home directory or a shared
+temporary directory, so every worker owns one isolated Studio data directory
+and journal. The normal (non-worker) Studio keeps its documented defaults.
 """
 
 from __future__ import annotations
@@ -29,12 +35,18 @@ from kala_agent.studio.server import create_studio_app
 from kala_agent.studio.static import STUDIO_DIST_ENV_VAR, resolve_static_root
 
 PROGRAM_NAME: Final[str] = "python -m kala_agent.studio"
+STUDIO_DATA_DIR_ENV_VAR: Final[str] = "KALA_STUDIO_DATA_DIR"
 DEFAULT_HOST: Final[str] = "127.0.0.1"
 DEFAULT_PORT: Final[int] = 8765
 MIN_PORT: Final[int] = 1
 MAX_PORT: Final[int] = 65_535
 LOG_LEVEL: Final[str] = "warning"
 UVICORN_MODULE_NAME: Final[str] = "uvicorn"
+WORKER_DATA_DIR_REQUIRED_MESSAGE: Final[str] = (
+    "--worker requires an explicit --data-dir or KALA_STUDIO_DATA_DIR; the "
+    "geometry worker never falls back to the home directory or a shared "
+    "temporary directory"
+)
 EPILOG: Final[str] = (
     "Exit codes: 0 served; 1 the uvicorn module is not installed; 2 a usage error occurred."
 )
@@ -86,7 +98,8 @@ def build_parser() -> argparse.ArgumentParser:
             "Run the Kala Studio standalone HTTP service on a loopback "
             "interface. The host defaults to 127.0.0.1 and is refused for "
             "anything else; the token is taken from KALA_STUDIO_TOKEN or "
-            "minted into the studio data directory."
+            "minted into the studio data directory. With --worker the same "
+            "command runs the internal geometry worker instead (ADR-0010)."
         ),
         epilog=EPILOG,
     )
@@ -105,8 +118,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--data-dir",
         default=None,
         help=(
-            "absolute path to the studio data directory; defaults to the "
-            "standard Kala data directory or the system temporary folder"
+            "absolute path to the studio data directory; with --worker it is "
+            "required (KALA_STUDIO_DATA_DIR is accepted instead); otherwise it "
+            "defaults to the standard Kala data directory or the system "
+            "temporary folder"
         ),
     )
     parser.add_argument(
@@ -115,6 +130,15 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "override the static UI directory; otherwise the studio "
             "uses the frozen or repo-relative dist directory"
+        ),
+    )
+    parser.add_argument(
+        "--worker",
+        action="store_true",
+        help=(
+            "run the internal geometry worker (ADR-0010): bind 127.0.0.1:0, "
+            "require KALA_WORKER_TOKEN (at least 32 characters), and print one "
+            "KALA_WORKER_READY line; --host, --port, and --static-dist are ignored"
         ),
     )
     return parser
@@ -136,6 +160,24 @@ def _resolve_data_dir(arguments: argparse.Namespace) -> Path:
         return Path(tempfile.gettempdir()) / "kala-studio"
 
 
+def _resolve_worker_data_dir(arguments: argparse.Namespace) -> Path:
+    """Resolve the worker data directory, refusing every implicit fallback.
+
+    The geometry worker is only started with a directory the caller named
+    explicitly: ``--data-dir`` wins, then ``KALA_STUDIO_DATA_DIR``. A missing,
+    blank, or non-string value fails closed with
+    :data:`WORKER_DATA_DIR_REQUIRED_MESSAGE` instead of reaching the home
+    directory or the shared temporary folder. That keeps each worker's
+    ``studio-journal.sqlite3`` inside its own front door's data directory.
+    """
+    raw = arguments.data_dir
+    if raw is None:
+        raw = os.environ.get(STUDIO_DATA_DIR_ENV_VAR)
+    if not isinstance(raw, str) or not raw.strip():
+        raise ValueError(WORKER_DATA_DIR_REQUIRED_MESSAGE)
+    return Path(raw.strip()).expanduser().resolve(strict=False)
+
+
 def _resolve_static_root(arguments: argparse.Namespace) -> Path | None:
     if arguments.static_dist:
         return Path(arguments.static_dist).expanduser().resolve(strict=False)
@@ -153,6 +195,25 @@ def main(
     err = sys.stderr if stderr is None else stderr
     parser = build_parser()
     arguments = parser.parse_args(list(argv) if argv is not None else None)
+    if arguments.worker:
+        from kala_agent.studio.worker import run_worker
+
+        try:
+            worker_data_dir = _resolve_worker_data_dir(arguments)
+        except ValueError as error:
+            err.write(f"{error}\n")
+            return EXIT_USAGE
+        try:
+            uvicorn = load_uvicorn()
+        except RuntimeError as error:
+            err.write(f"{error}\n")
+            return EXIT_ERROR
+        return run_worker(
+            data_dir=worker_data_dir,
+            uvicorn_module=uvicorn,
+            stdout=out,
+            stderr=err,
+        )
     try:
         target = build_target(arguments.host, arguments.port)
     except ValueError as error:

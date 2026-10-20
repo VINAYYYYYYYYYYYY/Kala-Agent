@@ -1,0 +1,29 @@
+[workspace]
+resolver = "3"
+
+[package]
+name = "kala-kernel"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+publish = false
+description = "Native policy, workflow and planning state machinery for the Kala Agent kernel"
+
+[dependencies]
+# Accepted read-only sibling crates. This cell keeps its own workspace and
+# lockfile so it never writes the root backend manifest or lock.
+kala-contracts = { path = "../kala-contracts" }
+kala-json = { path = "../kala-json" }
+chrono = "0.4"
+indexmap = "2.14"
+num-bigint = "0.4"
+num-traits = "0.2"
+
+[profile.release]
+strip = "symbols"
+
+[dev-dependencies]
+kala-contracts = { path = "../kala-contracts" }
+kala-json = { path = "../kala-json" }
+num-bigint = "0.4"

@@ -1,0 +1,448 @@
+{
+  "ledger1440": {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "tableRect": {
+      "x": 1121,
+      "y": 307,
+      "width": 313,
+      "height": 348.03,
+      "right": 1434,
+      "bottom": 655.03
+    },
+    "headers": [
+      {
+        "text": "SEQ",
+        "rect": {
+          "x": 1121,
+          "y": 307,
+          "width": 28,
+          "height": 17.55,
+          "right": 1149,
+          "bottom": 324.55
+        },
+        "clipped": false,
+        "scrollWidth": 28,
+        "clientWidth": 28
+      },
+      {
+        "text": "UTC",
+        "rect": {
+          "x": 1149,
+          "y": 307,
+          "width": 52,
+          "height": 17.55,
+          "right": 1201,
+          "bottom": 324.55
+        },
+        "clipped": false,
+        "scrollWidth": 52,
+        "clientWidth": 52
+      },
+      {
+        "text": "TYPE",
+        "rect": {
+          "x": 1201,
+          "y": 307,
+          "width": 34,
+          "height": 17.55,
+          "right": 1235,
+          "bottom": 324.55
+        },
+        "clipped": false,
+        "scrollWidth": 34,
+        "clientWidth": 34
+      },
+      {
+        "text": "MESSAGE",
+        "rect": {
+          "x": 1235,
+          "y": 307,
+          "width": 77,
+          "height": 17.55,
+          "right": 1312,
+          "bottom": 324.55
+        },
+        "clipped": false,
+        "scrollWidth": 77,
+        "clientWidth": 77
+      },
+      {
+        "text": "DIGEST",
+        "rect": {
+          "x": 1312,
+          "y": 307,
+          "width": 80,
+          "height": 17.55,
+          "right": 1392,
+          "bottom": 324.55
+        },
+        "clipped": false,
+        "scrollWidth": 80,
+        "clientWidth": 80
+      },
+      {
+        "text": "CHAIN",
+        "rect": {
+          "x": 1392,
+          "y": 307,
+          "width": 42,
+          "height": 17.55,
+          "right": 1434,
+          "bottom": 324.55
+        },
+        "clipped": false,
+        "scrollWidth": 42,
+        "clientWidth": 42
+      }
+    ],
+    "boxes": [
+      {
+        "className": "journal-entry-seq",
+        "rect": {
+          "x": 1121,
+          "y": 427.39,
+          "width": 28,
+          "height": 21,
+          "right": 1149,
+          "bottom": 448.39
+        },
+        "clippedX": false,
+        "clippedY": false
+      },
+      {
+        "className": "journal-entry-utc",
+        "rect": {
+          "x": 1149,
+          "y": 427.39,
+          "width": 52,
+          "height": 21,
+          "right": 1201,
+          "bottom": 448.39
+        },
+        "clippedX": false,
+        "clippedY": false
+      },
+      {
+        "className": "journal-entry-type",
+        "rect": {
+          "x": 1201,
+          "y": 427.39,
+          "width": 34,
+          "height": 21,
+          "right": 1235,
+          "bottom": 448.39
+        },
+        "clippedX": false,
+        "clippedY": false
+      },
+      {
+        "className": "journal-entry-message",
+        "rect": {
+          "x": 1235,
+          "y": 427.39,
+          "width": 77,
+          "height": 21,
+          "right": 1312,
+          "bottom": 448.39
+        },
+        "clippedX": false,
+        "clippedY": false
+      },
+      {
+        "className": "journal-entry-digest-cell",
+        "rect": {
+          "x": 1312,
+          "y": 427.39,
+          "width": 80,
+          "height": 21,
+          "right": 1392,
+          "bottom": 448.39
+        },
+        "clippedX": false,
+        "clippedY": false
+      },
+      {
+        "className": "journal-entry-chain",
+        "rect": {
+          "x": 1392,
+          "y": 427.39,
+          "width": 42,
+          "height": 21,
+          "right": 1434,
+          "bottom": 448.39
+        },
+        "clippedX": false,
+        "clippedY": false
+      }
+    ],
+    "cellPairOverlaps": [],
+    "headerClipped": [],
+    "digest": {
+      "cell": {
+        "x": 1312,
+        "y": 427.39,
+        "width": 80,
+        "height": 21,
+        "right": 1392,
+        "bottom": 448.39
+      },
+      "chip": {
+        "x": 1315,
+        "y": 431.31,
+        "width": 54.61,
+        "height": 14.14,
+        "right": 1369.61,
+        "bottom": 445.45
+      },
+      "chipText": "cb065a4d…",
+      "chipTitleLength": 64,
+      "copy": {
+        "x": 1371.61,
+        "y": 429.89,
+        "width": 16,
+        "height": 16,
+        "right": 1387.61,
+        "bottom": 445.89
+      },
+      "copyInsideCell": true,
+      "chipInsideCell": true,
+      "chainText": "ok",
+      "chainRect": {
+        "x": 1392,
+        "y": 427.39,
+        "width": 42,
+        "height": 21,
+        "right": 1434,
+        "bottom": 448.39
+      },
+      "copyOverlapsChain": false
+    },
+    "message": {
+      "text": "template l_bracket · provider freecad · L-bracket 60 x 45 x 40 · design a9d04f8f",
+      "title": "template l_bracket · provider freecad · L-bracket 60 x 45 x 40 · design a9d04f8f",
+      "titleMatchesText": true,
+      "rect": {
+        "x": 1235,
+        "y": 427.39,
+        "width": 77,
+        "height": 21,
+        "right": 1312,
+        "bottom": 448.39
+      },
+      "ellipsized": true,
+      "fullTextInDom": true
+    },
+    "localMessage": {
+      "text": "Loopback connected · browser fallback · http://127.0.0.1:8792",
+      "ellipsized": true
+    },
+    "rows": 17,
+    "stamp": "HASH-CHAIN OK",
+    "documentOverflow": 0,
+    "journalScroll": {
+      "clientWidth": 319,
+      "scrollWidth": 319,
+      "clientHeight": 571,
+      "scrollHeight": 571
+    }
+  },
+  "ledger1280": {
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "tableRect": {
+      "x": 1021,
+      "y": 307,
+      "width": 253,
+      "height": 348.03,
+      "right": 1274,
+      "bottom": 655.03
+    },
+    "headers": [
+      {
+        "text": "SEQ",
+        "rect": {
+          "x": 1021,
+          "y": 307,
+          "width": 28,
+          "height": 17.55,
+          "right": 1049,
+          "bottom": 324.55
+        },
+        "clipped": false,
+        "scrollWidth": 28,
+        "clientWidth": 28
+      },
+      {
+        "text": "TYPE",
+        "rect": {
+          "x": 1049,
+          "y": 307,
+          "width": 34,
+          "height": 17.55,
+          "right": 1083,
+          "bottom": 324.55
+        },
+        "clipped": false,
+        "scrollWidth": 34,
+        "clientWidth": 34
+      },
+      {
+        "text": "MESSAGE",
+        "rect": {
+          "x": 1083,
+          "y": 307,
+          "width": 111,
+          "height": 17.55,
+          "right": 1194,
+          "bottom": 324.55
+        },
+        "clipped": false,
+        "scrollWidth": 111,
+        "clientWidth": 111
+      },
+      {
+        "text": "DIGEST",
+        "rect": {
+          "x": 1194,
+          "y": 307,
+          "width": 80,
+          "height": 17.55,
+          "right": 1274,
+          "bottom": 324.55
+        },
+        "clipped": false,
+        "scrollWidth": 80,
+        "clientWidth": 80
+      }
+    ],
+    "boxes": [
+      {
+        "className": "journal-entry-seq",
+        "rect": {
+          "x": 1021,
+          "y": 427.39,
+          "width": 28,
+          "height": 21,
+          "right": 1049,
+          "bottom": 448.39
+        },
+        "clippedX": false,
+        "clippedY": false
+      },
+      {
+        "className": "journal-entry-type",
+        "rect": {
+          "x": 1049,
+          "y": 427.39,
+          "width": 34,
+          "height": 21,
+          "right": 1083,
+          "bottom": 448.39
+        },
+        "clippedX": false,
+        "clippedY": false
+      },
+      {
+        "className": "journal-entry-message",
+        "rect": {
+          "x": 1083,
+          "y": 427.39,
+          "width": 111,
+          "height": 21,
+          "right": 1194,
+          "bottom": 448.39
+        },
+        "clippedX": false,
+        "clippedY": false
+      },
+      {
+        "className": "journal-entry-digest-cell",
+        "rect": {
+          "x": 1194,
+          "y": 427.39,
+          "width": 80,
+          "height": 21,
+          "right": 1274,
+          "bottom": 448.39
+        },
+        "clippedX": false,
+        "clippedY": false
+      }
+    ],
+    "cellPairOverlaps": [],
+    "headerClipped": [],
+    "digest": {
+      "cell": {
+        "x": 1194,
+        "y": 427.39,
+        "width": 80,
+        "height": 21,
+        "right": 1274,
+        "bottom": 448.39
+      },
+      "chip": {
+        "x": 1197,
+        "y": 431.31,
+        "width": 54.61,
+        "height": 14.14,
+        "right": 1251.61,
+        "bottom": 445.45
+      },
+      "chipText": "cb065a4d…",
+      "chipTitleLength": 64,
+      "copy": {
+        "x": 1253.61,
+        "y": 429.89,
+        "width": 16,
+        "height": 16,
+        "right": 1269.61,
+        "bottom": 445.89
+      },
+      "copyInsideCell": true,
+      "chipInsideCell": true,
+      "chainText": "ok",
+      "chainRect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "copyOverlapsChain": false
+    },
+    "message": {
+      "text": "template l_bracket · provider freecad · L-bracket 60 x 45 x 40 · design a9d04f8f",
+      "title": "template l_bracket · provider freecad · L-bracket 60 x 45 x 40 · design a9d04f8f",
+      "titleMatchesText": true,
+      "rect": {
+        "x": 1083,
+        "y": 427.39,
+        "width": 111,
+        "height": 21,
+        "right": 1194,
+        "bottom": 448.39
+      },
+      "ellipsized": true,
+      "fullTextInDom": true
+    },
+    "localMessage": {
+      "text": "Loopback connected · browser fallback · http://127.0.0.1:8792",
+      "ellipsized": true
+    },
+    "rows": 17,
+    "stamp": "HASH-CHAIN OK",
+    "documentOverflow": 0,
+    "journalScroll": {
+      "clientWidth": 259,
+      "scrollWidth": 259,
+      "clientHeight": 471,
+      "scrollHeight": 471
+    }
+  }
+}

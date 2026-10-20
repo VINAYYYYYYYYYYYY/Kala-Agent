@@ -41,6 +41,7 @@ from kala_agent_freecad.contracts import (
     DEFAULT_DOCUMENT_NAME,
     EXPORT_SUFFIXES,
     GEOMETRY_EXPORT_FORMATS,
+    MAX_TRACE,
 )
 from kala_agent_freecad.errors import (
     FreeCADAdapterError,
@@ -50,7 +51,6 @@ from kala_agent_freecad.errors import (
 
 MAX_DIMENSION_MM: Final[float] = 5_000.0
 MAX_COORDINATE_MM: Final[float] = 5_000.0
-MAX_TRACE: Final[int] = 160
 MAX_WARNINGS: Final[int] = 16
 MAX_NAME_LENGTH: Final[int] = 64
 MAX_VERSION_LENGTH: Final[int] = 64
@@ -150,11 +150,12 @@ def run(
             session = _Session(modules, load_sketcher(), document, calculix_path)
             session.apply_all(request.calls)
             session.improve()
-            shape = _solid_shape(session.feature)
+            target = session.export_target()
+            shape = _measured_shape(_exported_shape(target))
             published = _export_all(
                 modules,
                 document,
-                session.feature,
+                target,
                 request,
                 workspace=workspace,
                 max_artifact_bytes=max_artifact_bytes,
@@ -216,6 +217,8 @@ class _Session:
         self._bodies: dict[str, FreeCADObject] = {}
         self._features: dict[str, FreeCADObject] = {}
         self._component = ""
+        self._occurrences: list[FreeCADObject] = []
+        self._joined = False
 
     def apply_all(
         self,
@@ -243,6 +246,38 @@ class _Session:
                 if on_step is not None:
                     sketch_name = str(getattr(self.sketch, "Name", "") or "")
                     on_step(call.tool, sketch_name)
+
+    def export_target(self) -> FreeCADObject:
+        """Return the document object to measure and export.
+
+        A place-only assembly is a set of occurrences: every placed body is
+        exported in one compound, and each body's shape already includes its
+        placement. A ``fuse`` or ``compound`` step produced the joined result
+        itself, so its tip feature stays the target. A part with no placement
+        exports its tip feature as before.
+        """
+        if not self._joined:
+            shapes = self._occurrence_shapes()
+            if shapes:
+                return self._occurrence_assembly(shapes)
+        return self._require_feature()
+
+    def _occurrence_shapes(self) -> list[FreeCADObject]:
+        shapes: list[FreeCADObject] = []
+        for body in self._occurrences:
+            shape = getattr(body, "Shape", None)
+            if shape is None:
+                name = str(getattr(body, "Name", "") or "the placed body")
+                raise FreeCADOperationError(f"{name} has no shape to export")
+            shapes.append(shape)
+        return shapes
+
+    def _occurrence_assembly(self, shapes: Sequence[FreeCADObject]) -> FreeCADObject:
+        make = getattr(self.modules.part, "makeCompound", None)
+        if not callable(make):
+            raise FreeCADOperationError("the Part module cannot make a compound")
+        self._primitive("Assembly", make(list(shapes)))
+        return self._require_feature()
 
     def improve(self) -> None:
         """Change the pad only when a completed solve reported a real stress."""
@@ -484,6 +519,8 @@ class _Session:
             _coordinate(arguments, "z", default=0.0),
         )
         body.Placement = placement
+        if all(existing is not body for existing in self._occurrences):
+            self._occurrences.append(body)
 
     def helix(self, arguments: Mapping[str, object]) -> None:
         feature = self._require_body().newObject("PartDesign::AdditiveHelix", "Helix")
@@ -568,6 +605,7 @@ class _Session:
                 raise FreeCADOperationError("the shape cannot be fused")
             fused = fuse(other)
         self._primitive("Assembly", fused)
+        self._joined = True
 
     def part_compound(self, arguments: Mapping[str, object]) -> None:
         shapes = self._member_shapes(arguments)
@@ -575,6 +613,7 @@ class _Session:
         if not callable(make):
             raise FreeCADOperationError("the Part module cannot make a compound")
         self._primitive("Compound", make(shapes))
+        self._joined = True
 
     def fem_pressure(self, arguments: Mapping[str, object]) -> None:
         maker = getattr(self.modules.objects_fem, "makeConstraintPressure", None)
@@ -912,6 +951,44 @@ def _close(freecad: FreeCADObject, document: FreeCADObject) -> None:
         return
 
 
+def _measured_shape(shape: FreeCADObject) -> FreeCADObject:
+    """Return the solid inside a one-solid compound, or the shape itself.
+
+    A boolean union of touching bodies can arrive as a compound that holds
+    exactly one solid. Measuring the inner solid keeps ``measurement.solid``
+    honest for that joined part; a real multi-solid assembly stays a compound.
+    """
+    if getattr(shape, "ShapeType", "") == "Compound":
+        solids = getattr(shape, "Solids", None)
+        if (
+            isinstance(solids, Sequence)
+            and not isinstance(solids, (str, bytes))
+            and len(solids) == 1
+        ):
+            inner = solids[0]
+            if getattr(inner, "ShapeType", "") == "Solid":
+                return inner
+    return shape
+
+
+def _exported_shape(target: FreeCADObject) -> FreeCADObject:
+    """Return the target's shape when it is a solid or an assembly compound."""
+    shape = getattr(target, "Shape", None)
+    if shape is None:
+        raise FreeCADOperationError("the design did not produce a solid")
+    shape_type = getattr(shape, "ShapeType", "")
+    if shape_type == "Solid":
+        return shape
+    solids = getattr(shape, "Solids", None)
+    try:
+        count = len(solids) if solids is not None else 0
+    except TypeError:
+        count = 0
+    if shape_type == "Compound" and count >= 1:
+        return shape
+    raise FreeCADOperationError("the design did not produce one valid solid")
+
+
 def _solid_shape(feature: FreeCADObject | None) -> FreeCADObject:
     if feature is None:
         raise FreeCADOperationError("the design did not produce a solid")
@@ -1019,34 +1096,32 @@ def _as_float(value: object) -> float | None:
 def _export_all(
     modules: FreeCADModules,
     document: FreeCADObject,
-    feature: FreeCADObject | None,
+    target: FreeCADObject,
     request: DesignRequest,
     *,
     workspace: Path,
     max_artifact_bytes: int,
     call_id: str,
 ) -> tuple[PublishedArtifact, ...]:
-    if feature is None:
-        raise FreeCADOperationError("the design did not produce a solid")
     published: list[PublishedArtifact] = []
     for export_format in request.export_formats:
         relative = f"{ARTIFACT_DIRECTORY}/{request.artifact_stem}{EXPORT_SUFFIXES[export_format]}"
-        target = resolve_target(workspace, relative)
-        prepare_target(target)
+        target_path = resolve_target(workspace, relative)
+        prepare_target(target_path)
         try:
             if export_format == "fcstd":
-                document.saveAs(str(target))
+                document.saveAs(str(target_path))
             else:
-                modules.part.export([feature], str(target))
+                modules.part.export([target], str(target_path))
         except Exception as error:
-            discard(target)
+            discard(target_path)
             raise FreeCADOperationError(
                 f"FreeCAD could not write the {export_format} export: "
                 f"{type(error).__name__}: {error}"
             ) from error
         published.append(
             finalize(
-                target,
+                target_path,
                 relative_path=relative,
                 export_format=export_format,
                 artifact_id=f"{call_id}-{export_format}",
@@ -1058,6 +1133,7 @@ def _export_all(
 
 __all__ = (
     "MAX_DIMENSION_MM",
+    "MAX_TRACE",
     "DesignOutcome",
     "DesignRequest",
     "parse_request",

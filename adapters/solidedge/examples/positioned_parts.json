@@ -1,0 +1,23 @@
+{
+  "summary": "Two positioned blocks: a 10 mm base and a 4 mm post at (12, 0, 0)",
+  "components": [
+    {
+      "name": "base",
+      "steps": [
+        { "op": "sketch", "profile": "rectangle", "plane": "XY", "width": 10, "height": 10 },
+        { "op": "extrude", "length": 10 }
+      ]
+    },
+    {
+      "name": "post",
+      "steps": [
+        { "op": "sketch", "profile": "rectangle", "plane": "XY", "width": 4, "height": 4 },
+        { "op": "extrude", "length": 4 }
+      ]
+    }
+  ],
+  "assembly": [
+    { "op": "place", "component": "base", "x": 0, "y": 0, "z": 0 },
+    { "op": "place", "component": "post", "x": 12, "y": 0, "z": 0 }
+  ]
+}

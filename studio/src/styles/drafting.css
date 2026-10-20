@@ -1,0 +1,1293 @@
+/* Vellum drafting sheet, viewport overlays, and auxiliary views.
+ *
+ * Loaded from the drafting components. Selectors are intentionally a touch
+ * more specific than the P1 shell rules in layout.css/studio.css so this
+ * file owns the P2 visual layer without reordering the global stylesheet
+ * imports. Everything is flat: 1px drafted borders, 0.5px hairlines, no
+ * shadows, no gradients, no glow. Patterns are inline SVG data URIs, so no
+ * network request and no CSP change.
+ */
+
+:root {
+  /* Warm clay and pencil faces; re-themed under [data-theme='slate']. */
+  --drafting-pencil-face: #f1ead9;
+  --drafting-pencil-shade: #e4dcc7;
+  --drafting-clay-face: #c98f6b;
+  --drafting-clay-shade: #a96b4b;
+  --drafting-hatch: #23211e;
+  --drafting-tick-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Cpath d='M23 25H27M25 23V27' fill='none' stroke='%23C4BDB0' stroke-width='0.8'/%3E%3C/svg%3E");
+  --drafting-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.16'/%3E%3C/svg%3E");
+}
+
+[data-theme='slate'] {
+  --drafting-pencil-face: #1a1a1e;
+  --drafting-pencil-shade: #232328;
+  --drafting-clay-face: #7d4d36;
+  --drafting-clay-shade: #613a29;
+  --drafting-hatch: #f5f5f7;
+  --drafting-tick-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Cpath d='M23 25H27M25 23V27' fill='none' stroke='%2334343A' stroke-width='0.8'/%3E%3C/svg%3E");
+  --drafting-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+}
+
+/* Sheet surface --------------------------------------------------------- */
+
+.drafting-sheet.drafting-sheet {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background-color: var(--sheet);
+  background-image: var(--drafting-tick-pattern), var(--grid-pattern);
+  background-repeat: repeat, repeat;
+  background-size: 50px 50px, 50px 50px;
+  isolation: isolate;
+}
+
+.drafting-sheet.drafting-sheet::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background-image: var(--drafting-grain);
+  background-repeat: repeat;
+  opacity: 0.5;
+}
+
+.drafting-sheet .drafting-sheet-frame {
+  position: absolute;
+  inset: 14px;
+  z-index: 3;
+  border: 1.5px solid var(--ink);
+  pointer-events: none;
+}
+
+.drafting-sheet .drafting-sheet-frame::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 0.5px solid var(--hairline);
+}
+
+.drafting-sheet .drafting-coord {
+  position: absolute;
+  z-index: 1;
+  padding: 0 var(--space-xs);
+  background: var(--sheet);
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  white-space: pre;
+  font-variant-numeric: tabular-nums;
+}
+
+.drafting-sheet .drafting-coord-top {
+  top: -9px;
+  transform: translateX(-50%);
+}
+
+.drafting-sheet .drafting-coord-bottom {
+  bottom: -9px;
+  transform: translateX(-50%);
+}
+
+.drafting-sheet .drafting-coord-left {
+  left: -9px;
+  transform: translateY(-50%) rotate(-90deg);
+}
+
+.drafting-sheet .drafting-coord-right {
+  right: -9px;
+  transform: translateY(-50%) rotate(90deg);
+}
+
+.drafting-sheet .drafting-tick {
+  position: absolute;
+  z-index: 1;
+  background: var(--construction);
+  opacity: 0.7;
+}
+
+.drafting-sheet .drafting-tick-top {
+  top: -5px;
+  width: 1px;
+  height: 5px;
+  transform: translateX(-50%);
+}
+
+.drafting-sheet .drafting-tick-bottom {
+  bottom: -5px;
+  width: 1px;
+  height: 5px;
+  transform: translateX(-50%);
+}
+
+.drafting-sheet .drafting-tick-left {
+  left: -5px;
+  width: 5px;
+  height: 1px;
+  transform: translateY(-50%);
+}
+
+.drafting-sheet .drafting-tick-right {
+  right: -5px;
+  width: 5px;
+  height: 1px;
+  transform: translateY(-50%);
+}
+
+.drafting-sheet .drafting-pin {
+  position: absolute;
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  line-height: 1;
+  opacity: 0.65;
+}
+
+.drafting-sheet .drafting-pin-tl { top: -15px; left: -15px; }
+.drafting-sheet .drafting-pin-tr { top: -15px; right: -15px; }
+.drafting-sheet .drafting-pin-bl { bottom: -15px; left: -15px; }
+.drafting-sheet .drafting-pin-br { bottom: -15px; right: -15px; }
+
+/* Sheet header ---------------------------------------------------------- */
+
+.drafting-sheet .drafting-sheet-tabline {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  right: 24px;
+  z-index: 7;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  pointer-events: none;
+}
+
+.drafting-sheet .drafting-sheet-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-xs);
+  pointer-events: auto;
+}
+
+.drafting-sheet .drafting-sheet-tab {
+  padding: var(--space-xs) var(--space-md) var(--space-xs);
+  border: 1px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  background: var(--card);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-label-sm);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.drafting-sheet .drafting-sheet-scale {
+  align-self: center;
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.drafting-sheet .drafting-mode-pill {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  z-index: 7;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 0.5px solid var(--hairline);
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+
+.drafting-sheet .drafting-mode-button {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--construction);
+  font-family: var(--font-ui);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.drafting-sheet .drafting-mode-button:hover {
+  color: var(--ink);
+  border-color: var(--hairline);
+}
+
+.drafting-sheet .drafting-mode-button.is-active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--sheet);
+}
+
+.drafting-sheet .drafting-mode-divider {
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+}
+
+/* Tool palette ---------------------------------------------------------- */
+
+.drafting-sheet .drafting-tools-wrap {
+  position: absolute;
+  top: 58px;
+  left: 24px;
+  z-index: 7;
+  display: grid;
+  gap: var(--space-xs);
+  justify-items: start;
+}
+
+.drafting-sheet .drafting-tools {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-xs);
+  border: 1px solid var(--ink);
+  background: var(--card);
+}
+
+.drafting-sheet .drafting-tool {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  border-radius: 0;
+  background: var(--sheet);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.drafting-sheet .drafting-tool svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.drafting-sheet .drafting-tool:hover {
+  border-color: var(--ink);
+}
+
+.drafting-sheet .drafting-tool.is-active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--sheet);
+}
+
+.drafting-sheet .drafting-tool:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* The measure tool: what it is waiting for, or the measured distance. */
+.drafting-sheet .drafting-measure-note {
+  margin: 0;
+  padding: 2px var(--space-sm);
+  border: 0.5px solid var(--redline);
+  background: var(--card);
+  color: var(--redline-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.drafting-sheet .drafting-tool-section {
+  letter-spacing: -0.02em;
+}
+
+/* Stage, section, notes ------------------------------------------------- */
+
+.drafting-sheet .drafting-sheet-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  min-width: 0;
+  min-height: 0;
+}
+
+.drafting-sheet .drafting-section-mark {
+  top: 50%;
+  left: 34px;
+  right: 34px;
+  z-index: 5;
+  transform: translateY(-50%);
+  opacity: 0.9;
+}
+
+.drafting-sheet .drafting-section-flag {
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--redline-ink);
+}
+
+.drafting-sheet .drafting-section-rule {
+  flex: 1;
+  border-top: 1px dashed var(--redline);
+  opacity: 0.8;
+}
+
+.drafting-sheet .drafting-stage-note,
+.drafting-sheet .drafting-cut-note {
+  position: absolute;
+  right: 24px;
+  z-index: 6;
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.08em;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.drafting-sheet .drafting-cut-note {
+  top: 70px;
+  color: var(--redline-ink);
+}
+
+/* A design's cut note sits top-left, away from the HLR's top view caption
+ * and the projection note. The HLR sheet prints the same note in its own
+ * heading; this variant is for the clay viewport, which has no HLR heading. */
+.drafting-sheet .drafting-cut-note.is-design {
+  left: 24px;
+  right: auto;
+  max-width: 52%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drafting-sheet .drafting-stage-note {
+  bottom: 96px;
+  opacity: 0.75;
+}
+
+/* Redline dimension overlay --------------------------------------------- */
+
+.drafting-sheet .viewer-dims {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.drafting-sheet .viewer-dim-label {
+  position: absolute;
+  padding: 0 2px;
+  background: var(--sheet);
+  color: var(--redline-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Measure leader and drafted centre lines ------------------------------- */
+
+.drafting-sheet .viewer-measure,
+.drafting-sheet .viewer-centre {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.drafting-sheet .viewer-measure-label {
+  position: absolute;
+  padding: 0 2px;
+  background: var(--sheet);
+  color: var(--redline-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+  font-variant-numeric: tabular-nums;
+}
+
+.drafting-sheet .viewer-centre-label {
+  position: absolute;
+  padding: 0 2px;
+  background: var(--sheet);
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+
+.drafting-sheet .viewer-canvas.is-measuring canvas {
+  cursor: crosshair;
+}
+
+.drafting-sheet .viewer-canvas-source {
+  z-index: 4;
+  top: 44px;
+  right: 24px;
+}
+
+.drafting-sheet .viewer-canvas-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+/* Title block ----------------------------------------------------------- */
+
+.drafting-sheet .drafting-title-block {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  z-index: 7;
+  display: grid;
+  grid-template-columns: 132px 84px 92px 92px;
+  border: 1.5px solid var(--ink);
+  background: var(--card);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  pointer-events: none;
+}
+
+.drafting-sheet .drafting-title-cell {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  padding: var(--space-xs) var(--space-sm);
+  border-right: 0.5px solid var(--hairline);
+  border-bottom: 0.5px solid var(--hairline);
+}
+
+.drafting-sheet .drafting-title-cell-wide {
+  grid-column: span 2;
+}
+
+.drafting-sheet .drafting-title-cell-author {
+  grid-column: span 2;
+}
+
+.drafting-sheet .drafting-title-label {
+  color: var(--construction);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.drafting-sheet .drafting-title-value {
+  overflow: hidden;
+  color: var(--ink);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Auxiliary view -------------------------------------------------------- */
+
+.studio-zone-right .aux-view {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--card);
+}
+
+.aux-view .aux-view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  min-height: 29px;
+  padding: 2px var(--space-sm);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--margin);
+}
+
+.aux-view .aux-view-tabs {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+}
+
+.aux-view .aux-view-cut-note {
+  color: var(--redline-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.aux-view .aux-view-tab {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--construction);
+  font-family: var(--font-ui);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.aux-view .aux-view-tab:hover {
+  color: var(--ink);
+  border-color: var(--hairline);
+}
+
+.aux-view .aux-view-tab.is-active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--sheet);
+}
+
+.aux-view .aux-view-body {
+  display: block;
+  min-height: 0;
+  padding: var(--space-sm) var(--space-sm) var(--space-xs);
+  overflow: auto;
+}
+
+.aux-view .aux-view-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-top: 0.5px solid var(--hairline);
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.aux-view .aux-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.aux-view .aux-profile {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.aux-view .aux-hatch-line {
+  stroke: var(--drafting-hatch);
+  stroke-width: 0.8;
+  opacity: 0.8;
+}
+
+.aux-view .aux-arrow-fill {
+  fill: var(--redline-ink);
+}
+
+.aux-view .aux-dim-line {
+  stroke: var(--redline);
+  stroke-width: 0.9;
+}
+
+.aux-view .aux-dim-text {
+  fill: var(--redline-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.aux-view .aux-centreline {
+  stroke: var(--construction);
+  stroke-width: 0.7;
+  stroke-dasharray: 8 2 2 2;
+  opacity: 0.8;
+}
+
+.aux-view .aux-centreline-faint {
+  opacity: 0.45;
+}
+
+.aux-view .aux-grid-lines line {
+  stroke: var(--grid-major);
+  stroke-width: 0.5;
+}
+
+.aux-view .aux-caption {
+  fill: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-label-sm);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.aux-view .aux-caption-muted {
+  fill: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.02em;
+}
+
+.aux-view .aux-sheet-rule {
+  stroke: var(--hairline);
+  stroke-width: 0.5;
+}
+
+.aux-view .aux-ortho-profile {
+  fill: var(--sheet);
+  stroke: var(--ink);
+  stroke-width: 1.1;
+}
+
+.aux-view .aux-view-label {
+  fill: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-label-sm);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.aux-view .aux-view-dims {
+  fill: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.aux-view .aux-empty {
+  display: grid;
+  gap: var(--space-sm);
+  padding: 2px 1px;
+}
+
+.aux-view .aux-empty-kicker {
+  color: var(--redline-ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-label-md);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.aux-view .aux-empty-body {
+  color: var(--construction);
+  font-family: var(--font-note);
+  font-size: var(--text-body-sm);
+  font-style: italic;
+  line-height: 1.35;
+}
+
+.aux-view .aux-empty-note {
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  line-height: 1.5;
+}
+
+.aux-view .aux-empty-facts {
+  display: grid;
+  gap: 2px;
+  padding-top: var(--space-sm);
+  border-top: 0.5px dotted var(--hairline);
+}
+
+.aux-view .aux-empty-facts div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.aux-view .aux-empty-facts dt {
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  text-transform: uppercase;
+}
+
+.aux-view .aux-empty-facts dd {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+}
+
+/* Design sheet tabs ----------------------------------------------------- */
+
+.drafting-sheet .drafting-design-tab {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  text-transform: none;
+}
+
+.drafting-sheet .drafting-design-tab.is-active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--sheet);
+}
+
+.drafting-sheet .drafting-design-tab-select {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  max-width: 190px;
+  padding: var(--space-xs) var(--space-sm);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  white-space: nowrap;
+}
+
+.drafting-sheet .drafting-design-tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drafting-sheet .drafting-design-tab-id {
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.drafting-sheet .drafting-design-tab.is-active .drafting-design-tab-id {
+  color: var(--sheet);
+  opacity: 0.72;
+}
+
+.drafting-sheet .drafting-design-tab-close {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  padding: 0;
+  border: 0;
+  border-left: 0.5px solid var(--hairline);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-md);
+  line-height: 1;
+}
+
+.drafting-sheet .drafting-design-tab-close:hover {
+  color: var(--redline-ink);
+}
+
+.drafting-sheet .drafting-design-tab-add {
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  padding: var(--space-xs) var(--space-sm);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-md);
+  font-weight: 700;
+  line-height: 1;
+  text-transform: none;
+}
+
+.drafting-sheet .drafting-design-tab-add:hover {
+  background: var(--ink);
+  color: var(--sheet);
+}
+
+/* 2D pencil HLR drawing -------------------------------------------------- */
+
+.drafting-sheet .hlr-drawing {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.drafting-sheet .hlr-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.drafting-sheet .hlr-svg.is-panning {
+  cursor: grabbing;
+}
+
+.drafting-sheet .hlr-heading {
+  position: absolute;
+  right: 24px;
+  bottom: 128px;
+  z-index: 6;
+  display: grid;
+  gap: 1px;
+  justify-items: end;
+  text-align: right;
+  max-width: min(540px, 62%);
+  pointer-events: none;
+}
+
+.drafting-sheet .hlr-heading-title {
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-label-md);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.drafting-sheet .hlr-heading-meta {
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.drafting-sheet .hlr-heading-view {
+  margin: 0;
+  color: var(--prussian);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* The shared Section A–A label. It lives in the heading row, never over a
+ * view caption: the sheet and the AuxView print the same plane and offset. */
+.drafting-sheet .hlr-heading-cut {
+  color: var(--redline-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* The measured cut drawn where it actually is: red 2H dash over the HLR
+ * linework. The A flags mark the ends of the trace. */
+.drafting-sheet .hlr-section-line {
+  fill: none;
+  stroke: var(--redline);
+  stroke-width: 1.1;
+  stroke-dasharray: 7 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.95;
+  vector-effect: non-scaling-stroke;
+}
+
+.drafting-sheet .hlr-section-flag {
+  fill: var(--redline-ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-label-sm);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.drafting-sheet .hlr-view-frame {
+  fill: none;
+  stroke: var(--hairline);
+  stroke-width: 0.5;
+  stroke-dasharray: 2 4;
+  opacity: 0.7;
+}
+
+.drafting-sheet .hlr-visible-line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.drafting-sheet .hlr-hidden-line {
+  fill: none;
+  stroke: var(--construction);
+  stroke-width: 0.9;
+  stroke-dasharray: 5 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.8;
+  vector-effect: non-scaling-stroke;
+}
+
+.drafting-sheet .hlr-view-caption {
+  fill: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-label-sm);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.drafting-sheet .hlr-view-missing,
+.drafting-sheet .hlr-view-truncated {
+  fill: var(--redline-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.04em;
+}
+
+.drafting-sheet .hlr-projection-title {
+  fill: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-label-sm);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.drafting-sheet .hlr-projection-line {
+  fill: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.02em;
+}
+
+.drafting-sheet .hlr-dim-line,
+.drafting-sheet .hlr-dim-tick {
+  stroke: var(--redline);
+  stroke-width: 0.9;
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.drafting-sheet .hlr-dim-text {
+  fill: var(--redline-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.drafting-sheet .hlr-envelope-note {
+  fill: var(--redline-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.drafting-sheet .hlr-legend {
+  fill: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.06em;
+}
+
+.drafting-sheet .hlr-empty {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xl);
+  text-align: center;
+}
+
+.drafting-sheet .hlr-empty-kicker {
+  color: var(--redline-ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-label-md);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.drafting-sheet .hlr-empty-body {
+  max-width: 420px;
+  color: var(--construction);
+  font-family: var(--font-note);
+  font-size: var(--text-body-sm);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.drafting-sheet .hlr-retry {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--redline);
+  border-radius: 0;
+  background: var(--card);
+  color: var(--redline-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.drafting-sheet .hlr-controls {
+  position: absolute;
+  right: 24px;
+  bottom: 20px;
+  z-index: 7;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 1px;
+  border: 0.5px solid var(--hairline);
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+}
+
+.drafting-sheet .hlr-control {
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 var(--space-xs);
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.drafting-sheet .hlr-control:hover {
+  border-color: var(--hairline);
+}
+
+.drafting-sheet .hlr-control-reset {
+  letter-spacing: 0.04em;
+}
+
+.drafting-sheet .hlr-zoom-value {
+  min-width: 38px;
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Design auxiliary panels ------------------------------------------------ */
+
+.aux-view .aux-section-plane {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding-bottom: var(--space-xs);
+}
+
+.aux-view .aux-section-plane-label {
+  margin-right: var(--space-xs);
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.06em;
+}
+
+.aux-view .aux-section-plane-button {
+  padding: 1px var(--space-xs);
+  border: 1px solid var(--hairline);
+  border-radius: 0;
+  background: transparent;
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+}
+
+.aux-view .aux-section-plane-button.is-active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--sheet);
+}
+
+.aux-view .aux-loading {
+  padding: var(--space-sm) 0;
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+}
+
+.aux-view .aux-error {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-sm) 0;
+}
+
+.aux-view .aux-error-kicker {
+  color: var(--redline-ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-label-md);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.aux-view .aux-error-body {
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.aux-view .aux-retry {
+  justify-self: start;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--redline);
+  border-radius: 0;
+  background: var(--card);
+  color: var(--redline-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+}
+
+.aux-view .aux-section-area {
+  stroke: none;
+}
+
+.aux-view .aux-section-boundary {
+  stroke: var(--ink);
+  stroke-width: 1.2;
+}
+
+.aux-view .aux-area-value {
+  fill: var(--redline-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.aux-view .aux-ortho-visible {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.aux-view .aux-ortho-hidden {
+  fill: none;
+  stroke: var(--construction);
+  stroke-width: 0.8;
+  stroke-dasharray: 4 2.5;
+  opacity: 0.8;
+}
+
+.aux-view .aux-design-tolerance {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.aux-view .aux-declared-note {
+  color: var(--redline-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.aux-view .aux-tolerance-list {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: var(--space-sm) 0 0;
+  border-top: 0.5px dotted var(--hairline);
+  list-style: none;
+}
+
+.aux-view .aux-tolerance-list li {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.aux-view .aux-backend-note {
+  margin-bottom: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-left: 2px solid var(--redline);
+  color: var(--redline-ink);
+  font-family: var(--font-note);
+  font-size: var(--text-body-sm);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+@media (max-width: 1400px) {
+  .drafting-sheet .drafting-title-block {
+    grid-template-columns: 118px 74px 82px 82px;
+    font-size: var(--text-label-sm);
+  }
+
+  .drafting-sheet .drafting-mode-button {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--text-label-sm);
+  }
+
+  /* The 260px right column cannot hold three tabs and the redline cut note
+     on one line: keep the tabs on their own row and right-align the note. */
+  .aux-view .aux-view-header {
+    flex-wrap: wrap;
+    row-gap: 0;
+    padding-bottom: 2px;
+  }
+
+  .aux-view .aux-view-tabs {
+    flex: 1 0 100%;
+  }
+
+  .aux-view .aux-view-cut-note {
+    margin-left: auto;
+  }
+
+  .journal-panel .journal-panel-header h2 {
+    font-size: var(--text-label-sm);
+  }
+}

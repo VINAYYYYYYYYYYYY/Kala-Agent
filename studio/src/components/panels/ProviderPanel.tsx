@@ -86,7 +86,11 @@ export function ProviderPanel({ compact = false }: { compact?: boolean }): React
         const errorMsg = errorByProvider[provider.id] ?? '';
 
         return (
-          <li key={provider.id} className="panel-list-item">
+          <li
+            key={provider.id}
+            className="panel-list-item"
+            title={compact && provider.notes ? provider.notes : undefined}
+          >
             <header>
               <span className="panel-list-name">{provider.name}</span>
               <span
@@ -95,7 +99,7 @@ export function ProviderPanel({ compact = false }: { compact?: boolean }): React
                 {provider.configured ? 'Configured server-side' : 'Not configured'}
               </span>
             </header>
-            {provider.notes ? <p className="panel-list-notes">{provider.notes}</p> : null}
+            {provider.notes && !compact ? <p className="panel-list-notes">{provider.notes}</p> : null}
             {isConfigurable ? (
               <form
                 className="provider-key-form"

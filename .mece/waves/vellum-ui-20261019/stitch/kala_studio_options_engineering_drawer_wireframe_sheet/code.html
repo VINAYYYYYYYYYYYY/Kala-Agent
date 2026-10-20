@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_blank" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&amp;family=Space+Grotesk:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "tertiary-container": "#3e0500", "surface-container": "#f1eee7", "on-tertiary-fixed": "#3e0500", "background": "#fcf9f2", "on-surface": "#1c1c18", "primary-fixed-dim": "#c9c6c3", "surface-bright": "#fcf9f2", "surface-dim": "#dcdad3", "on-tertiary-container": "#dd5a3e", "secondary-fixed-dim": "#9ecbfa", "inverse-on-surface": "#f3f0e9", "secondary-container": "#a4d0ff", "inverse-surface": "#31312c", "error-container": "#ffdad6", "on-primary-fixed": "#1c1c1a", "on-error-container": "#93000a", "on-secondary": "#ffffff", "surface-container-low": "#f6f3ec", "on-surface-variant": "#474741", "on-background": "#1c1c18", "inverse-primary": "#c9c6c3", "outline-variant": "#c8c7bf", "on-primary-fixed-variant": "#474744", "on-tertiary": "#ffffff", "primary-container": "#1c1c1a", "outline": "#777770", "tertiary-fixed": "#ffdad3", "on-primary": "#ffffff", "primary": "#000000", "secondary-fixed": "#cfe5ff", "on-tertiary-fixed-variant": "#891e07", "surface-container-highest": "#e5e2db", "tertiary": "#000000", "secondary": "#33628b", "tertiary-fixed-dim": "#ffb4a4", "on-primary-container": "#858481", "on-secondary-container": "#295982", "surface-variant": "#e5e2db", "error": "#ba1a1a", "surface": "#fcf9f2", "on-secondary-fixed-variant": "#154a72", "surface-container-high": "#ebe8e1", "surface-tint": "#5f5e5b", "surface-container-lowest": "#ffffff", "on-error": "#ffffff", "primary-fixed": "#e5e2de", "on-secondary-fixed": "#001d33" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "gutter-mobile": "0.5rem", "gutter": "0.75rem", "space-xl": "2rem", "margin-mobile": "0.75rem", "space-xs": "0.25rem", "space-md": "0.75rem", "space-sm": "0.5rem", "margin": "1rem", "space-lg": "1.25rem" }, "fontFamily": { "headline-md": [ "Newsreader" ], "body-md": [ "Space Grotesk" ], "label-md": [ "JetBrains Mono" ], "body-lg": [ "Space Grotesk" ], "headline-lg": [ "Newsreader" ], "body-sm": [ "Space Grotesk" ], "headline-xl-mobile": [ "Newsreader" ], "label-lg": [ "JetBrains Mono" ], "label-sm": [ "JetBrains Mono" ], "headline-xl": [ "Newsreader" ] }, "fontSize": { "headline-md": [ "22px", { "lineHeight": "28px", "fontWeight": "500" } ], "body-md": [ "14px", { "lineHeight": "20px", "fontWeight": "400" } ], "label-md": [ "11px", { "lineHeight": "14px", "letterSpacing": "0.06em", "fontWeight": "500" } ], "body-lg": [ "16px", { "lineHeight": "24px", "fontWeight": "400" } ], "headline-lg": [ "28px", { "lineHeight": "34px", "letterSpacing": "-0.01em", "fontWeight": "400" } ], "body-sm": [ "12px", { "lineHeight": "16px", "fontWeight": "400" } ], "headline-xl-mobile": [ "30px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "400" } ], "label-lg": [ "13px", { "lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "600" } ], "label-sm": [ "9px", { "lineHeight": "12px", "letterSpacing": "0.08em", "fontWeight": "500" } ], "headline-xl": [ "38px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "400" } ] } } } };</script></head><body class="bg-surface font-body-md text-on-surface antialiased min-h-screen"><div class="min-h-screen w-full bg-surface-dim/40 backdrop-blur-sm p-space-sm md:p-space-lg flex items-center justify-center"><div class="relative w-full max-w-[1440px] min-h-[900px] bg-surface-container-low shadow-[0_20px_50px_rgba(28,28,24,0.15)] flex flex-col"><div class="absolute -top-1.5 -left-1.5 w-3 h-3 bg-primary z-20 flex items-center justify-center"><span class="w-1 h-1 bg-surface-container-lowest block"></span></div><div class="absolute -top-1.5 -right-1.5 w-3 h-3 bg-primary z-20 flex items-center justify-center"><span class="w-1 h-1 bg-surface-container-lowest block"></span></div><div class="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-primary z-20 flex items-center justify-center"><span class="w-1 h-1 bg-surface-container-lowest block"></span></div><div class="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-primary z-20 flex items-center justify-center"><span class="w-1 h-1 bg-surface-container-lowest block"></span></div><div class="absolute inset-2 pointer-events-none z-10 flex flex-col justify-between"><div class="flex justify-between px-space-md py-space-xs"><span class="font-label-sm text-label-sm text-outline select-none">SEC-A // 01</span><span class="font-label-sm text-label-sm text-outline select-none">REF: 1440x900</span><span class="font-label-sm text-label-sm text-outline select-none">SEC-A // 08</span></div><div class="flex justify-between px-space-md py-space-xs"><span class="font-label-sm text-label-sm text-outline select-none">Y-DATUM 00</span><span class="font-label-sm text-label-sm text-outline select-none opacity-40 uppercase tracking-widest">Kala Studio Archival Drafting Sheet</span><span class="font-label-sm text-label-sm text-outline select-none">Y-DATUM 90</span></div></div><header class="relative z-20 h-14 bg-surface-container px-space-md flex items-center justify-between"><div class="flex items-center gap-space-md"><div class="w-2.5 h-2.5 bg-primary"></div><div class="flex items-baseline gap-space-sm"><span class="font-label-lg text-label-lg text-on-surface tracking-tight uppercase">Kala Studio</span><span class="font-label-sm text-label-sm text-on-surface-variant uppercase">// Options &amp; Engineering Drawer</span><span class="font-label-sm text-label-sm bg-surface-container-highest px-space-xs text-on-surface-variant">[DRAWER_REF: 0x8F3A]</span></div></div><div class="flex items-center gap-space-sm"><span class="hidden lg:inline-block font-label-sm text-label-sm text-outline uppercase">[ESC or ✕ TO DOCK TO RULER]</span><a class="h-8 px-space-md bg-surface-container-high hover:bg-primary-container text-on-surface hover:text-on-primary-container flex items-center gap-space-xs transition-colors" href="#"><span class="font-label-sm text-label-sm uppercase font-semibold">Pin Calipers</span></a><button aria-label="Close Drawer" class="w-8 h-8 bg-primary-container text-on-primary-container hover:bg-primary hover:text-on-primary flex items-center justify-center transition-colors" type="button"><span class="material-symbols-outlined text-[16px]">close</span></button></div></header><main class="relative z-10 flex-1 p-space-md overflow-hidden flex flex-col"><div class="flex flex-col w-full text-on-surface">
+<!-- OVERLAY SUB-HEADER BANNER (TECHNICAL DRAWING STRIP) -->
+<div class="bg-surface-container border-b border-outline-variant px-space-md py-space-sm flex flex-wrap items-center justify-between gap-space-sm shadow-sm relative">
+<div class="flex items-center gap-space-md">
+<div class="w-2.5 h-2.5 bg-primary"></div>
+<div class="flex flex-col">
+<div class="flex items-center gap-space-sm">
+<span class="font-label-lg text-label-lg uppercase text-on-surface tracking-wider">Kala Studio // Options &amp; Engineering Drawer</span>
+<span class="font-label-sm text-label-sm px-1.5 py-0.5 bg-surface-container-highest text-on-surface-variant font-medium">[DRAWER: ACTIVE (0x8F3A)]</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Secondary Controls, Kernel Overrides &amp; Handoff Protocols</span>
+</div>
+</div>
+<div class="flex items-center gap-space-sm">
+<span class="font-label-sm text-label-sm text-outline uppercase hidden md:inline-block">DIN EN ISO 5457 // FORMAT-A2 REF</span>
+<button class="px-space-md py-1 bg-surface-container-high hover:bg-primary hover:text-on-primary transition-colors flex items-center gap-1.5 shadow-[2px_2px_0px_#1c1c18]" type="button">
+<span class="font-label-sm text-label-sm uppercase font-semibold">✕ Close / Dock to Scale Ruler [Esc]</span>
+</button>
+</div>
+</div>
+<!-- MAIN 2x2 DRAFTED ENGINEERING GRID -->
+<div class="p-space-md grid grid-cols-1 lg:grid-cols-2 gap-space-md flex-1">
+<!-- CARD 01: PARAMETRIC INSPECTOR & PRIMITIVE CONTROLS -->
+<div class="relative bg-surface-container-lowest p-space-md flex flex-col justify-between shadow-[2px_2px_0px_#1c1c18]">
+<!-- Drafting Corner Registration Marks -->
+<span class="absolute top-1 left-1.5 font-label-sm text-label-sm text-outline select-none pointer-events-none">+</span>
+<span class="absolute top-1 right-1.5 font-label-sm text-label-sm text-outline select-none pointer-events-none">+</span>
+<span class="absolute bottom-1 left-1.5 font-label-sm text-label-sm text-outline select-none pointer-events-none">+</span>
+<span class="absolute bottom-1 right-1.5 font-label-sm text-label-sm text-outline select-none pointer-events-none">+</span>
+<div>
+<!-- Card Title Bar -->
+<div class="flex items-center justify-between pb-space-xs mb-space-sm border-b border-outline-variant">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[16px] text-on-surface">settings</span>
+<span class="font-label-lg text-label-lg uppercase tracking-tight font-semibold text-on-surface">01 // Parametric Inspector &amp; Primitive Controls</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary font-medium">CAD-CORE: v2.4.9</span>
+</div>
+<!-- Shape Selector Tabs (Drafting Tape Aesthetic) -->
+<div class="flex items-center gap-1.5 mb-space-md bg-surface-container p-1 border border-outline-variant">
+<button class="flex-1 py-1 px-space-xs text-center font-label-sm text-label-sm uppercase bg-primary text-on-primary font-semibold shadow-sm" type="button">
+            Box [Active]
+          </button>
+<button class="flex-1 py-1 px-space-xs text-center font-label-sm text-label-sm uppercase bg-surface-container-high hover:bg-surface-container-highest text-on-surface transition-colors" type="button">
+            Cylinder
+          </button>
+<button class="flex-1 py-1 px-space-xs text-center font-label-sm text-label-sm uppercase bg-surface-container-high hover:bg-surface-container-highest text-on-surface transition-colors" type="button">
+            Sphere
+          </button>
+<button class="flex-1 py-1 px-space-xs text-center font-label-sm text-label-sm uppercase bg-surface-container-high hover:bg-surface-container-highest text-on-surface transition-colors" type="button">
+            Custom Script
+          </button>
+</div>
+<!-- Tactile Vernier Sliders & Numeric Inputs -->
+<div class="space-y-space-sm">
+<!-- Width (size_x) -->
+<div class="bg-surface-container-low p-space-xs border border-outline-variant">
+<div class="flex justify-between items-baseline mb-1">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant font-medium">Width (size_x) // Base Span</span>
+<div class="flex items-center gap-1">
+<input class="w-16 text-right font-label-md text-label-md bg-surface-container-lowest border border-outline px-1.5 py-0.5 text-on-surface focus:outline-none" type="text" value="60.0"/>
+<span class="font-label-sm text-label-sm text-on-surface-variant">mm</span>
+</div>
+</div>
+<!-- Etched Vernier Ruler Graphic -->
+<div class="relative w-full h-4 bg-surface-container-high border-t border-outline-variant flex items-end justify-between px-1 overflow-hidden">
+<span class="w-px h-3 bg-primary"></span>
+<span class="w-px h-1.5 bg-outline"></span>
+<span class="w-px h-1.5 bg-outline"></span>
+<span class="w-px h-1.5 bg-outline"></span>
+<span class="w-px h-1.5 bg-outline"></span>
+<span class="w-px h-2.5 bg-primary"></span>
+<span class="w-px h-1.5 bg-outline"></span>
+<span class="w-px h-1.5 bg-outline"></span>
+<span class="w-px h-1.5 bg-outline"></span>
+<span class="w-px h-1.5 bg-outline"></span>
+<span class="w-px h-3 bg-secondary"></span>
+<span class="w-px h-1.5 bg-outline"></span>
+<span class="w-px h-1.5 bg-outline"></span>
+<span class="w-px h-1.5 bg-outline"></span>
+<span class="w-px h-1.5 bg-outline"></span>
+<span class="w-px h-2.5 bg-primary"></span>
+<span class="w-px h-1.5 bg-outline"></span>
+<span class="w-px h-1.5 bg-outline"></span>
+<span class="w-px h-1.5 bg-outline"></span>
+<span class="w-px h-1.5 bg-outline"></span>
+<span class="w-px h-3 bg-primary"></span>
+<!-- Thumb Marker -->
+<div class="absolute left-3/5 top-0 bottom-0 w-1 bg-secondary"></div>
+</div>
+</div>
+<!-- Height (size_y) -->
+<div class="bg-surface-container-low p-space-xs border border-outline-variant">
+<div class="flex justify-between items-baseline mb-1">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant font-medium">Height (size_y) // Elevation</span>
+<div class="flex items-center gap-1">
+<input class="w-16 text-right font-label-md text-label-md bg-surface-container-lowest border border-outline px-1.5 py-0.5 text-on-surface focus:outline-none" type="text" value="45.0"/>
+<span class="font-label-sm text-label-sm text-on-surface-variant">mm</span>
+</div>
+</div>
+<div class="relative w-full h-3 bg-surface-container-high border-t border-outline-variant flex items-end justify-between px-1">
+<span class="w-px h-2.5 bg-primary"></span>
+<span class="w-px h-1 bg-outline"></span>
+<span class="w-px h-1 bg-outline"></span>
+<span class="w-px h-2 bg-primary"></span>
+<span class="w-px h-1 bg-outline"></span>
+<span class="w-px h-1 bg-outline"></span>
+<span class="w-px h-2.5 bg-primary"></span>
+<span class="w-px h-1 bg-outline"></span>
+<span class="w-px h-1 bg-outline"></span>
+<span class="w-px h-2.5 bg-primary"></span>
+<div class="absolute left-1/2 top-0 bottom-0 w-1 bg-primary"></div>
+</div>
+</div>
+<!-- Depth (size_z) & Wall Thickness Split Row -->
+<div class="grid grid-cols-2 gap-space-xs">
+<div class="bg-surface-container-low p-space-xs border border-outline-variant">
+<div class="flex justify-between items-baseline mb-1">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant">Depth (size_z)</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold">40.0 mm</span>
+</div>
+<div class="w-full h-2 bg-surface-container-high border border-outline-variant relative">
+<div class="h-full bg-primary" style="width: 44%;"></div>
+</div>
+</div>
+<div class="bg-surface-container-low p-space-xs border border-on-tertiary-container/40">
+<div class="flex justify-between items-baseline mb-1">
+<span class="font-label-sm text-label-sm uppercase text-on-tertiary-container font-semibold">t_wall (Bore)</span>
+<span class="font-label-md text-label-md text-on-tertiary-container font-bold">8.0 mm</span>
+</div>
+<div class="w-full h-2 bg-surface-container-high border border-outline-variant relative">
+<div class="h-full bg-on-tertiary-container" style="width: 20%;"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- OPENCASCADE NOMINAL ESTIMATE STAMPED BOX -->
+<div class="mt-space-md p-space-sm bg-surface-container border-2 border-primary border-double">
+<div class="flex items-center justify-between mb-1">
+<span class="font-label-sm text-label-sm uppercase font-semibold text-primary tracking-wider">[ OPENCASCADE NOMINAL ESTIMATE ]</span>
+<span class="font-label-sm text-label-sm text-[#2A6B4C] font-semibold bg-[#2A6B4C]/10 px-1.5 py-0.5 border border-[#2A6B4C]">✓ DRIFT &lt; 0.01 mm NOMINAL</span>
+</div>
+<div class="grid grid-cols-2 gap-space-xs py-1 border-t border-b border-outline-variant/60 my-1 font-label-sm text-label-sm">
+<div><span class="text-on-surface-variant">Volume:</span> <strong class="text-on-surface">28,160 mm³</strong> (28.16 cm³)</div>
+<div><span class="text-on-surface-variant">Surface Area:</span> <strong class="text-on-surface">9,420 mm²</strong></div>
+</div>
+<p class="font-headline-md italic text-[12px] leading-tight text-on-surface-variant mt-1">
+          "Closed-form nominal geometry for sizing &amp; handoff. Not a certified FEA solver result."
+        </p>
+</div>
+</div>
+<!-- CARD 02: NEUTRAL-FILE EXPORT & CAD/CAE HANDOFF -->
+<div class="relative bg-surface-container-lowest p-space-md flex flex-col justify-between shadow-[2px_2px_0px_#1c1c18]">
+<span class="absolute top-1 left-1.5 font-label-sm text-label-sm text-outline select-none pointer-events-none">+</span>
+<span class="absolute top-1 right-1.5 font-label-sm text-label-sm text-outline select-none pointer-events-none">+</span>
+<span class="absolute bottom-1 left-1.5 font-label-sm text-label-sm text-outline select-none pointer-events-none">+</span>
+<span class="absolute bottom-1 right-1.5 font-label-sm text-label-sm text-outline select-none pointer-events-none">+</span>
+<div>
+<!-- Card Title Bar -->
+<div class="flex items-center justify-between pb-space-xs mb-space-sm border-b border-outline-variant">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[16px] text-on-surface">output</span>
+<span class="font-label-lg text-label-lg uppercase tracking-tight font-semibold text-on-surface">02 // Neutral-File Export &amp; CAD/CAE Handoff</span>
+</div>
+<span class="font-label-sm text-label-sm px-1 bg-secondary-fixed text-on-secondary-fixed font-semibold">ISO 10303 READY</span>
+</div>
+<!-- Archival Suite Form Selector -->
+<div class="mb-space-sm">
+<label class="block font-label-sm text-label-sm uppercase text-on-surface-variant mb-1 font-medium">Target Host Environment (Direct Socket / Pipe)</label>
+<div class="relative">
+<select class="w-full bg-surface-container-low border border-outline px-space-sm py-1.5 font-label-md text-label-md text-on-surface appearance-none focus:outline-none">
+<option>FreeCAD 1.1 (Connected) ▾</option>
+<option>SOLIDWORKS Professional 2024</option>
+<option>Autodesk Fusion 360 (Direct Link)</option>
+<option>ANSYS Mechanical APDL</option>
+<option>Abaqus / Standard CAE</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-2 text-[16px] text-on-surface pointer-events-none">unfold_more</span>
+</div>
+</div>
+<!-- Format Radio Selectors (Drafted Boxes) -->
+<div class="mb-space-md">
+<span class="block font-label-sm text-label-sm uppercase text-on-surface-variant mb-1 font-medium">Geometric Representation Protocol</span>
+<div class="grid grid-cols-3 gap-space-xs">
+<!-- Active Option -->
+<label class="flex items-center gap-2 p-space-xs bg-secondary-fixed/40 border border-secondary cursor-pointer">
+<span class="w-3.5 h-3.5 border border-secondary flex items-center justify-center bg-surface-container-lowest">
+<span class="w-2 h-2 bg-secondary"></span>
+</span>
+<span class="font-label-sm text-label-sm font-semibold text-on-surface">STEP (AP214)</span>
+</label>
+<label class="flex items-center gap-2 p-space-xs bg-surface-container border border-outline-variant cursor-pointer hover:bg-surface-container-high">
+<span class="w-3.5 h-3.5 border border-outline flex items-center justify-center bg-surface-container-lowest"></span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">STL Mesh</span>
+</label>
+<label class="flex items-center gap-2 p-space-xs bg-surface-container border border-outline-variant cursor-pointer hover:bg-surface-container-high">
+<span class="w-3.5 h-3.5 border border-outline flex items-center justify-center bg-surface-container-lowest"></span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Native FCStd</span>
+</label>
+</div>
+</div>
+<!-- Primary Stamped Action -->
+<button class="w-full py-2 bg-primary text-on-primary hover:bg-secondary transition-colors flex items-center justify-center gap-space-xs shadow-[2px_2px_0px_#777770]" type="button">
+<span class="material-symbols-outlined text-[16px]">verified</span>
+<span class="font-label-md text-label-md uppercase font-semibold tracking-wider">Export &amp; Stamp STEP Artefact ↵</span>
+</button>
+</div>
+<!-- Receipt & Verification Seal -->
+<div class="mt-space-md pt-space-xs border-t border-outline-variant space-y-space-xs">
+<div class="p-space-xs bg-[#2A6B4C]/10 border border-[#2A6B4C] flex items-start gap-1.5">
+<span class="material-symbols-outlined text-[14px] text-[#2A6B4C] mt-0.5">check_circle</span>
+<p class="font-label-sm text-label-sm text-[#2A6B4C] leading-snug">
+<strong>Saved:</strong> bracket-60x45x40.step · 14,820 bytes<br/>
+<strong>SHA-256:</strong> e41b72a9df54bb07c89f1165...88a1 [VERIFIED]
+          </p>
+</div>
+<div class="flex items-center justify-between gap-space-xs pt-1">
+<button class="flex-1 py-1 px-1 bg-surface-container-high hover:bg-surface-container-highest border border-outline text-center font-label-sm text-label-sm text-on-surface uppercase" type="button">
+            Copy CLI Bridge
+          </button>
+<button class="flex-1 py-1 px-1 bg-surface-container-high hover:bg-surface-container-highest border border-outline text-center font-label-sm text-label-sm text-on-surface uppercase" type="button">
+            Spool Edge Macro
+          </button>
+</div>
+</div>
+</div>
+<!-- CARD 03: MODEL GATEWAY & API PROVIDERS (SERVER-SIDE VAULT) -->
+<div class="relative bg-surface-container-lowest p-space-md flex flex-col justify-between shadow-[2px_2px_0px_#1c1c18]">
+<span class="absolute top-1 left-1.5 font-label-sm text-label-sm text-outline select-none pointer-events-none">+</span>
+<span class="absolute top-1 right-1.5 font-label-sm text-label-sm text-outline select-none pointer-events-none">+</span>
+<span class="absolute bottom-1 left-1.5 font-label-sm text-label-sm text-outline select-none pointer-events-none">+</span>
+<span class="absolute bottom-1 right-1.5 font-label-sm text-label-sm text-outline select-none pointer-events-none">+</span>
+<div>
+<!-- Card Title Bar -->
+<div class="flex items-center justify-between pb-space-xs mb-space-xs border-b border-outline-variant">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[16px] text-on-surface">vpn_key</span>
+<span class="font-label-lg text-label-lg uppercase tracking-tight font-semibold text-on-surface">03 // Model Gateway &amp; API Providers</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">[LOCAL VAULT]</span>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-space-sm">
+          API keys are preserved strictly in local memory / OS Keytar enclave. Zero telemetry handshakes.
+        </p>
+<!-- Provider Rows -->
+<div class="space-y-space-xs">
+<!-- Row 1: Local Deterministic Helper -->
+<div class="p-space-xs bg-surface-container border border-outline-variant flex items-center justify-between">
+<div>
+<span class="font-label-md text-label-md font-semibold text-on-surface block">Local Deterministic Helper</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Llama-3-Parametric-8B (GGUF q4_k_m)</span>
+</div>
+<span class="font-label-sm text-label-sm px-1.5 py-0.5 bg-[#2A6B4C]/15 border border-[#2A6B4C] text-[#2A6B4C] font-semibold tracking-wider">
+              [ ACTIVE · OFFLINE ]
+            </span>
+</div>
+<!-- Row 2: OpenRouter -->
+<div class="p-space-xs bg-surface-container border border-outline-variant">
+<div class="flex items-center justify-between mb-1">
+<div>
+<span class="font-label-md text-label-md font-semibold text-on-surface">OpenRouter Enclave</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant ml-1 font-mono">claude-3-7-sonnet</span>
+</div>
+<span class="font-label-sm text-label-sm px-1.5 py-0.5 bg-secondary-fixed border border-secondary text-on-secondary-fixed font-semibold">
+                [ CONFIGURED ]
+              </span>
+</div>
+<div class="flex items-center gap-1">
+<input class="flex-1 bg-surface-container-lowest border border-outline px-space-xs py-0.5 font-label-md text-label-md text-on-surface-variant select-all focus:outline-none" readonly="" type="text" value="sk-or-v1-••••••••••••••••"/>
+<button class="px-space-xs py-0.5 bg-surface-container-high border border-outline hover:bg-surface-container-highest font-label-sm text-label-sm uppercase" type="button">Save</button>
+<button class="px-space-xs py-0.5 bg-surface-container-high border border-outline hover:bg-error/10 text-error font-label-sm text-label-sm uppercase" type="button">Clear</button>
+</div>
+</div>
+<!-- Row 3: OpenAI Compatible -->
+<div class="p-space-xs bg-surface-container border border-outline-variant">
+<div class="flex items-center justify-between mb-1">
+<div>
+<span class="font-label-md text-label-md font-semibold text-on-surface">OpenAI Compatible Endpoint</span>
+</div>
+<span class="font-label-sm text-label-sm px-1.5 py-0.5 bg-surface-container-highest border border-outline text-on-surface-variant font-medium">
+                [ NOT CONFIGURED ]
+              </span>
+</div>
+<div class="flex items-center gap-1 mb-1">
+<input class="flex-1 bg-surface-container-lowest border border-outline px-space-xs py-0.5 font-label-md text-label-md text-on-surface-variant focus:outline-none" type="password" value="sk-proj-••••••••••••••••"/>
+<button class="px-space-xs py-0.5 bg-surface-container-high border border-outline font-label-sm text-label-sm uppercase" type="button">Mount</button>
+</div>
+<div class="flex items-center justify-between pt-1 border-t border-outline-variant/60">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Remote Egress Consent Allowlist</span>
+<!-- Drafted Toggle [OFF | ON] -->
+<div class="flex items-center border border-outline">
+<span class="font-label-sm text-label-sm px-2 py-0.5 bg-surface-container-high text-on-surface-variant font-bold">OFF</span>
+<span class="font-label-sm text-label-sm px-2 py-0.5 bg-surface-container-lowest text-outline">ON</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Archival Note -->
+<div class="mt-space-sm pt-space-xs border-t border-outline-variant flex items-center justify-between font-label-sm text-label-sm text-outline">
+<span>ENCLAVE: SEC-CHIP-T2</span>
+<span class="font-mono">FIPS-140-3 COMPLIANT LEVEL 1</span>
+</div>
+</div>
+<!-- CARD 04: LOOPBACK BOOT GATE & CONNECTION RECOVERY -->
+<div class="relative bg-surface-container-lowest p-space-md flex flex-col justify-between shadow-[2px_2px_0px_#1c1c18]">
+<span class="absolute top-1 left-1.5 font-label-sm text-label-sm text-outline select-none pointer-events-none">+</span>
+<span class="absolute top-1 right-1.5 font-label-sm text-label-sm text-outline select-none pointer-events-none">+</span>
+<span class="absolute bottom-1 left-1.5 font-label-sm text-label-sm text-outline select-none pointer-events-none">+</span>
+<span class="absolute bottom-1 right-1.5 font-label-sm text-label-sm text-outline select-none pointer-events-none">+</span>
+<div>
+<!-- Card Title Bar -->
+<div class="flex items-center justify-between pb-space-xs mb-space-xs border-b border-outline-variant">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[16px] text-on-surface">sync_alt</span>
+<span class="font-label-lg text-label-lg uppercase tracking-tight font-semibold text-on-surface">04 // Loopback Boot Gate &amp; Recovery</span>
+</div>
+<span class="flex items-center gap-1 font-label-sm text-label-sm text-[#2A6B4C] font-semibold">
+<span class="w-2 h-2 bg-[#2A6B4C] rounded-full inline-block"></span>
+            PORT 8765
+          </span>
+</div>
+<!-- Connection Inputs -->
+<div class="space-y-space-xs mb-space-sm">
+<div>
+<label class="block font-label-sm text-label-sm uppercase text-on-surface-variant mb-0.5 font-medium">Backend Kernel IPC Origin</label>
+<div class="flex items-center bg-surface-container-low border border-outline px-space-xs py-0.5">
+<span class="w-2 h-2 bg-[#2A6B4C] rounded-full mr-2"></span>
+<input class="w-full bg-transparent font-label-md text-label-md text-on-surface focus:outline-none" type="text" value="http://127.0.0.1:8765"/>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-0.5">
+<label class="font-label-sm text-label-sm uppercase text-on-surface-variant font-medium">Per-Launch Bearer Token</label>
+<button class="font-label-sm text-label-sm text-secondary uppercase hover:underline" type="button">Rotate Token</button>
+</div>
+<div class="flex items-center bg-surface-container-low border border-outline px-space-xs py-0.5">
+<input class="w-full bg-transparent font-label-md text-label-md text-on-surface focus:outline-none" type="password" value="kala_session_tok_991823bcaf0177ea410"/>
+<span class="material-symbols-outlined text-[16px] text-outline cursor-pointer hover:text-on-surface">visibility</span>
+</div>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="grid grid-cols-2 gap-space-xs mb-space-sm">
+<button class="py-1.5 bg-primary text-on-primary hover:bg-secondary font-label-md text-label-md uppercase font-semibold text-center transition-colors shadow-[2px_2px_0px_#777770]" type="button">
+            Connect Loopback
+          </button>
+<button class="py-1.5 bg-surface-container-high border border-outline text-on-surface hover:bg-surface-container-highest font-label-md text-label-md uppercase font-semibold text-center transition-colors" type="button">
+            Retry Bridge
+          </button>
+</div>
+<!-- In-memory Token Privacy Notice -->
+<div class="p-space-xs bg-surface-container-high border border-outline-variant">
+<p class="font-headline-md italic text-[11px] leading-relaxed text-on-surface-variant">
+<strong>Notice:</strong> The bearer token is held in-memory within this desktop session only. It is never persisted to disk or external cloud servers.
+          </p>
+</div>
+</div>
+<!-- Telemetry Ping Box -->
+<div class="mt-space-xs pt-space-xs border-t border-outline-variant flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant">
+<span>IPC LATENCY: <strong class="text-on-surface">1.4ms</strong></span>
+<span>SOCKET: <strong class="text-[#2A6B4C]">ESTABLISHED</strong></span>
+<span>PID: <strong class="text-on-surface">14208</strong></span>
+</div>
+</div>
+</div>
+<!-- ARCHITECTURAL DRAFTING TITLE BLOCK (SHEET FOOTER) -->
+<div class="mx-space-md mb-space-md border-2 border-primary bg-surface-container-lowest grid grid-cols-1 md:grid-cols-6 divide-y md:divide-y-0 md:divide-x divide-primary">
+<!-- Block 1: Studio Reference -->
+<div class="p-space-xs md:col-span-1 bg-surface-container-high flex flex-col justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase font-bold">KALA STUDIO CAD/CAE</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold tracking-tighter">SPEC-SERIES IV</span>
+</div>
+<!-- Block 2: Sheet Code -->
+<div class="p-space-xs md:col-span-1 flex flex-col justify-between">
+<span class="font-label-sm text-label-sm text-outline uppercase">Sheet Number</span>
+<span class="font-label-md text-label-md text-on-surface font-bold">KALA-UI-OPT-04</span>
+</div>
+<!-- Block 3: Title -->
+<div class="p-space-xs md:col-span-2 flex flex-col justify-between">
+<span class="font-label-sm text-label-sm text-outline uppercase">Drawing Title</span>
+<span class="font-headline-md italic text-body-md text-on-surface font-medium">Options &amp; Engineering Drawer Overlay</span>
+</div>
+<!-- Block 4: Technical Parameters -->
+<div class="p-space-xs md:col-span-1 flex flex-col justify-between font-label-sm text-label-sm text-on-surface-variant">
+<div><span>SCALE:</span> <strong class="text-on-surface">1:1 NOMINAL</strong></div>
+<div><span>PROJ:</span> <strong class="text-on-surface">3RD ANGLE (ISO)</strong></div>
+</div>
+<!-- Block 5: Approval Stamp Block -->
+<div class="p-space-xs md:col-span-1 bg-surface-container flex flex-col justify-between border-l border-primary">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-outline">REV: 03 [STABLE]</span>
+<span class="w-1.5 h-1.5 bg-[#2A6B4C]"></span>
+</div>
+<span class="font-label-sm text-label-sm text-[#2A6B4C] font-bold uppercase tracking-tight">APPROVED: KERNEL</span>
+</div>
+</div>
+</div></main></div></div></body></html>

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 2,
+  "comment": "Runtime dependencies of adapters/freecad/src/kala_agent_freecad when it runs inside FreeCAD's own Python (FreeCADCmd). Pins are the versions the reviewed differentials ran against. The staging helper resolves them for EVERY CPython ABI current FreeCAD releases ship (cp311, cp312, cp313, cp314) with `pip download --only-binary=:all:` and records every wheel digest in the staged adapters/freecad/vendor.json. `freecad-python-vendor.cjs --matrix` writes the equivalent Linux+Windows digest matrix to the repository's adapters/freecad/vendor.json. The provider then selects the single `site-packages-cpNNN` directory that matches FreeCADCmd's own Python.",
+  "python": {
+    "defaultVersion": "3.14",
+    "defaultAbi": "cp314",
+    "supported": [
+      { "abi": "cp311", "version": "3.11" },
+      { "abi": "cp312", "version": "3.12" },
+      { "abi": "cp313", "version": "3.13" },
+      { "abi": "cp314", "version": "3.14" }
+    ]
+  },
+  "requirements": [
+    "pydantic==2.13.5",
+    "pydantic-core==2.46.5",
+    "annotated-types==0.8.0",
+    "typing-extensions==4.16.0",
+    "typing-inspection==0.4.4"
+  ],
+  "kalaAgent": {
+    "source": "src/kala_agent",
+    "comment": "The adapter imports kala_agent.contracts, kala_agent.contracts.construction and kala_agent.tools.protocol; the package tree is vendored once because importing a submodule executes the package __init__ modules. It is pure Python and shared by every ABI."
+  }
+}

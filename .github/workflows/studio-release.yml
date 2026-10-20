@@ -1,0 +1,225 @@
+name: studio-release
+
+# Build the Kala Studio installers:
+#   * Linux: AppImage, built and smoke-tested headlessly on the runner.
+#   * Windows: NSIS, built with MSVC + vcpkg OpenCascade; the final runtime
+#     check is the post-install checklist in packaging/windows/README.md.
+#
+# FreeCAD: FreeCAD itself is never bundled. At stage time the helper asks the
+# build host's FreeCADCmd for its Python version/ABI and vendors the adapter
+# dependencies for that interpreter. If FreeCAD is absent, the pins' declared
+# default (3.14/cp314) is used and vendor.json records detected=false. The
+# vendored set is therefore coupled to the FreeCAD build used at build time;
+# rebuild with --freecad-python (Linux) or -FreeCadExe (Windows) for a
+# different FreeCAD interpreter.
+#
+# This workflow never publishes or signs. Artifacts are uploaded for manual
+# inspection only. It is triggered by a tag or manually; it is not evidence
+# that a hosted run executed.
+#
+# The release gate is the native-design readiness report. Until the native
+# front door covers every public route/DTO without the Python geometry worker,
+# desktop-pack.cjs refuses an installer target.
+
+"on":
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: studio-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  # One OpenCascade version for both jobs. The cad adapter build.rs links the
+  # OCCT 7.9 module names (TKDESTEP, TKXSBase, ...), so do not substitute the
+  # older distro libocct packages here.
+  VCPKG_TRIPLET_LINUX: x64-linux
+  VCPKG_TRIPLET_WINDOWS: x64-windows
+
+jobs:
+  linux-appimage:
+    name: Linux AppImage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: studio/package-lock.json
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Install packaging tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          # patchelf relocates the staged runtime to $ORIGIN/lib. xvfb is not
+          # needed: the smoke test extracts the AppImage and runs the backend.
+          sudo apt-get install -y --no-install-recommends patchelf
+
+      - name: Set up vcpkg and OpenCascade
+        shell: bash
+        run: |
+          set -euo pipefail
+          VCPKG_ROOT="${VCPKG_INSTALLATION_ROOT:-$HOME/vcpkg}"
+          if [ ! -x "$VCPKG_ROOT/vcpkg" ]; then
+            git clone --depth 1 https://github.com/microsoft/vcpkg "$VCPKG_ROOT"
+            "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+          fi
+          "$VCPKG_ROOT/vcpkg" install "opencascade:${VCPKG_TRIPLET_LINUX}"
+          OCCT_ROOT="$VCPKG_ROOT/installed/${VCPKG_TRIPLET_LINUX}"
+          echo "VCPKG_ROOT=$VCPKG_ROOT" >> "$GITHUB_ENV"
+          echo "KALA_OCCT_ROOT=$OCCT_ROOT" >> "$GITHUB_ENV"
+          echo "KALA_OCCT_INCLUDE_DIR=$OCCT_ROOT/include/opencascade" >> "$GITHUB_ENV"
+          echo "KALA_OCCT_LIB_DIR=$OCCT_ROOT/lib" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$OCCT_ROOT/lib:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+
+      - name: Install Studio dependencies
+        working-directory: studio
+        shell: bash
+        run: npm ci --no-audit --no-fund
+
+      - name: Studio gates
+        working-directory: studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run typecheck
+          npm test
+
+      - name: Build UI and native stage
+        working-directory: studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build
+          node scripts/native-backend.cjs
+          node -e "const m=require('./backend-native/native-build.json'); const v=m.freeCadAdapter.vendor; console.log('FreeCAD deps:', v.state, v.python + '/' + v.abi, 'detected=' + v.freecad.detected, v.wheels.length + ' wheels')"
+
+      - name: Build AppImage
+        working-directory: studio
+        shell: bash
+        run: node scripts/desktop-pack.cjs --linux AppImage --x64 --publish never
+
+      - name: Smoke-test AppImage (headless extraction path)
+        shell: bash
+        run: |
+          set -euo pipefail
+          APPIMAGE="$(find studio/release -maxdepth 1 -type f -name '*.AppImage' | sort | tail -n 1)"
+          test -n "$APPIMAGE"
+          echo "APPIMAGE=$APPIMAGE" >> "$GITHUB_ENV"
+          if command -v FreeCADCmd >/dev/null 2>&1 || command -v freecadcmd >/dev/null 2>&1; then
+            node packaging/linux/smoke-appimage.mjs --appimage "$APPIMAGE" --require-geometry --require-freecad
+          else
+            echo "FreeCAD is not installed on this runner; the FreeCAD provider smoke is skipped."
+            node packaging/linux/smoke-appimage.mjs --appimage "$APPIMAGE" --require-geometry
+          fi
+
+      - name: Record artifact checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum "$APPIMAGE" | tee "$APPIMAGE.sha256"
+          stat -c '%n %s bytes' "$APPIMAGE"
+
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: kala-studio-linux-appimage
+          path: |
+            studio/release/*.AppImage
+            studio/release/*.AppImage.sha256
+            studio/release/native-readiness.json
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-nsis:
+    name: Windows NSIS
+    runs-on: windows-2022
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: studio/package-lock.json
+
+      - name: Set up Rust (MSVC)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable-msvc
+          components: rustfmt, clippy
+
+      - name: Ensure NASM for ring on MSVC
+        shell: pwsh
+        run: |
+          if (-not (Get-Command nasm -ErrorAction SilentlyContinue)) {
+            choco install nasm --no-progress -y
+            echo "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          }
+
+      - name: Install OpenCascade with vcpkg
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $root = if ($env:VCPKG_INSTALLATION_ROOT) { $env:VCPKG_INSTALLATION_ROOT } else { "C:\vcpkg" }
+          if (-not (Test-Path (Join-Path $root "vcpkg.exe"))) {
+            git clone --depth 1 https://github.com/microsoft/vcpkg $root
+            & (Join-Path $root "bootstrap-vcpkg.bat")
+          }
+          & (Join-Path $root "vcpkg.exe") install "opencascade:$env:VCPKG_TRIPLET_WINDOWS"
+          "VCPKG_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "KALA_OCCT_ROOT=$root\installed\$env:VCPKG_TRIPLET_WINDOWS" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "KALA_OCCT_INCLUDE_DIR=$root\installed\$env:VCPKG_TRIPLET_WINDOWS\include\opencascade" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "KALA_OCCT_LIB_DIR=$root\installed\$env:VCPKG_TRIPLET_WINDOWS\lib" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "$root\installed\$env:VCPKG_TRIPLET_WINDOWS\bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Build NSIS installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          powershell -ExecutionPolicy Bypass -File packaging\windows\build-windows.ps1 -RunGates
+
+      - name: Record artifact checksum
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $installer = Get-ChildItem -Path studio\release -Filter "*.exe" -File |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+          if ($null -eq $installer) { throw "No NSIS installer was produced" }
+          $hash = (Get-FileHash -Algorithm SHA256 -Path $installer.FullName).Hash.ToLowerInvariant()
+          "$hash  $($installer.Name)" | Out-File -FilePath "$($installer.FullName).sha256" -Encoding ascii
+          Write-Host "$($installer.FullName) $($installer.Length) bytes"
+          Write-Host "SHA-256: $hash"
+
+      - name: Upload NSIS installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: kala-studio-windows-nsis
+          path: |
+            studio/release/*.exe
+            studio/release/*.exe.sha256
+            studio/release/native-readiness.json
+          if-no-files-found: error
+          retention-days: 14

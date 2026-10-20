@@ -1,0 +1,9 @@
+# docs-final: record the completed Rust port honestly
+Read every REPORT/REVIEW in `.mece/waves/rust-backend-20261019/cells/*` (especially application-r1, application-review, schemas-r1, api-routes-r1, cli-r1 including its INCIDENT, compat-drift, r2-datadir-fix) and `.mece/waves/design-turns-20261019/cells/test-isolation/REPORT.md`.
+Own: `backend/README.md`, `docs/rust-studio.md`, `docs/studio-limitations.md`, `backend/fixtures/README.md`, and NEW `docs/rust-migration-status.md`. No code or ADR edits.
+- `docs/rust-migration-status.md`: a table of every Python module → Rust crate/module with its status (accepted / follow-up), test counts, the differential evidence (case counts and mismatches), and the reviews. Mark what remains Python on purpose (the FreeCAD adapter, which runs inside FreeCAD; the Solid Edge bridge, which runs on Windows; and the geometry worker, pending the OCCT decision).
+- List the INTENTIONAL differences in one place: application D1 (oversized foreign payload 400 vs 500), schemas extra-field order, api-routes' 7 declared differences (no OpenAPI/`/docs`), kernel stricter restore, sandbox fail-closed, the executor's dead `timeout_seconds` note, and the native identity digests.
+- What remains: the cutover/packaging decision, `kala-agent serve` (if cli-serve hasn't landed), Windows checks blocked on MinGW, live Solid Edge proof, the `views.rs` duplication.
+- Fix `backend/fixtures/README.md` (48 → 56 Studio cases, 15 routes, the determinism notes) per compat-drift's REPORT.
+- Record the data-isolation work, and the user-data incident plus its assessment, factually in `studio-limitations.md` (or a "Test hygiene" section).
+Before running anything, apply the same USER DATA rule as `/home/v9i/Projects/Kala-Agent/.mece/waves/rust-backend-20261019/cells/CONVENTIONS.md`. Re-run documented commands or mark them "not run". REPORT.md.

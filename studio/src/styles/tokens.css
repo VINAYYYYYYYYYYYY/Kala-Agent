@@ -1,0 +1,119 @@
+/* Kala Studio design tokens.
+ *
+ * Day theme ("vellum") is the drafting board; the night theme ("slate") is
+ * the night-slate workbench. Only custom properties change between themes so
+ * every component stays theme-agnostic. No remote fonts: Space Grotesk,
+ * Newsreader, and JetBrains Mono are bundled from @fontsource in main.tsx.
+ *
+ * Type scale (DESIGN.md): headline 22/28, body 16/14/12, labels 13/11/9 in
+ * JetBrains Mono. Every font-size in the app is one of these tokens; the
+ * design-system guard test fails on a raw px font-size outside this file and
+ * on any declared size below 9 px.
+ *
+ * Spacing is the 4 px drafting rhythm (xs 4, sm 8, md 12, lg 20, xl 32) with
+ * 12 px gutters. The shape system is strictly rectilinear: --radius is 0.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* Vellum drafting-board palette */
+  --sheet: #f6f3eb;
+  --margin: #efece4;
+  --panel: #efece4;
+  --card: #faf8f2;
+  --ink: #23211e;
+  /* The drafting 2H construction grey is used for both linework and small
+   * text. #7a756c only reaches 4.13:1 on the sheet (3.51:1 on the boxwood
+   * ruler bar), so the text/line mix is darkened to clear WCAG AA (>=4.5:1)
+   * on every vellum surface while keeping the same graphite family. */
+  --construction: #645f55;
+  --hairline: #c8c2b6;
+  --grid-major: #dfdbd0;
+  --grid-minor: #eae6dc;
+  --redline: #c84b31;
+  /* Redline is also a text colour (dimensions, cut notes, error stamps).
+   * The line red stays #c84b31; the text red is darkened to 4.89:1 on the
+   * sheet so small mono labels are legible. */
+  --redline-ink: #b8432b;
+  --prussian: #2b5b84;
+  --stamp: #2a6b4c;
+  --boxwood: #e8e1ce;
+  --boxwood-border: #bdaf95;
+  --focus-ring: var(--prussian);
+  --error: #ba1a1a;
+  --backdrop: rgba(35, 33, 30, 0.38);
+  /* Drafting grid and ruled-paper line patterns (SVG, no CSS gradients). */
+  --grid-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Cpath d='M10 0V50M20 0V50M30 0V50M40 0V50M0 10H50M0 20H50M0 30H50M0 40H50' fill='none' stroke='%23EAE6DC' stroke-width='0.5'/%3E%3Cpath d='M0 0H50V50' fill='none' stroke='%23DFDBD0' stroke-width='1'/%3E%3C/svg%3E");
+  --rule-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M0 23.5H24' fill='none' stroke='%23EAE6DC' stroke-width='1'/%3E%3C/svg%3E");
+
+  /* Typography families */
+  --font-ui: 'Space Grotesk Variable', 'Space Grotesk', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  --font-note: 'Newsreader Variable', 'Newsreader', Georgia, 'Times New Roman', serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'Cascadia Mono', 'SF Mono', monospace;
+
+  /* Type scale — the only font-size values in the stylesheet. */
+  --text-headline: 22px;
+  --leading-headline: 28px;
+  --tracking-headline: -0.01em;
+  --text-body-lg: 16px;
+  --leading-body-lg: 24px;
+  --text-body-md: 14px;
+  --leading-body-md: 20px;
+  --text-body-sm: 12px;
+  --leading-body-sm: 16px;
+  --text-label-lg: 13px;
+  --leading-label-lg: 16px;
+  --tracking-label-lg: 0.04em;
+  --text-label-md: 11px;
+  --leading-label-md: 14px;
+  --tracking-label-md: 0.06em;
+  --text-label-sm: 9px;
+  --leading-label-sm: 12px;
+  --tracking-label-sm: 0.08em;
+
+  /* Spacing — 4 px drafting rhythm plus the sheet gutters. */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 20px;
+  --space-xl: 32px;
+  --gutter: 12px;
+  --gutter-mobile: 8px;
+  --sheet-margin: 16px;
+
+  /* Geometry */
+  --zone-left-width: 340px;
+  --zone-right-width: 320px;
+  --bottom-bar-height: 48px;
+  --aux-height: 250px;
+  --radius: 0;
+  --hairline-width: 0.5px;
+  --border-width: 1px;
+}
+
+[data-theme='slate'] {
+  color-scheme: dark;
+
+  /* Night-slate palette from the master engineering workbench */
+  --sheet: #0a0a0b;
+  --margin: #121214;
+  --panel: #121214;
+  --card: #161619;
+  --ink: #f5f5f7;
+  --construction: #8e8d94;
+  --hairline: #26262a;
+  --grid-major: #232326;
+  --grid-minor: #1a1a1e;
+  --redline: #dd5a3e;
+  --redline-ink: #dd5a3e;
+  --prussian: #9ecbfa;
+  --stamp: #10b981;
+  --boxwood: #1a1a1e;
+  --boxwood-border: #323238;
+  --focus-ring: #9ecbfa;
+  --error: #ff8f8f;
+  --backdrop: rgba(0, 0, 0, 0.64);
+  --grid-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Cpath d='M10 0V50M20 0V50M30 0V50M40 0V50M0 10H50M0 20H50M0 30H50M0 40H50' fill='none' stroke='%231A1A1E' stroke-width='0.5'/%3E%3Cpath d='M0 0H50V50' fill='none' stroke='%23232326' stroke-width='1'/%3E%3C/svg%3E");
+  --rule-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M0 23.5H24' fill='none' stroke='%231A1A1E' stroke-width='1'/%3E%3C/svg%3E");
+}

@@ -1,0 +1,97 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kala-agent-solidedge"
+version = "0.1.0"
+description = "Windows-local Solid Edge client: compiles Kala construction scripts and drives the local bridge"
+requires-python = ">=3.11"
+dependencies = [
+    "kala-agent>=0.1",
+    "kala-solidedge-bridge>=0.1",
+    "pydantic>=2.10,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "coverage>=7.6",
+    "mypy>=1.14",
+    "pytest>=8.3",
+    "ruff>=0.9",
+]
+
+[project.scripts]
+kala-solidedge = "kala_agent_solidedge.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["kala_agent_solidedge*"]
+
+[tool.pytest.ini_options]
+minversion = "8.3"
+addopts = ["-ra", "--strict-config", "--strict-markers"]
+testpaths = ["tests"]
+pythonpath = ["../../src", "../solidedge-bridge/src", "src"]
+markers = [
+    "solidedge: exercises a real Windows Solid Edge host; skipped unless explicitly enabled",
+]
+xfail_strict = true
+
+[tool.coverage.run]
+branch = true
+source = ["kala_agent_solidedge"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+precision = 2
+fail_under = 80
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "UP", "ANN", "ASYNC", "RUF"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["kala_agent", "kala_agent_solidedge", "kala_solidedge_bridge"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+skip-magic-trailing-comma = false
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["src", "tests"]
+mypy_path = ["../../src", "../solidedge-bridge/src", "src"]
+warn_unreachable = true
+show_error_codes = true
+pretty = true
+
+# pytest's assertion helpers import numpy, whose installed stubs use Python
+# 3.12 `type` statements that cannot be parsed under this package's 3.11
+# target. numpy and pytest are not package dependencies, so their internals are
+# not analyzed; the test bodies themselves are still type-checked strictly.
+[[tool.mypy.overrides]]
+module = ["numpy", "numpy.*", "_pytest", "_pytest.*", "pytest", "pytest.*"]
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = [
+    "test_boundaries",
+    "test_cli",
+    "test_client",
+    "test_compile",
+    "test_integration",
+    "test_oracle",
+    "test_paths",
+    "test_preflight",
+]
+disallow_untyped_decorators = false

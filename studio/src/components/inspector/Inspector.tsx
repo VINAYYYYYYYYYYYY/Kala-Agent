@@ -9,12 +9,15 @@ import type { ReactElement } from 'react';
 // refusal — the inspector catches it locally first.
 
 import { useUiState, dispatch } from '../../state/store';
+import { SurfaceMaterialControl } from '../panels/SurfaceMaterialControl';
+import { VernierSlider } from './VernierSlider';
 import {
   boundsDimensions,
   buildBox,
   buildCylinder,
   buildSphere,
   computeGeometryEstimate,
+  defaultParameters,
   formatAreaEstimate,
   formatEnvelopeEstimate,
   formatEnvelopeVolumeEstimate,
@@ -45,32 +48,22 @@ interface NumberFieldProps {
 
 function NumberField(props: NumberFieldProps): ReactElement {
   const error = describeValueError(props.value, props.min, props.max, props.integer);
+  const step = props.step ?? (props.integer ? 1 : 0.5);
   return (
-    <label className={`inspector-field${error ? ' has-error' : ''}`}>
-      <span className="inspector-field-label">{props.label}{props.suffix ? ` (${props.suffix})` : ''}</span>
-      <input
-        className="inspector-field-input"
-        type="number"
-        inputMode={props.integer ? 'numeric' : 'decimal'}
-        step={props.step ?? (props.integer ? 1 : 0.5)}
+    <div className={`inspector-field${error ? ' has-error' : ''}`}>
+      <VernierSlider
+        label={props.label}
+        value={props.value}
         min={props.min}
         max={props.max}
-        value={Number.isFinite(props.value) ? props.value : ''}
-        aria-invalid={error ? 'true' : 'false'}
-        onChange={(event) => {
-          const raw = event.target.value;
-          if (raw === '') {
-            props.onChange(0);
-            return;
-          }
-          const numeric = Number(raw);
-          if (Number.isFinite(numeric)) {
-            props.onChange(numeric);
-          }
-        }}
+        step={step}
+        integer={props.integer}
+        unit={props.suffix}
+        invalid={Boolean(error)}
+        onChange={props.onChange}
       />
-      {error ? <span className="inspector-field-error">{error}</span> : null}
-    </label>
+      {error ? <span className="inspector-field-error" role="alert">{error}</span> : null}
+    </div>
   );
 }
 
@@ -83,7 +76,13 @@ function describeValueError(value: number, min: number, max: number, integer: bo
   return null;
 }
 
-export function Inspector(): ReactElement {
+export interface InspectorProps {
+  /** The Options card supplies its own drafted heading; hide the inner one. */
+  showHeading?: boolean;
+}
+
+export function Inspector(props: InspectorProps = {}): ReactElement {
+  const showHeading = props.showHeading ?? true;
   const primitive = useUiState((s) => s.primitive);
   const parameters = useUiState((s) => s.parameters);
   const preview = useUiState((s) => s.preview);
@@ -97,26 +96,33 @@ export function Inspector(): ReactElement {
       : 'No mesh yet';
   return (
     <section className="inspector" aria-label="Inspector">
-      <header className="inspector-header">
-        <h2>Inspector</h2>
-        <span className="inspector-source" data-source={source}>
-          {sourceLabel}
-        </span>
-      </header>
+      {showHeading ? (
+        <header className="inspector-header">
+          <h2>Inspector</h2>
+          <span className="inspector-source" data-source={source}>
+            {sourceLabel}
+          </span>
+        </header>
+      ) : null}
+      <PrimitivePicker primitive={primitive} />
+      <SurfaceMaterial />
       <ParameterForm primitive={primitive} parameters={parameters} />
       {validation ? (
         <p className="inspector-validation" role="alert">
           {validation.message}
         </p>
       ) : null}
-      <GeometryEstimates primitive={primitive} parameters={parameters} />
-      {preview.local ? (
-        <BoundsReadout
-          parameters={parameters}
-          bounds={preview.local.bounds}
-          serverBounds={preview.server ? preview.server.preview.bounds : null}
-        />
-      ) : null}
+      <div className="inspector-lower">
+        <GeometryEstimates primitive={primitive} parameters={parameters} showNote={false} />
+        {preview.local ? (
+          <BoundsReadout
+            parameters={parameters}
+            bounds={preview.local.bounds}
+            serverBounds={preview.server ? preview.server.preview.bounds : null}
+          />
+        ) : null}
+      </div>
+      <p className="inspector-estimates-note">{ESTIMATE_NOTE}</p>
     </section>
   );
 }
@@ -127,10 +133,64 @@ function validationFor(kind: PrimitiveKind, p: StudioParameters) {
   return validateSphere(p as SphereParameters);
 }
 
+const KINDS: ReadonlyArray<{ id: PrimitiveKind; label: string }> = [
+  { id: 'box', label: 'Box' },
+  { id: 'cylinder', label: 'Cylinder' },
+  { id: 'sphere', label: 'Sphere' },
+];
+
+function PrimitivePicker(props: { primitive: PrimitiveKind }): ReactElement {
+  return (
+    <div className="inspector-kind-picker" role="radiogroup" aria-label="Primitive kind">
+      {KINDS.map((kind) => (
+        <button
+          key={kind.id}
+          type="button"
+          role="radio"
+          aria-checked={props.primitive === kind.id}
+          className={`inspector-kind-button${props.primitive === kind.id ? ' is-active' : ''}`}
+          onClick={() => {
+            if (props.primitive === kind.id) return;
+            dispatch({
+              type: 'primitive/change',
+              kind: kind.id,
+              parameters: defaultParameters(kind.id),
+            });
+          }}
+        >
+          {kind.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Surface material of the drawn solid. The same control is in the bottom
+// ruler bar; both write the one `viewport.material` field. The canvas
+// background is not offered here on purpose: it follows the workspace theme
+// (vellum paper by day, night slate at night) so the viewport surface and
+// the drafting sheet behind it always agree.
+function SurfaceMaterial(): ReactElement {
+  return (
+    <section className="inspector-material" aria-label="Surface material">
+      <h3>Surface material</h3>
+      <SurfaceMaterialControl variant="full" />
+      <p className="inspector-material-note">
+        Canvas background follows the workspace theme.
+      </p>
+    </section>
+  );
+}
+
 interface GeometryEstimatesProps {
   primitive: PrimitiveKind;
   parameters: StudioParameters;
+  showNote?: boolean;
 }
+
+const ESTIMATE_NOTE =
+  'Closed-form nominal geometry for sizing & handoff. Not a certified FEA solver result. ' +
+  'CAD/CAE handoff carries the ideal-solid numbers only. No stress, deflection, or tolerance results.';
 
 // Nominal analytical geometry for the active primitive. This is the number
 // set an OpenCascade (OCP) volume/area property query returns for the ideal
@@ -138,6 +198,7 @@ interface GeometryEstimatesProps {
 // package. It is explicitly NOT a simulation result.
 function GeometryEstimates(props: GeometryEstimatesProps): ReactElement {
   const estimate = computeGeometryEstimate(props.primitive, props.parameters);
+  const showNote = props.showNote ?? true;
   return (
     <section className="inspector-estimates" aria-label="OpenCascade geometry estimate">
       <h3>OpenCascade estimate (nominal)</h3>
@@ -147,11 +208,7 @@ function GeometryEstimates(props: GeometryEstimatesProps): ReactElement {
         <div><dt>Bounding envelope</dt><dd>{formatEnvelopeEstimate(estimate)}</dd></div>
         <div><dt>Envelope volume</dt><dd>{formatEnvelopeVolumeEstimate(estimate)}</dd></div>
       </dl>
-      <p className="inspector-estimates-note">
-        Closed-form nominal geometry for the ideal solid, for sizing, mass estimation, and
-        STEP/STL handoff to an external CAD/CAE package. No stress, deflection, or tolerance
-        results are computed here.
-      </p>
+      {showNote ? <p className="inspector-estimates-note">{ESTIMATE_NOTE}</p> : null}
     </section>
   );
 }

@@ -1,0 +1,7 @@
+# GPT-6.1-Sol artifact repair review — accepted within stated platform limits
+
+Consumed the terminal round2 task result; no live child turns. Independently re-ran all40 locked offline release tests, fmt, Linux all-target clippy with -D warnings, Windows MSVC all-target check and Windows all-target clippy with -D warnings: passed.
+
+Read the actual repair: every final bucket handle is checked for reparse attributes and directory type after branch selection, and fallback write reopen is checked itself. Objects-directory final-handle validation follows the same pattern. Rename now carries the held bucket handle as RootDirectory with a bare digest, keeps no-replace behavior, and uses correctly allocated/aligned rename metadata. Worker report records the Microsoft API rationale plus Windows-only ordinary, concurrent, unrelated-cwd and path-swap tests. Hostile fixture tests are explicitly opt-in and fail when required fixtures cannot be created.
+
+This closes the code-review objections. Accept this native artifact library for workspace integration and dependent Rust consumers. Windows runtime/NTFS behavior, hostile Windows fixture execution and inherited ACL/directory-flush limits remain explicitly pending/documented; compile/clippy checks do not supply runtime proof. Linux40 tests include actual Python cross-readers, digest tamper checks, threads/processes and adversarial descriptor-relative path tests. Approved root capability/identity strengthening remains intact. No full backend cutover or optimization claim.

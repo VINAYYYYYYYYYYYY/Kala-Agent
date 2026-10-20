@@ -11,12 +11,25 @@ import os
 from collections.abc import Mapping
 from typing import Final
 
+from kala_agent.studio.design.intent import (
+    DESIGN_INTENT_INSTRUCTION,
+    DesignIntent,
+    DesignIntentParseError,
+    design_intent_schema_text,
+    parse_design_intent_text,
+    strip_design_json_block,
+)
 from kala_agent.studio.providers.base import (
     ChatOutcome,
     ProviderConfigurationError,
 )
 from kala_agent.studio.providers.codex import codex_chat
-from kala_agent.studio.providers.local import DEFAULT_LOCAL_MODEL, local_chat
+from kala_agent.studio.providers.local import (
+    DEFAULT_LOCAL_MODEL,
+    detect_design_family,
+    local_chat,
+    parse_design_prompt,
+)
 from kala_agent.studio.providers.openai_compat import (
     OPENAI_DEFAULT_ENDPOINT,
     OPENROUTER_DEFAULT_ENDPOINT,
@@ -27,6 +40,60 @@ from kala_agent.studio.schemas import ProviderRecord
 
 STUDIO_PROVIDER_TIMEOUT_SECONDS: Final[float] = 30.0
 STUDIO_RESPONSE_MAX_BYTES: Final[int] = 4096
+
+
+class StudioChatTurn(ChatOutcome):
+    """A provider reply plus any design intent the turn produced.
+
+    The extra fields are metadata for the server, not part of the HTTP
+    response. ``design_intent`` is present only when the prompt was parsed or
+    validated into a complete intent; ``design_missing`` names the values the
+    local helper refused to guess. ``design_error`` records an honest parse
+    or repair failure.
+    """
+
+    def __init__(
+        self,
+        *,
+        text: str,
+        provider: str,
+        model: str | None,
+        offline: bool,
+        design_intent: DesignIntent | None = None,
+        design_missing: tuple[str, ...] = (),
+        design_notes: tuple[str, ...] = (),
+        design_family: str | None = None,
+        design_error: str | None = None,
+        cad_provider: str | None = None,
+    ) -> None:
+        super().__init__(text=text, provider=provider, model=model, offline=offline)
+        self.design_intent = design_intent
+        self.design_missing = design_missing
+        self.design_notes = design_notes
+        self.design_family = design_family
+        self.design_error = design_error
+        self.cad_provider = cad_provider
+
+
+def _design_prompt(prompt: str) -> str:
+    schema = design_intent_schema_text()
+    return (
+        f"{DESIGN_INTENT_INSTRUCTION}\n\n"
+        f"DesignIntent JSON Schema:\n{schema}\n\n"
+        f"User request:\n{prompt}"
+    )
+
+
+def _repair_prompt(prompt: str, error: str) -> str:
+    return (
+        "Your previous reply could not be validated as a DesignIntent: "
+        f"{error[:512]}\n\n"
+        "Return exactly one fenced ```json block containing a corrected "
+        "DesignIntent for the same request. Do not invent a value the user "
+        "did not state; if a required value is missing, reply in prose with "
+        "the missing values instead.\n\n"
+        f"User request:\n{prompt}"
+    )
 
 
 def list_provider_records(
@@ -113,6 +180,7 @@ def chat(
     prompt: str,
     allow_remote: bool,
     environ: Mapping[str, str] | None = None,
+    cad_provider: str | None = None,
 ) -> ChatOutcome:
     """Dispatch a chat request to the named provider.
 
@@ -121,32 +189,59 @@ def chat(
     requires it because it would invoke an out-of-process CLI. A caller
     that asks for a provider the registry does not publish is refused with
     :class:`ProviderConfigurationError`.
+
+    Design-intent hook: the local helper's strict parser and the remote
+    providers' JSON-Schema prompt both return a :class:`StudioChatTurn` so
+    the server can compile the intent without the provider layer ever
+    touching OCP. ``allow_remote`` semantics are unchanged.
     """
     if environ is None:
         environ = os.environ
     if provider == "local":
-        return local_chat(prompt, model=model or DEFAULT_LOCAL_MODEL)
+        parsed = parse_design_prompt(prompt)
+        outcome = local_chat(prompt, model=model or DEFAULT_LOCAL_MODEL)
+        if parsed is None:
+            return StudioChatTurn(
+                text=outcome.text,
+                provider=outcome.provider,
+                model=outcome.model,
+                offline=outcome.offline,
+                cad_provider=cad_provider,
+            )
+        return StudioChatTurn(
+            text=outcome.text,
+            provider=outcome.provider,
+            model=outcome.model,
+            offline=outcome.offline,
+            design_intent=parsed.intent,
+            design_missing=parsed.missing,
+            design_notes=parsed.notes,
+            design_family=parsed.family,
+            cad_provider=cad_provider,
+        )
     if provider == "openai":
         if not model:
             raise ProviderConfigurationError(
                 "openai provider requires a model id (e.g. 'gpt-4o-mini')"
             )
-        return openai_compat_chat(
+        return _remote_turn(
             "openai",
             model=model,
             prompt=prompt,
             allow_remote=allow_remote,
             environ=environ,
+            cad_provider=cad_provider,
         )
     if provider == "openrouter":
         if not model:
             raise ProviderConfigurationError("openrouter provider requires a model id")
-        return openai_compat_chat(
+        return _remote_turn(
             "openrouter",
             model=model,
             prompt=prompt,
             allow_remote=allow_remote,
             environ=environ,
+            cad_provider=cad_provider,
         )
     if provider == "codex":
         if not allow_remote:
@@ -157,9 +252,86 @@ def chat(
     raise ProviderConfigurationError(f"unknown provider: {provider!r}")
 
 
+def _remote_turn(
+    provider: str,
+    *,
+    model: str,
+    prompt: str,
+    allow_remote: bool,
+    environ: Mapping[str, str],
+    cad_provider: str | None = None,
+) -> StudioChatTurn:
+    family = detect_design_family(prompt)
+    if family is None:
+        outcome = openai_compat_chat(
+            provider,
+            model=model,
+            prompt=prompt,
+            allow_remote=allow_remote,
+            environ=environ,
+        )
+        return StudioChatTurn(
+            text=outcome.text,
+            provider=outcome.provider,
+            model=outcome.model,
+            offline=outcome.offline,
+            cad_provider=cad_provider,
+        )
+
+    first = openai_compat_chat(
+        provider,
+        model=model,
+        prompt=_design_prompt(prompt),
+        allow_remote=allow_remote,
+        environ=environ,
+    )
+    try:
+        intent = parse_design_intent_text(first.text)
+    except DesignIntentParseError as first_error:
+        second = openai_compat_chat(
+            provider,
+            model=model,
+            prompt=_repair_prompt(prompt, str(first_error)),
+            allow_remote=allow_remote,
+            environ=environ,
+        )
+        try:
+            intent = parse_design_intent_text(second.text)
+        except DesignIntentParseError as second_error:
+            prose = strip_design_json_block(second.text)
+            return StudioChatTurn(
+                text=(f"{prose} No validated design was produced: {str(second_error)[:512]}"),
+                provider=provider,
+                model=second.model or first.model or model,
+                offline=False,
+                design_family=family,
+                design_error=str(second_error),
+                cad_provider=cad_provider,
+            )
+        return StudioChatTurn(
+            text=strip_design_json_block(second.text),
+            provider=provider,
+            model=second.model or first.model or model,
+            offline=False,
+            design_intent=intent,
+            design_family=family,
+            cad_provider=cad_provider,
+        )
+    return StudioChatTurn(
+        text=strip_design_json_block(first.text),
+        provider=provider,
+        model=first.model or model,
+        offline=False,
+        design_intent=intent,
+        design_family=family,
+        cad_provider=cad_provider,
+    )
+
+
 __all__ = (
     "STUDIO_PROVIDER_TIMEOUT_SECONDS",
     "STUDIO_RESPONSE_MAX_BYTES",
+    "StudioChatTurn",
     "chat",
     "fixed_endpoints",
     "list_provider_records",

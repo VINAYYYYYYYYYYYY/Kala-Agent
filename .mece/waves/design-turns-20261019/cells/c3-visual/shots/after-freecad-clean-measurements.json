@@ -1,0 +1,152 @@
+{
+  "labels": [
+    "ISO · FROM (+X −Y +Z)",
+    "TOP · LOOKING −Z",
+    "FRONT · LOOKING +Y",
+    "RIGHT · LOOKING −X"
+  ],
+  "cut": "CUT A–A · XZ · Y = 4.00 mm",
+  "aux": "CUT A–A · XZ · Y = 4.00 mmAREA: 2,321.46 mm²",
+  "area": "AREA 2,321.46 mm²",
+  "journal": [
+    {
+      "source": "local",
+      "seq": "—",
+      "chain": "local",
+      "type": "[BRIDGE]"
+    },
+    {
+      "source": "local",
+      "seq": "—",
+      "chain": "local",
+      "type": "[SYSTEM]"
+    },
+    {
+      "source": "local",
+      "seq": "—",
+      "chain": "local",
+      "type": "[TOOL]"
+    },
+    {
+      "source": "local",
+      "seq": "—",
+      "chain": "local",
+      "type": "[PREVIEW]"
+    },
+    {
+      "source": "local",
+      "seq": "—",
+      "chain": "local",
+      "type": "[CHAT]"
+    },
+    {
+      "source": "local",
+      "seq": "—",
+      "chain": "local",
+      "type": "[TOOL]"
+    },
+    {
+      "source": "server",
+      "seq": "1",
+      "chain": "ok",
+      "type": "design.intent"
+    },
+    {
+      "source": "server",
+      "seq": "2",
+      "chain": "ok",
+      "type": "provider.build.requested"
+    },
+    {
+      "source": "server",
+      "seq": "3",
+      "chain": "ok",
+      "type": "provider.build.completed"
+    },
+    {
+      "source": "server",
+      "seq": "4",
+      "chain": "ok",
+      "type": "artifact.stored"
+    },
+    {
+      "source": "server",
+      "seq": "5",
+      "chain": "ok",
+      "type": "artifact.stored"
+    },
+    {
+      "source": "server",
+      "seq": "6",
+      "chain": "ok",
+      "type": "artifact.stored"
+    },
+    {
+      "source": "server",
+      "seq": "7",
+      "chain": "ok",
+      "type": "view.imported"
+    },
+    {
+      "source": "server",
+      "seq": "8",
+      "chain": "ok",
+      "type": "design.measured"
+    },
+    {
+      "source": "server",
+      "seq": "9",
+      "chain": "ok",
+      "type": "design.checked"
+    },
+    {
+      "source": "server",
+      "seq": "10",
+      "chain": "ok",
+      "type": "chat.turn"
+    },
+    {
+      "source": "local",
+      "seq": "—",
+      "chain": "local",
+      "type": "[CHAT]"
+    }
+  ],
+  "rows": 17,
+  "stamps": "HASH-CHAIN OK",
+  "tabs": [
+    "a9d04f8f"
+  ],
+  "title": "SUBJECT // DESIGN IDa9d04f8fDRAWINGL-bracket 60 x 45 x 40MEASURED BYmeasured by FreeCAD 1.1.4MATERIAL (DECLARED)aluminiumTOLERANCES (DECLARED)bore diameter 10 mm (declared) · 4 x hole diameter 5.5 mm (declared) · ISO 2768-m (declared)SCALEFITUNITSMETRIC (MM)PROJECTION3RD ANGLEREV—",
+  "view": "view: OpenCascade import (view-only)",
+  "readout": [
+    {
+      "t": "60×45×40 mm",
+      "w": 59,
+      "sw": 59,
+      "truncated": false,
+      "title": "ENV 60×45×40 mm — Envelope measured by FreeCAD 1.1.4: 60 × 45 × 40 mm"
+    },
+    {
+      "t": "35 571 mm³",
+      "w": 51,
+      "sw": 51,
+      "truncated": false,
+      "title": "VOL 35 571 mm³ — Volume measured by FreeCAD 1.1.4: 35571.416047 mm³"
+    },
+    {
+      "t": "11 889 mm²",
+      "w": 51,
+      "sw": 51,
+      "truncated": false,
+      "title": "AREA 11 889 mm² — Surface area measured by FreeCAD 1.1.4: 11889.101731 mm²"
+    },
+    {
+      "t": "FIT",
+      "w": 16,
+      "sw": 16,
+      "truncated": false,
+      "title": "SCALE FIT — The viewport frames the part to fit the sheet, so the sheet carries no fixed model-to-paper ratio. FIT states that honestly."
+    }
+  ]
+}

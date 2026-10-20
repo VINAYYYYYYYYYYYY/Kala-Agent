@@ -1,0 +1,27 @@
+/* Bottom ruler bar — the measured-design readout.
+ *
+ * The bar's own layout lives in layout.css. This file carries the one state
+ * the primitive preview never reaches: a compiled design is active, so the
+ * readout quotes measured values and names the source. Nothing here invents
+ * a value; it only says where the numbers came from.
+ */
+
+.bottom-bar .bottom-bar-source[data-source-kind='provider'] {
+  color: var(--prussian);
+  border-color: var(--prussian);
+  /* "measured by FreeCAD 1.1.4" is a proper label, not a lowercased style. */
+  text-transform: none;
+  font-weight: 600;
+}
+
+.bottom-bar .bottom-bar-source[data-source-kind='none'] {
+  text-transform: lowercase;
+}
+
+/* Ellipsis is a 1280 fallback, not a 1440 behaviour: at 1440 the compact
+   readout and source chip fit the single row in full. */
+@media (max-width: 1400px) {
+  .bottom-bar .bottom-bar-readout-value {
+    text-overflow: ellipsis;
+  }
+}

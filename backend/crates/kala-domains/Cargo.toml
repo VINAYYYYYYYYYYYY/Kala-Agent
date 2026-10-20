@@ -1,0 +1,37 @@
+[workspace]
+# This cell owns a standalone workspace and lockfile. The parent
+# `backend/Cargo.toml` and its lockfile are deliberately untouched.
+resolver = "3"
+
+[package]
+name = "kala-domains"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+publish = false
+description = "Native declarative domain packages and Rust implementation provenance for the Kala Agent backend"
+build = "build.rs"
+
+[dependencies]
+# Accepted read-only slices. These are path dependencies only; no public API
+# of a dependency is patched or worked around here.
+kala-budget = { path = "../kala-budget" }
+kala-contracts = { path = "../kala-contracts" }
+kala-json = { path = "../kala-json" }
+num-bigint = "0.4"
+num-traits = "0.2"
+sha2 = "0.10"
+
+[build-dependencies]
+# The build script hashes this crate's own Rust sources. It never invokes or
+# requires Python, a Python package, or Python source files.
+kala-json = { path = "../kala-json" }
+sha2 = "0.10"
+
+[dev-dependencies]
+serde_json = { version = "1.0", features = ["arbitrary_precision"] }
+tempfile = "3.20"
+
+[profile.release]
+strip = "symbols"

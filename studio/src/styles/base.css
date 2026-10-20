@@ -1,0 +1,135 @@
+/* Base reset and shared typography.
+ *
+ * The document never scrolls: the studio shell owns the full viewport and
+ * each zone scrolls internally. Focus rings use Prussian blue, and the
+ * reduced-motion preference disables decorative transitions.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--sheet);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-body-md);
+  line-height: 1.45;
+  font-feature-settings: 'tnum' 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+dl,
+dd,
+ol,
+ul {
+  margin: 0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: var(--space-sm) var(--space-sm);
+}
+
+input[type='range'] {
+  accent-color: var(--prussian);
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+input[type='checkbox'] {
+  accent-color: var(--stamp);
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+code,
+time,
+.mono {
+  font-family: var(--font-mono);
+}
+
+a {
+  color: var(--prussian);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--prussian) 25%, transparent);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--hairline);
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

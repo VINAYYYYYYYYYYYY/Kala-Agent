@@ -1,0 +1,85 @@
+[package]
+name = "kala-studio"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+publish = false
+description = "Standalone native Kala Studio HTTP service"
+
+[[bin]]
+name = "kala-studio"
+path = "src/main.rs"
+
+[features]
+default = ["native-geometry"]
+# ADR-0010 phase 2: the native geometry backend is the front door's default.
+# The default build links the real OpenCascade adapter (`kala-cad`), the CAD
+# provider connections (`kala-cad-providers`), the design-intent contract
+# (`kala-design-intent`) and the Studio journal (`kala-studio-journal`), so the
+# front door serves design, import, journal, intent and CAD-provider routes
+# with no Python process anywhere in the picture.
+native-geometry = [
+    "native-primitives",
+    "dep:kala-cad",
+    "dep:kala-cad-providers",
+    "dep:kala-contracts",
+    "dep:kala-design-intent",
+    "dep:kala-persistence",
+    "dep:kala-studio-journal",
+]
+# ADR-0010 parks the native primitive geometry behind this feature: the
+# reviewed `kala-geometry` mesh builder and the reviewed `kala-step` analytic
+# B-rep writer. The native geometry backend needs them for the primitive
+# preview/export/handoff routes, so it enables this feature itself.
+native-primitives = ["dep:kala-geometry", "dep:kala-step"]
+# The former name of the parked build. It is not a default feature either.
+native-step = ["native-primitives"]
+
+[dependencies]
+bytes = "1"
+clap = { version = "4", features = ["derive"] }
+getrandom = "0.3"
+http-body-util = "0.1"
+hyper = { version = "1", features = ["http1", "server"] }
+hyper-util = { version = "0.1", features = ["http1", "server", "server-graceful", "tokio"] }
+# The real OpenCascade adapter. It calls OCCT and never rewrites it.
+kala-cad = { path = "../kala-cad", optional = true }
+# The CAD provider connections: FreeCAD out of process, Solid Edge over the
+# ADR-0008 loopback bridge.
+kala-cad-providers = { path = "../kala-cad-providers", optional = true }
+# The accepted construction contract: the typed script and its wire form.
+kala-contracts = { path = "../kala-contracts", optional = true }
+# The design-intent contract, the templates and the strict prompt parser.
+kala-design-intent = { path = "../kala-design-intent", optional = true }
+kala-geometry = { path = "../kala-geometry", optional = true }
+kala-json = { path = "../kala-json" }
+# The persistence-domain canonical JSON, used to measure a journal payload
+# exactly the way the Python journal canonicalises it.
+kala-persistence = { path = "../kala-persistence", optional = true }
+kala-process = { path = "../kala-process" }
+# The Studio session journal and its content-addressed artifact store.
+kala-studio-journal = { path = "../kala-studio-journal", optional = true }
+kala-step = { path = "../kala-step", optional = true }
+regex = "1"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-native-roots"] }
+rustls = { version = "0.23", default-features = false, features = ["std", "ring", "tls12"] }
+rustls-pemfile = "1"
+serde_json = { version = "1", features = ["arbitrary_precision", "preserve_order"] }
+sha2 = "0.10"
+tempfile = "3"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal", "time", "io-util", "process", "sync"] }
+
+# Windows system trust stores. `schannel` is the safe, supported binding for
+# the CryptoAPI certificate stores CPython's `ssl.enum_certificates` reads
+# (`CA` and `ROOT`, current user and local machine).
+[target.'cfg(windows)'.dependencies]
+schannel = "0.1"
+
+[dev-dependencies]
+kala-geometry = { path = "../kala-geometry" }
+rustls = { version = "0.23", default-features = false, features = ["std", "ring", "tls12"] }
+rustls-pemfile = "1"
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }

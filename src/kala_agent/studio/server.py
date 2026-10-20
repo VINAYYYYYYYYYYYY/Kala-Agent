@@ -28,16 +28,39 @@ and the core API share no state, no token file, and no data directory.
 from __future__ import annotations
 
 import logging
+import math
 import os
+import secrets
 from collections.abc import AsyncIterator, Callable, Mapping
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from pathlib import Path
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
-from fastapi import APIRouter, FastAPI, Request, Response
+from fastapi import APIRouter, FastAPI, Query, Request, Response
 from starlette.middleware import Middleware
 
-from kala_agent.studio.boundary import resolve_studio_token
+from kala_agent.studio.boundary import (
+    TOKEN_REQUIRED_MESSAGE,
+    resolve_studio_data_dir,
+    resolve_studio_token,
+)
+from kala_agent.studio.design.providers.base import (
+    CadProvider,
+    CadProviderUnavailableError,
+    MeasuredBounds,
+)
+from kala_agent.studio.design.service import (
+    DESIGN_ID_PATTERN_LENGTH,
+    MAX_SECTION_OFFSET_MM,
+    DesignError,
+    DesignNotFoundError,
+    DesignOutcome,
+    DesignRejectedError,
+    DesignService,
+    DesignUnavailableError,
+    check_payload,
+    design_available,
+)
 from kala_agent.studio.errors import install_error_handlers
 from kala_agent.studio.geometry import (
     ANALYTIC_WARNING,
@@ -74,13 +97,28 @@ from kala_agent.studio.providers.base import (
     ProviderUnavailableError,
 )
 from kala_agent.studio.providers.dispatch import (
+    StudioChatTurn,
     chat,
     list_provider_records,
 )
 from kala_agent.studio.schemas import (
+    MAX_DRAWING_VIEWS,
+    MAX_JOURNAL_LIMIT,
     BBox,
+    CadProviderRecord,
+    CadProvidersResponse,
     ChatRequest,
     ChatResponse,
+    DesignArtifacts,
+    DesignBounds,
+    DesignCheck,
+    DesignMeasured,
+    DesignRequest,
+    DesignResult,
+    DesignView,
+    DrawingPolyline,
+    DrawingResponse,
+    DrawingView,
     ExportFormat,
     ExportRequest,
     HandoffRequest,
@@ -88,10 +126,16 @@ from kala_agent.studio.schemas import (
     HealthResponse,
     IntegrationRecord,
     IntegrationsResponse,
+    JournalEventRecord,
+    JournalPageResponse,
+    JournalVerifyResponse,
     PreviewRequest,
     PreviewResponse,
     PrimitiveKind,
     ProvidersResponse,
+    SectionBounds2D,
+    SectionLoopResponse,
+    SectionResponse,
     StudioSettingsResponse,
     UpdateProviderKeyRequest,
     error_response,
@@ -103,9 +147,22 @@ from kala_agent.studio.settings import (
 )
 from kala_agent.studio.static import resolve_static_root
 
+if TYPE_CHECKING:
+    from kala_agent.studio.design.drawing import Drawing, Polyline, Section
+    from kala_agent.studio.design.measure import Bounds as DesignMeasureBounds
+    from kala_agent.studio.session_journal import SessionEvent
+
 LOGGER: Final[logging.Logger] = logging.getLogger("kala_agent.studio.server")
 STUDIO_PREFIX: Final[str] = "/api/studio"
 STUDIO_VERSION: Final[str] = "0.1.0"
+DESIGN_UNAVAILABLE_MESSAGE: Final[str] = (
+    "Design compilation requires the OCP bindings (the 'cadquery-ocp' package). "
+    "The studio never fabricates a design; install 'cadquery-ocp' and restart "
+    "the studio to enable it."
+)
+ALLOWED_VIEWS: Final[tuple[str, ...]] = ("front", "top", "right", "iso")
+ALLOWED_SECTION_PLANES: Final[tuple[str, ...]] = ("XY", "XZ", "YZ")
+DEFAULT_DRAWING_LIMIT: Final[int] = 200
 
 
 def _bounds_to_bbox(bounds: Bounds) -> BBox:
@@ -191,6 +248,7 @@ def health(request: Request = None) -> HealthResponse:  # type: ignore[assignmen
         version=STUDIO_VERSION,
         offline=not _any_remote_provider_configured(env),
         step_available=step_available,
+        design_available=design_available(),
         integrations=tuple(row.id for row in build_registry()),
         providers=tuple(row.id for row in list_provider_records(env)),
     )
@@ -225,6 +283,39 @@ def integrations() -> IntegrationsResponse:
 def providers(request: Request = None) -> ProvidersResponse:  # type: ignore[assignment]
     env = _effective_request_environ(request)
     return ProvidersResponse(providers=list_provider_records(env))
+
+
+@router.get(
+    "/providers/cad",
+    summary="CAD provider availability (probed, never assumed)",
+    response_model=CadProvidersResponse,
+    tags=["studio"],
+)
+def cad_providers(request: Request) -> CadProvidersResponse | Response:
+    """Return each CAD provider's live probe result.
+
+    ADR-0011: availability is evidence from this host, never a constant. The
+    route carries the launch bearer like the other new read routes so a
+    same-origin page cannot enumerate a Windows bridge it does not own.
+    """
+    denied = _require_bearer(request)
+    if denied is not None:
+        return denied
+    service = _design_service(request)
+    return CadProvidersResponse(
+        providers=tuple(
+            CadProviderRecord(
+                id=status.id,
+                name=status.name,
+                available=status.available,
+                version=status.version,
+                reason=status.reason,
+                measured_by=status.measured_by,
+                mode=status.mode,
+            )
+            for status in service.probe_providers()
+        )
+    )
 
 
 @router.get(
@@ -287,10 +378,14 @@ def preview(payload: PreviewRequest) -> PreviewResponse | Response:
 
 @router.post(
     "/export",
-    summary="Render a parametric primitive to STL or STEP",
+    summary="Render a parametric primitive or a stored design to STL or STEP",
     tags=["studio"],
 )
-def export_primitive(payload: ExportRequest) -> Response:
+def export_primitive(payload: ExportRequest, request: Request) -> Response:
+    if payload.design_id is not None:
+        return _export_design(payload, request)
+    if payload.kind is None:  # pragma: no cover - the request validator guarantees this
+        return _invalid_request_response(ValueError("a primitive kind or a design id is required"))
     try:
         mesh = build_primitive(payload.kind.value, _copy_params(payload.parameters))
     except ValueError as error:
@@ -313,6 +408,35 @@ def export_primitive(payload: ExportRequest) -> Response:
     }
     return Response(
         content=data,
+        media_type=_media_type_for(payload.format),
+        headers=headers,
+    )
+
+
+def _export_design(payload: ExportRequest, request: Request) -> Response:
+    service = _design_service(request)
+    if not design_available():
+        return _design_unavailable_response()
+    if payload.design_id is None:  # pragma: no cover - the caller checked
+        return _invalid_request_response(ValueError("a design id is required"))
+    try:
+        outcome = service.export(payload.design_id, payload.format.value)
+    except DesignNotFoundError:
+        return _design_not_found_response(payload.design_id)
+    except DesignUnavailableError:
+        return _design_unavailable_response()
+    except DesignRejectedError as error:
+        return _design_rejected_response(error.reason)
+    except DesignError as error:
+        return _invalid_request_response(error)
+    headers = {
+        "content-disposition": f'attachment; filename="{outcome.filename}"',
+        "x-studio-design-id": outcome.design_id,
+        "x-studio-digest": outcome.sha256,
+        "x-studio-artifact-kind": outcome.format,
+    }
+    return Response(
+        content=outcome.data,
         media_type=_media_type_for(payload.format),
         headers=headers,
     )
@@ -392,12 +516,447 @@ def chat_route(payload: ChatRequest, request: Request) -> ChatResponse | Respons
         return _provider_protocol_response(error)
     except ProviderSubprocessError as error:
         return _provider_subprocess_response(error)
+
+    service = _design_service(request)
+    text = outcome.text[:4096]
+    design: DesignResult | None = None
+    design_id: str | None = None
+    turn = outcome if isinstance(outcome, StudioChatTurn) else None
+    selected_provider = (
+        payload.cad_provider.value
+        if payload.cad_provider is not None
+        else (turn.cad_provider if turn is not None else None)
+    )
+    if turn is not None and turn.design_intent is not None:
+        if selected_provider is None:
+            text = _join_text(text, _provider_choice_message(service))
+        elif not design_available():
+            text = _join_text(text, DESIGN_UNAVAILABLE_MESSAGE)
+        else:
+            try:
+                design_outcome = service.design(turn.design_intent, provider=selected_provider)
+            except CadProviderUnavailableError as error:
+                text = _join_text(
+                    text,
+                    _provider_unavailable_chat_message(error),
+                )
+            except DesignRejectedError as error:
+                text = _join_text(text, f"The design was rejected: {error.reason}.")
+            except DesignUnavailableError:
+                text = _join_text(text, DESIGN_UNAVAILABLE_MESSAGE)
+            except DesignError as error:
+                text = _join_text(text, f"The design could not be built: {error}.")
+            else:
+                design = _design_result(design_outcome, service=service)
+                design_id = design_outcome.design_id
+                text = _join_text(text, _measured_summary(design_outcome))
+    try:
+        service.record_chat_turn(
+            provider=payload.provider.value,
+            model=outcome.model,
+            offline=outcome.offline,
+            prompt=payload.prompt,
+            design_id=design_id,
+            design_requested=turn is not None
+            and (turn.design_intent is not None or bool(turn.design_missing)),
+            missing=() if turn is None else turn.design_missing,
+            cad_provider=selected_provider,
+        )
+    except Exception as error:  # pragma: no cover - a broken journal is a real failure
+        LOGGER.error("the studio chat turn could not be journalled: %s", type(error).__name__)
+        return _journal_error_response()
     return ChatResponse(
-        text=outcome.text[:4096],
+        text=text[:4096],
         provider=payload.provider,
         model=outcome.model,
         offline=outcome.offline,
+        design=design,
     )
+
+
+def _design_service(request: Request) -> DesignService:
+    service = getattr(request.app.state, "design_service", None)
+    if not isinstance(service, DesignService):
+        raise RuntimeError("the studio design service is not attached to the app")
+    return service
+
+
+def _require_bearer(request: Request) -> Response | None:
+    """Require the launch token on a new GET route.
+
+    The middleware stack already guards mutating methods; ADR-0009 criterion
+    7 asks the new read routes to carry the same bearer requirement, so the
+    journal history and design drawings are not readable by a same-origin
+    page that never proved it holds the launch token.
+    """
+    expected = getattr(request.app.state, "studio_api_token", None)
+    values = request.headers.getlist("authorization")
+    if not isinstance(expected, str) or not expected or len(values) != 1:
+        return _unauthorized_response()
+    scheme, separator, credential = values[0].partition(" ")
+    if not separator or scheme.lower() != "bearer" or not credential.strip():
+        return _unauthorized_response()
+    if not secrets.compare_digest(credential.strip().encode("utf-8"), expected.encode("utf-8")):
+        return _unauthorized_response()
+    return None
+
+
+@router.post(
+    "/design",
+    summary="Compile, measure, and journal one design intent",
+    response_model=DesignResult,
+    tags=["studio"],
+)
+def design_route(payload: DesignRequest, request: Request) -> DesignResult | Response:
+    if not design_available():
+        return _design_unavailable_response()
+    service = _design_service(request)
+    provider = payload.provider.value
+    try:
+        outcome = service.design(payload, provider=provider)
+    except CadProviderUnavailableError as error:
+        return _cad_provider_unavailable_response(error)
+    except DesignUnavailableError:
+        return _design_unavailable_response()
+    except DesignRejectedError as error:
+        return _design_rejected_response(error.reason)
+    except DesignError as error:
+        return _invalid_request_response(error)
+    return _design_result(outcome, service=service)
+
+
+@router.get(
+    "/design/{design_id}/drawing",
+    summary="Hidden-line views of a stored design",
+    response_model=DrawingResponse,
+    tags=["studio"],
+)
+def design_drawing(
+    design_id: str,
+    request: Request,
+    views: str | None = Query(default=None, max_length=64),
+) -> DrawingResponse | Response:
+    denied = _require_bearer(request)
+    if denied is not None:
+        return denied
+    if not design_available():
+        return _design_unavailable_response()
+    if not _valid_design_id(design_id):
+        return _invalid_request_response(ValueError("the design id is not a sha256 digest"))
+    try:
+        selected = _parse_views(views)
+    except ValueError as error:
+        return _invalid_request_response(error)
+    service = _design_service(request)
+    try:
+        drawing = service.drawing(design_id, selected)
+    except DesignNotFoundError:
+        return _design_not_found_response(design_id)
+    except DesignRejectedError as error:
+        return _design_rejected_response(error.reason)
+    except DesignUnavailableError:
+        return _design_unavailable_response()
+    except ValueError as error:
+        return _invalid_request_response(error)
+    return _drawing_response(design_id, drawing)
+
+
+@router.get(
+    "/design/{design_id}/section",
+    summary="Section loops of a stored design",
+    response_model=SectionResponse,
+    tags=["studio"],
+)
+def design_section(
+    design_id: str,
+    request: Request,
+    plane: str = Query(default="XZ", max_length=2),
+    offset: float | None = Query(default=None),
+) -> SectionResponse | Response:
+    denied = _require_bearer(request)
+    if denied is not None:
+        return denied
+    if not design_available():
+        return _design_unavailable_response()
+    if not _valid_design_id(design_id):
+        return _invalid_request_response(ValueError("the design id is not a sha256 digest"))
+    normalized_plane = plane.strip().upper()
+    if normalized_plane not in ALLOWED_SECTION_PLANES:
+        return _invalid_request_response(ValueError("plane must be one of XY, XZ, or YZ"))
+    if offset is not None:
+        if not math.isfinite(offset) or abs(offset) > MAX_SECTION_OFFSET_MM:
+            return _invalid_request_response(
+                ValueError(f"offset must be finite and within +/-{MAX_SECTION_OFFSET_MM:g} mm")
+            )
+    service = _design_service(request)
+    try:
+        section = service.section(design_id, plane=normalized_plane, offset_mm=offset)
+    except DesignNotFoundError:
+        return _design_not_found_response(design_id)
+    except DesignRejectedError as error:
+        return _design_rejected_response(error.reason)
+    except DesignUnavailableError:
+        return _design_unavailable_response()
+    except ValueError as error:
+        return _invalid_request_response(error)
+    return _section_response(design_id, section)
+
+
+@router.get(
+    "/journal",
+    summary="A bounded page of Studio journal events",
+    response_model=JournalPageResponse,
+    tags=["studio"],
+)
+def journal_route(
+    request: Request,
+    after: int = Query(default=0, ge=0),
+    limit: int = Query(default=DEFAULT_DRAWING_LIMIT, ge=1, le=MAX_JOURNAL_LIMIT),
+) -> JournalPageResponse | Response:
+    denied = _require_bearer(request)
+    if denied is not None:
+        return denied
+    service = _design_service(request)
+    effective_limit = min(limit, MAX_JOURNAL_LIMIT)
+    events = service.journal_page(after, effective_limit)
+    next_after = events[-1].sequence if events else after
+    has_more = bool(events) and bool(service.journal_page(next_after, 1))
+    return JournalPageResponse(
+        events=tuple(_journal_event(event) for event in events),
+        next_after=next_after,
+        has_more=has_more,
+        limit=effective_limit,
+    )
+
+
+@router.get(
+    "/journal/verify",
+    summary="Verify the Studio journal hash chain",
+    response_model=JournalVerifyResponse,
+    tags=["studio"],
+)
+def journal_verify_route(request: Request) -> JournalVerifyResponse | Response:
+    denied = _require_bearer(request)
+    if denied is not None:
+        return denied
+    service = _design_service(request)
+    verification = service.verify()
+    return JournalVerifyResponse(
+        ok=verification.ok,
+        event_count=verification.event_count,
+        head_digest=verification.head_digest,
+        first_bad_sequence=verification.first_bad_sequence,
+    )
+
+
+def _parse_views(views: str | None) -> tuple[str, ...]:
+    if views is None or not views.strip():
+        return ALLOWED_VIEWS
+    selected: list[str] = []
+    for piece in views.split(","):
+        name = piece.strip().lower()
+        if not name:
+            raise ValueError("views must not contain an empty name")
+        if name not in ALLOWED_VIEWS:
+            raise ValueError("views must be a subset of front, top, right, iso")
+        if name in selected:
+            raise ValueError("views must not repeat a name")
+        selected.append(name)
+    if not selected or len(selected) > MAX_DRAWING_VIEWS:
+        raise ValueError(f"views must select between 1 and {MAX_DRAWING_VIEWS} names")
+    return tuple(selected)
+
+
+def _valid_design_id(value: str) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == DESIGN_ID_PATTERN_LENGTH
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
+def _design_result(outcome: DesignOutcome, *, service: DesignService) -> DesignResult:
+    del service
+    measurement = outcome.measurement
+    bounds = measurement.bounds
+    return DesignResult(
+        design_id=outcome.design_id,
+        label=outcome.label[:120],
+        provider=outcome.provider,
+        provider_version=outcome.provider_version,
+        measured_by=outcome.measured_by,
+        script=outcome.script,
+        measured=DesignMeasured(
+            volume_mm3=measurement.volume_mm3,
+            surface_area_mm2=measurement.area_mm2,
+            centroid_mm=measurement.centroid_mm,
+            bounds=None if bounds is None else _design_bounds(bounds),
+            size_mm=None if bounds is None else bounds.size_mm,
+            valid=outcome.valid,
+            solid_count=outcome.solid_count,
+            mass_g=measurement.mass_g,
+        ),
+        checks=tuple(DesignCheck(**check_payload(check)) for check in outcome.checks),
+        verified=outcome.verified,
+        view=DesignView(
+            positions=outcome.view.positions,
+            normals=outcome.view.normals,
+            indices=outcome.view.indices,
+            vertex_count=outcome.view.vertex_count,
+            triangle_count=outcome.view.triangle_count,
+            deflection_mm=outcome.view.deflection_mm,
+            engine="ocp",
+            bounds=_design_bounds(outcome.view_bounds),
+            solids=outcome.view_solids,
+            warnings=outcome.view_warnings,
+        ),
+        artifacts=DesignArtifacts(
+            script_sha256=outcome.script_sha256,
+            step_sha256=outcome.step_sha256,
+            native_sha256=outcome.native_sha256,
+            native_kind=outcome.native_kind,
+        ),
+        journal_head=outcome.journal_head,
+        material=outcome.material,
+        tolerances=outcome.tolerances,
+        declared_envelope=None
+        if outcome.declared_envelope is None
+        else _design_bounds(outcome.declared_envelope),
+        cached=outcome.cached,
+        warnings=outcome.warnings,
+        component_count=outcome.component_count,
+        fused=outcome.fused,
+    )
+
+
+def _design_bounds(bounds: DesignMeasureBounds | MeasuredBounds) -> DesignBounds:
+    return DesignBounds(
+        min=(float(bounds.min_mm[0]), float(bounds.min_mm[1]), float(bounds.min_mm[2])),
+        max=(float(bounds.max_mm[0]), float(bounds.max_mm[1]), float(bounds.max_mm[2])),
+    )
+
+
+def _drawing_response(design_id: str, drawing: Drawing) -> DrawingResponse:
+    return DrawingResponse(
+        design_id=design_id,
+        views=tuple(
+            DrawingView(
+                name=view.name,
+                visible=tuple(_drawing_polyline(polyline) for polyline in view.visible),
+                hidden=tuple(_drawing_polyline(polyline) for polyline in view.hidden),
+                truncated=view.truncated,
+                point_count=view.point_count,
+                polyline_count=view.polyline_count,
+            )
+            for view in drawing.views
+        ),
+        chord_tolerance_mm=drawing.chord_tolerance_mm,
+        max_points=drawing.max_points,
+        point_count=drawing.total_point_count,
+    )
+
+
+def _drawing_polyline(polyline: Polyline) -> DrawingPolyline:
+    return DrawingPolyline(
+        points=tuple((float(point[0]), float(point[1])) for point in polyline.points),
+        closed=bool(polyline.closed),
+        point_count=int(polyline.point_count),
+    )
+
+
+def _section_response(design_id: str, section: Section) -> SectionResponse:
+    loop_responses: list[SectionLoopResponse] = []
+    for loop in section.loops:
+        loop_bounds = loop.bounds
+        loop_responses.append(
+            SectionLoopResponse(
+                points=tuple((float(point[0]), float(point[1])) for point in loop.points),
+                area_mm2=loop.area_mm2,
+                area_exact=loop.area_exact,
+                outer=loop.outer,
+                bounds=SectionBounds2D(
+                    min_u=loop_bounds.min_u,
+                    min_v=loop_bounds.min_v,
+                    max_u=loop_bounds.max_u,
+                    max_v=loop_bounds.max_v,
+                    width=loop_bounds.width,
+                    height=loop_bounds.height,
+                    center_u=loop_bounds.center_u,
+                    center_v=loop_bounds.center_v,
+                ),
+                centroid=(float(loop.centroid[0]), float(loop.centroid[1])),
+                point_count=loop.point_count,
+            )
+        )
+    return SectionResponse(
+        design_id=design_id,
+        plane=section.plane,
+        offset_mm=section.offset_mm,
+        loops=tuple(loop_responses),
+        area_mm2=section.area_mm2,
+        area_exact=section.area_exact,
+        chord_tolerance_mm=section.chord_tolerance_mm,
+        truncated=section.truncated,
+        outer_loop_count=len(section.outer_loops),
+        inner_loop_count=len(section.inner_loops),
+        point_count=section.point_count,
+    )
+
+
+def _journal_event(event: SessionEvent) -> JournalEventRecord:
+    payload = None if event.payload is None else dict(event.payload)
+    return JournalEventRecord(
+        sequence=event.sequence,
+        event_type=event.event_type,
+        aggregate_id=event.aggregate_id,
+        payload=payload,
+        digest=event.digest,
+        occurred_at=event.occurred_at,
+        previous_event_digest=event.previous_event_digest,
+        event_digest=event.event_digest,
+    )
+
+
+def _measured_summary(outcome: DesignOutcome) -> str:
+    measurement = outcome.measurement
+    verdict = "B-Rep verified" if outcome.verified else "B-Rep NOT verified"
+    if measurement.volume_mm3 is None or measurement.area_mm2 is None or measurement.bounds is None:
+        return (
+            f"{outcome.label}: {verdict}; measured by {outcome.measured_by}. "
+            "The provider did not report volume, surface area, or envelope; "
+            f"no number is substituted. design_id {outcome.design_id}."
+        )
+    size = measurement.bounds.size_mm
+    return (
+        f"{outcome.label}: {verdict}; measured by {outcome.measured_by}. "
+        f"Measured volume {measurement.volume_mm3:.3f} mm^3, "
+        f"surface area {measurement.area_mm2:.3f} mm^2, "
+        f"envelope {size[0]:.3f} x {size[1]:.3f} x {size[2]:.3f} mm. "
+        f"design_id {outcome.design_id}."
+    )
+
+
+def _provider_choice_message(service: DesignService) -> str:
+    statuses = service.probe_providers()
+    options = ", ".join(f"{status.id} ({status.mode})" for status in statuses)
+    available = ", ".join(status.id for status in statuses if status.available)
+    return (
+        f"Choose a CAD provider before I build this design: {options}. "
+        f"Available on this host: {available or 'none'}. "
+        "No design was built."
+    )
+
+
+def _provider_unavailable_chat_message(error: CadProviderUnavailableError) -> str:
+    available = ", ".join(error.available) if error.available else "none"
+    return (
+        f"The {error.provider} CAD provider is not available: {error.reason}. "
+        f"Available: {available}. No design was built."
+    )
+
+
+def _join_text(*parts: str) -> str:
+    return " ".join(part.strip() for part in parts if part and part.strip())[:4096]
 
 
 def _copy_params(params: dict[str, object] | None) -> dict[str, object]:
@@ -413,6 +972,62 @@ def _step_unavailable_response(error: StepUnavailableError) -> Response:
         (str(error)[:256],),
     ).model_dump(mode="json")
     return _json_error(503, body)
+
+
+def _cad_provider_unavailable_response(error: CadProviderUnavailableError) -> Response:
+    details = [str(error)[:256]]
+    if error.reason and error.reason != str(error):
+        details.append(f"reason: {error.reason}"[:256])
+    available = ", ".join(error.available) if error.available else "none"
+    details.append(f"available: {available}"[:256])
+    body = error_response(
+        "provider_unavailable",
+        f"the {error.provider} CAD provider is not available",
+        tuple(details),
+    ).model_dump(mode="json")
+    return _json_error(503, body)
+
+
+def _design_unavailable_response() -> Response:
+    body = error_response(
+        "design_unavailable",
+        DESIGN_UNAVAILABLE_MESSAGE,
+    ).model_dump(mode="json")
+    return _json_error(503, body)
+
+
+def _design_rejected_response(reason: str) -> Response:
+    body = error_response(
+        "design_rejected",
+        "the design could not be compiled or measured",
+        (reason[:256],),
+    ).model_dump(mode="json")
+    return _json_error(422, body)
+
+
+def _design_not_found_response(design_id: str) -> Response:
+    body = error_response(
+        "design_not_found",
+        "no design is stored under that id",
+        (f"design_id={design_id[:64]}",),
+    ).model_dump(mode="json")
+    return _json_error(404, body)
+
+
+def _journal_error_response() -> Response:
+    body = error_response(
+        "journal_unavailable",
+        "the Studio journal could not record this turn",
+    ).model_dump(mode="json")
+    return _json_error(500, body)
+
+
+def _unauthorized_response() -> Response:
+    body = error_response(
+        "unauthorized",
+        TOKEN_REQUIRED_MESSAGE,
+    ).model_dump(mode="json")
+    return _json_error(401, body, headers={"www-authenticate": "Bearer"})
 
 
 def _invalid_request_response(error: ValueError) -> Response:
@@ -508,19 +1123,30 @@ def _provider_subprocess_response(error: ProviderSubprocessError) -> Response:
     return _json_error(502, body)
 
 
-def _json_error(status_code: int, body: dict[str, object]) -> Response:
+def _json_error(
+    status_code: int,
+    body: dict[str, object],
+    *,
+    headers: Mapping[str, str] | None = None,
+) -> Response:
     import json
 
     serialized = json.dumps(body, separators=(",", ":"), sort_keys=True).encode("utf-8")
-    headers = {"content-type": "application/json"}
-    return Response(content=serialized, status_code=status_code, headers=headers)
+    response_headers = {"content-type": "application/json"}
+    if headers:
+        response_headers.update(headers)
+    return Response(content=serialized, status_code=status_code, headers=response_headers)
 
 
 LifespanFactory = Callable[[FastAPI], AbstractAsyncContextManager[None]]
 
 
 def build_lifespan(
-    api_token: str, *, data_dir: Path, environ: Mapping[str, str]
+    api_token: str,
+    *,
+    data_dir: Path,
+    environ: Mapping[str, str],
+    design_service: DesignService | None = None,
 ) -> LifespanFactory:
     """Return a lifespan that mints the studio token at startup.
 
@@ -538,6 +1164,8 @@ def build_lifespan(
             _ = api_token
             _ = data_dir
             _ = environ
+            if design_service is not None:
+                design_service.close()
 
     return lifespan
 
@@ -575,32 +1203,53 @@ def create_studio_app(
     max_body_bytes: int = 256 * 1024,
     static_root: Path | None = None,
     environ: Mapping[str, str] | None = None,
+    design_providers: Mapping[str, CadProvider] | None = None,
+    max_step_bytes: int | None = None,
 ) -> FastAPI:
-    """Build a standalone FastAPI instance for the studio."""
+    """Build a standalone FastAPI instance for the studio.
+
+    ``design_providers`` and ``max_step_bytes`` are the embedding/test seam for
+    the CAD provider registry; production uses the explicit default registry
+    and the ``KALA_STEP_IMPORT_MAX_BYTES`` setting.
+    """
     source = environ if environ is not None else os.environ
     if data_dir is None:
-        from kala_agent.config import Settings
-        from kala_agent.studio.boundary import resolve_studio_data_dir
-
-        try:
-            settings = Settings.from_env(source)
-        except Exception:
-            import tempfile
-
-            data_dir = Path(tempfile.gettempdir()) / "kala-studio"
+        explicit = source.get("KALA_STUDIO_DATA_DIR")
+        if isinstance(explicit, str) and explicit.strip():
+            data_dir = Path(explicit.strip()).expanduser().resolve(strict=False)
         else:
-            data_dir = resolve_studio_data_dir(settings.data_dir)
+            from kala_agent.config import Settings
+
+            try:
+                settings = Settings.from_env(source)
+            except Exception:
+                import tempfile
+
+                data_dir = Path(tempfile.gettempdir()) / "kala-studio"
+            else:
+                data_dir = resolve_studio_data_dir(settings.data_dir)
     data_dir.mkdir(parents=True, exist_ok=True)
     token = resolve_studio_token(data_dir, environ=source) if api_token is None else api_token
     limit = validate_max_body_bytes(max_body_bytes)
     resolved_static = static_root
     if resolved_static is None:
         resolved_static = resolve_static_root(source)
+    design_service = DesignService(
+        data_dir,
+        providers=design_providers,
+        max_step_bytes=max_step_bytes,
+        environ=source,
+    )
     app = FastAPI(
         title="Kala Studio API",
         version=STUDIO_VERSION,
         description="Standalone studio HTTP surface (loopback only).",
-        lifespan=build_lifespan(token, data_dir=data_dir, environ=source),
+        lifespan=build_lifespan(
+            token,
+            data_dir=data_dir,
+            environ=source,
+            design_service=design_service,
+        ),
         middleware=build_middleware_stack(
             api_token=token,
             max_body_bytes=limit,
@@ -610,6 +1259,8 @@ def create_studio_app(
         redoc_url=None,
     )
     app.state.studio_data_dir = data_dir
+    app.state.studio_api_token = token
+    app.state.design_service = design_service
     app.state.studio_use_custom_environ = environ is not None
     if environ is not None:
         app.state.studio_environ = environ
@@ -619,15 +1270,22 @@ def create_studio_app(
 
 
 __all__ = (
+    "DESIGN_UNAVAILABLE_MESSAGE",
     "LOGGER",
     "STUDIO_PREFIX",
     "STUDIO_VERSION",
     "build_lifespan",
     "build_middleware_stack",
+    "cad_providers",
     "create_studio_app",
+    "design_drawing",
+    "design_route",
+    "design_section",
     "get_settings",
     "health",
     "integrations",
+    "journal_route",
+    "journal_verify_route",
     "providers",
     "update_settings",
 )

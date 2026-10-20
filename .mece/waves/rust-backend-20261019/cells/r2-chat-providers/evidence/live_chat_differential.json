@@ -1,0 +1,286 @@
+{
+  "failures": [],
+  "prompt": "Design a machined aluminum L-bracket for a 40 mm mounting plate, 8 mm wall thickness, with a 10 mm centered bore and 4x M5 corner mounting holes.",
+  "providers": {
+    "freecad": {
+      "python_design": {
+        "checks": [
+          {
+            "id": "brep_valid",
+            "passed": true
+          },
+          {
+            "id": "single_solid",
+            "passed": true
+          },
+          {
+            "id": "envelope_x",
+            "passed": true
+          },
+          {
+            "id": "envelope_y",
+            "passed": true
+          },
+          {
+            "id": "envelope_z",
+            "passed": true
+          }
+        ],
+        "design_id": "a9d04f8ff14e365ee57e0a7d6e212ad5afae59de428b5cefa029bf91f72f62a7",
+        "label": "L-bracket 60 x 45 x 40",
+        "measured_by": "FreeCAD",
+        "native_kind": "fcstd",
+        "native_sha256": "b47af8b4862ec3ecf17dd152e00a6f10c46eba6c9eabae6c32f68a803fe21a08",
+        "provider": "freecad",
+        "provider_version": "1.1.4",
+        "script_sha256": "88a7ec139868e36bd23c81f5688869bf9de5f23a7c72928db4014c9eb0afebae",
+        "size_mm": [
+          60.0,
+          45.00000000000001,
+          40.0
+        ],
+        "solid_count": 1,
+        "step_sha256": "667f35f9d2ee32bdf6ed0a2cb0303da249a32aa3e2bbf9e5d7744ef68b769bde",
+        "surface_area_mm2": 11889.101731,
+        "valid": true,
+        "verified": true,
+        "view": {
+          "solids": 1,
+          "triangle_count": 568,
+          "vertex_count": 586
+        },
+        "volume_mm3": 35571.416047
+      },
+      "python_status": 200,
+      "rust_design": {
+        "checks": [
+          {
+            "id": "brep_valid",
+            "passed": true
+          },
+          {
+            "id": "single_solid",
+            "passed": true
+          },
+          {
+            "id": "envelope_x",
+            "passed": true
+          },
+          {
+            "id": "envelope_y",
+            "passed": true
+          },
+          {
+            "id": "envelope_z",
+            "passed": true
+          }
+        ],
+        "design_id": "a9d04f8ff14e365ee57e0a7d6e212ad5afae59de428b5cefa029bf91f72f62a7",
+        "label": "L-bracket 60 x 45 x 40",
+        "measured_by": "FreeCAD",
+        "native_kind": "fcstd",
+        "native_sha256": "12ebc81c6c803f9f93275c1106c689f1b08530af8f7289b3fa37e8e208331055",
+        "provider": "freecad",
+        "provider_version": "1.1.4",
+        "script_sha256": "88a7ec139868e36bd23c81f5688869bf9de5f23a7c72928db4014c9eb0afebae",
+        "size_mm": [
+          60.0,
+          45.00000000000001,
+          40.0
+        ],
+        "solid_count": 1,
+        "step_sha256": "33ee8272b5e82e1024ffb8aba949d956c484f300524fedf1b4b2bbcb773aafdc",
+        "surface_area_mm2": 11889.101731,
+        "valid": true,
+        "verified": true,
+        "view": {
+          "solids": 1,
+          "triangle_count": 568,
+          "vertex_count": 586
+        },
+        "volume_mm3": 35571.416047
+      },
+      "rust_status": 200,
+      "semantic_equal": true,
+      "text": "Local helper. Design intent parsed from declared values. 4x M5 mapped to 5.5 mm clearance holes (ISO 273 medium). Plate width 60 mm and depth 45 mm are canonical template defaults; state them to override. Compiling and measuring with OpenCASCADE. L-bracket 60 x 45 x 40: B-Rep verified; measured by FreeCAD. Measured volume 35571.416 mm^3, surface area 11889.102 mm^2, envelope 60.000 x 45.000 x 40.000 mm. design_id a9d04f8ff14e365ee57e0a7d6e212ad5afae59de428b5cefa029bf91f72f62a7.",
+      "text_equal": true
+    },
+    "opencascade": {
+      "python_design": {
+        "checks": [
+          {
+            "id": "brep_valid",
+            "passed": true
+          },
+          {
+            "id": "single_solid",
+            "passed": true
+          },
+          {
+            "id": "envelope_x",
+            "passed": true
+          },
+          {
+            "id": "envelope_y",
+            "passed": true
+          },
+          {
+            "id": "envelope_z",
+            "passed": true
+          }
+        ],
+        "design_id": "594f408b3223505c51bfdef61cfb935fc28f8ec461aa62fefc62c9b731932c92",
+        "label": "L-bracket 60 x 45 x 40",
+        "measured_by": "OpenCascade (opt-in)",
+        "native_kind": null,
+        "native_sha256": null,
+        "provider": "opencascade",
+        "provider_version": "8.0.1.1",
+        "script_sha256": "88a7ec139868e36bd23c81f5688869bf9de5f23a7c72928db4014c9eb0afebae",
+        "size_mm": [
+          60.0,
+          45.0,
+          40.0
+        ],
+        "solid_count": 1,
+        "step_sha256": "16a0a231b0168ea8acbe45fd9c8ba648f7657dadb07782f209f89294b54d73f3",
+        "surface_area_mm2": 11889.101731097317,
+        "valid": true,
+        "verified": true,
+        "view": {
+          "solids": 1,
+          "triangle_count": 568,
+          "vertex_count": 586
+        },
+        "volume_mm3": 35571.416047113315
+      },
+      "python_status": 200,
+      "rust_design": {
+        "checks": [
+          {
+            "id": "brep_valid",
+            "passed": true
+          },
+          {
+            "id": "single_solid",
+            "passed": true
+          },
+          {
+            "id": "envelope_x",
+            "passed": true
+          },
+          {
+            "id": "envelope_y",
+            "passed": true
+          },
+          {
+            "id": "envelope_z",
+            "passed": true
+          }
+        ],
+        "design_id": "594f408b3223505c51bfdef61cfb935fc28f8ec461aa62fefc62c9b731932c92",
+        "label": "L-bracket 60 x 45 x 40",
+        "measured_by": "OpenCascade (opt-in)",
+        "native_kind": null,
+        "native_sha256": null,
+        "provider": "opencascade",
+        "provider_version": "8.0.1.1",
+        "script_sha256": "88a7ec139868e36bd23c81f5688869bf9de5f23a7c72928db4014c9eb0afebae",
+        "size_mm": [
+          60.0,
+          45.0,
+          40.0
+        ],
+        "solid_count": 1,
+        "step_sha256": "16a0a231b0168ea8acbe45fd9c8ba648f7657dadb07782f209f89294b54d73f3",
+        "surface_area_mm2": 11889.101731097317,
+        "valid": true,
+        "verified": true,
+        "view": {
+          "solids": 1,
+          "triangle_count": 568,
+          "vertex_count": 586
+        },
+        "volume_mm3": 35571.416047113315
+      },
+      "rust_status": 200,
+      "semantic_equal": true,
+      "text": "Local helper. Design intent parsed from declared values. 4x M5 mapped to 5.5 mm clearance holes (ISO 273 medium). Plate width 60 mm and depth 45 mm are canonical template defaults; state them to override. Compiling and measuring with OpenCASCADE. L-bracket 60 x 45 x 40: B-Rep verified; measured by OpenCascade (opt-in). Measured volume 35571.416 mm^3, surface area 11889.102 mm^2, envelope 60.000 x 45.000 x 40.000 mm. design_id 594f408b3223505c51bfdef61cfb935fc28f8ec461aa62fefc62c9b731932c92.",
+      "text_equal": true
+    },
+    "solidedge": {
+      "python_design": null,
+      "python_status": 200,
+      "rust_design": null,
+      "rust_status": 200,
+      "semantic_equal": true,
+      "text": "Local helper. Design intent parsed from declared values. 4x M5 mapped to 5.5 mm clearance holes (ISO 273 medium). Plate width 60 mm and depth 45 mm are canonical template defaults; state them to override. Compiling and measuring with OpenCASCADE. The solidedge CAD provider is not available: Solid Edge build requires the Windows bridge (not reachable); this host is linux, so the ADR-0008 bridge cannot run here. Available: opencascade, freecad. No design was built.",
+      "text_equal": true
+    }
+  },
+  "python": {
+    "health": {
+      "design_available": true,
+      "integrations": [
+        "solidworks",
+        "solid_edge",
+        "autocad",
+        "fusion360",
+        "freecad",
+        "openscad",
+        "ansys_mechanical",
+        "abaqus",
+        "comsol",
+        "simcenter_nastran",
+        "altair_optistruct"
+      ],
+      "offline": true,
+      "providers": [
+        "local",
+        "openai",
+        "openrouter",
+        "codex"
+      ],
+      "service": "kala-studio",
+      "status": "ok",
+      "step_available": true,
+      "version": "0.1.0"
+    },
+    "port": 36777
+  },
+  "rust": {
+    "health": {
+      "design_available": true,
+      "geometry_worker": {
+        "design_available": true,
+        "state": "ready",
+        "version": "0.1.0"
+      },
+      "integrations": [
+        "solidworks",
+        "solid_edge",
+        "autocad",
+        "fusion360",
+        "freecad",
+        "openscad",
+        "ansys_mechanical",
+        "abaqus",
+        "comsol",
+        "simcenter_nastran",
+        "altair_optistruct"
+      ],
+      "offline": true,
+      "providers": [
+        "local",
+        "openai",
+        "openrouter",
+        "codex"
+      ],
+      "service": "kala-studio",
+      "status": "ok",
+      "step_available": true,
+      "version": "0.1.0"
+    },
+    "port": 50145
+  }
+}

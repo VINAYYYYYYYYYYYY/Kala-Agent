@@ -1,16 +1,32 @@
 name: studio
 
-# Build and smoke-test the unsigned Kala Studio desktop bundle on
-# Ubuntu and Windows runners. The matrix never signs artefacts, never
-# authenticates against an LLM provider, never publishes, and never
-# modifies the host. See docs/studio-limitations.md.
+# Build and validate the native Kala Studio backend and Electron shell.
 #
-# The "on" key is quoted so YAML loaders do not read it as a boolean.
+# The product target is a native Rust runtime, but the accepted native slice
+# currently covers the original nine Studio route-methods. The working Python
+# reference has ADR-0009 design/journal routes and DTO fields, so:
+#   - development defaults to the Python reference;
+#   - explicit native development testing remains available;
+#   - Windows NSIS/release generation is blocked by the readiness gate below
+#     until the expanded native port passes compatibility gates.
+#
+# Linux is development/testing only. This is not a Solid Edge release, not a
+# Linux CAD product, and not a packaging cutover.
+#
+# Python remains available only as the reference/parity oracle and for
+# the existing Python reference tests. The native stage never contains a
+# Python interpreter, site-packages, OCP, or PyInstaller output.
+#
+# Nothing here signs, publishes, deploys, or installs on a clean host.
+# This workflow definition is not evidence that a hosted run executed;
+# the Windows installer and real Windows/COM behavior remain host-gated.
+
 "on":
   push:
     branches: [main]
     paths:
       - "studio/**"
+      - "backend/**"
       - "src/kala_agent/studio/**"
       - "packaging/**"
       - "pyproject.toml"
@@ -19,6 +35,7 @@ name: studio
     branches: [main]
     paths:
       - "studio/**"
+      - "backend/**"
       - "src/kala_agent/studio/**"
       - "packaging/**"
       - "pyproject.toml"
@@ -32,47 +49,65 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
 jobs:
-  build:
-    name: build and smoke (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    env:
-      PYINSTALLER_SPEC: packaging/studio-backend.spec
-      STUDIO_BACKEND_BIN_DIR: studio/backend
+  native-linux-dev:
+    name: native dev checks (ubuntu)
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python (reference oracle only)
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
 
-      - name: Install Python dependencies
+      - name: Expose absolute Python oracle paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHON_BIN="$(python -c 'import sys; print(sys.executable)')"
+          for name in KALA_PYTHON KALA_GEOMETRY_PYTHON KALA_STEP_ORACLE_PYTHON KALA_STUDIO_OCP_PYTHON; do
+            echo "${name}=${PYTHON_BIN}" >> "$GITHUB_ENV"
+          done
+
+      - name: Install Python reference dependencies
         shell: bash
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
-          # `dev` brings pytest/httpx; `studio` brings uvicorn;
-          # `geometry` brings cadquery-ocp. A release that cannot write
-          # STEP must fail closed, so the wheel is mandatory here.
+          # Python is the reference/oracle here, not the product runtime.
           python -m pip install -e ".[dev,studio,geometry]"
-          python -m pip install pyinstaller
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          # Node 22 LTS. studio/package.json requires >=22.12 for the
-          # Vite 8 / Vitest 5 toolchain; setup-node resolves the latest
-          # 22.x release, which satisfies that range.
           node-version: "22"
           cache: npm
           cache-dependency-path: studio/package-lock.json
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Configure optional FreeCAD second-reader
+        shell: bash
+        # FreeCAD is an optional application-level second reader on top of the
+        # mandatory OCP differential. If absent, the accepted test prints a
+        # loud explicit skip; a skip is never counted as FreeCAD proof.
+        run: |
+          set -euo pipefail
+          if command -v FreeCADCmd >/dev/null 2>&1; then
+            echo "KALA_STEP_FREECAD=$(command -v FreeCADCmd)" >> "$GITHUB_ENV"
+          else
+            echo "KALA_STEP_SKIP_FREECAD=1" >> "$GITHUB_ENV"
+          fi
 
       - name: Install npm dependencies
         working-directory: studio
@@ -89,158 +124,351 @@ jobs:
         shell: bash
         run: npm run typecheck
 
-      - name: Test UI
+      - name: Build native Studio backend and stage it
+        working-directory: studio
+        shell: bash
+        run: npm run build:native
+
+      - name: Test UI and native lifecycle
+        working-directory: studio
+        shell: bash
+        # The native stage exists, so the real BackendProcess health/shutdown
+        # test runs instead of being skipped.
+        run: npm test
+
+      - name: Rust format check
+        working-directory: backend
+        shell: bash
+        run: cargo fmt --all --check
+
+      - name: Rust workspace tests (release, locked)
+        working-directory: backend
+        shell: bash
+        run: cargo test --release --workspace --locked -j2
+
+      - name: Rust all-target clippy
+        working-directory: backend
+        shell: bash
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: Rust release build
+        working-directory: backend
+        shell: bash
+        run: cargo build --release --workspace --locked
+
+      - name: Frozen-backend smoke from an unrelated cwd (Python-free child PATH)
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHON_BIN="$(python -c 'import sys; print(sys.executable)')"
+          SMOKE_DIR="$(mktemp -d)"
+          cd "$SMOKE_DIR"
+          # The child inherits an empty PATH: the native runtime must work
+          # without any Python interpreter, OCP, or vendor tree.
+          PATH="" "$PYTHON_BIN" \
+            "$GITHUB_WORKSPACE/packaging/studio_smoke.py" \
+            --backend "$GITHUB_WORKSPACE/studio/backend-native/kala-studio" \
+            --timeout 120
+
+      - name: Native packaged-layout smoke (Python-free child PATH)
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHON_BIN="$(python -c 'import sys; print(sys.executable)')"
+          SMOKE_DIR="$(mktemp -d)"
+          cd "$SMOKE_DIR"
+          PATH="" "$PYTHON_BIN" \
+            "$GITHUB_WORKSPACE/packaging/native_studio_smoke.py" \
+            --stage-dir "$GITHUB_WORKSPACE/studio/backend-native" \
+            --timeout 120
+
+      - name: Build unpacked desktop bundle (development check, no release artifact)
+        working-directory: studio
+        shell: bash
+        run: npm run desktop:pack -- --dir
+
+      - name: Verify unpacked resources contain only the native runtime/UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          UNPACKED="$(find studio/release -maxdepth 1 -type d -name '*-unpacked' | head -1)"
+          test -n "${UNPACKED}"
+          test -f "${UNPACKED}/resources/backend/kala-studio"
+          test -f "${UNPACKED}/resources/backend/studio_dist/index.html"
+          test -f "${UNPACKED}/resources/backend/native-build.json"
+          if find "${UNPACKED}/resources/backend" \
+              \( -name '*.py' -o -name '*.pyc' -o -name 'python*' -o \
+                 -name 'site-packages' -o -name 'OCP' -o -name 'FreeCAD' \) \
+              -print -quit | grep -q .; then
+            echo "::error::Python/OCP/vendor artifacts found in packaged resources/backend"
+            exit 1
+          fi
+          echo "Native packaged resources verified: ${UNPACKED}/resources/backend"
+
+      - name: Smoke the unpacked packaged layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHON_BIN="$(python -c 'import sys; print(sys.executable)')"
+          UNPACKED="$(find studio/release -maxdepth 1 -type d -name '*-unpacked' | head -1)"
+          SMOKE_DIR="$(mktemp -d)"
+          cd "$SMOKE_DIR"
+          PATH="" "$PYTHON_BIN" \
+            "$GITHUB_WORKSPACE/packaging/native_studio_smoke.py" \
+            --stage-dir "$GITHUB_WORKSPACE/${UNPACKED}/resources/backend" \
+            --timeout 120
+
+      - name: Report current-feature native readiness (development, pending gate)
+        working-directory: studio
+        shell: bash
+        # Linux is a development/testing job. It reports the current 14-route
+        # Python versus native nine-route drift so the pending expanded port is
+        # visible in every run; the Windows release job below turns the same
+        # check into a blocking gate.
+        run: npm run check:native-readiness -- --report-only
+
+  native-windows:
+    name: native Windows build (unsigned)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python (reference oracle only)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Expose absolute Python oracle paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHON_BIN="$(python -c 'import sys; print(sys.executable)')"
+          for name in KALA_PYTHON KALA_GEOMETRY_PYTHON KALA_STEP_ORACLE_PYTHON KALA_STUDIO_OCP_PYTHON; do
+            echo "${name}=${PYTHON_BIN}" >> "$GITHUB_ENV"
+          done
+
+      - name: Install Python reference dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          # OCP is a test oracle on Windows too; FreeCAD remains optional
+          # and is not installed by this job.
+          python -m pip install -e ".[dev,studio,geometry]"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: studio/package-lock.json
+
+      - name: Set up Rust (MSVC)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+          components: rustfmt, clippy
+
+      - name: Ensure NASM for ring on MSVC
+        shell: pwsh
+        # rustls/ring needs NASM for its Windows assembly. windows-latest
+        # usually provides it; install only when absent. MSVC Build Tools
+        # and the Windows SDK are expected from the runner image.
+        run: |
+          if (-not (Get-Command nasm -ErrorAction SilentlyContinue)) {
+            choco install nasm -y --no-progress
+            "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+            $env:PATH = "C:\Program Files\NASM;$env:PATH"
+          }
+          rustc -vV
+          where.exe cl
+          where.exe link
+          where.exe nasm
+
+      - name: Configure optional FreeCAD second-reader
+        shell: pwsh
+        # FreeCAD is optional and is not installed by this job. The accepted
+        # test prints a loud explicit skip when it is absent; that skip is not
+        # FreeCAD or Windows proof. OCP remains mandatory.
+        run: |
+          $freecad = Get-Command FreeCADCmd -ErrorAction SilentlyContinue
+          if ($freecad) {
+            "KALA_STEP_FREECAD=$($freecad.Source)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          } else {
+            "KALA_STEP_SKIP_FREECAD=1" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          }
+
+      - name: Install npm dependencies
+        working-directory: studio
+        shell: bash
+        run: npm ci
+
+      - name: Build UI
+        working-directory: studio
+        shell: bash
+        run: npm run build
+
+      - name: Type-check UI
+        working-directory: studio
+        shell: bash
+        run: npm run typecheck
+
+      - name: Build native Studio backend and stage it
+        working-directory: studio
+        shell: bash
+        run: npm run build:native
+
+      - name: Test UI and native lifecycle
         working-directory: studio
         shell: bash
         run: npm test
 
-      - name: Lint and type-check studio
+      - name: Rust format check
+        working-directory: backend
         shell: bash
-        run: |
-          set -euo pipefail
-          # Studio-only gates (no unrelated core gates). `ruff` and
-          # `mypy` come from the `dev` extra. Strict mypy runs against
-          # the studio package source, which is fully annotated.
-          python -m ruff check \
-            src/kala_agent/studio \
-            tests/security/test_studio*.py \
-            tests/unit/test_studio*.py
-          python -m ruff format --check \
-            src/kala_agent/studio \
-            tests/security/test_studio*.py \
-            tests/unit/test_studio*.py
-          python -m mypy --strict src/kala_agent/studio
+        run: cargo fmt --all --check
 
-      - name: Test studio backend
+      - name: Rust workspace tests (release, locked, real Python oracles)
+        working-directory: backend
+        shell: bash
+        # The absolute KALA_*_PYTHON paths set above replace the Linux-only
+        # .venv/bin/python defaults. No Windows test is called proof unless
+        # it actually runs; the OCP differential is mandatory here.
+        run: cargo test --release --workspace --locked -j2
+
+      - name: Rust all-target clippy
+        working-directory: backend
+        shell: bash
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: Rust release build
+        working-directory: backend
+        shell: bash
+        run: cargo build --release --workspace --locked
+
+      - name: Python Studio reference tests
         shell: bash
         run: |
           set -euo pipefail
-          # Globs so a new studio test is picked up automatically; they
-          # include the mocked-HTTP provider tests (no socket) and the
-          # OCP-mocked/exact STEP tests. None call a live provider or
-          # solver.
           python -m pytest -q --no-header --no-summary \
             tests/security/test_studio*.py \
             tests/unit/test_studio*.py
 
-      - name: Build backend (PyInstaller)
-        shell: bash
+      - name: Frozen-backend smoke from an unrelated cwd (Python-free child PATH)
+        shell: pwsh
         run: |
-          set -euo pipefail
-          pyinstaller "${PYINSTALLER_SPEC}" --noconfirm --clean
-          test -f dist/kala-studio || test -f dist/kala-studio.exe
+          $python = (Get-Command python).Source
+          $stage = Join-Path $env:GITHUB_WORKSPACE "studio\backend-native"
+          $smokeDir = Join-Path $env:RUNNER_TEMP ("kala-native-smoke-" + [guid]::NewGuid())
+          New-Item -ItemType Directory -Path $smokeDir | Out-Null
+          $env:PATH = ""
+          Push-Location $smokeDir
+          try {
+            & $python (Join-Path $env:GITHUB_WORKSPACE "packaging\studio_smoke.py") `
+              --backend (Join-Path $stage "kala-studio.exe") --timeout 120
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally {
+            Pop-Location
+          }
 
-      - name: Smoke-test frozen backend
-        shell: bash
+      - name: Native packaged-layout smoke (Python-free child PATH)
+        shell: pwsh
         run: |
-          set -euo pipefail
-          if [ -f dist/kala-studio.exe ]; then
-            BACKEND=dist/kala-studio.exe
-          else
-            BACKEND=dist/kala-studio
-          fi
-          # Launches the frozen binary from a temporary working
-          # directory and requires real health, UI, preview, and STEP
-          # responses. STEP is mandatory: the smoke fails when the
-          # writer is absent unless --allow-missing-step is passed.
-          python packaging/studio_smoke.py \
-            --backend "${BACKEND}" --timeout 120
+          $python = (Get-Command python).Source
+          $stage = Join-Path $env:GITHUB_WORKSPACE "studio\backend-native"
+          $smokeDir = Join-Path $env:RUNNER_TEMP ("kala-native-layout-" + [guid]::NewGuid())
+          New-Item -ItemType Directory -Path $smokeDir | Out-Null
+          $env:PATH = ""
+          Push-Location $smokeDir
+          try {
+            & $python (Join-Path $env:GITHUB_WORKSPACE "packaging\native_studio_smoke.py") `
+              --stage-dir $stage --timeout 120
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally {
+            Pop-Location
+          }
 
-      - name: Copy backend binary into studio/backend
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "${STUDIO_BACKEND_BIN_DIR}"
-          if [ -f dist/kala-studio.exe ]; then
-            cp dist/kala-studio.exe \
-              "${STUDIO_BACKEND_BIN_DIR}/kala-studio.exe"
-          else
-            cp dist/kala-studio "${STUDIO_BACKEND_BIN_DIR}/kala-studio"
-            chmod +x "${STUDIO_BACKEND_BIN_DIR}/kala-studio"
-          fi
-
-      - name: Compute backend digest
-        id: digest
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f "${STUDIO_BACKEND_BIN_DIR}/kala-studio.exe" ]; then
-            sha256sum "${STUDIO_BACKEND_BIN_DIR}/kala-studio.exe" \
-              > digest.txt
-          else
-            sha256sum "${STUDIO_BACKEND_BIN_DIR}/kala-studio" \
-              > digest.txt
-          fi
-          cat digest.txt
-
-      - name: Build desktop bundle (electron-builder)
+      - name: Check current-feature native readiness (release gate)
+        id: readiness
         working-directory: studio
         shell: bash
+        # BLOCKING release gate. The accepted native slice covers the original
+        # nine route-methods; the current Python reference has ADR-0009
+        # design/drawing/section/journal routes plus design DTO fields. While
+        # those are missing, no NSIS/release artifact may be produced. This
+        # step intentionally fails the job after build/test/smoke evidence has
+        # run; keep the Python reference as the working default.
+        continue-on-error: true
+        run: npm run check:native-readiness
+
+      - name: Build unsigned NSIS installer
+        if: steps.readiness.outcome == 'success'
+        working-directory: studio
+        shell: bash
+        # desktop-pack re-checks integrity, source parity and the readiness
+        # gate, and always injects `--publish never`. Signing credentials are
+        # never configured, so the installer is unsigned.
+        run: npm run desktop:pack -- --win nsis --x64
+
+      - name: Verify installer and native backend digest
+        if: steps.readiness.outcome == 'success'
+        shell: bash
         run: |
           set -euo pipefail
-          if [ -f "backend/kala-studio.exe" ] \
-             || [ -f "backend/kala-studio" ]; then
-            # --publish never keeps the matrix from pushing to any
-            # registry even if the UI config later adds a default.
-            npm run desktop:pack -- --publish never
-          else
-            echo "::error::backend binary missing at studio/backend/"
-            exit 1
-          fi
+          sha256sum studio/backend-native/kala-studio.exe > studio/backend-native.sha256
+          test -f studio/backend-native/kala-studio.exe
+          test -f studio/backend-native/studio_dist/index.html
+          test -n "$(find studio/release -maxdepth 1 -name '*.exe' -print -quit)"
+          cat studio/backend-native.sha256
 
-      - name: Upload backend binary (unsigned)
+      - name: Upload unsigned native artifacts
+        if: steps.readiness.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: studio-backend-${{ matrix.os }}
+          name: studio-native-windows-unsigned
           path: |
-            studio/backend/kala-studio
-            studio/backend/kala-studio.exe
-            digest.txt
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Upload desktop bundle (unsigned)
-        uses: actions/upload-artifact@v4
-        with:
-          name: studio-desktop-${{ matrix.os }}
-          path: |
-            studio/release/*.AppImage
             studio/release/*.exe
-            studio/release/*.nsis.7z
             studio/release/*.blockmap
+            studio/release/native-readiness.json
+            studio/backend-native/kala-studio.exe
+            studio/backend-native/native-build.json
+            studio/backend-native.sha256
           if-no-files-found: error
           retention-days: 14
+
+      - name: Enforce current-feature release gate
+        if: steps.readiness.outcome != 'success'
+        shell: bash
+        run: |
+          echo "::error::Current-feature native parity is pending (Python ADR-0009 design/journal routes). Refusing NSIS/release generation; the Python reference remains the working default."
+          exit 1
 
       - name: Summarise
         if: always()
         shell: bash
         run: |
           {
-            echo "## Kala Studio build (${{ matrix.os }})"
+            echo "## Kala Studio native Windows build (unsigned)"
             echo ""
             echo "**Status:** ${{ job.status }}"
             echo "**Signing:** none (unsigned)."
+            echo "**Installer execution:** not run; a clean Windows host is still required."
             echo ""
-            if [ "${{ job.status }}" = "success" ] && [ -f digest.txt ]; then
-              echo "**Backend sha256:**"
-              echo ""
-              echo '```'
-              cat digest.txt
-              echo '```'
-            else
-              echo "**Backend sha256:** unavailable (build failed)."
-            fi
+            echo "Built the native kala-studio release binary, staged the UI beside it,"
+            echo "ran the Rust workspace tests with absolute Python oracle paths, and"
+            echo "ran the frozen/native smokes with a Python-free child PATH."
             echo ""
-            echo "Built the PyInstaller backend, ran the frozen runtime"
-            echo "smoke (health, UI, preview, STEP), built the"
-            echo "electron-builder bundle, and uploaded the unsigned"
-            echo "artefacts. Did not sign, did not authenticate against"
-            echo "any provider, did not publish, and did not run the"
-            echo "installer on a clean host."
+            echo "The current-feature readiness gate is blocking: the native slice covers"
+            echo "the original nine Studio route-methods while the Python reference has 14"
+            echo "plus ADR-0009 design DTOs. NSIS generation/upload only runs when that gate"
+            echo "passes. No sign, publish, deploy, install, or live provider/model call was"
+            echo "performed."
           } >> "$GITHUB_STEP_SUMMARY"
 
-  core-tests-linux:
-    name: core tests (ubuntu)
+  python-reference-linux:
+    name: Python reference tests (ubuntu)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -257,11 +485,31 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
-          # Install the geometry extra so the OCP-only STEP tests run
-          # instead of skipping on this baseline host.
           python -m pip install -e ".[dev,studio,geometry]"
 
-      - name: Run core test suite
+      - name: Lint and type-check Studio Python reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m ruff check \
+            src/kala_agent/studio \
+            tests/security/test_studio*.py \
+            tests/unit/test_studio*.py
+          python -m ruff format --check \
+            src/kala_agent/studio \
+            tests/security/test_studio*.py \
+            tests/unit/test_studio*.py
+          python -m mypy --strict src/kala_agent/studio
+
+      - name: Python Studio reference tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest -q --no-header --no-summary \
+            tests/security/test_studio*.py \
+            tests/unit/test_studio*.py
+
+      - name: Run core reference test suite
         shell: bash
         run: |
           set -euo pipefail
@@ -293,6 +541,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # The `freecad` marker needs a real FreeCAD install; the
-          # marker-less tests still exercise import and discovery.
+          # A real FreeCAD installation is optional; marker-gated tests are
+          # not executed here and are not counted as Windows/COM proof.
           python -m pytest -q --no-header --no-summary -m "not freecad"

@@ -25,7 +25,7 @@ vi.mock('../src/api/client', async (importOriginal) => {
 
 import { StudioApiError, StudioAuthError } from '../src/api/client';
 import { ExportPanel } from '../src/components/export/ExportPanel';
-import { dispatch, resetStore } from '../src/state/store';
+import { dispatch, getState, resetStore } from '../src/state/store';
 import type { BoxParameters, ExportFormat, ExportArtifact, IntegrationRecord } from '../src/types/studio';
 
 const connection = {
@@ -142,6 +142,10 @@ describe('ExportPanel — direct export', () => {
     await waitFor(() => {
       expect(view.container.querySelector('.export-panel-result')?.textContent).toContain('84');
     });
+    // The real byte count lands in the bounded journal as an export receipt.
+    const receipt = getState().journal.find((entry) => entry.kind === 'export');
+    expect(receipt?.message).toContain('kala-studio-box.stl');
+    expect(receipt?.digest).toContain('84 bytes');
     // No stray GET followed the export.
     expect(fetch).not.toHaveBeenCalled();
   });

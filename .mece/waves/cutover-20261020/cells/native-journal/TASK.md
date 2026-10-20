@@ -1,0 +1,5 @@
+# native-journal: the Studio session journal + artifact store in Rust
+Read `../../WAVE.md` and the Python reference `src/kala_agent/studio/session_journal.py` (A3 + repair; O(1) appends; tamper detection; WAL; size limits; `verify()`), plus `.mece/waves/design-turns-20261019/cells/a3-journal/REPORT.md`.
+Own: NEW `backend/crates/kala-studio-journal/**` (standalone). Consume the accepted `kala-persistence` (chain digest), `kala-artifacts`, and `kala-json` read-only.
+Byte compatibility is REQUIRED: the Rust journal must open, verify, and append to a Python-written `studio-journal.sqlite3` (same schema, canonical payload JSON, chain digests), and vice versa. Same `page`/`verify`/`append` API semantics, same artifact sha256 layout, the same cached-head O(1) append with a full walk on open and on verify, and identical tamper detection (`first_bad_sequence`).
+Differential vs live Python: interleaved appends from both implementations on one file; tamper cases; concurrent appends; a perf-shape test (no full walk per append). Use temp dirs only (USER DATA rule). Full Rust gates. REPORT.md.

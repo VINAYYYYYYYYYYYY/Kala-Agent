@@ -1,0 +1,678 @@
+{
+  "corpus_schema_version": 1,
+  "defaults": {
+    "box_edge_subdivisions": 1,
+    "box_size_mm": 10.0,
+    "cylinder_height_mm": 10.0,
+    "cylinder_height_segments": 1,
+    "cylinder_radial_segments": 48,
+    "cylinder_radius_mm": 5.0,
+    "sphere_radius_mm": 5.0,
+    "sphere_rings": 24,
+    "sphere_sectors": 32
+  },
+  "kind": "geometry_stl",
+  "maxima": {
+    "box_edge_subdivisions": 64,
+    "cylinder_height_segments": 64,
+    "cylinder_radial_segments": 256,
+    "mesh_triangles": 400000,
+    "mesh_vertices": 200000,
+    "sphere_rings": 96,
+    "sphere_sectors": 128
+  },
+  "meshes": [
+    {
+      "bounds": {
+        "max": [
+          5.0,
+          5.0,
+          5.0
+        ],
+        "min": [
+          -5.0,
+          -5.0,
+          -5.0
+        ]
+      },
+      "engine": "analytic",
+      "id": "box_default",
+      "indices": {
+        "first": [
+          0,
+          1,
+          2,
+          1,
+          3,
+          2
+        ],
+        "last": [
+          20,
+          22,
+          21,
+          21,
+          22,
+          23
+        ],
+        "length": 36,
+        "sha256_of_compact_json": "9e3b6fc1fe4913d7a3574338c7759c66a95448bdae92a9f7adc99806a1dd95de"
+      },
+      "kind": "box",
+      "normals": {
+        "first": [
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "last": [
+          -1.0,
+          0.0,
+          0.0,
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "length": 72,
+        "sha256_of_compact_json": "ea2ff31e25f6b12460d3030d567b2aa7f4456efcc0d3bcd65f26596a6e877a73"
+      },
+      "parameters": {},
+      "positions": {
+        "first": [
+          -5.0,
+          -5.0,
+          5.0,
+          5.0,
+          -5.0,
+          5.0
+        ],
+        "last": [
+          -5.0,
+          -5.0,
+          5.0,
+          -5.0,
+          5.0,
+          5.0
+        ],
+        "length": 72,
+        "sha256_of_compact_json": "b0ae9eb18e5451763f81be64e7e547188f1d01a8e44fd72d4062274bec43b7cd"
+      },
+      "signed_volume": 1000.0000000000001,
+      "signed_volume_note": "diagnostic oracle; compare with a small tolerance because accumulation order is not a product contract",
+      "signed_volume_repr": "1000.0000000000001",
+      "stl": {
+        "header_ascii": "kala-studio analytic tessellation, binary STL export",
+        "length": 684,
+        "sha256": "e6c04f2a46a0897aaa157a63b3efc89f0632201728753ce82c7ca0e7d2c7dfd5",
+        "stored_file": "box_default.stl",
+        "stored_file_sha256": "e6c04f2a46a0897aaa157a63b3efc89f0632201728753ce82c7ca0e7d2c7dfd5",
+        "triangle_count_from_header": 12,
+        "triangle_count_matches_mesh": true
+      },
+      "triangle_count": 12,
+      "vertex_count": 24,
+      "warning": "analytic tessellation is a preview representation; not CAD-grade NURBS or B-rep",
+      "welded_edge_symmetric_counts": {
+        "all_edges_used_twice": true,
+        "distinct_edges": 18
+      }
+    },
+    {
+      "bounds": {
+        "max": [
+          5.0,
+          5.0,
+          5.0
+        ],
+        "min": [
+          -5.0,
+          -5.0,
+          -5.0
+        ]
+      },
+      "engine": "analytic",
+      "id": "box_max",
+      "indices": {
+        "first": [
+          0,
+          1,
+          65,
+          1,
+          66,
+          65
+        ],
+        "last": [
+          25283,
+          25348,
+          25284,
+          25284,
+          25348,
+          25349
+        ],
+        "length": 147456,
+        "sha256_of_compact_json": "3f7a4d5e755b9175c3c4d73b5fc880e82a29611756d9f85f1e5118ec9979baed"
+      },
+      "kind": "box",
+      "normals": {
+        "first": [
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "last": [
+          -1.0,
+          0.0,
+          0.0,
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "length": 76050,
+        "sha256_of_compact_json": "c289f9e60f283b0a46f805e33687d8c6d773878b21ffe48d0a17f83583fd3848"
+      },
+      "parameters": {
+        "subdivisions": 64
+      },
+      "positions": {
+        "first": [
+          -5.0,
+          -5.0,
+          5.0,
+          -4.84375,
+          -5.0,
+          5.0
+        ],
+        "last": [
+          -5.0,
+          4.84375,
+          5.0,
+          -5.0,
+          5.0,
+          5.0
+        ],
+        "length": 76050,
+        "sha256_of_compact_json": "5e5d684eab5d721fbbf416ba6fa2b01b18303b56f6c663dd3b93ca4b10c63795"
+      },
+      "signed_volume": 1000.0000000007183,
+      "signed_volume_note": "diagnostic oracle; compare with a small tolerance because accumulation order is not a product contract",
+      "signed_volume_repr": "1000.0000000007183",
+      "stl": {
+        "header_ascii": "kala-studio analytic tessellation, binary STL export",
+        "length": 2457684,
+        "sha256": "6ae74307e1e3ac9101e3fcf0a2ca8ebd3af1b04fc88be7f269a82429da2febde",
+        "stored_file": null,
+        "stored_file_note": "large mesh: regenerate the mesh and compare sha256/length",
+        "triangle_count_from_header": 49152,
+        "triangle_count_matches_mesh": true
+      },
+      "triangle_count": 49152,
+      "vertex_count": 25350,
+      "warning": "analytic tessellation is a preview representation; not CAD-grade NURBS or B-rep",
+      "welded_edge_symmetric_counts": {
+        "all_edges_used_twice": true,
+        "distinct_edges": 73728
+      }
+    },
+    {
+      "bounds": {
+        "max": [
+          5.0,
+          5.0,
+          5.0
+        ],
+        "min": [
+          -5.0,
+          -5.0,
+          -5.0
+        ]
+      },
+      "engine": "analytic",
+      "id": "cylinder_default",
+      "indices": {
+        "first": [
+          0,
+          1,
+          49,
+          1,
+          50,
+          49
+        ],
+        "last": [
+          148,
+          196,
+          195,
+          148,
+          197,
+          196
+        ],
+        "length": 576,
+        "sha256_of_compact_json": "ca205d9ba74f2c29ee99871f4192d3cdcbc97c0ce935339858c67763cf7e9eaa"
+      },
+      "kind": "cylinder",
+      "normals": {
+        "first": [
+          0.9978589232386035,
+          0.06540312923014313,
+          0.0,
+          0.9940593567290958,
+          0.10883930953169453,
+          0.0
+        ],
+        "last": [
+          0.0,
+          0.0,
+          -1.0,
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "length": 594,
+        "sha256_of_compact_json": "553c16e66cc172c8f6b32352d9970db444f8a59bfc18c829de3f986dd72dfd90"
+      },
+      "parameters": {},
+      "positions": {
+        "first": [
+          5.0,
+          0.0,
+          -5.0,
+          4.957224306869052,
+          0.6526309611002579,
+          -5.0
+        ],
+        "last": [
+          4.957224306869052,
+          -0.6526309611002584,
+          -5.0,
+          5.0,
+          -1.2246467991473533e-15,
+          -5.0
+        ],
+        "length": 594,
+        "sha256_of_compact_json": "bea3811d29d7e310af12923244d53f742c4ede979203ac36c0b63ff337248835"
+      },
+      "signed_volume": 783.1571533203099,
+      "signed_volume_note": "diagnostic oracle; compare with a small tolerance because accumulation order is not a product contract",
+      "signed_volume_repr": "783.1571533203099",
+      "stl": {
+        "header_ascii": "kala-studio analytic tessellation, binary STL export",
+        "length": 9684,
+        "sha256": "0c87786bde66b7cffd9a7c71ff7b501922c4d747eb8e768f4ae7469ca8548243",
+        "stored_file": "cylinder_default.stl",
+        "stored_file_sha256": "0c87786bde66b7cffd9a7c71ff7b501922c4d747eb8e768f4ae7469ca8548243",
+        "triangle_count_from_header": 192,
+        "triangle_count_matches_mesh": true
+      },
+      "triangle_count": 192,
+      "vertex_count": 198,
+      "warning": "analytic tessellation is a preview representation; not CAD-grade NURBS or B-rep",
+      "welded_edge_symmetric_counts": {
+        "all_edges_used_twice": true,
+        "distinct_edges": 288
+      }
+    },
+    {
+      "bounds": {
+        "max": [
+          5.0,
+          5.0,
+          5.0
+        ],
+        "min": [
+          -5.0,
+          -5.0,
+          -5.0
+        ]
+      },
+      "engine": "analytic",
+      "id": "cylinder_max",
+      "indices": {
+        "first": [
+          0,
+          1,
+          257,
+          1,
+          258,
+          257
+        ],
+        "last": [
+          16963,
+          17219,
+          17218,
+          16963,
+          17220,
+          17219
+        ],
+        "length": 99840,
+        "sha256_of_compact_json": "68d8aa7bd02342d8b681ebb13720e379fa51fdd4fd114b4e63d6604176dea664"
+      },
+      "kind": "cylinder",
+      "normals": {
+        "first": [
+          0.9999247018391445,
+          0.012271538285719613,
+          0.0,
+          0.9997908468418241,
+          0.020451468683408663,
+          0.0
+        ],
+        "last": [
+          0.0,
+          0.0,
+          -1.0,
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "length": 51663,
+        "sha256_of_compact_json": "95c22c1d3929640d723ba516b28920222d7243184ebf707608268b213eeeeb60"
+      },
+      "parameters": {
+        "height_segments": 64,
+        "radial_segments": 256
+      },
+      "positions": {
+        "first": [
+          5.0,
+          0.0,
+          -5.0,
+          4.998494093481021,
+          0.12270614261456145,
+          -5.0
+        ],
+        "last": [
+          4.998494093481021,
+          -0.12270614261456224,
+          -5.0,
+          5.0,
+          -1.2246467991473533e-15,
+          -5.0
+        ],
+        "length": 51663,
+        "sha256_of_compact_json": "57355f358d8299cb459f7b04fa4ac9f29015a14806ca85a8b1832ddc8fbf55b9"
+      },
+      "signed_volume": 785.3193127335953,
+      "signed_volume_note": "diagnostic oracle; compare with a small tolerance because accumulation order is not a product contract",
+      "signed_volume_repr": "785.3193127335953",
+      "stl": {
+        "header_ascii": "kala-studio analytic tessellation, binary STL export",
+        "length": 1664084,
+        "sha256": "cd67e50d0b99d4bb364e1b7c32c35187c55ec0752cf0072df610e62c770efcec",
+        "stored_file": null,
+        "stored_file_note": "large mesh: regenerate the mesh and compare sha256/length",
+        "triangle_count_from_header": 33280,
+        "triangle_count_matches_mesh": true
+      },
+      "triangle_count": 33280,
+      "vertex_count": 17221,
+      "warning": "analytic tessellation is a preview representation; not CAD-grade NURBS or B-rep",
+      "welded_edge_symmetric_counts": {
+        "all_edges_used_twice": true,
+        "distinct_edges": 49920
+      }
+    },
+    {
+      "bounds": {
+        "max": [
+          5.0,
+          5.0,
+          5.0
+        ],
+        "min": [
+          -5.0,
+          -5.0,
+          -5.0
+        ]
+      },
+      "engine": "analytic",
+      "id": "sphere_default",
+      "indices": {
+        "first": [
+          1,
+          34,
+          2,
+          2,
+          34,
+          35
+        ],
+        "last": [
+          0,
+          758,
+          757,
+          0,
+          759,
+          758
+        ],
+        "length": 4416,
+        "sha256_of_compact_json": "20030fa3c976ef26c9d29dcf0352a1ab9ce2fe7cc099e46b7e6035ba45d53280"
+      },
+      "kind": "sphere",
+      "normals": {
+        "first": [
+          -2.6095714788907235e-18,
+          0.0,
+          -1.0,
+          0.1305154075755451,
+          0.012854645651847772,
+          0.991362943865946
+        ],
+        "last": [
+          0.13051540757554567,
+          -0.012854645651847888,
+          -0.9913629438659459,
+          -2.6095714788907405e-18,
+          5.219142957781481e-18,
+          1.0
+        ],
+        "length": 2283,
+        "sha256_of_compact_json": "1ec379016c867f6968adfb10d54396e0dad359fc96758146bdf528611870ac85"
+      },
+      "parameters": {},
+      "positions": {
+        "first": [
+          0.0,
+          0.0,
+          -5.0,
+          0.6526309611002579,
+          0.0,
+          4.957224306869052
+        ],
+        "last": [
+          0.65263096110026,
+          -1.5984848350717883e-16,
+          -4.957224306869052,
+          0.0,
+          0.0,
+          5.0
+        ],
+        "length": 2283,
+        "sha256_of_compact_json": "61ed919da977e2d54fe89b0bd386201705be12fc09a314e793a0956041d7dcac"
+      },
+      "signed_volume": 518.0154923770376,
+      "signed_volume_note": "diagnostic oracle; compare with a small tolerance because accumulation order is not a product contract",
+      "signed_volume_repr": "518.0154923770376",
+      "stl": {
+        "header_ascii": "kala-studio analytic tessellation, binary STL export",
+        "length": 73684,
+        "sha256": "ea50ff2ea4f09bffcee161e017f85565f0ad87434ea8c4743881d40f202419e3",
+        "stored_file": "sphere_default.stl",
+        "stored_file_sha256": "ea50ff2ea4f09bffcee161e017f85565f0ad87434ea8c4743881d40f202419e3",
+        "triangle_count_from_header": 1472,
+        "triangle_count_matches_mesh": true
+      },
+      "triangle_count": 1472,
+      "vertex_count": 761,
+      "warning": "analytic tessellation is a preview representation; not CAD-grade NURBS or B-rep",
+      "welded_edge_symmetric_counts": {
+        "all_edges_used_twice": true,
+        "distinct_edges": 2208
+      }
+    },
+    {
+      "bounds": {
+        "max": [
+          5.0,
+          5.0,
+          5.0
+        ],
+        "min": [
+          -5.0,
+          -5.0,
+          -5.0
+        ]
+      },
+      "engine": "analytic",
+      "id": "sphere_max",
+      "indices": {
+        "first": [
+          1,
+          130,
+          2,
+          2,
+          130,
+          131
+        ],
+        "last": [
+          0,
+          12254,
+          12253,
+          0,
+          12255,
+          12254
+        ],
+        "length": 72960,
+        "sha256_of_compact_json": "a03623da99300376de3504887f76b946c10012565a60969440467df3e8b0b8bc"
+      },
+      "kind": "sphere",
+      "normals": {
+        "first": [
+          -6.450042534900686e-19,
+          9.67506380235103e-19,
+          -1.0,
+          0.032719072267525365,
+          0.0008032081408501155,
+          0.9994642650773639
+        ],
+        "last": [
+          0.03271907226752534,
+          -0.0008032081408501608,
+          -0.9994642650773639,
+          -6.450042534900634e-19,
+          -4.837531901175476e-19,
+          1.0
+        ],
+        "length": 36771,
+        "sha256_of_compact_json": "4806513642a79dab4b04096a65cfc126effb600c821972b78e68e2c4fa7f0b0a"
+      },
+      "parameters": {
+        "rings": 96,
+        "sectors": 128
+      },
+      "positions": {
+        "first": [
+          0.0,
+          0.0,
+          -5.0,
+          0.16359541410888068,
+          0.0,
+          4.997322937381829
+        ],
+        "last": [
+          0.16359541410888,
+          -4.006932004872513e-17,
+          -4.997322937381829,
+          0.0,
+          0.0,
+          5.0
+        ],
+        "length": 36771,
+        "sha256_of_compact_json": "bea0a6c524f83752d4c911efa0ece3e8d318959f10be658fc6d62950b0b568d3"
+      },
+      "signed_volume": 523.2484117733442,
+      "signed_volume_note": "diagnostic oracle; compare with a small tolerance because accumulation order is not a product contract",
+      "signed_volume_repr": "523.2484117733442",
+      "stl": {
+        "header_ascii": "kala-studio analytic tessellation, binary STL export",
+        "length": 1216084,
+        "sha256": "b7b27e4721efe1f832eca21370e10406039305bec941baf4e0e463b8cc32ea61",
+        "stored_file": null,
+        "stored_file_note": "large mesh: regenerate the mesh and compare sha256/length",
+        "triangle_count_from_header": 24320,
+        "triangle_count_matches_mesh": true
+      },
+      "triangle_count": 24320,
+      "vertex_count": 12257,
+      "warning": "analytic tessellation is a preview representation; not CAD-grade NURBS or B-rep",
+      "welded_edge_symmetric_counts": {
+        "all_edges_used_twice": true,
+        "distinct_edges": 36480
+      }
+    }
+  ],
+  "oracle_modules": [
+    "kala_agent.studio.geometry.meshes",
+    "kala_agent.studio.geometry.stl",
+    "kala_agent.studio.geometry.step"
+  ],
+  "step": {
+    "available": true,
+    "byte_equality_contract": false,
+    "exported": true,
+    "header_lines": [
+      "ISO-10303-21;",
+      "HEADER;",
+      "FILE_DESCRIPTION(('Open CASCADE Model'),'2;1');",
+      "FILE_NAME('Open CASCADE Shape Model','2026-01-01T00:00:00',('Author'),(",
+      "    'Open CASCADE'),'Open CASCADE STEP processor 8.0','Open CASCADE 8.0'",
+      "  ,'Unknown');",
+      "FILE_SCHEMA(('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }'));",
+      "ENDSEC;",
+      "DATA;",
+      "#1 = APPLICATION_PROTOCOL_DEFINITION('international standard',",
+      "  'automotive_design',2000,#2);",
+      "#2 = APPLICATION_CONTEXT("
+    ],
+    "header_timestamp_detected": true,
+    "kind": "box",
+    "length": 15440,
+    "manifold_solid_brep_count": 1,
+    "module_name": "OCP",
+    "normalisation": [
+      {
+        "field": "FILE_NAME header write timestamp",
+        "reason": "the OCP writer stamps the wall clock of the write",
+        "replacement": "2026-01-01T00:00:00"
+      },
+      {
+        "field": "Open CASCADE STEP translator product revision counter",
+        "reason": "OCCT numbers the translated product per process, so the value depends on how many STEP exports ran before it",
+        "replacement": "zero padded to the original digit width"
+      }
+    ],
+    "oracle_stdout_note": "the OCP writer prints transfer statistics on stdout; captured and not included in the fixture",
+    "parameters": {},
+    "sha256": "0cf3c3f8394083d5e39551295f192a9fcaa6f18b0114f2f5a3d0b7199638e651",
+    "sha256_role": "digest of the STEP body after the writer's run-specific values are normalised; the raw bytes carry a wall-clock timestamp and a per-process translator counter, so the raw digest is not a parity contract",
+    "starts_with_iso_10303_21": true,
+    "structural_contract": [
+      "starts with ISO-10303-21",
+      "has STEP HEADER and DATA sections",
+      "contains at least one MANIFOLD_SOLID_BREP entity",
+      "header timestamp is not part of parity comparison"
+    ],
+    "timestamp_line": "FILE_NAME('Open CASCADE Shape Model','2026-01-01T00:00:00',('Author'),(",
+    "workdir_is_ephemeral": true
+  },
+  "stl_layout": {
+    "attribute_byte_count": 0,
+    "header_bytes": 80,
+    "header_fill": "kala-studio analytic tessellation, binary STL export",
+    "normal_source": "per-triangle geometric normal, not the smooth vertex normals",
+    "triangle_record_bytes": 50,
+    "triangle_record_format": "<12fH"
+  }
+}

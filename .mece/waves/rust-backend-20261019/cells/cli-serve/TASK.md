@@ -1,0 +1,4 @@
+# cli-serve: wire `kala-agent serve` to the accepted kala-api server
+Follow `../CONVENTIONS.md` (including the USER DATA rule: export RUSTUP_HOME/CARGO_HOME, then temp HOME and data dirs, in every shell). Read `../cli-r1/REPORT.md` (the `serve` gap and `build_serve_plan`) and `../api-routes-r1/REPORT.md` (the `kala-api/server` crate and its launch contract).
+Own: `backend/crates/kala-cli/**`, plus `backend/crates/kala-api/server/**` ONLY if a library entry point must be exposed (no behaviour change). Make `kala-agent serve` start the native server with the exact Python `serve` contract (pre-bind validation order, token minted to `<data-dir>/api-token` 0600, JSON summary, loopback-only, exit codes, SIGTERM shutdown).
+Differential: run `serve` from both CLIs on temp data dirs and drive both with the api-routes request script, plus the launch/shutdown cases. Zero unexplained mismatches. Full Rust gates for both crates. REPORT.md.

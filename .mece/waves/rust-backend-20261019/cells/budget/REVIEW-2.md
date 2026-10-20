@@ -1,0 +1,5 @@
+# GPT-6.1-Sol review — budget slice accepted after repairs
+
+Inspected new UnicodeNd table/provenance, Decimal and float grammar separation, effective/adjusted exponent checks, shared formatter integration, native regressions and live Python entry-path tests. Independently reran cargo test --release --locked:65passed, including all85fixture cases, all760UnicodeNd digits/whitespace/lookalike checks, boundary/duration/ledger differential and bounded allocation/concurrency gates. fmt/clippy -D warnings/release build passed. Both REVIEW-1 defects are fixed; initial rejection inputs now covered. No blocking budget defect remains from this review.
+
+Accepted as native default-context Decimal/counter/duration/ledger slice, still excluded/standalone pending reviewed workspace/core integration. Retain documented Pydantic multiline error-text gap for future wrappers and ensure canonical state hash bytes use kala-json losslessly, not serde's state dump. Context/from_parts are trusted native constructors, not validating user input. No performance comparison or Windows build/execution evidence yet; not a complete Decimal library or full backend completion.

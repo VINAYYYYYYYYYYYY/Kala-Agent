@@ -1,0 +1,8 @@
+# corpus-sync: bring the kala-studio corpus consumers in line with the regenerated corpus
+Follow `../CONVENTIONS.md` (the USER DATA rule in every shell). Read `../compat-drift/REPORT.md` and `/home/v9i/Projects/Kala-Agent/.mece/waves/design-turns-20261019/cells/docs-final/REPORT.md` (findings 1 and the kala-studio failure).
+Own ONLY: `backend/crates/kala-studio/tests/replay_binary_corpus.py`, `backend/crates/kala-studio/tests/corpus_fixture.rs`, and (if needed) the per-case metadata in `backend/fixtures/corpus/v1/**` via `backend/compat/generate_corpus.py`. Do not change product code.
+Problems:
+1. `replay_binary_corpus.py` reports 56 cases with 5 mismatches, all in compat-drift's 4 new cases. Three are `body_deterministic: false` by the corpus's own metadata but are compared as raw bytes. `studio.cad_providers` depends on host FreeCAD availability.
+   Fix: honour `body_deterministic: false` (compare status, headers, and the declared stable fields/shape only), and treat host-evidence cases explicitly (compare against the CURRENT host probe, or mark them `host_dependent` in the generator with a recorded rationale). Never blanket-skip, and never loosen deterministic cases.
+2. `corpus_fixture.rs` pins the old 48-case corpus. Update it to assert the regenerated manifest (56 cases, 15 routes, `corpus_sha256`).
+Acceptance: `replay_binary_corpus.py` gives 56 cases and 0 mismatches. A negative control (mutate one deterministic body byte in a temp copy) must FAIL. `kala-studio` `--all-features` is fully green. `backend/compat/self_check.py` and `generate_corpus.py --check` are green. The 268/292/20 differentials stay at 0. REPORT.md.

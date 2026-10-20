@@ -1,0 +1,908 @@
+{
+  "generated": "2026-10-20",
+  "front_doors": {
+    "rust": {
+      "base": "http://127.0.0.1:8877",
+      "binary": "backend/target/release/kala-studio",
+      "worker": "/home/v9i/Projects/Kala-Agent/.venv/bin/python -m kala_agent.studio --worker"
+    },
+    "python": {
+      "base": "http://127.0.0.1:8872",
+      "command": ".venv/bin/python -m kala_agent.studio"
+    },
+    "static_dist": "/tmp/opencode/rust-e2e-qa/dist"
+  },
+  "visible": {
+    "providers": {
+      "rust": [
+        {
+          "id": "opencascade",
+          "label": "OpenCascade (opt-in)8.0.1.1",
+          "disabled": false,
+          "title": "OpenCascade (opt-in) 8.0.1.1 \u2014 builds and measures this design",
+          "ariaChecked": "false"
+        },
+        {
+          "id": "freecad",
+          "label": "FreeCAD1.1.4",
+          "disabled": false,
+          "title": "FreeCAD 1.1.4 \u2014 builds and measures this design",
+          "ariaChecked": "false"
+        },
+        {
+          "id": "solidedge",
+          "label": "Solid Edgeunavailable",
+          "disabled": true,
+          "title": "Solid Edge is unavailable: Solid Edge build requires the Windows bridge (not reachable); this host is linux, so the ADR-0008 bridge cannot run here",
+          "ariaChecked": "false"
+        }
+      ],
+      "python": [
+        {
+          "id": "opencascade",
+          "label": "OpenCascade (opt-in)8.0.1.1",
+          "disabled": false,
+          "title": "OpenCascade (opt-in) 8.0.1.1 \u2014 builds and measures this design",
+          "ariaChecked": "false"
+        },
+        {
+          "id": "freecad",
+          "label": "FreeCAD1.1.4",
+          "disabled": false,
+          "title": "FreeCAD 1.1.4 \u2014 builds and measures this design",
+          "ariaChecked": "false"
+        },
+        {
+          "id": "solidedge",
+          "label": "Solid Edgeunavailable",
+          "disabled": true,
+          "title": "Solid Edge is unavailable: Solid Edge build requires the Windows bridge (not reachable); this host is linux, so the ADR-0008 bridge cannot run here",
+          "ariaChecked": "false"
+        }
+      ],
+      "equal": true
+    },
+    "freecad_turn": {
+      "rust": {
+        "status": 200,
+        "reply": "Local helper. Design intent parsed from declared values. 4x M5 mapped to 5.5 mm clearance holes (ISO 273 medium). Plate width 60 mm and depth 45 mm are canonical template defaults; state them to override. Compiling and measuring with OpenCASCADE. The freecad CAD provider is not available in this studio build. No design was built.",
+        "card": false
+      },
+      "python": {
+        "status": 200,
+        "reply": "Local helper. Design intent parsed from declared values. 4x M5 mapped to 5.5 mm clearance holes (ISO 273 medium). Plate width 60 mm and depth 45 mm are canonical template defaults; state them to override. Compiling and measuring with OpenCASCADE. L-bracket 60 x 45 x 40: B-Rep verified; measured by FreeCAD. Measured volume 35571.416 mm^3, surface area 11889.102 mm^2, envelope 60.000 x 45.000 x 40.000 mm. design_id a9d04f8ff14e365ee57e0a7d6e212ad5afae59de428b5cefa029bf91f72f62a7.",
+        "card": true,
+        "provider": "measured by FreeCAD 1.1.4",
+        "volume": "35571.42 mm\u00b3",
+        "area": "11889.10 mm\u00b2",
+        "stamp": "B-Rep Verified"
+      },
+      "equal": false
+    },
+    "opencascade_turn": {
+      "rust": {
+        "status": 200,
+        "provider": "measured by OpenCascade (opt-in) 8.0.1.1",
+        "rows": [
+          {
+            "key": "volume",
+            "label": "volume",
+            "value": "35571.42 mm\u00b3"
+          },
+          {
+            "key": "area",
+            "label": "area",
+            "value": "11889.10 mm\u00b2"
+          },
+          {
+            "key": "envelope_x",
+            "label": "envelope X",
+            "value": "60.00 mm"
+          },
+          {
+            "key": "envelope_y",
+            "label": "envelope Y",
+            "value": "45.00 mm"
+          },
+          {
+            "key": "envelope_z",
+            "label": "envelope Z",
+            "value": "40.00 mm"
+          }
+        ],
+        "stamp": "B-Rep Verified",
+        "checks": [
+          "passed",
+          "passed",
+          "passed",
+          "passed",
+          "passed"
+        ]
+      },
+      "python": {
+        "status": 200,
+        "provider": "measured by OpenCascade (opt-in) 8.0.1.1",
+        "rows": [
+          {
+            "key": "volume",
+            "label": "volume",
+            "value": "35571.42 mm\u00b3"
+          },
+          {
+            "key": "area",
+            "label": "area",
+            "value": "11889.10 mm\u00b2"
+          },
+          {
+            "key": "envelope_x",
+            "label": "envelope X",
+            "value": "60.00 mm"
+          },
+          {
+            "key": "envelope_y",
+            "label": "envelope Y",
+            "value": "45.00 mm"
+          },
+          {
+            "key": "envelope_z",
+            "label": "envelope Z",
+            "value": "40.00 mm"
+          }
+        ],
+        "stamp": "B-Rep Verified",
+        "checks": [
+          "passed",
+          "passed",
+          "passed",
+          "passed",
+          "passed"
+        ]
+      },
+      "equal": true
+    },
+    "hlr": {
+      "rust": {
+        "heading": "HLR \u00b7 L-bracket 60 x 45 x 40594f408b \u00b7 1056 PTS \u00b7 2B VISIBLE / 2H HIDDENview: OpenCascade (opt-in) build",
+        "viewCount": 4,
+        "views": [
+          {
+            "name": "iso",
+            "visible": 1,
+            "hidden": 1
+          },
+          {
+            "name": "top",
+            "visible": 1,
+            "hidden": 1
+          },
+          {
+            "name": "front",
+            "visible": 1,
+            "hidden": 1
+          },
+          {
+            "name": "right",
+            "visible": 1,
+            "hidden": 1
+          }
+        ],
+        "hiddenTotal": 4,
+        "hiddenDashed": "5px, 3px",
+        "canvasPresent": false,
+        "hlrSvg": true
+      },
+      "python": {
+        "heading": "HLR \u00b7 L-bracket 60 x 45 x 40594f408b \u00b7 1056 PTS \u00b7 2B VISIBLE / 2H HIDDENview: OpenCascade (opt-in) build",
+        "viewCount": 4,
+        "views": [
+          {
+            "name": "iso",
+            "visible": 1,
+            "hidden": 1
+          },
+          {
+            "name": "top",
+            "visible": 1,
+            "hidden": 1
+          },
+          {
+            "name": "front",
+            "visible": 1,
+            "hidden": 1
+          },
+          {
+            "name": "right",
+            "visible": 1,
+            "hidden": 1
+          }
+        ],
+        "hiddenTotal": 4,
+        "hiddenDashed": "5px, 3px",
+        "canvasPresent": false,
+        "hlrSvg": true
+      },
+      "equal": true
+    },
+    "section": {
+      "rust": {
+        "tab": "Section A-A",
+        "plane": "XZ",
+        "areaLabel": "AREA 2,321.46 mm\u00b2",
+        "caption": [
+          "SECTION XZ",
+          "OFFSET 4.00 mm \u00b7 1 OUTER \u00b7 1 INNER LOOP",
+          "KERNEL AREA"
+        ],
+        "footer": "PLANE: XZAREA: 2,321.46 mm\u00b2",
+        "svgAria": "Section XZ at offset 4.00 millimetres, area 2,321.46 square millimetres",
+        "loops": 1
+      },
+      "python": {
+        "tab": "Section A-A",
+        "plane": "XZ",
+        "areaLabel": "AREA 2,321.46 mm\u00b2",
+        "caption": [
+          "SECTION XZ",
+          "OFFSET 4.00 mm \u00b7 1 OUTER \u00b7 1 INNER LOOP",
+          "KERNEL AREA"
+        ],
+        "footer": "PLANE: XZAREA: 2,321.46 mm\u00b2",
+        "svgAria": "Section XZ at offset 4.00 millimetres, area 2,321.46 square millimetres",
+        "loops": 1
+      },
+      "equal": true
+    },
+    "ledger": {
+      "rust": {
+        "stamp": "HASH-CHAIN OK",
+        "rowCount": 22,
+        "serverRowCount": 12,
+        "serverSequences": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "sampleServer": [
+          {
+            "seq": "7",
+            "type": "artifact.stored",
+            "message": "step \u00b7 55554 bytes \u00b7 sha f22a8fc3",
+            "digest": "6ef431fc\u2026",
+            "chain": "Covered by a verified hash chain"
+          },
+          {
+            "seq": "8",
+            "type": "view.imported",
+            "message": "view imported \u00b7 1 solid \u00b7 568 triangles",
+            "digest": "b47d92c3\u2026",
+            "chain": "Covered by a verified hash chain"
+          },
+          {
+            "seq": "9",
+            "type": "design.compiled",
+            "message": "2 components \u00b7 fused \u00b7 design 594f408b",
+            "digest": "c9bbdc41\u2026",
+            "chain": "Covered by a verified hash chain"
+          },
+          {
+            "seq": "10",
+            "type": "design.measured",
+            "message": "measured by OpenCascade (opt-in) \u00b7 volume 35571.416 mm^3 \u00b7 area 11889.102 mm^2 \u00b7 1 solid",
+            "digest": "e5dc29dc\u2026",
+            "chain": "Covered by a verified hash chain"
+          },
+          {
+            "seq": "11",
+            "type": "design.checked",
+            "message": "verified \u00b7 5 checks passed",
+            "digest": "1ef24fcd\u2026",
+            "chain": "Covered by a verified hash chain"
+          },
+          {
+            "seq": "12",
+            "type": "chat.turn",
+            "message": "local \u00b7 CAD opencascade \u00b7 offline \u00b7 design requested",
+            "digest": "af7a5d54\u2026",
+            "chain": "Covered by a verified hash chain"
+          }
+        ],
+        "localChain": false,
+        "footnote": "http://127.0.0.1:8877backend v0.1.0",
+        "live": "[CHAT] \u00b7 Agent \u00b7 Local helper. Design intent parsed from declared values. 4x M5 mapped to 5.5 mm clearance holes (ISO 273 medium). Plate width 60 mm and depth 45 mm are canonic\u2026"
+      },
+      "python": {
+        "stamp": "HASH-CHAIN OK",
+        "rowCount": 49,
+        "serverRowCount": 39,
+        "serverSequences": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39
+        ],
+        "sampleServer": [
+          {
+            "seq": "34",
+            "type": "artifact.stored",
+            "message": "step \u00b7 21648 bytes \u00b7 sha 3a32209c",
+            "digest": "ea423f59\u2026",
+            "chain": "Covered by a verified hash chain"
+          },
+          {
+            "seq": "35",
+            "type": "export.completed",
+            "message": "step \u00b7 21648 bytes \u00b7 sha 3a32209c",
+            "digest": "5ad9b775\u2026",
+            "chain": "Covered by a verified hash chain"
+          },
+          {
+            "seq": "36",
+            "type": "design.intent",
+            "message": "template l_bracket \u00b7 provider freecad \u00b7 L-bracket 60 x 45 x 40 \u00b7 design a9d04f8f",
+            "digest": "bd7091c5\u2026",
+            "chain": "Covered by a verified hash chain"
+          },
+          {
+            "seq": "37",
+            "type": "chat.turn",
+            "message": "local \u00b7 CAD freecad \u00b7 offline \u00b7 design requested",
+            "digest": "c4f61804\u2026",
+            "chain": "Covered by a verified hash chain"
+          },
+          {
+            "seq": "38",
+            "type": "design.intent",
+            "message": "template l_bracket \u00b7 provider opencascade \u00b7 L-bracket 60 x 45 x 40 \u00b7 design 594f408b",
+            "digest": "763353c0\u2026",
+            "chain": "Covered by a verified hash chain"
+          },
+          {
+            "seq": "39",
+            "type": "chat.turn",
+            "message": "local \u00b7 CAD opencascade \u00b7 offline \u00b7 design requested",
+            "digest": "af7a5d54\u2026",
+            "chain": "Covered by a verified hash chain"
+          }
+        ],
+        "localChain": false,
+        "footnote": "http://127.0.0.1:8872backend v0.1.0",
+        "live": "[CHAT] \u00b7 Agent \u00b7 Local helper. Design intent parsed from declared values. 4x M5 mapped to 5.5 mm clearance holes (ISO 273 medium). Plate width 60 mm and depth 45 mm are canonic\u2026"
+      }
+    },
+    "export": {
+      "rust": {
+        "suggestedFilename": "kala-studio-594f408b3223.step",
+        "savedPath": "shots/rust-current-export-kala-studio-594f408b3223.step",
+        "bytes": 55554,
+        "fileSha256": "f22a8fc38102159efdf3a6af55d089514d99923f5a79ecf7c34e242e87864089",
+        "receiptText": "Saved kala-studio-594f408b3223.step \u00b7 55,554 bytessha256f22a8fc38102159efdf3a6af55d089514d99923f5a79ecf7c34e242e87864089",
+        "receiptDigest": "f22a8fc38102159efdf3a6af55d089514d99923f5a79ecf7c34e242e87864089",
+        "stepArtifactChip": "f22a8fc38102159efdf3a6af55d089514d99923f5a79ecf7c34e242e87864089"
+      },
+      "python": {
+        "suggestedFilename": "kala-studio-594f408b3223.step",
+        "savedPath": "shots/python-export-kala-studio-594f408b3223.step",
+        "bytes": 55554,
+        "fileSha256": "8f982c4177f4c16a8d334e9eddeea912041dc4c3d7b7dd1a07a54bbf8c4b2294",
+        "receiptText": "Saved kala-studio-594f408b3223.step \u00b7 55,554 bytessha2568f982c4177f4c16a8d334e9eddeea912041dc4c3d7b7dd1a07a54bbf8c4b2294",
+        "receiptDigest": "8f982c4177f4c16a8d334e9eddeea912041dc4c3d7b7dd1a07a54bbf8c4b2294",
+        "stepArtifactChip": "8f982c4177f4c16a8d334e9eddeea912041dc4c3d7b7dd1a07a54bbf8c4b2294"
+      }
+    },
+    "crash": {
+      "workerPidsBefore": [
+        "1428605"
+      ],
+      "killedPid": "1428605",
+      "journalDuringOutage": {
+        "status": 503,
+        "body": {
+          "code": "geometry_worker_unavailable",
+          "details": [
+            "the geometry worker is unreachable: error sending request for url (http://127.0.0.1:39333/internal/v1/journal)"
+          ],
+          "message": "the geometry worker is not available; the studio cannot compute geometry without it"
+        }
+      },
+      "healthDuringOutage": {
+        "state": "restarting",
+        "version": null,
+        "design_available": false
+      },
+      "uiExportError": "geometry_worker_unavailable: the geometry worker is not available; the studio cannot compute geometry without it \u2014 the geometry worker is not running",
+      "settingsDuringOutage": {
+        "status": 200
+      },
+      "uiChatDuringOutage": {
+        "status": 200,
+        "text": "Local helper. Reasoning trace id 163dfeff. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. Give me the nominal envelope of the current part.",
+        "design": null
+      },
+      "recoveredAfterMs": 1285,
+      "healthAfterRestart": {
+        "state": "ready",
+        "version": "0.1.0",
+        "design_available": true
+      },
+      "workerPidsAfter": [
+        "1434855"
+      ],
+      "exportAfterRestart": {
+        "receipt": "Saved kala-studio-594f408b3223.step \u00b7 55,554 bytessha256f22a8fc38102159efdf3a6af55d089514d99923f5a79ecf7c34e242e87864089",
+        "digest": "f22a8fc38102159efdf3a6af55d089514d99923f5a79ecf7c34e242e87864089"
+      },
+      "designAfterRestart": {
+        "httpStatus": 200,
+        "replyText": "Local helper. Design intent parsed from declared values. 4x M5 mapped to 5.5 mm clearance holes (ISO 273 medium). Plate width 60 mm and depth 45 mm are canonical template defaults; state them to override. Compiling and measuring with OpenCASCADE. L-bracket 60 x 45 x 40: B-Rep verified; measured by O",
+        "designId": "594f408b",
+        "provider": "measured by OpenCascade (opt-in) 8.0.1.1",
+        "stamp": "B-Rep Verified",
+        "volume": "35571.42 mm\u00b3"
+      },
+      "ledgerAfter": {
+        "stamp": "HASH-CHAIN OK",
+        "rowCount": 36,
+        "serverRowCount": 14,
+        "serverSequences": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "sampleServer": [
+          {
+            "seq": "9",
+            "type": "design.compiled",
+            "message": "2 components \u00b7 fused \u00b7 design 594f408b",
+            "digest": "c9bbdc41\u2026",
+            "chain": "Covered by a verified hash chain"
+          },
+          {
+            "seq": "10",
+            "type": "design.measured",
+            "message": "measured by OpenCascade (opt-in) \u00b7 volume 35571.416 mm^3 \u00b7 area 11889.102 mm^2 \u00b7 1 solid",
+            "digest": "e5dc29dc\u2026",
+            "chain": "Covered by a verified hash chain"
+          },
+          {
+            "seq": "11",
+            "type": "design.checked",
+            "message": "verified \u00b7 5 checks passed",
+            "digest": "1ef24fcd\u2026",
+            "chain": "Covered by a verified hash chain"
+          },
+          {
+            "seq": "12",
+            "type": "chat.turn",
+            "message": "local \u00b7 CAD opencascade \u00b7 offline \u00b7 design requested",
+            "digest": "af7a5d54\u2026",
+            "chain": "Covered by a verified hash chain"
+          },
+          {
+            "seq": "13",
+            "type": "artifact.stored",
+            "message": "step \u00b7 55554 bytes \u00b7 sha f22a8fc3",
+            "digest": "c751c6b1\u2026",
+            "chain": "Covered by a verified hash chain"
+          },
+          {
+            "seq": "14",
+            "type": "export.completed",
+            "message": "step \u00b7 55554 bytes \u00b7 sha f22a8fc3",
+            "digest": "b5aaefe6\u2026",
+            "chain": "Covered by a verified hash chain"
+          }
+        ],
+        "localChain": false,
+        "footnote": "http://127.0.0.1:8877backend v0.1.0",
+        "live": "[CHAT] \u00b7 Agent \u00b7 Local helper. Design intent parsed from declared values. 4x M5 mapped to 5.5 mm clearance holes (ISO 273 medium). Plate width 60 mm and depth 45 mm are canonic\u2026"
+      }
+    }
+  },
+  "network": {
+    "status_and_parity": [
+      {
+        "path": "/api/studio/health",
+        "rust_status": 200,
+        "python_status": 200,
+        "rust_bytes": 411,
+        "python_bytes": 333,
+        "json_equal_after_normalisation": true,
+        "note": "geometry_worker is the Rust-only supervisor block (ADR-0010)"
+      },
+      {
+        "path": "/api/studio/integrations",
+        "rust_status": 200,
+        "python_status": 200,
+        "rust_bytes": 4419,
+        "python_bytes": 4419,
+        "json_equal_after_normalisation": true,
+        "note": null
+      },
+      {
+        "path": "/api/studio/providers",
+        "rust_status": 200,
+        "python_status": 200,
+        "rust_bytes": 1133,
+        "python_bytes": 1133,
+        "json_equal_after_normalisation": true,
+        "note": null
+      },
+      {
+        "path": "/api/studio/providers/cad",
+        "rust_status": 200,
+        "python_status": 200,
+        "rust_bytes": 542,
+        "python_bytes": 542,
+        "json_equal_after_normalisation": true,
+        "note": null
+      },
+      {
+        "path": "/api/studio/settings",
+        "rust_status": 200,
+        "python_status": 200,
+        "rust_bytes": 1340,
+        "python_bytes": 1340,
+        "json_equal_after_normalisation": true,
+        "note": null
+      },
+      {
+        "path": "/api/studio/journal/verify",
+        "rust_status": 200,
+        "python_status": 200,
+        "rust_bytes": 134,
+        "python_bytes": 135,
+        "json_equal_after_normalisation": true,
+        "note": "different session journals: event_count/head_digest differ; the chain verdict is OK on both"
+      },
+      {
+        "path": "/api/studio/design/594f408b3223505c51bfdef61cfb935fc28f8ec461aa62fefc62c9b731932c92/drawing",
+        "rust_status": 200,
+        "python_status": 200,
+        "rust_bytes": 38120,
+        "python_bytes": 38120,
+        "json_equal_after_normalisation": true,
+        "note": "byte-identical payload for the same design id"
+      },
+      {
+        "path": "/api/studio/design/594f408b3223505c51bfdef61cfb935fc28f8ec461aa62fefc62c9b731932c92/section",
+        "rust_status": 200,
+        "python_status": 200,
+        "rust_bytes": 2829,
+        "python_bytes": 2829,
+        "json_equal_after_normalisation": true,
+        "note": "byte-identical payload for the same design id"
+      }
+    ],
+    "chat_opencascade": {
+      "rust_status": 200,
+      "python_status": 200,
+      "rust_bytes": 53174,
+      "python_bytes": 53173,
+      "json_equal_after_normalising_generated_digest_journal_head_and_cache_state": true,
+      "rust_step_sha256": "f22a8fc38102159efdf3a6af55d089514d99923f5a79ecf7c34e242e87864089",
+      "python_step_sha256": "8f982c4177f4c16a8d334e9eddeea912041dc4c3d7b7dd1a07a54bbf8c4b2294",
+      "reply_text_equal": true
+    },
+    "design_freecad-design-request": {
+      "rust_status": 200,
+      "python_status": 200,
+      "fields": {
+        "design_id": [
+          "a9d04f8ff14e365ee57e0a7d6e212ad5afae59de428b5cefa029bf91f72f62a7",
+          "a9d04f8ff14e365ee57e0a7d6e212ad5afae59de428b5cefa029bf91f72f62a7",
+          true
+        ],
+        "provider": [
+          "freecad",
+          "freecad",
+          true
+        ],
+        "provider_version": [
+          "1.1.4",
+          "1.1.4",
+          true
+        ],
+        "measured_by": [
+          "FreeCAD",
+          "FreeCAD",
+          true
+        ],
+        "verified": [
+          true,
+          true,
+          true
+        ],
+        "component_count": [
+          2,
+          2,
+          true
+        ],
+        "fused": [
+          true,
+          true,
+          true
+        ],
+        "cached": [
+          false,
+          false,
+          true
+        ],
+        "measured.volume_mm3": [
+          35571.416047,
+          35571.416047,
+          true
+        ],
+        "measured.surface_area_mm2": [
+          11889.101731,
+          11889.101731,
+          true
+        ],
+        "measured.size_mm": [
+          [
+            60.0,
+            45.00000000000001,
+            40.0
+          ],
+          [
+            60.0,
+            45.00000000000001,
+            40.0
+          ],
+          true
+        ],
+        "measured.solid_count": [
+          1,
+          1,
+          true
+        ],
+        "measured.valid": [
+          true,
+          true,
+          true
+        ],
+        "artifacts.script_sha256": [
+          "88a7ec139868e36bd23c81f5688869bf9de5f23a7c72928db4014c9eb0afebae",
+          "88a7ec139868e36bd23c81f5688869bf9de5f23a7c72928db4014c9eb0afebae",
+          true
+        ],
+        "artifacts.step_sha256": [
+          "0f412daf0fde1237014b14944b44420838ddc38db588723923f76c8655d79cfc",
+          "cef2a3bd22bed5e469d21da4d2cfda453cf20e376719d3a93ec079d4b75bd58f",
+          false
+        ],
+        "artifacts.native_sha256": [
+          "3005c4cf4c81d1d2f3e451224d4b83e3807a32c2f5f50d037569825ef6f9f7a7",
+          "bafed28d6daf3a0e7c9d8de50b37bdf66b507d68476fc567302a80c7d76549b2",
+          false
+        ],
+        "journal_head": [
+          "178c71d711b10fc29ade5475625a708c0fad8aba4e19ec918ce2070cf904a207",
+          "6582f952411d41e8cfda97dac5a563a688d23163bd9de89551a1698b2a7067d6",
+          false
+        ]
+      }
+    },
+    "design_assembly-request": {
+      "rust_status": 200,
+      "python_status": 200,
+      "fields": {
+        "design_id": [
+          "c60029cd22ce0784459c1c8cc638dba7daaa83cc24be8680b3bf7a06b8834e1e",
+          "c60029cd22ce0784459c1c8cc638dba7daaa83cc24be8680b3bf7a06b8834e1e",
+          true
+        ],
+        "provider": [
+          "freecad",
+          "freecad",
+          true
+        ],
+        "provider_version": [
+          "1.1.4",
+          "1.1.4",
+          true
+        ],
+        "measured_by": [
+          "FreeCAD",
+          "FreeCAD",
+          true
+        ],
+        "verified": [
+          true,
+          true,
+          true
+        ],
+        "component_count": [
+          2,
+          2,
+          true
+        ],
+        "fused": [
+          false,
+          false,
+          true
+        ],
+        "cached": [
+          false,
+          false,
+          true
+        ],
+        "measured.volume_mm3": [
+          1000.0,
+          1000.0,
+          true
+        ],
+        "measured.surface_area_mm2": [
+          800.0,
+          800.0,
+          true
+        ],
+        "measured.size_mm": [
+          [
+            30.0,
+            10.0,
+            5.0
+          ],
+          [
+            30.0,
+            10.0,
+            5.0
+          ],
+          true
+        ],
+        "measured.solid_count": [
+          2,
+          2,
+          true
+        ],
+        "measured.valid": [
+          true,
+          true,
+          true
+        ],
+        "artifacts.script_sha256": [
+          "18cc514fce6a74f66fb65a73b6b4c7e4eb3f04ec004c962d30fe45ebe26d9e7b",
+          "18cc514fce6a74f66fb65a73b6b4c7e4eb3f04ec004c962d30fe45ebe26d9e7b",
+          true
+        ],
+        "artifacts.step_sha256": [
+          "c4fab88e4d0734d81399bd962a7f19392d01e1d8435ed6e783e1ee59fcfeb79e",
+          "643e8480797c2160f61e24a7dd70ef35a2959cbb68c1a508c17bf96f0be505d2",
+          false
+        ],
+        "artifacts.native_sha256": [
+          "55774d1cb1ee013aa773830143cf87077f842290b81bad4e041dde5c723ea8f6",
+          "b625ea0d7bd2106c1423da7e9a17339adcd8dac5d2da3ce18ac54d25d3c3bed1",
+          false
+        ],
+        "journal_head": [
+          "d8bdd42ceeec990ae3e19eaead8037a888fb5ed2607bcab6e7585640e660949e",
+          "d04e8335b018356d120cbfc81643619a2a474a4ab06e957d6cf5b8e4abf3960d",
+          false
+        ]
+      }
+    },
+    "freecad_proxy_routes": {
+      "design_id": "a9d04f8ff14e365ee57e0a7d6e212ad5afae59de428b5cefa029bf91f72f62a7",
+      "drawing_bytes": [
+        40343,
+        40343
+      ],
+      "drawing_payload_identical": true,
+      "view_hidden_polyline_counts": {
+        "front": 22,
+        "top": 18,
+        "right": 32,
+        "iso": 40
+      },
+      "section_bytes": [
+        2843,
+        2843
+      ],
+      "section_payload_identical": true,
+      "section": {
+        "plane": "XZ",
+        "offset_mm": 4.0,
+        "area_mm2": 2321.4601836602546,
+        "outer": 1,
+        "inner": 1
+      },
+      "export_step_bytes": [
+        21648,
+        21648
+      ],
+      "export_step_sha256": [
+        "0f412daf0fde1237014b14944b44420838ddc38db588723923f76c8655d79cfc",
+        "cef2a3bd22bed5e469d21da4d2cfda453cf20e376719d3a93ec079d4b75bd58f"
+      ],
+      "note": "same size; the sha differs only because the FreeCAD STEP header embeds the export timestamp"
+    }
+  },
+  "export_files": {
+    "python-clean-export-kala-studio-594f408b3223.step": {
+      "bytes": 55554,
+      "sha256": "e420f33434efd5ea365f36c2e8a2879ac8f8f3f9b0c10ae37283303fa937e90e"
+    },
+    "python-export-kala-studio-594f408b3223.step": {
+      "bytes": 55554,
+      "sha256": "8f982c4177f4c16a8d334e9eddeea912041dc4c3d7b7dd1a07a54bbf8c4b2294"
+    },
+    "python-export-kala-studio-a9d04f8ff14e.step": {
+      "bytes": 21648,
+      "sha256": "3a32209c9b80a6eca4bc2b752f0bed877de200f336fdb3530777678c5fe1126b"
+    },
+    "rust-clean-export-kala-studio-594f408b3223.step": {
+      "bytes": 55554,
+      "sha256": "5469a54c98db97ec78f94824ecc60c3a1010d5cf710710c546562ae46ad26fb6"
+    },
+    "rust-current-export-kala-studio-594f408b3223.step": {
+      "bytes": 55554,
+      "sha256": "f22a8fc38102159efdf3a6af55d089514d99923f5a79ecf7c34e242e87864089"
+    },
+    "rust-export-kala-studio-594f408b3223.step": {
+      "bytes": 55554,
+      "sha256": "8f982c4177f4c16a8d334e9eddeea912041dc4c3d7b7dd1a07a54bbf8c4b2294"
+    }
+  },
+  "notes": [
+    "The OpenCascade chat JSON is identical after normalising the generated STEP digest, the session journal head and the design-cache flag; the visible text and every design value are identical. The cache flag differs because the Python reference had the design in memory from an earlier call while the Rust run built it cold.",
+    "The OpenCascade drawing and section payloads for design 594f408b... are byte-identical between the two front doors.",
+    "The OpenCascade STEP files are the same size (55,554 bytes) but their sha256 differs because the OCP STEP header embeds the export timestamp (FILE_NAME ... 2026-10-20T...); the geometry is the same.",
+    "The FreeCAD chat is refused by the Rust front door (chat_design.rs finish_design compiles only opencascade); the Python public server builds it. The worker and the Rust /design route both build FreeCAD correctly.",
+    "A design restored from the worker journal loses measured.surface_area_mm2 (service.py writes surface_area_mm2 and reads area_mm2), so after the worker restart the UI card shows \"-\" for area on both front doors. The pre-restart card shows 11889.10 mm^2."
+  ]
+}

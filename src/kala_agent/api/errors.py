@@ -143,7 +143,7 @@ async def handle_http_exception(request: Request, error: Exception) -> JSONRespo
     elif error.status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE:
         code = "payload_too_large"
         message = "the request body exceeds the configured size limit"
-    elif status.HTTP_400_BAD_REQUEST <= error.status_code < status.HTTP_500_BAD_REQUEST:
+    elif status.HTTP_400_BAD_REQUEST <= error.status_code < status.HTTP_500_INTERNAL_SERVER_ERROR:
         code = "request_rejected"
         message = str(error.detail)[:128] or "the request was rejected"
     else:

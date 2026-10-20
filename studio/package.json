@@ -15,10 +15,15 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "preview": "vite preview",
+    "build:native": "node scripts/native-backend.cjs",
+    "check:native-readiness": "node scripts/native-readiness.cjs",
     "desktop": "node scripts/desktop.cjs",
     "desktop:pack": "node scripts/desktop-pack.cjs"
   },
   "dependencies": {
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource-variable/newsreader": "^5.3.0",
+    "@fontsource-variable/space-grotesk": "^5.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "three": "^0.186.0"

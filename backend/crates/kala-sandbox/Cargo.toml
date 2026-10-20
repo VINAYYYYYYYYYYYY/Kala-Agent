@@ -1,0 +1,43 @@
+[package]
+name = "kala-sandbox"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+publish = false
+description = "Native Linux sandbox jail, strict-profile probe and refusal policy for the Kala Agent backend"
+
+# This crate is deliberately a standalone workspace with its own lock. The
+# accepted root workspace under `backend/` and the accepted sibling crates stay
+# untouched: they are consumed read-only through path dependencies.
+[workspace]
+members = []
+
+[dependencies]
+# Accepted sibling crates, consumed read-only.
+# kala-process owns process launching, deadlines, cancellation and resource
+# bounds; kala-json owns lossless JSON values and canonical hashing.
+kala-json = { path = "../kala-json" }
+kala-process = { path = "../kala-process" }
+serde_json = "1.0"
+tempfile = "3.20"
+thiserror = "2.0"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[[bin]]
+# Native probe helper. It is the sandbox probe child, not a product entry
+# point; the library never requires it to exist.
+name = "kala-sandbox-probe"
+path = "src/bin/kala-sandbox-probe.rs"
+
+[[bin]]
+# Native init helper. It builds the production worker jail, performs the
+# PID-1 transition and supervises the worker inside the namespace. The
+# accepted `kala-process` supervisor launches it instead of the worker.
+name = "kala-sandbox-init"
+path = "src/bin/kala-sandbox-init.rs"
+
+[profile.release]
+strip = "symbols"

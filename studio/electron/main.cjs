@@ -2,10 +2,13 @@
 //
 // Lifecycle:
 //   1. Detect packaged vs development mode via `app.isPackaged`. In
-//      packaged builds the backend binary lives at
-//      `resources/backend/kala-studio[.exe]`; we refuse to start
-//      otherwise rather than fall back to an arbitrary Python on the
-//      operator's machine.
+//      packaged builds the native backend binary, its static UI and the
+//      bundled OCCT/FreeCAD runtime live under `resources/backend/`
+//      (`kala-studio[.exe]`, `studio_dist/`, `lib/`, `adapters/`). Packaged
+//      mode launches only the native Rust `kala-studio`; Python environment
+//      overrides are removed and never consulted. Development defaults to the
+//      staged native slice; the Python reference is an explicit
+//      `KALA_STUDIO_DEV_BACKEND=python` development fallback only.
 //   2. Pick a free loopback port via `pickFreePort`.
 //   3. Spawn the backend with the exact argv shape the backend CLI
 //      expects: `--host 127.0.0.1 --port <port>`. The backend reads
@@ -87,38 +90,194 @@ function buildBackendInvocation({ command, args, cwd, env, port, token }) {
   };
 }
 
+const NATIVE_STAGE_DIR = path.join(REPO_ROOT, 'studio', 'backend-native');
+const DEV_BACKEND_ENV = 'KALA_STUDIO_DEV_BACKEND';
+
+function nativeBinaryName(platform = process.platform) {
+  return platform === 'win32' ? 'kala-studio.exe' : 'kala-studio';
+}
+
+function isFile(candidate) {
+  try {
+    return fs.statSync(candidate).isFile();
+  } catch {
+    return false;
+  }
+}
+
+function isExecutableFile(candidate, platform = process.platform) {
+  try {
+    if (!fs.statSync(candidate).isFile()) return false;
+    if (platform !== 'win32') fs.accessSync(candidate, fs.constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function nativeInstructions({ packaged, candidate, platform }) {
+  if (packaged) {
+    return `the packaged native backend is missing at ${candidate}. ` +
+      'Rebuild the desktop bundle with the native stage; packaged mode never uses Python.';
+  }
+  return `the native backend is not staged at ${candidate}. ` +
+    'Run `npm run build:native` in studio/ (or `node scripts/native-backend.cjs`). ' +
+    'Development defaults to this native slice; the Python reference is available only with ' +
+    'KALA_STUDIO_DEV_BACKEND=python and KALA_STUDIO_PYTHON.';
+}
+
+const PACKAGED_ENV_KEYS_TO_REMOVE = [
+  'PYTHONPATH',
+  'PYTHONHOME',
+  'KALA_STUDIO_PYTHON',
+  'KALA_STUDIO_DEV_BACKEND',
+  'KALA_STUDIO_GEOMETRY_WORKER',
+  'KALA_STUDIO_REPO_ROOT',
+  'KALA_STUDIO_DIST',
+];
+
+function isDirectory(candidate) {
+  try {
+    return fs.statSync(candidate).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Build the backend child environment for a packaged launch.
+ *
+ * Packaged mode is native-only: Python selection variables are removed, so a
+ * stale `KALA_STUDIO_PYTHON`/`KALA_STUDIO_DEV_BACKEND` in the operator's shell
+ * can never select a Python interpreter. The bundled OCCT directory is added
+ * to the platform loader path (this is the documented fallback when patchelf
+ * was unavailable at staging time) and the FreeCAD adapter is exposed to the
+ * provider's discovery path.
+ */
+function packagedBackendEnvironment({
+  resourcesPath,
+  environ = process.env,
+  platform = process.platform,
+} = {}) {
+  const env = { ...environ };
+  for (const key of PACKAGED_ENV_KEYS_TO_REMOVE) delete env[key];
+  const backendDir = path.join(resourcesPath, 'backend');
+  const libDir = path.join(backendDir, 'lib');
+  if (platform === 'linux' && isDirectory(libDir)) {
+    env.LD_LIBRARY_PATH = [libDir, env.LD_LIBRARY_PATH].filter(Boolean).join(path.delimiter);
+  } else if (platform === 'win32') {
+    env.PATH = [backendDir, isDirectory(libDir) ? libDir : null, env.PATH]
+      .filter(Boolean)
+      .join(path.delimiter);
+  }
+  const adapterSrc = path.join(backendDir, 'adapters', 'freecad', 'src');
+  if (isDirectory(adapterSrc)) {
+    env.KALA_FREECAD_SYS_PATH = adapterSrc;
+  }
+  return env;
+}
+
 // Find the backend binary. `app.isPackaged` is the source of truth;
 // `process.resourcesPath` is set in dev as well, so checking its
 // truthiness is wrong. We import `electron` lazily so this module loads
-// under plain Node for unit tests.
-function resolveBackendCommand() {
-  let isPackaged = false;
-  try {
-    isPackaged = require('electron').app.isPackaged;
-  } catch {
-    isPackaged = false;
+// under plain Node for unit tests. Optional arguments are a test seam:
+// production callers use the live Electron app/environment.
+//
+// Packaged mode resolves ONLY `resources/backend/kala-studio[.exe]`; it
+// never consults Python overrides. Development defaults to the staged native
+// slice and fails with actionable build instructions when it is missing.
+// `KALA_STUDIO_DEV_BACKEND=python` (or `python-reference`) is the explicit
+// development-only reference mode; neither path falls back to an arbitrary
+// `python` found on PATH.
+function resolveBackendCommand(options = {}) {
+  let isPackaged = options.isPackaged;
+  if (isPackaged === undefined) {
+    try {
+      isPackaged = require('electron').app.isPackaged;
+    } catch {
+      isPackaged = false;
+    }
   }
+  const platform = options.platform || process.platform;
+  const resourcesPath = options.resourcesPath || process.resourcesPath;
+  const repoRoot = options.repoRoot || REPO_ROOT;
+  const binaryName = nativeBinaryName(platform);
+
   if (isPackaged) {
-    const packaged = path.join(
-      process.resourcesPath,
-      'backend',
-      process.platform === 'win32' ? 'kala-studio.exe' : 'kala-studio',
-    );
-    return { command: packaged, args: [], exists: fs.existsSync(packaged) };
+    const packaged = path.join(resourcesPath, 'backend', binaryName);
+    return {
+      command: packaged,
+      args: [],
+      cwd: path.dirname(packaged),
+      env: packagedBackendEnvironment({ resourcesPath, platform }),
+      // A packaged resource may not carry a Unix execute bit through an
+      // archive extraction. Presence is the packaging contract; a spawn
+      // failure is surfaced by the readiness probe with the child error.
+      exists: isFile(packaged),
+      mode: 'packaged-native',
+      instructions: nativeInstructions({ packaged: true, candidate: packaged, platform }),
+    };
   }
-  // Dev: prefer the project's .venv interpreter when present so the
-  // operator doesn't need a globally-installed Python.
-  const repoVenvBin = process.platform === 'win32'
-    ? path.join(REPO_ROOT, '.venv', 'Scripts', 'python.exe')
-    : path.join(REPO_ROOT, '.venv', 'bin', 'python');
-  const venvPython = fs.existsSync(repoVenvBin) ? repoVenvBin : null;
-  const python = process.env.KALA_STUDIO_PYTHON || venvPython || 'python';
+
+  const devMode = String(options.devBackend ?? process.env[DEV_BACKEND_ENV] ?? '')
+    .trim()
+    .toLowerCase();
+  const pythonOverride = String(options.python ?? process.env.KALA_STUDIO_PYTHON ?? '').trim();
+  const native = path.join(repoRoot, 'studio', 'backend-native', binaryName);
+
+  // An explicit interpreter override selects the development reference backend.
+  if (pythonOverride) {
+    const exists = isExecutableFile(pythonOverride, platform);
+    return {
+      command: pythonOverride,
+      args: ['-m', 'kala_agent.studio'],
+      cwd: repoRoot,
+      env: { ...process.env, PYTHONPATH: path.join(repoRoot, 'src') },
+      exists,
+      mode: 'python-override',
+      instructions: `the development-only Python reference backend is not executable at ${pythonOverride}. ` +
+        'Point KALA_STUDIO_PYTHON at the intended interpreter or unset it to use the native backend.',
+    };
+  }
+
+  if (devMode === 'python' || devMode === 'python-reference') {
+    const venvPython = platform === 'win32'
+      ? path.join(repoRoot, '.venv', 'Scripts', 'python.exe')
+      : path.join(repoRoot, '.venv', 'bin', 'python');
+    return {
+      command: venvPython,
+      args: ['-m', 'kala_agent.studio'],
+      cwd: repoRoot,
+      env: { ...process.env, PYTHONPATH: path.join(repoRoot, 'src') },
+      exists: isExecutableFile(venvPython, platform),
+      mode: 'python-reference',
+      instructions: `the development reference backend is not executable at ${venvPython}. ` +
+        'Create the repository virtualenv, set KALA_STUDIO_PYTHON to the intended interpreter, ' +
+        'or unset KALA_STUDIO_DEV_BACKEND to use the native backend.',
+    };
+  }
+
+  if (devMode === '' || devMode === 'native') {
+    return {
+      command: native,
+      args: [],
+      cwd: repoRoot,
+      env: { ...process.env },
+      exists: isExecutableFile(native, platform),
+      mode: 'native',
+      instructions: nativeInstructions({ packaged: false, candidate: native, platform }),
+    };
+  }
+
   return {
-    command: python,
-    args: ['-m', 'kala_agent.studio'],
-    cwd: REPO_ROOT,
-    env: { ...process.env, PYTHONPATH: path.join(REPO_ROOT, 'src') },
-    exists: true,
+    command: native,
+    args: [],
+    cwd: repoRoot,
+    env: { ...process.env },
+    exists: false,
+    mode: 'invalid',
+    instructions: `unknown ${DEV_BACKEND_ENV}=${devMode}; use "native" or "python". ` +
+      nativeInstructions({ packaged: false, candidate: native, platform }),
   };
 }
 
@@ -284,13 +443,16 @@ async function main() {
   const token = generateToken();
   const resolved = resolveBackendCommand();
   if (!resolved.exists) {
-    console.error(
-      '[kala-studio] packaged backend missing at resources/backend/kala-studio' +
-      (process.platform === 'win32' ? '.exe' : '') +
-      '; refusing to start an arbitrary Python fallback in production.',
-    );
+    console.error(`[kala-studio] ${resolved.instructions}`);
     app.exit(1);
     return;
+  }
+  if (resolved.mode === 'python-override' || resolved.mode === 'python-reference') {
+    console.warn(
+      '[kala-studio] development-only Python reference backend selected by an explicit ' +
+      'KALA_STUDIO_DEV_BACKEND/KALA_STUDIO_PYTHON override; packaged builds always use the ' +
+      'staged native backend.',
+    );
   }
   const invocation = buildBackendInvocation({
     command: resolved.command,
@@ -397,6 +559,7 @@ function bootstrap() {
 module.exports = {
   bootstrap,
   resolveBackendCommand,
+  packagedBackendEnvironment,
   buildBackendInvocation,
   validateIpcSender,
   pickFreePort,
@@ -407,4 +570,6 @@ module.exports = {
   TRUSTED_HOST,
   PRELOAD_PATH,
   REPO_ROOT,
+  NATIVE_STAGE_DIR,
+  DEV_BACKEND_ENV,
 };

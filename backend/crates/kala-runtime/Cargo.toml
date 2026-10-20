@@ -1,0 +1,42 @@
+[workspace]
+# This cell owns a standalone workspace and lockfile. The parent
+# `backend/Cargo.toml` and its lockfile are deliberately untouched.
+resolver = "3"
+
+[package]
+name = "kala-runtime"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+publish = false
+description = "Native Kala model gateway: provider request shaping, egress policy, budget reservation, response validation and secret redaction"
+
+[dependencies]
+# Accepted read-only sibling crates. They own canonical JSON bytes and
+# digests (kala-json), the typed contract enums (kala-contracts), the policy
+# engine (kala-kernel), the budget ledger and decimal type (kala-budget) and
+# the JSON schema validator (kala-tools).
+kala-budget = { path = "../kala-budget" }
+kala-contracts = { path = "../kala-contracts" }
+kala-json = { path = "../kala-json" }
+kala-kernel = { path = "../kala-kernel" }
+kala-tools = { path = "../kala-tools" }
+# The same HTTP client stack the accepted kala-studio uses: reqwest over
+# rustls with the platform trust store.
+async-trait = "0.1"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+num-bigint = "0.4"
+num-traits = "0.2"
+regex = "1"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-native-roots", "stream"] }
+tokio = { version = "1", features = ["rt", "time", "sync"] }
+
+[dev-dependencies]
+num-traits = "0.2"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-native-roots", "blocking"] }
+serde_json = { version = "1", features = ["arbitrary_precision", "preserve_order"] }
+tokio = { version = "1", features = ["full"] }
+
+[profile.release]
+strip = "symbols"

@@ -55,6 +55,11 @@ SOLVER_STATUSES: Final[tuple[str, ...]] = (
 GEOMETRY_TIMEOUT_SECONDS: Final[float] = 180.0
 FEM_TIMEOUT_SECONDS: Final[float] = 900.0
 DESIGN_TIMEOUT_SECONDS: Final[float] = 180.0
+# The builder truncates its own tool and redesign traces at this length, and
+# the shipped output schema allows exactly the same number. One constant keeps
+# a long, successful build (the ADR-0009 L-bracket has 85 calls) from being
+# rejected as an invalid result by a tighter envelope cap.
+MAX_TRACE: Final[int] = 160
 DESIGN_ANALYSIS_STATUSES: Final[tuple[str, ...]] = (
     "not_run",
     "solver_unavailable",
@@ -545,8 +550,9 @@ _CALLS_JSON: Final[Mapping[str, object]] = MappingProxyType(
 )
 _TRACE: Final[Mapping[str, object]] = MappingProxyType(
     {
+        "description": "Ordered call names, bounded by the builder's own trace limit.",
         "items": MappingProxyType({"maxLength": 64, "minLength": 1, "type": "string"}),
-        "maxItems": 64,
+        "maxItems": MAX_TRACE,
         "type": "array",
     }
 )
@@ -823,6 +829,7 @@ __all__ = (
     "GEOMETRY_TIMEOUT_SECONDS",
     "GEOMETRY_TOOL_ID",
     "GEOMETRY_TOOL_VERSION",
+    "MAX_TRACE",
     "SHAPE_KINDS",
     "SOLVER_ENGINE",
     "SOLVER_STATUSES",

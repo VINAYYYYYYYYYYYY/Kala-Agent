@@ -1,0 +1,20 @@
+# P1 shell: Vellum theme, 4-zone layout, bottom bar, Options drawer, store contract
+
+Read `/home/v9i/Projects/Kala-Agent/.mece/waves/vellum-ui-20261019/WAVE.md` first. Its invariants and ownership rules are binding. Work only in `/home/v9i/Projects/Kala-Agent/studio`.
+
+## Steps
+1. Read the existing studio code: `src/components/shell/AppShell.tsx`, `state/store.ts`, `types/studio.ts`, `styles/studio.css`, the toolbar/sidebar/inspector/export/panels components, and the tests (especially `test/layoutCss.test.ts`, `test/AgentWorkspace.dom.test.tsx`, `test/AppBoot.dom.test.tsx`).
+2. Read `stitch/kala_studio_the_vellum_drafting_board_master_workspace/code.html` and `stitch/kala_studio_options_engineering_drawer_wireframe_sheet/code.html`. Look at the screen.png files if your tools can view images. Take the night tokens from `stitch/kala_studio_master_engineering_design_workbench_night_slate/code.html`.
+3. Theme: CSS custom properties for the `vellum` and `slate` themes on `[data-theme]` on the root, plus local fonts. Split CSS into `styles/tokens.css`, `styles/base.css`, and `styles/layout.css`, and keep or trim `studio.css` for component styles that still apply. Remove dead old-layout CSS.
+4. Layout: rewrite `AppShell` into the 4-zone grid from WAVE.md. Left: `ChatPanel`. Center: `DraftingSheet` stub with a `BottomBar` underneath. Right: `AuxView` stub on top and `JournalPanel` stub below. Keep `BootGate` wrapping, and make its connection screen use the vellum look (drafted card like Options card 04). Exactly one `SceneCanvas` is mounted at any time: the DraftingSheet stub should render the existing `SceneCanvas` with the current props so the app is fully functional after P1.
+5. `BottomBar` (48px). Left: 2D Pencil/3D Clay switch, Grid, Axes, Dims, Section A-A, Reset View, all wired to real store/viewport state. Center: mono readout of envelope, volume, and area from the real nominal estimate or server preview, with the source labelled (local estimate / server) and "—" when unknown. Right: Export STEP (opens the drawer at card 02, or triggers the existing export flow if that is simple and safe), FreeCAD status pill (real integration status only), and ⚙ Options.
+6. `OptionsDrawer` modal with 4 drafted cards that reuse the existing Inspector, ExportPanel + IntegrationsPanel, ProviderPanel, and connection info/retry. Restyle those panels to the drawer look: Vernier-style numeric inputs and ruler sliders, stamped status boxes, and the honest footnote "Closed-form nominal geometry for sizing & handoff. Not a certified FEA solver result." Add a theme switch (Vellum/Slate) inside the drawer. Esc closes, focus is trapped and returned, `role=dialog`, `aria-modal`.
+7. Store contract additions from WAVE.md (renderMode, auxView, showSection, optionsOpen, theme, bounded journal with real appenders). Journal cap is 500 entries, oldest dropped first. Add unit tests.
+8. Stubs with FINAL exported prop interfaces, each with a doc comment saying "P2 owns the visual implementation":
+   - `components/drafting/DraftingSheet.tsx`: receives what SceneCanvas needs plus renderMode, showSection, a part label/title-block data object, and units. Renders SceneCanvas inside a simple sheet frame for now.
+   - `components/drafting/AuxView.tsx`: receives auxView, an onAuxViewChange callback, primitive kind, parameters, and bounds. Renders tab headers and placeholder text.
+   - `components/journal/JournalPanel.tsx`: receives journal entries plus connection/hash-chain status (`'unknown'` unless the backend actually reports it). Renders a plain list.
+9. Gates: `npm run typecheck && npm test && npm run build`, all green. Update old-layout assertions and add tests for BottomBar toggles, the OptionsDrawer (open/Esc/focus return), theme switch, and journal appenders.
+
+## Report
+Write `/home/v9i/Projects/Kala-Agent/.mece/waves/vellum-ui-20261019/cells/shell/REPORT.md`. Include the exact final prop interfaces of the three stubs and the store field names and selectors, because P2 workers build against them. Also include files changed, gate results (counts), and known gaps.

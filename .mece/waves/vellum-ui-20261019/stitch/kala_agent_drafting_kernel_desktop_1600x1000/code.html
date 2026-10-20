@@ -1,0 +1,908 @@
+<!DOCTYPE html><html lang="en"><head></head><body class="w-[1600px] h-[1000px] mx-auto my-auto relative flex flex-col p-2 box-border"><svg class="inline-defs-container" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"></svg>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kala Agent // Drafting Kernel Desktop</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&amp;family=Instrument+Serif:ital@0;1&amp;family=JetBrains+Mono:wght@300;400;500;600;700&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --vellum-canvas: #F4F1EA;
+      --vellum-card: #EAE5D9;
+      --graphite-dock: #1E1E1C;
+      --lead-4b: #181816;
+      --lead-hb: #4A4843;
+      --lead-2h: #B5AFA2;
+      --border-ruled: #C8C2B4;
+      --eng-blue: #2B5B84;
+      --vermilion: #C84B31;
+      --forest-ink: #2E6F40;
+    }
+
+    body {
+      background-color: #121211;
+      color: var(--lead-4b);
+      font-family: 'Space Grotesk', -apple-system, sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .font-mono-tech {
+      font-family: 'JetBrains Mono', 'Courier Prime', monospace;
+    }
+
+    .font-serif-drafting {
+      font-family: 'Instrument Serif', 'Newsreader', serif;
+    }
+
+    /* 5mm tactile 2H grid background */
+    .drafting-grid-pattern {
+      background-color: var(--vellum-canvas);
+      background-image: 
+        linear-gradient(to right, rgba(181, 175, 162, 0.28) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(181, 175, 162, 0.28) 1px, transparent 1px),
+        linear-gradient(to right, rgba(181, 175, 162, 0.55) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(181, 175, 162, 0.55) 1px, transparent 1px);
+      background-size: 20px 20px, 20px 20px, 100px 100px, 100px 100px;
+    }
+
+    /* Tactile Paper Grain Simulation */
+    .vellum-grain {
+      background-image: radial-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 0);
+      background-size: 4px 4px;
+    }
+
+    /* Stencil corner ticks */
+    .crosshair-corner {
+      position: relative;
+    }
+    .crosshair-corner::before {
+      content: '+';
+      position: absolute;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--lead-2h);
+      line-height: 1;
+    }
+
+    /* Vernier slide-rule styling */
+    .vernier-track {
+      background: repeating-linear-gradient(
+        90deg,
+        var(--lead-2h) 0,
+        var(--lead-2h) 1px,
+        transparent 1px,
+        transparent 5px
+      );
+    }
+    .vernier-track-major {
+      background: repeating-linear-gradient(
+        90deg,
+        var(--lead-hb) 0,
+        var(--lead-hb) 1px,
+        transparent 1px,
+        transparent 25px
+      );
+    }
+
+    /* Ruled paper lines */
+    .ruled-subtle-border {
+      border-color: var(--border-ruled);
+    }
+
+    /* Custom thin scrollbars */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--lead-2h);
+    }
+  </style>
+
+
+
+  <!-- ========================================== -->
+  <!-- ISO/DIN SHEET BORDER & COORDINATE MARGINS  -->
+  <!-- ========================================== -->
+  <div class="relative w-full h-full flex flex-col bg-[#1E1E1C] border-[2px] border-[#383733] shadow-2xl overflow-hidden">
+    
+    <!-- Coordinate Top Strip (1-8) -->
+    <div class="h-5 bg-[#181816] border-b border-[#32312D] flex items-center justify-between px-10 text-[9px] font-mono-tech text-[#88837A] tracking-widest uppercase">
+      <div class="flex items-center space-x-2 text-[#5E5B55]">
+        <span>ISO 5457 // FORMAT: A0 SURROGATE</span>
+        <span>•</span>
+        <span>PROJECTION: THIRD ANGLE</span>
+      </div>
+      <div class="flex-1 grid grid-cols-8 text-center px-12 text-[#9A958C] font-semibold">
+        <span>1</span>
+        <span>2</span>
+        <span>3</span>
+        <span>4</span>
+        <span>5</span>
+        <span>6</span>
+        <span>7</span>
+        <span>8</span>
+      </div>
+      <div class="flex items-center space-x-3 text-[#5E5B55]">
+        <span>CALIPER: ±0.012mm</span>
+        <span>SCALE: 1:1 METRIC</span>
+      </div>
+    </div>
+
+    <!-- Main Container with Left & Right Coordinate Ribbons -->
+    <div class="flex-1 flex overflow-hidden relative">
+
+      <!-- Left Coordinate Ribbon (A-F) -->
+      <div class="w-5 bg-[#181816] border-r border-[#32312D] flex flex-col justify-around items-center text-[9px] font-mono-tech text-[#9A958C] font-semibold py-6">
+        <span>A</span>
+        <span>B</span>
+        <span>C</span>
+        <span>D</span>
+        <span>E</span>
+        <span>F</span>
+      </div>
+
+      <!-- INNER WORKBENCH APPLICATION FRAME -->
+      <div class="flex-1 flex flex-col overflow-hidden bg-[#F4F1EA]">
+
+        <!-- ==================================================== -->
+        <!-- ZONE 1: TOP DRAFTING HEADER & DISCIPLINE SWITCHER   -->
+        <!-- ==================================================== -->
+        <header class="h-12 bg-[#1E1E1C] text-[#F4F1EA] border-b border-[#32312D] flex items-center justify-between px-3 select-none z-30">
+          
+          <!-- Left: Logo & Active Sheet -->
+          <div class="flex items-center space-x-3">
+            <!-- Minimalist Compass & Graphite Lead Emblem -->
+            <div class="w-7 h-7 border border-[#4A4843] bg-[#282825] flex items-center justify-center relative">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F4F1EA" stroke-width="1.5" stroke-linecap="square">
+                <!-- Compass arms -->
+                <path d="M12 2L4 21"></path>
+                <path d="M12 2L20 21"></path>
+                <!-- Center hinge & pencil needle -->
+                <circle cx="12" cy="4" r="2" fill="#B5AFA2" stroke="none"></circle>
+                <line x1="8" y1="13" x2="16" y2="13" stroke="#B5AFA2" stroke-dasharray="2 1"></line>
+                <circle cx="4" cy="21" r="1" fill="#C84B31" stroke="none"></circle>
+                <rect x="18.5" y="19" width="3" height="3" fill="#F4F1EA" stroke="none"></rect>
+              </svg>
+            </div>
+            
+            <div class="flex flex-col">
+              <div class="flex items-center space-x-2">
+                <span class="font-mono-tech text-xs tracking-wider font-bold text-white">KALA</span>
+                <span class="text-[#55524C] font-mono-tech text-[10px]">//</span>
+                <span class="font-mono-tech text-[11px] text-[#C8C2B4] tracking-tight">DRAFTING KERNEL v0.1</span>
+              </div>
+              <div class="text-[9px] font-mono-tech text-[#88837A] tracking-tighter">
+                SHEET 01: mechanical-reference <span class="text-[#2B5B84]">(rev-r0)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Center: The 3 Discipline Roots Switcher (Physical Index Tabs) -->
+          <nav class="flex items-end h-full pt-1 space-x-1">
+            <!-- Tab 1: Mechanical (Active) -->
+            <button class="h-9 px-3.5 bg-[#F4F1EA] text-[#181816] border-t-2 border-t-[#C84B31] border-x border-x-[#C8C2B4] rounded-t-sm flex items-center space-x-2 font-mono-tech text-[10px] font-semibold shadow-sm transition-all relative top-[1px]">
+              <span class="w-1.5 h-1.5 bg-[#C84B31]"></span>
+              <span>01. MECHANICAL:</span>
+              <span class="text-[#4A4843] font-normal">Bracket Surrogate v0.1.0</span>
+              <span class="text-[8px] bg-[#2E6F40] text-white px-1 py-0.2 rounded-none tracking-tight font-bold">ACTIVE</span>
+            </button>
+
+            <!-- Tab 2: Aerospace -->
+            <button class="h-8 px-3 bg-[#282825] hover:bg-[#30302D] text-[#A6A095] border-t border-t-[#383733] border-x border-x-[#32312D] rounded-t-sm flex items-center space-x-1.5 font-mono-tech text-[10px] transition-colors">
+              <span class="text-[#5A5852]">02. AEROSPACE:</span>
+              <span class="text-[#88837A]">Tapered Wing Planform v0.1.0</span>
+            </button>
+
+            <!-- Tab 3: Architecture -->
+            <button class="h-8 px-3 bg-[#282825] hover:bg-[#30302D] text-[#A6A095] border-t border-t-[#383733] border-x border-x-[#32312D] rounded-t-sm flex items-center space-x-1.5 font-mono-tech text-[10px] transition-colors">
+              <span class="text-[#5A5852]">03. ARCHITECTURE:</span>
+              <span class="text-[#88837A]">Storey Envelope v0.1.0</span>
+            </button>
+          </nav>
+
+          <!-- Right: Local-First Residency & Sandbox Stamps -->
+          <div class="flex items-center space-x-2 text-[9px] font-mono-tech">
+            <span class="px-2 py-0.5 bg-[#121211] border border-[#32312D] text-[#B5AFA2] tracking-tighter flex items-center space-x-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#2E6F40] inline-block animate-pulse"></span>
+              <span>LOOPBACK: 127.0.0.1:8000</span>
+            </span>
+            <span class="px-2 py-0.5 bg-[#121211] border border-[#32312D] text-[#A6A095]">AIR-GAPPED: LocalModelClient</span>
+            <span class="px-1.5 py-0.5 bg-[#2E6F40]/20 border border-[#2E6F40] text-[#71C588] font-bold">EGRESS: SEALED</span>
+            <span class="px-1.5 py-0.5 bg-[#282825] border border-[#44423E] text-[#C8C2B4]">SANDBOX: PORTABLE</span>
+          </div>
+        </header>
+
+        <!-- MIDDLE THREE-COLUMN WORKSPACE -->
+        <div class="flex-1 flex overflow-hidden relative">
+
+          <!-- ==================================================== -->
+          <!-- ZONE 2: LEFT DOCK — CALCULATION SHEET & VERNIER      -->
+          <!-- ==================================================== -->
+          <aside class="w-[310px] bg-[#EAE5D9] border-r border-[#C8C2B4] flex flex-col justify-between overflow-hidden relative z-10 vellum-grain">
+            
+            <!-- Section Header -->
+            <div class="p-2.5 border-b border-[#C8C2B4] bg-[#E2DDCF] flex items-center justify-between">
+              <div class="flex items-center space-x-1.5">
+                <span class="text-[10px] font-mono-tech font-bold text-[#181816] tracking-wider uppercase">CALCULATION SHEET</span>
+                <span class="text-[9px] font-mono-tech text-[#7A756B]">// DIN 4000</span>
+              </div>
+              <span class="text-[9px] font-mono-tech text-[#2B5B84] bg-[#D7E3EC] px-1 py-0.5 border border-[#ADC3D4]">SEQ: RUN-01</span>
+            </div>
+
+            <!-- Top Section: Workflow Step Catalog -->
+            <div class="flex-1 p-3 overflow-y-auto space-y-2 border-b border-[#C8C2B4]">
+              <div class="text-[9px] font-mono-tech uppercase text-[#6E695F] font-bold tracking-widest flex items-center justify-between">
+                <span>EVALUATOR SEQUENCE</span>
+                <span class="text-[#2E6F40]">3/4 SATISFIED</span>
+              </div>
+
+              <!-- Step 1 -->
+              <div class="p-2 bg-[#F4F1EA] border border-[#C8C2B4] shadow-xs relative">
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center space-x-1.5">
+                    <span class="w-3.5 h-3.5 bg-[#2E6F40] text-white flex items-center justify-center text-[9px] font-mono-tech font-bold">✓</span>
+                    <span class="text-[10px] font-mono-tech font-bold text-[#181816]">1. geometry-check</span>
+                  </div>
+                  <span class="text-[8px] font-mono-tech text-[#2E6F40] bg-[#E6F0E9] px-1 border border-[#B9D9C0]">PASS</span>
+                </div>
+                <div class="mt-1 pl-5 text-[9px] font-mono-tech text-[#686359] flex items-center justify-between">
+                  <span>GeometryEvaluator</span>
+                  <span class="text-[#2B5B84] font-semibold">sha256:8f3a..c1</span>
+                </div>
+              </div>
+
+              <!-- Step 2 -->
+              <div class="p-2 bg-[#F4F1EA] border border-[#C8C2B4] shadow-xs relative">
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center space-x-1.5">
+                    <span class="w-3.5 h-3.5 bg-[#2E6F40] text-white flex items-center justify-center text-[9px] font-mono-tech font-bold">✓</span>
+                    <span class="text-[10px] font-mono-tech font-bold text-[#181816]">2. material-check</span>
+                  </div>
+                  <span class="text-[8px] font-mono-tech text-[#2E6F40] bg-[#E6F0E9] px-1 border border-[#B9D9C0]">PASS</span>
+                </div>
+                <div class="mt-1 pl-5 text-[9px] font-mono-tech text-[#686359] flex items-center justify-between">
+                  <span>MaterialEvaluator</span>
+                  <span class="text-[#2B5B84] font-semibold">sha256:4b12..e9</span>
+                </div>
+              </div>
+
+              <!-- Step 3 -->
+              <div class="p-2 bg-[#F4F1EA] border border-[#C8C2B4] shadow-xs relative">
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center space-x-1.5">
+                    <span class="w-3.5 h-3.5 bg-[#2E6F40] text-white flex items-center justify-center text-[9px] font-mono-tech font-bold">✓</span>
+                    <span class="text-[10px] font-mono-tech font-bold text-[#181816]">3. load-check</span>
+                  </div>
+                  <span class="text-[8px] font-mono-tech text-[#2E6F40] bg-[#E6F0E9] px-1 border border-[#B9D9C0]">PASS</span>
+                </div>
+                <div class="mt-1 pl-5 text-[9px] font-mono-tech text-[#686359] flex items-center justify-between">
+                  <span>LoadCaseEvaluator</span>
+                  <span class="text-[#2B5B84] font-semibold">sha256:9c04..a2</span>
+                </div>
+              </div>
+
+              <!-- Step 4 (Pending) -->
+              <div class="p-2 bg-[#FAF5E8] border-2 border-[#C84B31] shadow-xs relative">
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center space-x-1.5">
+                    <span class="w-3.5 h-3.5 bg-[#C84B31] text-white flex items-center justify-center text-[9px] font-mono-tech font-bold animate-pulse">!</span>
+                    <span class="text-[10px] font-mono-tech font-bold text-[#C84B31]">4. constraint-eval</span>
+                  </div>
+                  <span class="text-[8px] font-mono-tech text-[#C84B31] bg-[#FDEAE6] px-1 border border-[#F2BBB0] font-bold">PENDING</span>
+                </div>
+                <div class="mt-1 pl-5 text-[9px] font-mono-tech text-[#686359]">
+                  <div class="text-[#C84B31] font-semibold tracking-tight text-[8.5px]">AWAITING PRE_COMMIT STAMP</div>
+                  <div class="text-[#2B5B84] text-[8.5px] mt-0.5">sha256:2d77..f4</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bottom Section: Typed Parameter Specs & Vernier Caliper Scales -->
+            <div class="p-3 bg-[#E2DDCF] space-y-2.5">
+              <div class="flex items-center justify-between text-[9px] font-mono-tech uppercase font-bold text-[#4A4843]">
+                <span>TYPED PARAMETER MATRIX</span>
+                <span class="text-[#7A756B]">[VERNIER MODE]</span>
+              </div>
+
+              <!-- Parameter 1: Width -->
+              <div class="space-y-0.5">
+                <div class="flex justify-between text-[9px] font-mono-tech text-[#181816]">
+                  <span class="font-semibold">Bracket Width (W)</span>
+                  <span class="font-bold text-[#2B5B84]">120.00 mm</span>
+                </div>
+                <div class="h-3.5 w-full bg-[#F4F1EA] border border-[#C8C2B4] relative flex items-center px-1">
+                  <div class="absolute inset-0 vernier-track opacity-40"></div>
+                  <div class="w-1.5 h-4 bg-[#181816] absolute left-[65%] -top-[1px] shadow-sm"></div>
+                </div>
+              </div>
+
+              <!-- Parameter 2: Thickness -->
+              <div class="space-y-0.5">
+                <div class="flex justify-between text-[9px] font-mono-tech text-[#181816]">
+                  <span class="font-semibold">Flange Thickness (t)</span>
+                  <span class="font-bold text-[#2B5B84]">16.50 mm</span>
+                </div>
+                <div class="h-3.5 w-full bg-[#F4F1EA] border border-[#C8C2B4] relative flex items-center px-1">
+                  <div class="absolute inset-0 vernier-track opacity-40"></div>
+                  <div class="w-1.5 h-4 bg-[#181816] absolute left-[42%] -top-[1px] shadow-sm"></div>
+                </div>
+              </div>
+
+              <!-- Parameter 3: Hole Diameter -->
+              <div class="space-y-0.5">
+                <div class="flex justify-between text-[9px] font-mono-tech text-[#181816]">
+                  <span class="font-semibold">Bore Hole Dia (Ø)</span>
+                  <span class="font-bold text-[#2B5B84]">22.00 mm</span>
+                </div>
+                <div class="h-3.5 w-full bg-[#F4F1EA] border border-[#C8C2B4] relative flex items-center px-1">
+                  <div class="absolute inset-0 vernier-track opacity-40"></div>
+                  <div class="w-1.5 h-4 bg-[#181816] absolute left-[30%] -top-[1px] shadow-sm"></div>
+                </div>
+              </div>
+
+              <!-- Parameter 4: Applied Load -->
+              <div class="space-y-0.5">
+                <div class="flex justify-between text-[9px] font-mono-tech text-[#181816]">
+                  <span class="font-semibold">Applied Force (Fz)</span>
+                  <span class="font-bold text-[#C84B31]">4,500.00 N</span>
+                </div>
+                <div class="h-3.5 w-full bg-[#F4F1EA] border border-[#C8C2B4] relative flex items-center px-1">
+                  <div class="absolute inset-0 vernier-track opacity-40"></div>
+                  <div class="w-1.5 h-4 bg-[#C84B31] absolute left-[55%] -top-[1px] shadow-sm"></div>
+                </div>
+              </div>
+
+              <!-- Parameter 5: Yield Constant & Footnote -->
+              <div class="pt-1.5 border-t border-[#C8C2B4]">
+                <div class="flex justify-between text-[9px] font-mono-tech text-[#181816]">
+                  <span class="font-semibold">Yield Constant (σ_y)</span>
+                  <span class="font-bold text-[#2E6F40]">275.0 MPa</span>
+                </div>
+                <div class="text-[7.5px] font-mono-tech text-[#88837A] mt-0.5 italic">
+                  * footnote: illustrative-constant-not-certified
+                </div>
+              </div>
+
+            </div>
+          </aside>
+
+          <!-- ==================================================== -->
+          <!-- ZONE 3: CENTER CANVAS — VELLUM DRAFTING SHEET        -->
+          <!-- ==================================================== -->
+          <main class="flex-1 flex flex-col relative drafting-grid-pattern overflow-hidden">
+            
+            <!-- Top Watermark Stamp across top margin -->
+            <div class="h-7 bg-[#EFECE3]/90 border-b border-[#C8C2B4] flex items-center justify-center px-4 relative z-10 backdrop-blur-xs">
+              <div class="flex items-center space-x-2 text-[9px] font-mono-tech tracking-widest text-[#A8432C] font-bold border-x border-[#C84B31]/40 px-3">
+                <span class="inline-block w-2 h-2 border border-[#C84B31] text-center leading-none text-[7px]">!</span>
+                <span>NON-AUTHORITATIVE FINDING — SURROGATE REFERENCE ARITHMETIC ONLY (NOT CERTIFIED CAD/CAE)</span>
+                <span class="inline-block w-2 h-2 border border-[#C84B31] text-center leading-none text-[7px]">!</span>
+              </div>
+            </div>
+
+            <!-- Orthographic & Isometric Pencil-and-Ink Technical Drawing Area -->
+            <div class="flex-1 relative p-6 flex flex-col justify-between overflow-hidden">
+              
+              <!-- Crosshair corner ticks on drawing sheet -->
+              <div class="absolute top-2 left-2 text-[#9A958C] font-mono-tech text-xs select-none">+</div>
+              <div class="absolute top-2 right-2 text-[#9A958C] font-mono-tech text-xs select-none">+</div>
+              <div class="absolute bottom-2 left-2 text-[#9A958C] font-mono-tech text-xs select-none">+</div>
+              <div class="absolute bottom-2 right-2 text-[#9A958C] font-mono-tech text-xs select-none">+</div>
+
+              <!-- Main SVG Vector Technical Drawing (Multi-view + Isometric) -->
+              <div class="w-full h-full relative flex items-center justify-center">
+                
+                <svg viewBox="0 0 760 380" class="w-full h-full max-h-[380px]" style="filter: drop-shadow(0 1px 1px rgba(0,0,0,0.05));">
+                  <!-- Hatching definitions for cut section -->
+                  <defs>
+                    <pattern id="section-hatch" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+                      <line x1="0" y1="0" x2="0" y2="8" stroke="#7A756B" stroke-width="0.8"></line>
+                    </pattern>
+                    <pattern id="light-hatch" width="4" height="4" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+                      <line x1="0" y1="0" x2="0" y2="4" stroke="#B5AFA2" stroke-width="0.5"></line>
+                    </pattern>
+                  </defs>
+
+                  <!-- 2H Centerlines (Dash-dot) -->
+                  <g stroke="#B5AFA2" stroke-width="0.8" stroke-dasharray="16,3,3,3">
+                    <line x1="40" y1="180" x2="360" y2="180"></line>
+                    <line x1="180" y1="40" x2="180" y2="320"></line>
+                    <line x1="430" y1="180" x2="720" y2="180"></line>
+                  </g>
+
+                  <!-- ============================================== -->
+                  <!-- VIEW 1: FRONT ELEVATION / CUT SECTION A-A      -->
+                  <!-- ============================================== -->
+                  <g id="front-elevation">
+                    <!-- Cut cross section with 45 deg hatching -->
+                    <rect x="70" y="80" width="220" height="40" fill="url(#section-hatch)" stroke="#181816" stroke-width="1.8"></rect>
+                    <!-- Vertical bracket column -->
+                    <polygon points="120,120 120,240 240,240 240,120" fill="#F4F1EA" stroke="#181816" stroke-width="1.8"></polygon>
+                    <!-- Bore Hole through section (hidden / cut lines) -->
+                    <rect x="160" y="80" width="40" height="40" fill="#F4F1EA" stroke="#181816" stroke-width="1.8"></rect>
+                    <line x1="160" y1="80" x2="160" y2="120" stroke="#C84B31" stroke-width="1.2" stroke-dasharray="4,2"></line>
+                    <line x1="200" y1="80" x2="200" y2="120" stroke="#C84B31" stroke-width="1.2" stroke-dasharray="4,2"></line>
+
+                    <!-- Base mounting flange -->
+                    <rect x="90" y="240" width="180" height="30" fill="url(#section-hatch)" stroke="#181816" stroke-width="1.8"></rect>
+                    
+                    <!-- Gusset ribs (4B line weight) -->
+                    <line x1="70" y1="120" x2="120" y2="240" stroke="#181816" stroke-width="1.5"></line>
+                    <line x1="290" y1="120" x2="240" y2="240" stroke="#181816" stroke-width="1.5"></line>
+
+                    <!-- Dimension Lines (HB Lead + Prussian Blue ink callouts) -->
+                    <!-- Width Callout W=120.00 -->
+                    <g stroke="#2B5B84" stroke-width="1">
+                      <!-- Extension lines -->
+                      <line x1="70" y1="70" x2="70" y2="55"></line>
+                      <line x1="290" y1="70" x2="290" y2="55"></line>
+                      <!-- Dimension line with arrows -->
+                      <line x1="70" y1="60" x2="290" y2="60"></line>
+                      <!-- Arrowheads -->
+                      <polygon points="70,60 76,58 76,62" fill="#2B5B84"></polygon>
+                      <polygon points="290,60 284,58 284,62" fill="#2B5B84"></polygon>
+                    </g>
+                    <text x="180" y="54" fill="#2B5B84" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="bold" text-anchor="middle">W = 120.00 mm</text>
+
+                    <!-- Thickness Callout t=16.50 -->
+                    <g stroke="#2B5B84" stroke-width="1">
+                      <line x1="45" y1="80" x2="65" y2="80"></line>
+                      <line x1="45" y1="120" x2="65" y2="120"></line>
+                      <line x1="50" y1="80" x2="50" y2="120"></line>
+                      <polygon points="50,80 48,86 52,86" fill="#2B5B84"></polygon>
+                      <polygon points="50,120 48,114 52,114" fill="#2B5B84"></polygon>
+                    </g>
+                    <text x="38" y="104" fill="#2B5B84" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="bold" text-anchor="end">t = 16.50</text>
+
+                    <!-- Hole Callout Leader -->
+                    <polyline points="180,100 215,80 260,80" fill="none" stroke="#2B5B84" stroke-width="1"></polyline>
+                    <circle cx="180" cy="100" r="2" fill="#2B5B84"></circle>
+                    <text x="265" y="83" fill="#2B5B84" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="bold">Ø 22.00 BORE [THRU]</text>
+
+                    <!-- View Label -->
+                    <text x="180" y="300" fill="#181816" font-family="'Space Grotesk', sans-serif" font-size="11" font-weight="bold" text-anchor="middle" letter-spacing="1">ELEVATION / SECTION A-A</text>
+                  </g>
+
+                  <!-- ============================================== -->
+                  <!-- VIEW 2: ISOMETRIC AXONOMETRIC PENCIL PROJECTION -->
+                  <!-- ============================================== -->
+                  <g id="isometric-projection" transform="translate(430, 40)">
+                    <!-- Isometric 30-degree isometric block geometry -->
+                    <!-- Top flange surface -->
+                    <polygon points="120,40 220,95 140,140 40,85" fill="#EAE5D9" stroke="#181816" stroke-width="1.8"></polygon>
+                    <!-- Ellipse hole in isometric plane -->
+                    <ellipse cx="130" cy="90" rx="28" ry="14" fill="#F4F1EA" stroke="#181816" stroke-width="1.5"></ellipse>
+                    <!-- Right front face -->
+                    <polygon points="140,140 220,95 220,115 140,160" fill="#DCD7CA" stroke="#181816" stroke-width="1.5"></polygon>
+                    <!-- Left front face -->
+                    <polygon points="40,85 140,140 140,160 40,105" fill="#C8C2B4" stroke="#181816" stroke-width="1.5"></polygon>
+
+                    <!-- Supporting vertical column -->
+                    <polygon points="90,145 170,145 170,225 90,225" fill="#E2DDCF" stroke="#181816" stroke-width="1.8"></polygon>
+                    <!-- Lower pedestal -->
+                    <polygon points="60,225 200,225 240,250 100,250" fill="#EAE5D9" stroke="#181816" stroke-width="1.8"></polygon>
+                    <polygon points="60,225 60,245 100,270 100,250" fill="#B5AFA2" stroke="#181816" stroke-width="1.5"></polygon>
+                    <polygon points="100,270 240,270 240,250 100,250" fill="#C8C2B4" stroke="#181816" stroke-width="1.5"></polygon>
+
+                    <!-- Applied Vector Force Fz Callout in Vermilion -->
+                    <g stroke="#C84B31" stroke-width="2">
+                      <line x1="130" y1="20" x2="130" y2="75"></line>
+                      <polygon points="130,85 125,72 135,72" fill="#C84B31"></polygon>
+                    </g>
+                    <text x="140" y="35" fill="#C84B31" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="bold">Fz = 4,500 N [DOWN]</text>
+
+                    <!-- View Label -->
+                    <text x="140" y="295" fill="#181816" font-family="'Space Grotesk', sans-serif" font-size="11" font-weight="bold" text-anchor="middle" letter-spacing="1">ISOMETRIC SURROGATE</text>
+                  </g>
+
+                  <!-- Real-time Mathematical Readout Callouts -->
+                  <g id="analytical-callouts" transform="translate(60, 320)">
+                    <rect x="0" y="0" width="360" height="42" fill="#FAF7F0" stroke="#C8C2B4" stroke-width="1"></rect>
+                    <text x="12" y="18" fill="#181816" font-family="'JetBrains Mono', monospace" font-size="8.5" font-weight="bold">SURROGATE GEOMETRIC STATE:</text>
+                    <text x="12" y="32" fill="#2B5B84" font-family="'JetBrains Mono', monospace" font-size="8.5">
+                      area: <tspan font-weight="bold">1,842.5 mm²</tspan> | vol: <tspan font-weight="bold">72,480 mm³</tspan>
+                    </text>
+                    <text x="195" y="32" fill="#4A4843" font-family="'JetBrains Mono', monospace" font-size="8.5">
+                      σ_bend: <tspan font-weight="bold" fill="#181816">84.2 MPa</tspan> (Z: 14.2cm³)
+                    </text>
+                  </g>
+                </svg>
+              </div>
+
+              <!-- ==================================================== -->
+              <!-- TOP-RIGHT PINNED TRACING CARD (FreeCAD Bridge)       -->
+              <!-- ==================================================== -->
+              <div class="absolute top-4 right-4 w-[280px] bg-[#FAF8F2]/95 border-2 border-dashed border-[#B5AFA2] p-3 shadow-md backdrop-blur-xs select-none z-20">
+                <!-- Pushpin graphic -->
+                <div class="absolute -top-2 -left-2 w-4 h-4 rounded-full bg-[#C84B31] border border-white flex items-center justify-center text-[7px] text-white font-bold shadow-xs">
+                  •
+                </div>
+
+                <div class="flex items-center justify-between pb-1.5 border-b border-[#C8C2B4]">
+                  <div class="flex items-center space-x-1.5">
+                    <span class="text-[9px] font-mono-tech font-bold text-[#181816]">kala-agent-freecad</span>
+                    <span class="text-[8px] bg-[#D7E3EC] text-[#2B5B84] px-1 py-0.2 border border-[#B5CAD8] font-mono-tech">v1.1.3 Bridge</span>
+                  </div>
+                  <span class="text-[8px] text-[#2E6F40] font-mono-tech font-bold">ONLINE</span>
+                </div>
+
+                <div class="mt-2 space-y-1.5 font-mono-tech">
+                  <div class="flex items-center justify-between text-[8.5px]">
+                    <span class="text-[#4A4843]">cad.freecad-geometry:</span>
+                    <span class="text-[#2E6F40] font-bold">1.0.0 READY</span>
+                  </div>
+
+                  <!-- Export Stamps -->
+                  <div class="flex items-center space-x-1 pt-0.5">
+                    <span class="text-[8px] text-[#7A756B]">STAMP EXPORTS:</span>
+                    <span class="px-1 py-0.2 bg-[#EAE5D9] border border-[#C8C2B4] text-[8px] font-bold text-[#181816]">.STEP</span>
+                    <span class="px-1 py-0.2 bg-[#EAE5D9] border border-[#C8C2B4] text-[8px] font-bold text-[#181816]">.IGES</span>
+                    <span class="px-1 py-0.2 bg-[#EAE5D9] border border-[#C8C2B4] text-[8px] font-bold text-[#181816]">.FCStd</span>
+                  </div>
+                  <div class="text-[7.5px] text-[#7A756B] tracking-tight">CLASS: DESIGN_BINARY (CAS-RESOLVED)</div>
+
+                  <!-- Honest Status Stamp -->
+                  <div class="pt-1.5 border-t border-[#C8C2B4]">
+                    <div class="flex items-center justify-between text-[8px]">
+                      <span class="text-[#4A4843]">cad.freecad-fem:</span>
+                      <span class="text-[#7A756B]">1.0.0</span>
+                    </div>
+                    <div class="mt-0.5 p-1 bg-[#F5EBE8] border border-[#E8B5AB] text-[#C84B31] text-[7.5px] font-bold leading-tight">
+                      STATUS: SOLVER_UNAVAILABLE<br>
+                      <span class="font-normal text-[#8A301E]">(CalculiX ccx not present on host machine)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ==================================================== -->
+              <!-- BOTTOM-RIGHT CORNER: TITLE BLOCK & PRE_COMMIT GATE   -->
+              <!-- ==================================================== -->
+              <div class="absolute bottom-3 right-3 w-[460px] bg-[#FAF8F2] border-2 border-[#181816] shadow-lg select-none z-20">
+                
+                <!-- Title Block Header Bar -->
+                <div class="bg-[#181816] text-[#F4F1EA] px-2.5 py-1 flex items-center justify-between font-mono-tech text-[9px]">
+                  <div class="flex items-center space-x-2">
+                    <span class="font-bold tracking-wider">DIN 6771 // TITLE BLOCK</span>
+                    <span class="text-[#88837A]">•</span>
+                    <span class="text-[#C84B31] font-bold">PRE_COMMIT CHECKPOINT</span>
+                  </div>
+                  <span class="bg-[#C84B31] text-white px-1.5 py-0.2 text-[8px] font-bold animate-pulse">WAITING_FOR_APPROVAL</span>
+                </div>
+
+                <!-- Grid of Title Block Cells -->
+                <div class="grid grid-cols-2 divide-x divide-y divide-[#181816] border-b border-[#181816] font-mono-tech text-[8.5px]">
+                  
+                  <!-- Cell 1: Checkpoint & Status -->
+                  <div class="p-2 bg-[#F4F1EA]">
+                    <div class="text-[#7A756B] text-[7.5px] uppercase font-bold">CHECKPOINT ID</div>
+                    <div class="font-bold text-[#181816] mt-0.5">PRE_COMMIT (req-902a)</div>
+                    <div class="text-[7.5px] text-[#C84B31] mt-0.5 font-bold">LOCK STATE: GATEWAY_HOLD</div>
+                  </div>
+
+                  <!-- Cell 2: Discipline & Spec -->
+                  <div class="p-2 bg-[#F4F1EA]">
+                    <div class="text-[#7A756B] text-[7.5px] uppercase font-bold">SPECIFICATION</div>
+                    <div class="font-bold text-[#181816] mt-0.5">8402-AE // BRACKET-01</div>
+                    <div class="text-[7.5px] text-[#2E6F40] mt-0.5 font-bold">MATERIAL: Ti-6Al-4V GRADE 5</div>
+                  </div>
+
+                  <!-- Cell 3: State Digest -->
+                  <div class="p-2 bg-[#F4F1EA]">
+                    <div class="text-[#7A756B] text-[7.5px] uppercase font-bold">STATE DIGEST</div>
+                    <div class="text-[#2B5B84] font-bold truncate mt-0.5">sha256:7a91e3...44b8</div>
+                    <span class="inline-block mt-0.5 px-1 py-0.2 bg-[#E1EBE2] text-[#2E6F40] text-[7px] font-bold border border-[#A7CEAD]">[VERIFIED MERKLE ROOT]</span>
+                  </div>
+
+                  <!-- Cell 4: Action Digest -->
+                  <div class="p-2 bg-[#F4F1EA]">
+                    <div class="text-[#7A756B] text-[7.5px] uppercase font-bold">ACTION DIGEST</div>
+                    <div class="text-[#2B5B84] font-bold truncate mt-0.5">sha256:3c10f8...91d2</div>
+                    <span class="inline-block mt-0.5 px-1 py-0.2 bg-[#E1EBE2] text-[#2E6F40] text-[7px] font-bold border border-[#A7CEAD]">[DETERMINISTIC EVAL]</span>
+                  </div>
+
+                </div>
+
+                <!-- Signature & Seal Box (Engineer Sign-off & Stamp Buttons) -->
+                <div class="p-2.5 bg-[#EAE5D9] flex flex-col space-y-2">
+                  <div class="flex items-center space-x-2">
+                    <label class="text-[8px] font-mono-tech text-[#4A4843] uppercase font-bold whitespace-nowrap">Sign-off Authority:</label>
+                    <input type="text" value="LEAD_ENGINEER_4B // CALIPER_HSM" readonly="" class="flex-1 bg-[#F4F1EA] border border-[#C8C2B4] px-2 py-0.5 text-[8.5px] font-mono-tech text-[#181816] font-semibold focus:outline-none">
+                  </div>
+
+                  <!-- Stamp Actions -->
+                  <div class="grid grid-cols-2 gap-2 pt-0.5">
+                    <!-- Bold Vermilion Stamp Button -->
+                    <button class="h-8 bg-[#C84B31] hover:bg-[#B33F27] text-white border-2 border-[#942C17] flex items-center justify-center space-x-1.5 shadow-sm active:translate-y-0.5 transition-all">
+                      <!-- Wax/Lead stamp icon -->
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 6v6l4 2"></path>
+                      </svg>
+                      <span class="font-mono-tech text-[9px] font-bold tracking-tight uppercase">STAMP &amp; COMMIT REVISION</span>
+                    </button>
+
+                    <!-- Dark Charcoal Reject Button -->
+                    <button class="h-8 bg-[#181816] hover:bg-[#282825] text-[#C8C2B4] border border-[#383733] flex items-center justify-center space-x-1 shadow-sm active:translate-y-0.5 transition-all">
+                      <span class="font-mono-tech text-[9px] font-bold tracking-tight uppercase">REJECT &amp; STRIKE</span>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          </main>
+
+          <!-- ==================================================== -->
+          <!-- ZONE 4: RIGHT DOCK — BUDGET SCALE & CAPABILITIES     -->
+          <!-- ==================================================== -->
+          <aside class="w-[300px] bg-[#EAE5D9] border-l border-[#C8C2B4] flex flex-col justify-between overflow-hidden relative z-10 vellum-grain">
+            
+            <!-- Section Header -->
+            <div class="p-2.5 border-b border-[#C8C2B4] bg-[#E2DDCF] flex items-center justify-between">
+              <div class="flex items-center space-x-1.5">
+                <span class="text-[10px] font-mono-tech font-bold text-[#181816] tracking-wider uppercase">RESOURCE REGISTRY</span>
+                <span class="text-[9px] font-mono-tech text-[#7A756B]">// RUN_BUDGET</span>
+              </div>
+              <span class="text-[8px] font-mono-tech text-[#2E6F40] font-bold">HARD_LIMITS</span>
+            </div>
+
+            <!-- Section A: 7-Dimension RunBudget Scales -->
+            <div class="flex-1 p-3 overflow-y-auto space-y-2 border-b border-[#C8C2B4]">
+              <div class="text-[9px] font-mono-tech uppercase text-[#6E695F] font-bold tracking-widest flex items-center justify-between">
+                <span>7-DIMENSION SLIDE-RULES</span>
+                <span class="text-[8px] text-[#7A756B]">RESERVED vs LIMIT</span>
+              </div>
+
+              <!-- Gauge 1: Model Calls -->
+              <div class="p-1.5 bg-[#F4F1EA] border border-[#C8C2B4]">
+                <div class="flex justify-between text-[8.5px] font-mono-tech">
+                  <span class="text-[#4A4843]">1. Model Calls</span>
+                  <span class="font-bold text-[#181816]">0 / 32</span>
+                </div>
+                <div class="h-2 w-full bg-[#E2DDCF] mt-1 relative overflow-hidden border border-[#C8C2B4]">
+                  <div class="h-full bg-[#2B5B84] w-[4%]"></div>
+                </div>
+              </div>
+
+              <!-- Gauge 2: Tool Calls -->
+              <div class="p-1.5 bg-[#F4F1EA] border border-[#C8C2B4]">
+                <div class="flex justify-between text-[8.5px] font-mono-tech">
+                  <span class="text-[#4A4843]">2. Tool Calls</span>
+                  <span class="font-bold text-[#2B5B84]">1 / 64</span>
+                </div>
+                <div class="h-2 w-full bg-[#E2DDCF] mt-1 relative overflow-hidden border border-[#C8C2B4]">
+                  <div class="h-full bg-[#2B5B84] w-[2%]"></div>
+                </div>
+              </div>
+
+              <!-- Gauge 3: Tokens -->
+              <div class="p-1.5 bg-[#F4F1EA] border border-[#C8C2B4]">
+                <div class="flex justify-between text-[8.5px] font-mono-tech">
+                  <span class="text-[#4A4843]">3. Context Tokens</span>
+                  <span class="font-bold text-[#181816]">0 / 100k</span>
+                </div>
+                <div class="h-2 w-full bg-[#E2DDCF] mt-1 relative overflow-hidden border border-[#C8C2B4]">
+                  <div class="h-full bg-[#2B5B84] w-[0%]"></div>
+                </div>
+              </div>
+
+              <!-- Gauge 4: Artifact Bytes -->
+              <div class="p-1.5 bg-[#F4F1EA] border border-[#C8C2B4]">
+                <div class="flex justify-between text-[8.5px] font-mono-tech">
+                  <span class="text-[#4A4843]">4. Artifact Bytes</span>
+                  <span class="font-bold text-[#181816]">48 KB / 1.0 GB</span>
+                </div>
+                <div class="h-2 w-full bg-[#E2DDCF] mt-1 relative overflow-hidden border border-[#C8C2B4]">
+                  <div class="h-full bg-[#2B5B84] w-[1%]"></div>
+                </div>
+              </div>
+
+              <!-- Gauge 5: Duration -->
+              <div class="p-1.5 bg-[#F4F1EA] border border-[#C8C2B4]">
+                <div class="flex justify-between text-[8.5px] font-mono-tech">
+                  <span class="text-[#4A4843]">5. Wall Duration</span>
+                  <span class="font-bold text-[#181816]">1.4s / 3600s</span>
+                </div>
+                <div class="h-2 w-full bg-[#E2DDCF] mt-1 relative overflow-hidden border border-[#C8C2B4]">
+                  <div class="h-full bg-[#2E6F40] w-[1%]"></div>
+                </div>
+              </div>
+
+              <!-- Gauge 6: Cost -->
+              <div class="p-1.5 bg-[#F4F1EA] border border-[#C8C2B4]">
+                <div class="flex justify-between text-[8.5px] font-mono-tech">
+                  <span class="text-[#4A4843]">6. Run Cost</span>
+                  <span class="font-bold text-[#2E6F40]">$0.0000 USD</span>
+                </div>
+                <div class="h-2 w-full bg-[#E2DDCF] mt-1 relative overflow-hidden border border-[#C8C2B4]">
+                  <div class="h-full bg-[#2E6F40] w-[0%]"></div>
+                </div>
+              </div>
+
+              <!-- Gauge 7: Replanning -->
+              <div class="p-1.5 bg-[#F4F1EA] border border-[#C8C2B4]">
+                <div class="flex justify-between text-[8.5px] font-mono-tech">
+                  <span class="text-[#4A4843]">7. Replanning Retries</span>
+                  <span class="font-bold text-[#181816]">0 / 3 MAX</span>
+                </div>
+                <div class="h-2 w-full bg-[#E2DDCF] mt-1 relative overflow-hidden border border-[#C8C2B4]">
+                  <div class="h-full bg-[#2B5B84] w-[0%]"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section B: Policy & Capability Seals -->
+            <div class="p-3 bg-[#E2DDCF] space-y-2">
+              <div class="text-[9px] font-mono-tech uppercase font-bold text-[#4A4843] flex items-center justify-between">
+                <span>SECURITY CAPABILITY SEALS</span>
+                <span class="text-[7.5px] text-[#7A756B]">SANDBOX-ENFORCED</span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-1.5 font-mono-tech text-[8px]">
+                <!-- Tag 1 -->
+                <div class="p-1 bg-[#F4F1EA] border border-[#C8C2B4] flex items-center justify-between">
+                  <span class="text-[#181816] font-semibold">artifact.read/write</span>
+                  <span class="text-[#2E6F40] font-bold">ALLOW</span>
+                </div>
+
+                <!-- Tag 2 -->
+                <div class="p-1 bg-[#F4F1EA] border border-[#C8C2B4] flex items-center justify-between">
+                  <span class="text-[#181816] font-semibold">design.read/write</span>
+                  <span class="text-[#2E6F40] font-bold">ALLOW</span>
+                </div>
+
+                <!-- Tag 3 -->
+                <div class="p-1 bg-[#F4F1EA] border border-[#C8C2B4] flex items-center justify-between">
+                  <span class="text-[#181816] font-semibold">tool.execute</span>
+                  <span class="text-[#2E6F40] font-bold">ALLOW</span>
+                </div>
+
+                <!-- Tag 4: Crossed-out Red Seal -->
+                <div class="p-1 bg-[#FBEBE8] border-2 border-[#C84B31] relative overflow-hidden flex items-center justify-between">
+                  <span class="text-[#C84B31] font-bold line-through">model.egress</span>
+                  <span class="text-[#C84B31] font-extrabold">DENIED</span>
+                  <!-- Stamped strike mark -->
+                  <div class="absolute inset-0 border-t border-b border-[#C84B31] rotate-12 pointer-events-none opacity-40"></div>
+                </div>
+              </div>
+
+              <!-- HSM Fingerprint Signature -->
+              <div class="p-1.5 bg-[#FAF8F2] border border-[#C8C2B4] font-mono-tech text-[7.5px] text-[#7A756B] space-y-0.5">
+                <div class="text-[#181816] font-bold">HARDWARE ATTESTATION: YubiKey 5 FIPS</div>
+                <div class="truncate text-[#2B5B84]">SLOT 9A: 9B04 F621 82CD 11A9 E355</div>
+              </div>
+            </div>
+
+          </aside>
+
+        </div>
+
+        <!-- ==================================================== -->
+        <!-- ZONE 5: BOTTOM DRAWER — ARCHIVAL EVENT JOURNAL & CAS -->
+        <!-- ==================================================== -->
+        <footer class="h-[150px] bg-[#1E1E1C] border-t-2 border-[#383733] text-[#F4F1EA] flex flex-col overflow-hidden select-none z-30">
+          
+          <!-- Journal Header Bar -->
+          <div class="h-6 bg-[#161614] border-b border-[#2C2B28] px-4 flex items-center justify-between text-[9px] font-mono-tech">
+            <div class="flex items-center space-x-3 text-[#B5AFA2]">
+              <span class="font-bold text-white tracking-wider uppercase">ARCHIVAL EVENT JOURNAL &amp; CAS LEDGER</span>
+              <span class="text-[#55524C]">//</span>
+              <span class="text-[#2B5B84] font-bold">SQLITE v2 IMMUTABLE HASH-CHAIN</span>
+              <span class="text-[#55524C]">•</span>
+              <span class="text-[#71C588]">STATUS: UNBROKEN TOPOLOGICAL AUDIT (SEQ #01 → #20)</span>
+            </div>
+            <div class="flex items-center space-x-3 text-[8.5px] text-[#88837A]">
+              <span>PAGE: 01 OF 01</span>
+              <span>•</span>
+              <span class="text-[#C8C2B4]">ENCRYPTION: HARD-SECURED</span>
+            </div>
+          </div>
+
+          <!-- Ruled Journal Table (Monospace ledger entries) -->
+          <div class="flex-1 overflow-x-auto overflow-y-auto font-mono-tech text-[9px] p-2 divide-y divide-[#262522]">
+            
+            <!-- Table Header -->
+            <div class="grid grid-cols-12 text-[#7A756B] pb-1 uppercase tracking-tight text-[8px] font-bold px-2">
+              <span class="col-span-1">SEQ</span>
+              <span class="col-span-2">TIMESTAMP (UTC)</span>
+              <span class="col-span-2">EVENT TYPE</span>
+              <span class="col-span-4">PAYLOAD &amp; MUTATION DESCRIPTOR</span>
+              <span class="col-span-2">SHA-256 CAS DIGEST</span>
+              <span class="col-span-1 text-right">CHAIN STATE</span>
+            </div>
+
+            <!-- Ledger Row 20 (Most Recent) -->
+            <div class="grid grid-cols-12 py-1 px-2 items-center hover:bg-[#282825] transition-colors text-[#F4F1EA]">
+              <span class="col-span-1 text-[#C84B31] font-bold">#20</span>
+              <span class="col-span-2 text-[#88837A]">14:32:01.002</span>
+              <span class="col-span-2 text-[#C84B31] font-semibold">revision.prepared</span>
+              <span class="col-span-4 text-[#C8C2B4] truncate">checkpoint.create[req-902a] (awaiting lead stamp)</span>
+              <span class="col-span-2 text-[#2B5B84] truncate">sha256:7a91e3b8..44b8</span>
+              <span class="col-span-1 text-right text-[#C84B31] font-bold">PENDING</span>
+            </div>
+
+            <!-- Ledger Row 19 -->
+            <div class="grid grid-cols-12 py-1 px-2 items-center hover:bg-[#282825] transition-colors text-[#F4F1EA]">
+              <span class="col-span-1 text-[#2E6F40]">#19</span>
+              <span class="col-span-2 text-[#88837A]">14:31:58.412</span>
+              <span class="col-span-2 text-[#71C588]">domain.evaluated</span>
+              <span class="col-span-4 text-[#C8C2B4] truncate">LoadCaseEvaluator: Fz=4500N, σ_bend=84.2MPa passed</span>
+              <span class="col-span-2 text-[#2B5B84] truncate">sha256:9c04a211..88ef</span>
+              <span class="col-span-1 text-right text-[#2E6F40] font-bold">LINKED</span>
+            </div>
+
+            <!-- Ledger Row 18 -->
+            <div class="grid grid-cols-12 py-1 px-2 items-center hover:bg-[#282825] transition-colors text-[#F4F1EA]">
+              <span class="col-span-1 text-[#2E6F40]">#18</span>
+              <span class="col-span-2 text-[#88837A]">14:31:52.880</span>
+              <span class="col-span-2 text-[#71C588]">domain.evaluated</span>
+              <span class="col-span-4 text-[#C8C2B4] truncate">MaterialEvaluator: Ti-6Al-4V Grade 5 (σ_y=275MPa)</span>
+              <span class="col-span-2 text-[#2B5B84] truncate">sha256:4b12e980..52aa</span>
+              <span class="col-span-1 text-right text-[#2E6F40] font-bold">LINKED</span>
+            </div>
+
+            <!-- Ledger Row 17 -->
+            <div class="grid grid-cols-12 py-1 px-2 items-center hover:bg-[#282825] transition-colors text-[#F4F1EA]">
+              <span class="col-span-1 text-[#2E6F40]">#17</span>
+              <span class="col-span-2 text-[#88837A]">14:31:44.119</span>
+              <span class="col-span-2 text-[#71C588]">domain.evaluated</span>
+              <span class="col-span-4 text-[#C8C2B4] truncate">GeometryEvaluator: 1842.5mm² area, 72480mm³ vol confirmed</span>
+              <span class="col-span-2 text-[#2B5B84] truncate">sha256:8f3ac182..31cc</span>
+              <span class="col-span-1 text-right text-[#2E6F40] font-bold">LINKED</span>
+            </div>
+
+            <!-- Ledger Row 01 (Genesis) -->
+            <div class="grid grid-cols-12 py-1 px-2 items-center hover:bg-[#282825] transition-colors text-[#88837A]">
+              <span class="col-span-1 text-[#5A5852]">#01</span>
+              <span class="col-span-2 text-[#66625B]">14:30:00.000</span>
+              <span class="col-span-2 text-[#9A958C]">revision.created</span>
+              <span class="col-span-4 text-[#7A756B] truncate">GENESIS_INIT // Kala Parametric Kernel cold boot</span>
+              <span class="col-span-2 text-[#2B5B84] truncate">sha256:00000000..01ab</span>
+              <span class="col-span-1 text-right text-[#2E6F40] font-bold">ROOT</span>
+            </div>
+
+          </div>
+        </footer>
+
+      </div>
+
+      <!-- Right Coordinate Ribbon (A-F) -->
+      <div class="w-5 bg-[#181816] border-l border-[#32312D] flex flex-col justify-around items-center text-[9px] font-mono-tech text-[#9A958C] font-semibold py-6">
+        <span>A</span>
+        <span>B</span>
+        <span>C</span>
+        <span>D</span>
+        <span>E</span>
+        <span>F</span>
+      </div>
+
+    </div>
+
+    <!-- Coordinate Bottom Strip (1-8) -->
+    <div class="h-5 bg-[#181816] border-t border-[#32312D] flex items-center justify-between px-10 text-[9px] font-mono-tech text-[#88837A] tracking-widest uppercase">
+      <div class="text-[#5E5B55]">KALA PARAMETRICS (C) 2025 // AIRFRAME DIVISION</div>
+      <div class="flex-1 grid grid-cols-8 text-center px-12 text-[#9A958C] font-semibold">
+        <span>1</span>
+        <span>2</span>
+        <span>3</span>
+        <span>4</span>
+        <span>5</span>
+        <span>6</span>
+        <span>7</span>
+        <span>8</span>
+      </div>
+      <div class="text-[#5E5B55]">DIN 6771 COMPLIANT</div>
+    </div>
+
+  </div>
+
+
+</body></html>

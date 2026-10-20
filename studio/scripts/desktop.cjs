@@ -14,7 +14,10 @@ const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
+const nativeBackend = require('./native-backend.cjs');
+
 const studioRoot = path.resolve(__dirname, '..');
+const DEV_BACKEND_ENV = 'KALA_STUDIO_DEV_BACKEND';
 
 function ensureUiBuilt() {
   const distIndex = path.join(studioRoot, 'dist', 'index.html');
@@ -42,6 +45,41 @@ function ensureUiBuilt() {
       else reject(new Error(`vite build exited with code ${code}`));
     });
     child.on('error', reject);
+  });
+}
+
+function pythonReferenceRequested(environ = process.env) {
+  const mode = String(environ[DEV_BACKEND_ENV] || '').trim().toLowerCase();
+  const pythonOverride = String(environ.KALA_STUDIO_PYTHON || '').trim();
+  return Boolean(pythonOverride) || mode === 'python' || mode === 'python-reference';
+}
+
+function nativeRequested(environ = process.env) {
+  return !pythonReferenceRequested(environ);
+}
+
+async function ensureNativeBackend() {
+  // Development defaults to the native Rust slice. The Python reference is an
+  // explicit development-only fallback (`KALA_STUDIO_DEV_BACKEND=python` or a
+  // `KALA_STUDIO_PYTHON` override); packaged builds never use it.
+  if (!nativeRequested()) {
+    console.log(
+      '[kala-studio] development Python reference backend selected by an explicit override; ' +
+      'unset KALA_STUDIO_DEV_BACKEND/KALA_STUDIO_PYTHON to run the native backend.',
+    );
+    return;
+  }
+  if (String(process.env.KALA_STUDIO_SKIP_NATIVE_BUILD || '') === '1') {
+    console.log('[kala-studio] native build skipped by KALA_STUDIO_SKIP_NATIVE_BUILD=1.');
+    return;
+  }
+  const paths = nativeBackend.nativePaths({ studioRoot });
+  if (fs.existsSync(paths.binaryPath) && fs.existsSync(paths.indexFile)) return;
+  console.log('[kala-studio] native backend not staged — building it now…');
+  await nativeBackend.buildAndStageNative({
+    studioRoot,
+    stageDir: paths.stageDir,
+    distDir: path.join(studioRoot, 'dist'),
   });
 }
 
@@ -78,8 +116,9 @@ function launchElectron(forwardArgs) {
 async function main() {
   try {
     await ensureUiBuilt();
+    await ensureNativeBackend();
   } catch (cause) {
-    console.error('[kala-studio] failed to build UI:', cause);
+    console.error('[kala-studio] failed to prepare the desktop launch:', cause);
     process.exit(1);
     return;
   }

@@ -1,0 +1,11 @@
+# GPT-6.1-Sol Studio integration review — STEP accepted, narrow settings repair
+
+Consumed terminal Studio-r3 result, no live child turns. Independently ran103 locked offline release tests including actual HTTP STEP/OCP reimport, real binary corpus (44 exact +2 structuralSTEP +2 body-config cases, zero mismatch) and live Python differential248cases/zero mismatch. Native STEP production adapter/default and alternate unavailable seam are accepted. Read actual STEP/proxy/TLS/settings code. No product Python/OCP dependency introduced.
+
+Independent out-of-tree probe confirmed two settings gaps with fresh temp data dirs, real release native binary and live Python TestClient, no credential values logged:
+- Valid file `{"api_keys":{},"api_keys":{"openai":"synthetic-review-key"},"unused":"\ud800"}`: Python200 configured[true,false]; native200 configured[false,false]. Serde rejects escaped surrogate, strict codepoint fallback rejects duplicate key, discarding the valid map. A subsequent unrelated-key write can lose existing credentials. Repair last-wins decoding for the codepoint fallback without weakening strict hash JSON.
+- File with valid synthetic openai key plus unrelated4301-digit integer: Python500 sanitized on GETsettings; native200 configuredtrue. Preserve source failure class and ensure writes refuse without changing the original file. Source catches JSONDecodeError but this is ValueError. Need route regression for reads/writes.
+
+Windows source also retains unused private `tls::configure_windows_roots` after `configure_roots` moved to add_der_roots. On Windows this old duplicate is compiled and unused, so it warns under -D warnings; remove or consolidate it. Independent full Windows check with CC_x86_64_pc_windows_msvc=clang-cl reached ring C compilation and failed on missing Windows SDK `assert.h`; this is real environment limitation, not a passed full-crate check. Pure trust-store snippet checking cannot prove the whole cfg(windows) module clean.
+
+Keep Windows registry-proxy/store-location/SSL_CERT_DIR and request surrogate/depth detail gaps explicit. This review does not demand invented Linux support or disabled verification. Existing STEP, proxy environment, settings codepoint and parser fixes stay passing. Full Studio cutover acceptance awaits narrow data-preservation repair. No full rewrite, Windows runtime or speedup claim.

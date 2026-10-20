@@ -1,0 +1,41 @@
+# The Kala composition root is deliberately a standalone workspace with its own
+# lockfile. The parent `backend/Cargo.toml` is owned by another cell and is not
+# touched. Every accepted sibling crate below is consumed READ-ONLY by path.
+[workspace]
+members = []
+resolver = "3"
+
+[package]
+name = "kala-application"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+publish = false
+description = "The Kala local composition root: kernel, persistence, tool plane, model gateway and domain packages, wired together"
+
+[dependencies]
+kala-api = { path = "../kala-api" }
+kala-artifacts = { path = "../kala-artifacts" }
+kala-budget = { path = "../kala-budget" }
+kala-contracts = { path = "../kala-contracts" }
+kala-domains = { path = "../kala-domains" }
+kala-json = { path = "../kala-json" }
+kala-kernel = { path = "../kala-kernel" }
+kala-persistence = { path = "../kala-persistence" }
+kala-repositories = { path = "../kala-repositories" }
+kala-runtime = { path = "../kala-runtime" }
+kala-tools = { path = "../kala-tools" }
+
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+futures = "0.3"
+getrandom = "0.3"
+num-bigint = "0.4"
+serde_json = { version = "1.0", features = ["arbitrary_precision"] }
+
+[dev-dependencies]
+rusqlite = { version = "0.40", default-features = false, features = ["bundled"] }
+tempfile = "3.20"
+
+[profile.release]
+strip = "symbols"

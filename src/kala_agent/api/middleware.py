@@ -16,7 +16,7 @@ from typing import Final
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from kala_agent.api.schemas import error_response
+from kala_agent.api.envelope import error_response
 
 MAX_REQUEST_BODY_BYTES: Final[int] = 262_144
 MIN_REQUEST_BODY_BYTES: Final[int] = 1_024
