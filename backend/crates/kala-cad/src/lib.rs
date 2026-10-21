@@ -71,7 +71,12 @@ pub use step_common::{
 // Frozen construction constants. They mirror the contract/compiler source and
 // are shared by the native and explicit-unavailable builds.
 /// Default wall-clock compile budget in seconds.
-pub const DEFAULT_COMPILE_TIMEOUT_SECONDS: f64 = 5.0;
+///
+/// A 500-step design (a 2 000 x 2 000 x 5 mm plate with 249 through holes)
+/// compiles and measures in 16.9 s on this host, and the 202-step 100-hole
+/// plate in 2.5 s. Sixty seconds covers the whole budget with margin while
+/// still refusing a runaway compile.
+pub const DEFAULT_COMPILE_TIMEOUT_SECONDS: f64 = 60.0;
 /// Component operations the v1 compiler can lower.
 pub const SUPPORTED_COMPONENT_OPS: [&str; 4] = ["sketch", "extrude", "revolve", "pocket"];
 /// Assembly operations the v1 compiler can lower.

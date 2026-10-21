@@ -1,11 +1,12 @@
 //! OpenAI-compatible remote chat with a fixed allowlist and bounded transport.
 //!
 //! Endpoints are hard-coded, redirects are refused, the credential is read
-//! only from the documented environment name, the request timeout is 30
-//! seconds, and the response body is capped at 1,000,000 bytes. A
-//! [`HttpTransport`] seam exists so tests can verify the wire request and
-//! error mapping without a live provider; the production implementation is
-//! [`ReqwestTransport`].
+//! only from the documented environment name, a plain chat request times out
+//! after 30 seconds, a design turn after 180 seconds, and the response body is
+//! capped at 1,000,000 bytes. The caller passes the timeout explicitly; it is
+//! never chosen by the HTTP request. A [`HttpTransport`] seam exists so tests
+//! can verify the wire request and error mapping without a live provider; the
+//! production implementation is [`ReqwestTransport`].
 
 use std::collections::BTreeMap;
 use std::future::Future;
@@ -24,6 +25,35 @@ use super::{ChatOutcome, ProviderFailure};
 pub const OPENAI_DEFAULT_ENDPOINT: &str = "https://api.openai.com/v1/chat/completions";
 pub const OPENROUTER_DEFAULT_ENDPOINT: &str = "https://openrouter.ai/api/v1/chat/completions";
 pub const STUDIO_REQUEST_TIMEOUT_SECONDS: u64 = 30;
+/// The longer budget a remote design turn gets: free and reasoning models need
+/// more than 30 seconds to author a non-template `ConstructionScript`, and the
+/// turn may spend one repair call. It matches the 180 s budget the CLI
+/// providers already give their model. Only the server's design path selects
+/// it.
+pub const STUDIO_DESIGN_REQUEST_TIMEOUT_SECONDS: u64 = 180;
+/// The wall deadline of one CAD build, in seconds.
+///
+/// This is the FreeCAD provider's default deadline
+/// (`kala_cad_providers::DEFAULT_TIMEOUT_SECONDS`, a `f64` constant in a
+/// feature-gated crate) and the OpenCascade compile budget
+/// (`kala_cad::DEFAULT_COMPILE_TIMEOUT_SECONDS`) fits inside it. It is
+/// restated here as an integer so `/health` can report the budget in every
+/// build; a unit test pins it to the real provider constants when the native
+/// geometry feature is on.
+pub const DESIGN_BUILD_TIMEOUT_SECONDS: u64 = 1_800;
+/// A design turn builds at most twice: the first attempt and one repair build.
+pub const DESIGN_TURN_BUILD_ATTEMPTS: u64 = 2;
+/// The backend's own worst-case wall time for one design turn, in seconds.
+///
+/// Each build attempt is preceded by one model call, so the worst case is
+/// `attempts * (model call + build)`: 2 * (180 + 1800) = 3 960 s (66 min).
+/// `/health` publishes this value; the Studio client derives its own deadline
+/// from it instead of pinning a number that the design budget can outgrow.
+#[must_use]
+pub const fn design_turn_budget_seconds() -> u64 {
+    DESIGN_TURN_BUILD_ATTEMPTS
+        * (STUDIO_DESIGN_REQUEST_TIMEOUT_SECONDS + DESIGN_BUILD_TIMEOUT_SECONDS)
+}
 pub const MAX_HTTP_RESPONSE_BYTES: usize = 1_000_000;
 pub const MAX_KEY_LENGTH: usize = 256;
 pub const MAX_RESPONSE_TEXT_LENGTH: usize = 4_096;
@@ -37,6 +67,19 @@ pub struct RemoteRequest {
     pub headers: Vec<(String, String)>,
     pub body: Vec<u8>,
     pub timeout: Duration,
+}
+
+/// One outbound bounded GET request (the provider model catalog).
+///
+/// The URL is owned because an OpenAI-compatible endpoint may be configured
+/// at run time. `max_bytes` is the response ceiling the transport enforces
+/// while reading.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GetRequest {
+    pub url: String,
+    pub headers: Vec<(String, String)>,
+    pub timeout: Duration,
+    pub max_bytes: usize,
 }
 
 /// One HTTP response after bounded reading.
@@ -67,6 +110,22 @@ pub trait HttpTransport: Send + Sync {
         &'a self,
         request: RemoteRequest,
     ) -> Pin<Box<dyn Future<Output = Result<RemoteResponse, TransportError>> + Send + 'a>>;
+
+    /// A bounded GET, used by the provider model catalog.
+    ///
+    /// Transports that only implement POST keep working: the default answers
+    /// with a sanitized internal failure and never opens a connection.
+    fn get<'a>(
+        &'a self,
+        request: GetRequest,
+    ) -> Pin<Box<dyn Future<Output = Result<RemoteResponse, TransportError>> + Send + 'a>> {
+        let _ = request;
+        Box::pin(async move {
+            Err(TransportError::Internal(
+                "the transport does not support GET".to_owned(),
+            ))
+        })
+    }
 }
 
 /// Production HTTPS transport backed by reqwest + rustls.
@@ -79,8 +138,12 @@ pub struct ReqwestTransport {
     proxied: std::sync::Mutex<std::collections::HashMap<String, reqwest::Client>>,
 }
 
-/// Build one provider client: no redirects, fixed timeout, Python proxy
-/// semantics resolved per request, and the source's system trust model.
+/// Build one provider client: no redirects, the plain-chat timeout as the
+/// client default, Python proxy semantics resolved per request, and the
+/// source's system trust model. A request that carries its own
+/// [`RemoteRequest::timeout`] overrides the client default (reqwest's
+/// per-request timeout wins), which is how a design turn gets 180 seconds
+/// while a plain chat keeps 30.
 fn build_client(proxy: Option<&str>) -> Result<reqwest::Client, String> {
     let builder = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
@@ -100,7 +163,8 @@ fn build_client(proxy: Option<&str>) -> Result<reqwest::Client, String> {
 }
 
 impl ReqwestTransport {
-    /// Build a client that never follows redirects and has a fixed timeout.
+    /// Build a client that never follows redirects; its timeout is the
+    /// plain-chat default, and each request's own budget overrides it.
     ///
     /// Proxy handling is *not* delegated to reqwest's system matcher: the
     /// transport resolves Python's `urllib` environment rules per request
@@ -215,6 +279,75 @@ impl HttpTransport for ReqwestTransport {
             })
         })
     }
+
+    fn get<'a>(
+        &'a self,
+        request: GetRequest,
+    ) -> Pin<Box<dyn Future<Output = Result<RemoteResponse, TransportError>> + Send + 'a>> {
+        Box::pin(async move {
+            let GetRequest {
+                url,
+                headers,
+                timeout,
+                max_bytes,
+            } = request;
+            // Like `post`, the proxy is resolved per request from the process
+            // environment; a plain `http` URL (a loopback OpenAI-compatible
+            // endpoint) uses the direct client.
+            let client = match reqwest::Url::parse(&url) {
+                Ok(parsed) if parsed.scheme() == "https" => {
+                    let environ = crate::boundary::process_environ();
+                    match crate::proxy::proxy_for(&environ, "https", &request_host(&parsed)) {
+                        Some(proxy_url) => self.client_for_proxy(&proxy_url)?,
+                        None => self.client.clone(),
+                    }
+                }
+                _ => self.client.clone(),
+            };
+            let mut builder = client.get(url).timeout(timeout);
+            for (name, value) in headers {
+                builder = builder.header(name, value);
+            }
+            let response = match builder.send().await {
+                Ok(response) => response,
+                Err(error) => return Err(map_reqwest_error(&error)),
+            };
+            let status = response.status().as_u16();
+            let reason = response
+                .status()
+                .canonical_reason()
+                .map(std::string::ToString::to_string);
+            let content_length = response.content_length();
+            if content_length.is_some_and(|value| value > max_bytes as u64) {
+                return Err(TransportError::TooLarge(
+                    "the provider response is larger than the bounded size".to_owned(),
+                ));
+            }
+            let mut response = response;
+            let mut body = Vec::new();
+            loop {
+                match response.chunk().await {
+                    Ok(Some(chunk)) => {
+                        if body.len() + chunk.len() > max_bytes {
+                            return Err(TransportError::TooLarge(
+                                "the provider response exceeded the bounded size during read"
+                                    .to_owned(),
+                            ));
+                        }
+                        body.extend_from_slice(&chunk);
+                    }
+                    Ok(None) => break,
+                    Err(error) => return Err(map_reqwest_error(&error)),
+                }
+            }
+            Ok(RemoteResponse {
+                status,
+                reason,
+                content_length,
+                body,
+            })
+        })
+    }
 }
 
 fn map_reqwest_error(error: &reqwest::Error) -> TransportError {
@@ -248,7 +381,7 @@ fn endpoint_for(provider: &str) -> Result<&'static str, ProviderFailure> {
     }
 }
 
-fn credential(
+pub(crate) fn credential(
     provider: &str,
     environ: &BTreeMap<String, String>,
     stored: &crate::settings::StoredKeys,
@@ -320,10 +453,16 @@ fn request_headers(key: &str) -> Vec<(String, String)> {
 
 /// Send one bounded chat request to the fixed provider endpoint.
 ///
+/// `timeout` is the caller's whole-request budget. The design path passes
+/// [`STUDIO_DESIGN_REQUEST_TIMEOUT_SECONDS`]; a plain chat passes
+/// [`STUDIO_REQUEST_TIMEOUT_SECONDS`]. It is never taken from the request
+/// body, so a client cannot extend it.
+///
 /// # Errors
 ///
 /// Returns the typed provider failure the Studio route maps to a sanitized
 /// status. No endpoint or credential appears in a failure message.
+#[allow(clippy::too_many_arguments)]
 pub async fn openai_compat_chat(
     provider: &str,
     model: &str,
@@ -332,6 +471,7 @@ pub async fn openai_compat_chat(
     environ: &BTreeMap<String, String>,
     stored: &crate::settings::StoredKeys,
     transport: &dyn HttpTransport,
+    timeout: Duration,
 ) -> Result<ChatOutcome, ProviderFailure> {
     if !allow_remote {
         return Err(ProviderFailure::configuration(
@@ -344,7 +484,7 @@ pub async fn openai_compat_chat(
         url: endpoint,
         headers: request_headers(&key),
         body: request_body(model, prompt),
-        timeout: Duration::from_secs(STUDIO_REQUEST_TIMEOUT_SECONDS),
+        timeout,
     };
     let response = match transport.post(request).await {
         Ok(response) => response,
@@ -388,12 +528,11 @@ pub async fn openai_compat_chat(
         ));
     }
     let (text, observed_model) = read_response(&response.body)?;
-    let text: String = text.chars().take(MAX_RESPONSE_TEXT_LENGTH).collect();
-    Ok(ChatOutcome {
+    Ok(ChatOutcome::new(
         text,
-        model: observed_model.unwrap_or_else(|| model.to_owned()),
-        offline: false,
-    })
+        observed_model.unwrap_or_else(|| model.to_owned()),
+        false,
+    ))
 }
 
 fn read_response(data: &[u8]) -> Result<(String, Option<String>), ProviderFailure> {
@@ -547,6 +686,7 @@ mod tests {
             &environment(),
             &crate::settings::StoredKeys::new(),
             &transport,
+            Duration::from_secs(STUDIO_REQUEST_TIMEOUT_SECONDS),
         )
         .await
         .unwrap();
@@ -577,6 +717,7 @@ mod tests {
             &environment(),
             &crate::settings::StoredKeys::new(),
             &transport,
+            Duration::from_secs(STUDIO_REQUEST_TIMEOUT_SECONDS),
         )
         .await
         .unwrap_err();
@@ -593,6 +734,7 @@ mod tests {
             &environment(),
             &crate::settings::StoredKeys::new(),
             &transport,
+            Duration::from_secs(STUDIO_REQUEST_TIMEOUT_SECONDS),
         )
         .await
         .unwrap_err();
@@ -615,6 +757,7 @@ mod tests {
             &environment(),
             &crate::settings::StoredKeys::new(),
             &transport,
+            Duration::from_secs(STUDIO_REQUEST_TIMEOUT_SECONDS),
         )
         .await
         .unwrap_err();
@@ -622,5 +765,119 @@ mod tests {
             failure,
             ProviderFailure::Network(message) if message.contains("redirects")
         ));
+    }
+
+    #[tokio::test]
+    async fn design_turn_requests_carry_180_seconds_plain_chat_carries_30() {
+        let design = FakeTransport::new(Ok(RemoteResponse {
+            status: 200,
+            reason: Some("OK".to_owned()),
+            content_length: Some(74),
+            body: br#"{"model":"m","choices":[{"message":{"content":"hi"}}]}"#.to_vec(),
+        }));
+        openai_compat_chat(
+            "openai",
+            "m",
+            "p",
+            true,
+            &environment(),
+            &crate::settings::StoredKeys::new(),
+            &design,
+            Duration::from_secs(STUDIO_DESIGN_REQUEST_TIMEOUT_SECONDS),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            design.last.lock().unwrap().as_ref().unwrap().timeout,
+            Duration::from_secs(180),
+            "a design turn must carry the 180 s design budget"
+        );
+
+        let plain = FakeTransport::new(Ok(RemoteResponse {
+            status: 200,
+            reason: Some("OK".to_owned()),
+            content_length: Some(74),
+            body: br#"{"model":"m","choices":[{"message":{"content":"hi"}}]}"#.to_vec(),
+        }));
+        openai_compat_chat(
+            "openai",
+            "m",
+            "p",
+            true,
+            &environment(),
+            &crate::settings::StoredKeys::new(),
+            &plain,
+            Duration::from_secs(STUDIO_REQUEST_TIMEOUT_SECONDS),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            plain.last.lock().unwrap().as_ref().unwrap().timeout,
+            Duration::from_secs(30),
+            "a plain chat must keep the 30 s budget"
+        );
+    }
+
+    /// Reqwest's per-request timeout overrides the client-level one:
+    /// `RequestBuilder::timeout` documents it and `RequestConfig::fetch`
+    /// prefers the request-scoped value. This test proves it against a real
+    /// loopback server: the client's 50 ms timeout would abort the 150 ms
+    /// reply, but the request's 5 s budget wins.
+    #[tokio::test]
+    async fn per_request_timeout_overrides_the_client_level_timeout() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut buffer = [0_u8; 1024];
+            let _ = stream.read(&mut buffer).await;
+            tokio::time::sleep(Duration::from_millis(150)).await;
+            let body = b"{\"ok\":true}";
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n",
+                body.len()
+            );
+            let _ = stream.write_all(response.as_bytes()).await;
+            let _ = stream.write_all(body).await;
+        });
+        let client = reqwest::Client::builder()
+            .no_proxy()
+            .timeout(Duration::from_millis(50))
+            .build()
+            .unwrap();
+        let response = client
+            .post(format!("http://{addr}/"))
+            .timeout(Duration::from_secs(5))
+            .send()
+            .await
+            .expect("the per-request 5 s budget must override the client's 50 ms timeout");
+        assert_eq!(response.status().as_u16(), 200);
+    }
+
+    #[test]
+    fn the_design_turn_budget_is_built_from_the_real_provider_budgets() {
+        // The two model calls of one design turn, each followed by one build.
+        assert_eq!(DESIGN_TURN_BUILD_ATTEMPTS, 2);
+        assert_eq!(
+            design_turn_budget_seconds(),
+            DESIGN_TURN_BUILD_ATTEMPTS
+                * (STUDIO_DESIGN_REQUEST_TIMEOUT_SECONDS + DESIGN_BUILD_TIMEOUT_SECONDS)
+        );
+        assert_eq!(design_turn_budget_seconds(), 3_960);
+
+        // The restated build deadline must be the provider's own default, or
+        // the published budget would describe a build nobody runs.
+        #[cfg(feature = "native-geometry")]
+        {
+            assert_eq!(
+                DESIGN_BUILD_TIMEOUT_SECONDS as f64,
+                kala_cad_providers::DEFAULT_TIMEOUT_SECONDS
+            );
+            assert!(
+                kala_cad::DEFAULT_COMPILE_TIMEOUT_SECONDS <= DESIGN_BUILD_TIMEOUT_SECONDS as f64
+            );
+        }
     }
 }

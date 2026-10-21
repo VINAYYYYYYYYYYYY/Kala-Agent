@@ -1075,10 +1075,17 @@ fn reply_corpus() -> Vec<String> {
         "```json\n{\"template\":{\"template\":\"l_bracket\",\"width\":60,\"depth\":45,\"height\":40,\"wall\":8},\"tolerances\":[\"x\"],\"material\":\"m\",\"label\":\"l\",\"nodes\":[1,2,3]}\n```".to_owned(),
         "```json\n{\"template\":{\"template\":\"l_bracket\",\"width\":60,\"depth\":45,\"height\":40,\"wall\":8},\"tolerances\":[\"a\",\"b\",\"c\",\"d\",\"e\",\"f\",\"g\",\"h\",\"i\",\"j\",\"k\",\"l\",\"m\",\"n\",\"o\",\"p\",\"q\"]}\n```".to_owned(),
     ];
-    // A fence with braces in prose and a second fence: Python's greedy group
-    // takes the first opening fence through the last closing fence.
+    // Two fences, each with an object; identical payloads agree.
     replies.push(format!(
         "Consider {{\"not\":\"the payload\"}} first.\n```json\n{bracket}\n```\nAnd another ```json\n{bracket}\n```."
+    ));
+    // A bare object wrapped in prose (no fence).
+    replies.push(format!(
+        "Here is the bracket: {bracket} The kernel will measure it."
+    ));
+    // Two conflicting fenced objects are refused instead of guessed.
+    replies.push(format!(
+        "```json\n{bracket}\n```\n```json\n{{\"template\":{{\"template\":\"l_bracket\",\"width\":61,\"depth\":45,\"height\":40,\"wall\":8}}}}\n```"
     ));
     replies.push("```json\n{\"template\":{\"template\":\"l_bracket\",\"width\":60,\"depth\":45,\"height\":40,\"wall\":8}}}\n```".to_owned());
     replies.push("```json\n{\"template\":{\"template\":\"housing_envelope\",\"width\":80,\"depth\":60,\"height\":40,\"wall\":5},\"tolerances\":[\"  ISO 2768-m  \"]}\n```".to_owned());
@@ -1384,6 +1391,18 @@ fn intent_payload_corpus() -> Vec<String> {
         r#"{"summary":"s","components":[{"name":"b","steps":[{"op":"sketch","profile":{"rectangle":{"width":1,"height":1},"x":2,"y":3}},{"op":"extrude","length":1}]}]}"#.to_owned(),
         r#"{"summary":"s","components":[{"name":"b","steps":[{"op":"bogus"}]}],"assembly":[{"op":"place"}]}"#.to_owned(),
         r#"{"summary":"s","components":[{"name":"b","steps":[]}],"assembly":[{"op":"place"}]}"#.to_owned(),
+        // The 2026-10-20 flange repro: a pocket states XY over an XZ sketch
+        // that follows an XY revolve. The intent is refused before the cut.
+        r#"{"summary":"flange","components":[{"name":"half_a","steps":[{"op":"sketch","plane":"XY","profile":"rectangle","width":35,"height":12,"x":15},{"op":"revolve","plane":"XY","angle":180},{"op":"sketch","plane":"XZ","profile":"circle","diameter":8,"x":40},{"op":"pocket","plane":"XY"}]}]}"#.to_owned(),
+        // A sketch whose plane differs from the plane that produced the solid.
+        r#"{"summary":"cross","components":[{"name":"plate","steps":[{"op":"sketch","plane":"XY","profile":"rectangle","width":20,"height":20},{"op":"extrude","length":10},{"op":"sketch","plane":"XZ","profile":"circle","diameter":2,"x":5,"y":5},{"op":"pocket","plane":"XZ"}]}]}"#.to_owned(),
+        // A pocket that omits its plane inherits the sketch plane and is valid.
+        r#"{"summary":"inherits","components":[{"name":"plate","steps":[{"op":"sketch","plane":"XZ","profile":"rectangle","width":20,"height":20},{"op":"extrude","length":10},{"op":"sketch","plane":"XZ","profile":"circle","diameter":2,"x":5,"y":5},{"op":"pocket"}]}]}"#.to_owned(),
+        // The pocket's own plane field is ignored, as the compiler ignores it.
+        r#"{"summary":"ignored","components":[{"name":"plate","steps":[{"op":"sketch","plane":"XZ","profile":"rectangle","width":20,"height":20},{"op":"extrude","length":10},{"op":"sketch","plane":"XZ","profile":"circle","diameter":2,"x":5,"y":5},{"op":"pocket","plane":"XY"}]}]}"#.to_owned(),
+        // The shipped L-bracket template's canonical wire form: an XZ
+        // upright pocket whose default plane field says XY.
+        r#"{"summary":"template","components":[{"name":"upright","steps":[{"op":"sketch","plane":"XZ","profile":"rectangle","width":60,"height":40,"x":-30},{"op":"extrude","length":8},{"op":"sketch","plane":"XZ","profile":"circle","diameter":10,"y":24},{"op":"pocket","plane":"XY"}]}]}"#.to_owned(),
     ];
     for script in scripts {
         payloads.push(format!("{{\"script\":{script}}}"));
@@ -1405,6 +1424,19 @@ fn intent_payload_corpus() -> Vec<String> {
             .map(|_| r#"{"op":"sketch","profile":"circle","diameter":1}"#)
             .collect::<Vec<_>>()
             .join(",")
+    ));
+    // The whole-design budget: 64 components are legal, 65 are refused.
+    payloads.push(format!(
+        "{{\"script\":{{\"summary\":\"s\",\"components\":[{}]}}}}",
+        (0..65)
+            .map(|index| format!("{{\"name\":\"b{index}\",\"steps\":{step}}}"))
+            .collect::<Vec<_>>()
+            .join(",")
+    ));
+    // 501 steps in total: 500 in the body plus one assembly step.
+    let five_hundred = (0..250).map(|_| step).collect::<Vec<_>>().join(",");
+    payloads.push(format!(
+        "{{\"script\":{{\"summary\":\"s\",\"components\":[{{\"name\":\"b\",\"steps\":{five_hundred}}}],\"assembly\":[{{\"op\":\"place\",\"component\":\"b\"}}]}}}}"
     ));
     payloads
 }
@@ -1483,7 +1515,7 @@ fn live_python_schema_is_byte_identical() {
     assert!(kala_design_intent::design_intent_schema_text().contains("DesignIntent"));
     assert_eq!(
         kala_design_intent::design_intent_schema_text().len(),
-        11_291
+        11_293
     );
     assert_eq!(
         kala_design_intent::DESIGN_INTENT_INSTRUCTION,
@@ -1521,7 +1553,7 @@ fn live_python_schema_is_byte_identical() {
     );
     assert_eq!(
         as_float(field(constants, "template_max_segments")) as usize,
-        kala_design_intent::MAX_SEGMENTS
+        kala_design_intent::MAX_COMPONENTS
     );
     assert_eq!(
         as_float(field(constants, "default_hole_edge")),

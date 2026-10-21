@@ -19,9 +19,16 @@ use crate::text::Text;
 use crate::wire::{ContractModel, WireValue, key};
 
 /// Maximum components in one construction script.
-pub const MAX_COMPONENTS: usize = 8;
+pub const MAX_COMPONENTS: usize = 64;
 /// Maximum steps inside one component.
-pub const MAX_STEPS: usize = 12;
+pub const MAX_STEPS: usize = 500;
+/// Maximum steps in one whole construction script.
+///
+/// The sum of every component's steps plus the assembly steps. A single
+/// per-body cap would either stop honest one-body designs or leave the whole
+/// script unbounded; this one generous whole-design budget keeps the model
+/// input bounded instead.
+pub const MAX_TOTAL_STEPS: usize = 500;
 /// Maximum absolute coordinate or size in millimetres.
 pub const MAX_DIMENSION_MM: f64 = 5_000.0;
 
@@ -1291,6 +1298,22 @@ impl ContractModel for ConstructionScript {
                         );
                         break;
                     }
+                }
+            }
+            if issues.is_empty() {
+                let total: usize = components
+                    .iter()
+                    .map(|component| component.steps().len())
+                    .sum::<usize>()
+                    + assembly.len();
+                if total > MAX_TOTAL_STEPS {
+                    push(
+                        &mut issues,
+                        "",
+                        format!(
+                            "a script may use at most {MAX_TOTAL_STEPS} steps in total; this one uses {total}"
+                        ),
+                    );
                 }
             }
         }

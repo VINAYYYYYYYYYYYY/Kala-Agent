@@ -79,6 +79,7 @@
         "expected": {
           "body": {
             "design_available": true,
+            "design_turn_budget_seconds": 3960,
             "integrations": [
               "solidworks",
               "solid_edge",
@@ -97,7 +98,10 @@
               "local",
               "openai",
               "openrouter",
-              "codex"
+              "codex",
+              "claude_code",
+              "codex_cli",
+              "opencode_cli"
             ],
             "service": "kala-studio",
             "status": "ok",
@@ -106,14 +110,14 @@
           },
           "body_comparison": "exact",
           "body_deterministic": true,
-          "body_length": 333,
+          "body_length": 408,
           "body_length_role": "length of the recorded body text; the recorded digest is the digest of the same text",
-          "body_sha256": "db994c6ec8ed47b4d0f49d2a9b0d5cbfef98989b10a86e78f2233ecff2a1a670",
+          "body_sha256": "8e2abeb28d8958f5b2b6f4d2370a02c710aef3770c51db525606d2f2f428eff0",
           "body_sha256_role": "exact response bytes",
-          "body_text": "{\"status\":\"ok\",\"service\":\"kala-studio\",\"version\":\"0.1.0\",\"offline\":true,\"step_available\":true,\"design_available\":true,\"integrations\":[\"solidworks\",\"solid_edge\",\"autocad\",\"fusion360\",\"freecad\",\"openscad\",\"ansys_mechanical\",\"abaqus\",\"comsol\",\"simcenter_nastran\",\"altair_optistruct\"],\"providers\":[\"local\",\"openai\",\"openrouter\",\"codex\"]}",
+          "body_text": "{\"status\":\"ok\",\"service\":\"kala-studio\",\"version\":\"0.1.0\",\"offline\":true,\"design_turn_budget_seconds\":3960,\"step_available\":true,\"design_available\":true,\"integrations\":[\"solidworks\",\"solid_edge\",\"autocad\",\"fusion360\",\"freecad\",\"openscad\",\"ansys_mechanical\",\"abaqus\",\"comsol\",\"simcenter_nastran\",\"altair_optistruct\"],\"providers\":[\"local\",\"openai\",\"openrouter\",\"codex\",\"claude_code\",\"codex_cli\",\"opencode_cli\"]}",
           "headers": {
             "cache-control": "no-store",
-            "content-length": "333",
+            "content-length": "408",
             "content-security-policy": "default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
             "content-type": "application/json",
             "cross-origin-opener-policy": "same-origin",
@@ -127,7 +131,7 @@
             "x-powered-by",
             "set-cookie"
           ],
-          "normalized_body_sha256": "1e9df9cb446bd9a7ee252c00b3eee8d82ce675fdc1227ec24f3bb265464fabfb",
+          "normalized_body_sha256": "274175b029578475647d2ee5ecf30ee21376f2ebdf0a6a5aa9a2f4c43f018fe9",
           "status": 200
         },
         "id": "studio.health",
@@ -354,41 +358,80 @@
           "body": {
             "providers": [
               {
+                "available": null,
                 "configured": true,
                 "id": "local",
                 "name": "Local Deterministic Helper",
-                "notes": "Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver."
+                "notes": "Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver.",
+                "reason": null,
+                "source": null
               },
               {
+                "available": null,
                 "configured": false,
                 "id": "openai",
                 "name": "OpenAI (Chat Completions)",
-                "notes": "API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time."
+                "notes": "API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time.",
+                "reason": null,
+                "source": null
               },
               {
+                "available": null,
                 "configured": false,
                 "id": "openrouter",
                 "name": "OpenRouter (Chat Completions)",
-                "notes": "API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time."
+                "notes": "API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time.",
+                "reason": null,
+                "source": null
               },
               {
+                "available": false,
                 "configured": false,
                 "id": "codex",
                 "name": "Codex CLI (ChatGPT subscription)",
-                "notes": "Codex CLI (ChatGPT subscription). This build does not ship the verified codex subprocess integration, so the provider is always unavailable and a request returns a 503. No request is sent."
+                "notes": "Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH",
+                "source": "subscription (CLI)"
+              },
+              {
+                "available": false,
+                "configured": false,
+                "id": "claude_code",
+                "name": "Claude Code CLI (Anthropic subscription)",
+                "notes": "Claude Code CLI (Anthropic subscription). Runs the operator's own `claude` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs with every built-in tool removed and with the operator's hooks, plugins, skills and MCP servers switched off. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the Claude Code CLI was not found on PATH or at KALA_STUDIO_CLAUDE_CLI_PATH",
+                "source": "subscription (CLI)"
+              },
+              {
+                "available": false,
+                "configured": false,
+                "id": "codex_cli",
+                "name": "Codex CLI (ChatGPT subscription)",
+                "notes": "Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH",
+                "source": "subscription (CLI)"
+              },
+              {
+                "available": false,
+                "configured": false,
+                "id": "opencode_cli",
+                "name": "OpenCode CLI (subscription)",
+                "notes": "OpenCode CLI (subscription). Runs the operator's own `opencode` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs as an agent that may not call any tool, in a private working directory. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the OpenCode CLI was not found on PATH or at KALA_STUDIO_OPENCODE_CLI_PATH",
+                "source": "subscription (CLI)"
               }
             ]
           },
           "body_comparison": "exact",
           "body_deterministic": true,
-          "body_length": 1133,
+          "body_length": 3455,
           "body_length_role": "length of the recorded body text; the recorded digest is the digest of the same text",
-          "body_sha256": "1abb4e70a605344876fe75d061639b62bf067c0f0e2716d64383440d8065b0f4",
+          "body_sha256": "394825b7722c75671ff3952d967ee2061a8e64b89f8d1307fc6609ae64474959",
           "body_sha256_role": "exact response bytes",
-          "body_text": "{\"providers\":[{\"id\":\"local\",\"name\":\"Local Deterministic Helper\",\"configured\":true,\"notes\":\"Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver.\"},{\"id\":\"openai\",\"name\":\"OpenAI (Chat Completions)\",\"configured\":false,\"notes\":\"API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time.\"},{\"id\":\"openrouter\",\"name\":\"OpenRouter (Chat Completions)\",\"configured\":false,\"notes\":\"API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time.\"},{\"id\":\"codex\",\"name\":\"Codex CLI (ChatGPT subscription)\",\"configured\":false,\"notes\":\"Codex CLI (ChatGPT subscription). This build does not ship the verified codex subprocess integration, so the provider is always unavailable and a request returns a 503. No request is sent.\"}]}",
+          "body_text": "{\"providers\":[{\"id\":\"local\",\"name\":\"Local Deterministic Helper\",\"configured\":true,\"notes\":\"Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver.\",\"available\":null,\"reason\":null,\"source\":null},{\"id\":\"openai\",\"name\":\"OpenAI (Chat Completions)\",\"configured\":false,\"notes\":\"API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time.\",\"available\":null,\"reason\":null,\"source\":null},{\"id\":\"openrouter\",\"name\":\"OpenRouter (Chat Completions)\",\"configured\":false,\"notes\":\"API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time.\",\"available\":null,\"reason\":null,\"source\":null},{\"id\":\"codex\",\"name\":\"Codex CLI (ChatGPT subscription)\",\"configured\":false,\"notes\":\"Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH\",\"source\":\"subscription (CLI)\"},{\"id\":\"claude_code\",\"name\":\"Claude Code CLI (Anthropic subscription)\",\"configured\":false,\"notes\":\"Claude Code CLI (Anthropic subscription). Runs the operator's own `claude` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs with every built-in tool removed and with the operator's hooks, plugins, skills and MCP servers switched off. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the Claude Code CLI was not found on PATH or at KALA_STUDIO_CLAUDE_CLI_PATH\",\"source\":\"subscription (CLI)\"},{\"id\":\"codex_cli\",\"name\":\"Codex CLI (ChatGPT subscription)\",\"configured\":false,\"notes\":\"Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH\",\"source\":\"subscription (CLI)\"},{\"id\":\"opencode_cli\",\"name\":\"OpenCode CLI (subscription)\",\"configured\":false,\"notes\":\"OpenCode CLI (subscription). Runs the operator's own `opencode` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs as an agent that may not call any tool, in a private working directory. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the OpenCode CLI was not found on PATH or at KALA_STUDIO_OPENCODE_CLI_PATH\",\"source\":\"subscription (CLI)\"}]}",
           "headers": {
             "cache-control": "no-store",
-            "content-length": "1133",
+            "content-length": "3455",
             "content-security-policy": "default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
             "content-type": "application/json",
             "cross-origin-opener-policy": "same-origin",
@@ -402,7 +445,7 @@
             "x-powered-by",
             "set-cookie"
           ],
-          "normalized_body_sha256": "cb1d41fe9d70f35923919246707bb480221832d86c72e0382e7828318cadd0d2",
+          "normalized_body_sha256": "8907076a72abf827f1b7a745b45ca787b976d322d8fa6cfb4329cdb8a4fe38b9",
           "status": 200
         },
         "id": "studio.providers",
@@ -430,46 +473,109 @@
                 "env_var": "OPENROUTER_API_KEY",
                 "provider": "openrouter",
                 "source": "none"
+              },
+              {
+                "configured": false,
+                "env_var": "",
+                "provider": "codex",
+                "source": "subscription"
+              },
+              {
+                "configured": false,
+                "env_var": "",
+                "provider": "claude_code",
+                "source": "subscription"
+              },
+              {
+                "configured": false,
+                "env_var": "",
+                "provider": "codex_cli",
+                "source": "subscription"
+              },
+              {
+                "configured": false,
+                "env_var": "",
+                "provider": "opencode_cli",
+                "source": "subscription"
               }
             ],
             "offline": true,
             "providers": [
               {
+                "available": null,
                 "configured": true,
                 "id": "local",
                 "name": "Local Deterministic Helper",
-                "notes": "Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver."
+                "notes": "Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver.",
+                "reason": null,
+                "source": null
               },
               {
+                "available": null,
                 "configured": false,
                 "id": "openai",
                 "name": "OpenAI (Chat Completions)",
-                "notes": "API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time."
+                "notes": "API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time.",
+                "reason": null,
+                "source": null
               },
               {
+                "available": null,
                 "configured": false,
                 "id": "openrouter",
                 "name": "OpenRouter (Chat Completions)",
-                "notes": "API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time."
+                "notes": "API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time.",
+                "reason": null,
+                "source": null
               },
               {
+                "available": false,
                 "configured": false,
                 "id": "codex",
                 "name": "Codex CLI (ChatGPT subscription)",
-                "notes": "Codex CLI (ChatGPT subscription). This build does not ship the verified codex subprocess integration, so the provider is always unavailable and a request returns a 503. No request is sent."
+                "notes": "Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH",
+                "source": "subscription (CLI)"
+              },
+              {
+                "available": false,
+                "configured": false,
+                "id": "claude_code",
+                "name": "Claude Code CLI (Anthropic subscription)",
+                "notes": "Claude Code CLI (Anthropic subscription). Runs the operator's own `claude` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs with every built-in tool removed and with the operator's hooks, plugins, skills and MCP servers switched off. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the Claude Code CLI was not found on PATH or at KALA_STUDIO_CLAUDE_CLI_PATH",
+                "source": "subscription (CLI)"
+              },
+              {
+                "available": false,
+                "configured": false,
+                "id": "codex_cli",
+                "name": "Codex CLI (ChatGPT subscription)",
+                "notes": "Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH",
+                "source": "subscription (CLI)"
+              },
+              {
+                "available": false,
+                "configured": false,
+                "id": "opencode_cli",
+                "name": "OpenCode CLI (subscription)",
+                "notes": "OpenCode CLI (subscription). Runs the operator's own `opencode` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs as an agent that may not call any tool, in a private working directory. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the OpenCode CLI was not found on PATH or at KALA_STUDIO_OPENCODE_CLI_PATH",
+                "source": "subscription (CLI)"
               }
             ]
           },
           "body_comparison": "exact",
           "body_deterministic": true,
-          "body_length": 1340,
+          "body_length": 3987,
           "body_length_role": "length of the recorded body text; the recorded digest is the digest of the same text",
-          "body_sha256": "08f0c89b57e46ef734040d91be6af8790b231472d2ce3cb9ab519666d24e868c",
+          "body_sha256": "f71336fe7e06cdc496897a7381d987ecbe14297ab111948d09808aaa0a308d29",
           "body_sha256_role": "exact response bytes",
-          "body_text": "{\"credentials\":[{\"provider\":\"openai\",\"env_var\":\"OPENAI_API_KEY\",\"configured\":false,\"source\":\"none\"},{\"provider\":\"openrouter\",\"env_var\":\"OPENROUTER_API_KEY\",\"configured\":false,\"source\":\"none\"}],\"providers\":[{\"id\":\"local\",\"name\":\"Local Deterministic Helper\",\"configured\":true,\"notes\":\"Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver.\"},{\"id\":\"openai\",\"name\":\"OpenAI (Chat Completions)\",\"configured\":false,\"notes\":\"API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time.\"},{\"id\":\"openrouter\",\"name\":\"OpenRouter (Chat Completions)\",\"configured\":false,\"notes\":\"API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time.\"},{\"id\":\"codex\",\"name\":\"Codex CLI (ChatGPT subscription)\",\"configured\":false,\"notes\":\"Codex CLI (ChatGPT subscription). This build does not ship the verified codex subprocess integration, so the provider is always unavailable and a request returns a 503. No request is sent.\"}],\"offline\":true}",
+          "body_text": "{\"credentials\":[{\"provider\":\"openai\",\"env_var\":\"OPENAI_API_KEY\",\"configured\":false,\"source\":\"none\"},{\"provider\":\"openrouter\",\"env_var\":\"OPENROUTER_API_KEY\",\"configured\":false,\"source\":\"none\"},{\"provider\":\"codex\",\"env_var\":\"\",\"configured\":false,\"source\":\"subscription\"},{\"provider\":\"claude_code\",\"env_var\":\"\",\"configured\":false,\"source\":\"subscription\"},{\"provider\":\"codex_cli\",\"env_var\":\"\",\"configured\":false,\"source\":\"subscription\"},{\"provider\":\"opencode_cli\",\"env_var\":\"\",\"configured\":false,\"source\":\"subscription\"}],\"providers\":[{\"id\":\"local\",\"name\":\"Local Deterministic Helper\",\"configured\":true,\"notes\":\"Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver.\",\"available\":null,\"reason\":null,\"source\":null},{\"id\":\"openai\",\"name\":\"OpenAI (Chat Completions)\",\"configured\":false,\"notes\":\"API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time.\",\"available\":null,\"reason\":null,\"source\":null},{\"id\":\"openrouter\",\"name\":\"OpenRouter (Chat Completions)\",\"configured\":false,\"notes\":\"API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time.\",\"available\":null,\"reason\":null,\"source\":null},{\"id\":\"codex\",\"name\":\"Codex CLI (ChatGPT subscription)\",\"configured\":false,\"notes\":\"Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH\",\"source\":\"subscription (CLI)\"},{\"id\":\"claude_code\",\"name\":\"Claude Code CLI (Anthropic subscription)\",\"configured\":false,\"notes\":\"Claude Code CLI (Anthropic subscription). Runs the operator's own `claude` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs with every built-in tool removed and with the operator's hooks, plugins, skills and MCP servers switched off. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the Claude Code CLI was not found on PATH or at KALA_STUDIO_CLAUDE_CLI_PATH\",\"source\":\"subscription (CLI)\"},{\"id\":\"codex_cli\",\"name\":\"Codex CLI (ChatGPT subscription)\",\"configured\":false,\"notes\":\"Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH\",\"source\":\"subscription (CLI)\"},{\"id\":\"opencode_cli\",\"name\":\"OpenCode CLI (subscription)\",\"configured\":false,\"notes\":\"OpenCode CLI (subscription). Runs the operator's own `opencode` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs as an agent that may not call any tool, in a private working directory. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the OpenCode CLI was not found on PATH or at KALA_STUDIO_OPENCODE_CLI_PATH\",\"source\":\"subscription (CLI)\"}],\"offline\":true}",
           "headers": {
             "cache-control": "no-store",
-            "content-length": "1340",
+            "content-length": "3987",
             "content-security-policy": "default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
             "content-type": "application/json",
             "cross-origin-opener-policy": "same-origin",
@@ -483,7 +589,7 @@
             "x-powered-by",
             "set-cookie"
           ],
-          "normalized_body_sha256": "67f8d2b25fc2b669db7541d9212e682847724f45230551b2e5d18c931d20063c",
+          "normalized_body_sha256": "9f73c6bb806cc51af33a726c5488d6af7576ff3c56e842eef6abd8fcf9f9af86",
           "status": 200
         },
         "id": "studio.settings.read",
@@ -511,46 +617,109 @@
                 "env_var": "OPENROUTER_API_KEY",
                 "provider": "openrouter",
                 "source": "none"
+              },
+              {
+                "configured": false,
+                "env_var": "",
+                "provider": "codex",
+                "source": "subscription"
+              },
+              {
+                "configured": false,
+                "env_var": "",
+                "provider": "claude_code",
+                "source": "subscription"
+              },
+              {
+                "configured": false,
+                "env_var": "",
+                "provider": "codex_cli",
+                "source": "subscription"
+              },
+              {
+                "configured": false,
+                "env_var": "",
+                "provider": "opencode_cli",
+                "source": "subscription"
               }
             ],
             "offline": false,
             "providers": [
               {
+                "available": null,
                 "configured": true,
                 "id": "local",
                 "name": "Local Deterministic Helper",
-                "notes": "Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver."
+                "notes": "Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver.",
+                "reason": null,
+                "source": null
               },
               {
+                "available": null,
                 "configured": true,
                 "id": "openai",
                 "name": "OpenAI (Chat Completions)",
-                "notes": "API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time."
+                "notes": "API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time.",
+                "reason": null,
+                "source": null
               },
               {
+                "available": null,
                 "configured": false,
                 "id": "openrouter",
                 "name": "OpenRouter (Chat Completions)",
-                "notes": "API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time."
+                "notes": "API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time.",
+                "reason": null,
+                "source": null
               },
               {
+                "available": false,
                 "configured": false,
                 "id": "codex",
                 "name": "Codex CLI (ChatGPT subscription)",
-                "notes": "Codex CLI (ChatGPT subscription). This build does not ship the verified codex subprocess integration, so the provider is always unavailable and a request returns a 503. No request is sent."
+                "notes": "Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH",
+                "source": "subscription (CLI)"
+              },
+              {
+                "available": false,
+                "configured": false,
+                "id": "claude_code",
+                "name": "Claude Code CLI (Anthropic subscription)",
+                "notes": "Claude Code CLI (Anthropic subscription). Runs the operator's own `claude` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs with every built-in tool removed and with the operator's hooks, plugins, skills and MCP servers switched off. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the Claude Code CLI was not found on PATH or at KALA_STUDIO_CLAUDE_CLI_PATH",
+                "source": "subscription (CLI)"
+              },
+              {
+                "available": false,
+                "configured": false,
+                "id": "codex_cli",
+                "name": "Codex CLI (ChatGPT subscription)",
+                "notes": "Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH",
+                "source": "subscription (CLI)"
+              },
+              {
+                "available": false,
+                "configured": false,
+                "id": "opencode_cli",
+                "name": "OpenCode CLI (subscription)",
+                "notes": "OpenCode CLI (subscription). Runs the operator's own `opencode` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs as an agent that may not call any tool, in a private working directory. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the OpenCode CLI was not found on PATH or at KALA_STUDIO_OPENCODE_CLI_PATH",
+                "source": "subscription (CLI)"
               }
             ]
           },
           "body_comparison": "exact",
           "body_deterministic": true,
-          "body_length": 1341,
+          "body_length": 3988,
           "body_length_role": "length of the recorded body text; the recorded digest is the digest of the same text",
-          "body_sha256": "0c9a0f2a38ca00b741419b5c063f7e0c86af071eb88f116faf57881f68fd0c5d",
+          "body_sha256": "04c7f265b5cda42d0b3edefa64878d46c713abb6eec458b9c265a0bf78f35bec",
           "body_sha256_role": "exact response bytes",
-          "body_text": "{\"credentials\":[{\"provider\":\"openai\",\"env_var\":\"OPENAI_API_KEY\",\"configured\":true,\"source\":\"stored\"},{\"provider\":\"openrouter\",\"env_var\":\"OPENROUTER_API_KEY\",\"configured\":false,\"source\":\"none\"}],\"providers\":[{\"id\":\"local\",\"name\":\"Local Deterministic Helper\",\"configured\":true,\"notes\":\"Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver.\"},{\"id\":\"openai\",\"name\":\"OpenAI (Chat Completions)\",\"configured\":true,\"notes\":\"API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time.\"},{\"id\":\"openrouter\",\"name\":\"OpenRouter (Chat Completions)\",\"configured\":false,\"notes\":\"API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time.\"},{\"id\":\"codex\",\"name\":\"Codex CLI (ChatGPT subscription)\",\"configured\":false,\"notes\":\"Codex CLI (ChatGPT subscription). This build does not ship the verified codex subprocess integration, so the provider is always unavailable and a request returns a 503. No request is sent.\"}],\"offline\":false}",
+          "body_text": "{\"credentials\":[{\"provider\":\"openai\",\"env_var\":\"OPENAI_API_KEY\",\"configured\":true,\"source\":\"stored\"},{\"provider\":\"openrouter\",\"env_var\":\"OPENROUTER_API_KEY\",\"configured\":false,\"source\":\"none\"},{\"provider\":\"codex\",\"env_var\":\"\",\"configured\":false,\"source\":\"subscription\"},{\"provider\":\"claude_code\",\"env_var\":\"\",\"configured\":false,\"source\":\"subscription\"},{\"provider\":\"codex_cli\",\"env_var\":\"\",\"configured\":false,\"source\":\"subscription\"},{\"provider\":\"opencode_cli\",\"env_var\":\"\",\"configured\":false,\"source\":\"subscription\"}],\"providers\":[{\"id\":\"local\",\"name\":\"Local Deterministic Helper\",\"configured\":true,\"notes\":\"Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver.\",\"available\":null,\"reason\":null,\"source\":null},{\"id\":\"openai\",\"name\":\"OpenAI (Chat Completions)\",\"configured\":true,\"notes\":\"API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time.\",\"available\":null,\"reason\":null,\"source\":null},{\"id\":\"openrouter\",\"name\":\"OpenRouter (Chat Completions)\",\"configured\":false,\"notes\":\"API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time.\",\"available\":null,\"reason\":null,\"source\":null},{\"id\":\"codex\",\"name\":\"Codex CLI (ChatGPT subscription)\",\"configured\":false,\"notes\":\"Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH\",\"source\":\"subscription (CLI)\"},{\"id\":\"claude_code\",\"name\":\"Claude Code CLI (Anthropic subscription)\",\"configured\":false,\"notes\":\"Claude Code CLI (Anthropic subscription). Runs the operator's own `claude` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs with every built-in tool removed and with the operator's hooks, plugins, skills and MCP servers switched off. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the Claude Code CLI was not found on PATH or at KALA_STUDIO_CLAUDE_CLI_PATH\",\"source\":\"subscription (CLI)\"},{\"id\":\"codex_cli\",\"name\":\"Codex CLI (ChatGPT subscription)\",\"configured\":false,\"notes\":\"Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH\",\"source\":\"subscription (CLI)\"},{\"id\":\"opencode_cli\",\"name\":\"OpenCode CLI (subscription)\",\"configured\":false,\"notes\":\"OpenCode CLI (subscription). Runs the operator's own `opencode` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs as an agent that may not call any tool, in a private working directory. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the OpenCode CLI was not found on PATH or at KALA_STUDIO_OPENCODE_CLI_PATH\",\"source\":\"subscription (CLI)\"}],\"offline\":false}",
           "headers": {
             "cache-control": "no-store",
-            "content-length": "1341",
+            "content-length": "3988",
             "content-security-policy": "default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
             "content-type": "application/json",
             "cross-origin-opener-policy": "same-origin",
@@ -564,7 +733,7 @@
             "x-powered-by",
             "set-cookie"
           ],
-          "normalized_body_sha256": "4d50a0799128daa319c3eefb81adaffc7634cdd2ec881fe207cfe6187a07bf6e",
+          "normalized_body_sha256": "34f666b4c9aabd1f156897861c19a6ef7eaa84dc9aaad860667da8c5525f41f1",
           "status": 200
         },
         "id": "studio.settings.store_key",
@@ -600,46 +769,109 @@
                 "env_var": "OPENROUTER_API_KEY",
                 "provider": "openrouter",
                 "source": "none"
+              },
+              {
+                "configured": false,
+                "env_var": "",
+                "provider": "codex",
+                "source": "subscription"
+              },
+              {
+                "configured": false,
+                "env_var": "",
+                "provider": "claude_code",
+                "source": "subscription"
+              },
+              {
+                "configured": false,
+                "env_var": "",
+                "provider": "codex_cli",
+                "source": "subscription"
+              },
+              {
+                "configured": false,
+                "env_var": "",
+                "provider": "opencode_cli",
+                "source": "subscription"
               }
             ],
             "offline": false,
             "providers": [
               {
+                "available": null,
                 "configured": true,
                 "id": "local",
                 "name": "Local Deterministic Helper",
-                "notes": "Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver."
+                "notes": "Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver.",
+                "reason": null,
+                "source": null
               },
               {
+                "available": null,
                 "configured": true,
                 "id": "openai",
                 "name": "OpenAI (Chat Completions)",
-                "notes": "API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time."
+                "notes": "API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time.",
+                "reason": null,
+                "source": null
               },
               {
+                "available": null,
                 "configured": false,
                 "id": "openrouter",
                 "name": "OpenRouter (Chat Completions)",
-                "notes": "API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time."
+                "notes": "API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time.",
+                "reason": null,
+                "source": null
               },
               {
+                "available": false,
                 "configured": false,
                 "id": "codex",
                 "name": "Codex CLI (ChatGPT subscription)",
-                "notes": "Codex CLI (ChatGPT subscription). This build does not ship the verified codex subprocess integration, so the provider is always unavailable and a request returns a 503. No request is sent."
+                "notes": "Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH",
+                "source": "subscription (CLI)"
+              },
+              {
+                "available": false,
+                "configured": false,
+                "id": "claude_code",
+                "name": "Claude Code CLI (Anthropic subscription)",
+                "notes": "Claude Code CLI (Anthropic subscription). Runs the operator's own `claude` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs with every built-in tool removed and with the operator's hooks, plugins, skills and MCP servers switched off. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the Claude Code CLI was not found on PATH or at KALA_STUDIO_CLAUDE_CLI_PATH",
+                "source": "subscription (CLI)"
+              },
+              {
+                "available": false,
+                "configured": false,
+                "id": "codex_cli",
+                "name": "Codex CLI (ChatGPT subscription)",
+                "notes": "Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH",
+                "source": "subscription (CLI)"
+              },
+              {
+                "available": false,
+                "configured": false,
+                "id": "opencode_cli",
+                "name": "OpenCode CLI (subscription)",
+                "notes": "OpenCode CLI (subscription). Runs the operator's own `opencode` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs as an agent that may not call any tool, in a private working directory. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the OpenCode CLI was not found on PATH or at KALA_STUDIO_OPENCODE_CLI_PATH",
+                "source": "subscription (CLI)"
               }
             ]
           },
           "body_comparison": "exact",
           "body_deterministic": true,
-          "body_length": 1341,
+          "body_length": 3988,
           "body_length_role": "length of the recorded body text; the recorded digest is the digest of the same text",
-          "body_sha256": "0c9a0f2a38ca00b741419b5c063f7e0c86af071eb88f116faf57881f68fd0c5d",
+          "body_sha256": "04c7f265b5cda42d0b3edefa64878d46c713abb6eec458b9c265a0bf78f35bec",
           "body_sha256_role": "exact response bytes",
-          "body_text": "{\"credentials\":[{\"provider\":\"openai\",\"env_var\":\"OPENAI_API_KEY\",\"configured\":true,\"source\":\"stored\"},{\"provider\":\"openrouter\",\"env_var\":\"OPENROUTER_API_KEY\",\"configured\":false,\"source\":\"none\"}],\"providers\":[{\"id\":\"local\",\"name\":\"Local Deterministic Helper\",\"configured\":true,\"notes\":\"Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver.\"},{\"id\":\"openai\",\"name\":\"OpenAI (Chat Completions)\",\"configured\":true,\"notes\":\"API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time.\"},{\"id\":\"openrouter\",\"name\":\"OpenRouter (Chat Completions)\",\"configured\":false,\"notes\":\"API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time.\"},{\"id\":\"codex\",\"name\":\"Codex CLI (ChatGPT subscription)\",\"configured\":false,\"notes\":\"Codex CLI (ChatGPT subscription). This build does not ship the verified codex subprocess integration, so the provider is always unavailable and a request returns a 503. No request is sent.\"}],\"offline\":false}",
+          "body_text": "{\"credentials\":[{\"provider\":\"openai\",\"env_var\":\"OPENAI_API_KEY\",\"configured\":true,\"source\":\"stored\"},{\"provider\":\"openrouter\",\"env_var\":\"OPENROUTER_API_KEY\",\"configured\":false,\"source\":\"none\"},{\"provider\":\"codex\",\"env_var\":\"\",\"configured\":false,\"source\":\"subscription\"},{\"provider\":\"claude_code\",\"env_var\":\"\",\"configured\":false,\"source\":\"subscription\"},{\"provider\":\"codex_cli\",\"env_var\":\"\",\"configured\":false,\"source\":\"subscription\"},{\"provider\":\"opencode_cli\",\"env_var\":\"\",\"configured\":false,\"source\":\"subscription\"}],\"providers\":[{\"id\":\"local\",\"name\":\"Local Deterministic Helper\",\"configured\":true,\"notes\":\"Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver.\",\"available\":null,\"reason\":null,\"source\":null},{\"id\":\"openai\",\"name\":\"OpenAI (Chat Completions)\",\"configured\":true,\"notes\":\"API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time.\",\"available\":null,\"reason\":null,\"source\":null},{\"id\":\"openrouter\",\"name\":\"OpenRouter (Chat Completions)\",\"configured\":false,\"notes\":\"API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time.\",\"available\":null,\"reason\":null,\"source\":null},{\"id\":\"codex\",\"name\":\"Codex CLI (ChatGPT subscription)\",\"configured\":false,\"notes\":\"Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH\",\"source\":\"subscription (CLI)\"},{\"id\":\"claude_code\",\"name\":\"Claude Code CLI (Anthropic subscription)\",\"configured\":false,\"notes\":\"Claude Code CLI (Anthropic subscription). Runs the operator's own `claude` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs with every built-in tool removed and with the operator's hooks, plugins, skills and MCP servers switched off. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the Claude Code CLI was not found on PATH or at KALA_STUDIO_CLAUDE_CLI_PATH\",\"source\":\"subscription (CLI)\"},{\"id\":\"codex_cli\",\"name\":\"Codex CLI (ChatGPT subscription)\",\"configured\":false,\"notes\":\"Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH\",\"source\":\"subscription (CLI)\"},{\"id\":\"opencode_cli\",\"name\":\"OpenCode CLI (subscription)\",\"configured\":false,\"notes\":\"OpenCode CLI (subscription). Runs the operator's own `opencode` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs as an agent that may not call any tool, in a private working directory. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the OpenCode CLI was not found on PATH or at KALA_STUDIO_OPENCODE_CLI_PATH\",\"source\":\"subscription (CLI)\"}],\"offline\":false}",
           "headers": {
             "cache-control": "no-store",
-            "content-length": "1341",
+            "content-length": "3988",
             "content-security-policy": "default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
             "content-type": "application/json",
             "cross-origin-opener-policy": "same-origin",
@@ -653,7 +885,7 @@
             "x-powered-by",
             "set-cookie"
           ],
-          "normalized_body_sha256": "4d50a0799128daa319c3eefb81adaffc7634cdd2ec881fe207cfe6187a07bf6e",
+          "normalized_body_sha256": "34f666b4c9aabd1f156897861c19a6ef7eaa84dc9aaad860667da8c5525f41f1",
           "status": 200
         },
         "id": "studio.settings.read_stored",
@@ -671,41 +903,80 @@
           "body": {
             "providers": [
               {
+                "available": null,
                 "configured": true,
                 "id": "local",
                 "name": "Local Deterministic Helper",
-                "notes": "Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver."
+                "notes": "Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver.",
+                "reason": null,
+                "source": null
               },
               {
+                "available": null,
                 "configured": true,
                 "id": "openai",
                 "name": "OpenAI (Chat Completions)",
-                "notes": "API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time."
+                "notes": "API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time.",
+                "reason": null,
+                "source": null
               },
               {
+                "available": null,
                 "configured": false,
                 "id": "openrouter",
                 "name": "OpenRouter (Chat Completions)",
-                "notes": "API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time."
+                "notes": "API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time.",
+                "reason": null,
+                "source": null
               },
               {
+                "available": false,
                 "configured": false,
                 "id": "codex",
                 "name": "Codex CLI (ChatGPT subscription)",
-                "notes": "Codex CLI (ChatGPT subscription). This build does not ship the verified codex subprocess integration, so the provider is always unavailable and a request returns a 503. No request is sent."
+                "notes": "Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH",
+                "source": "subscription (CLI)"
+              },
+              {
+                "available": false,
+                "configured": false,
+                "id": "claude_code",
+                "name": "Claude Code CLI (Anthropic subscription)",
+                "notes": "Claude Code CLI (Anthropic subscription). Runs the operator's own `claude` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs with every built-in tool removed and with the operator's hooks, plugins, skills and MCP servers switched off. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the Claude Code CLI was not found on PATH or at KALA_STUDIO_CLAUDE_CLI_PATH",
+                "source": "subscription (CLI)"
+              },
+              {
+                "available": false,
+                "configured": false,
+                "id": "codex_cli",
+                "name": "Codex CLI (ChatGPT subscription)",
+                "notes": "Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH",
+                "source": "subscription (CLI)"
+              },
+              {
+                "available": false,
+                "configured": false,
+                "id": "opencode_cli",
+                "name": "OpenCode CLI (subscription)",
+                "notes": "OpenCode CLI (subscription). Runs the operator's own `opencode` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs as an agent that may not call any tool, in a private working directory. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the OpenCode CLI was not found on PATH or at KALA_STUDIO_OPENCODE_CLI_PATH",
+                "source": "subscription (CLI)"
               }
             ]
           },
           "body_comparison": "exact",
           "body_deterministic": true,
-          "body_length": 1132,
+          "body_length": 3454,
           "body_length_role": "length of the recorded body text; the recorded digest is the digest of the same text",
-          "body_sha256": "36b5b8cb70cd6e58b633ea693c8a2a824966e427dffd6f60cc2a544c124cfdcd",
+          "body_sha256": "592347c125688bc716a553d11391d3ac17b7de51faef2a4ea591f87386951f8b",
           "body_sha256_role": "exact response bytes",
-          "body_text": "{\"providers\":[{\"id\":\"local\",\"name\":\"Local Deterministic Helper\",\"configured\":true,\"notes\":\"Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver.\"},{\"id\":\"openai\",\"name\":\"OpenAI (Chat Completions)\",\"configured\":true,\"notes\":\"API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time.\"},{\"id\":\"openrouter\",\"name\":\"OpenRouter (Chat Completions)\",\"configured\":false,\"notes\":\"API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time.\"},{\"id\":\"codex\",\"name\":\"Codex CLI (ChatGPT subscription)\",\"configured\":false,\"notes\":\"Codex CLI (ChatGPT subscription). This build does not ship the verified codex subprocess integration, so the provider is always unavailable and a request returns a 503. No request is sent.\"}]}",
+          "body_text": "{\"providers\":[{\"id\":\"local\",\"name\":\"Local Deterministic Helper\",\"configured\":true,\"notes\":\"Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver.\",\"available\":null,\"reason\":null,\"source\":null},{\"id\":\"openai\",\"name\":\"OpenAI (Chat Completions)\",\"configured\":true,\"notes\":\"API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time.\",\"available\":null,\"reason\":null,\"source\":null},{\"id\":\"openrouter\",\"name\":\"OpenRouter (Chat Completions)\",\"configured\":false,\"notes\":\"API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time.\",\"available\":null,\"reason\":null,\"source\":null},{\"id\":\"codex\",\"name\":\"Codex CLI (ChatGPT subscription)\",\"configured\":false,\"notes\":\"Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH\",\"source\":\"subscription (CLI)\"},{\"id\":\"claude_code\",\"name\":\"Claude Code CLI (Anthropic subscription)\",\"configured\":false,\"notes\":\"Claude Code CLI (Anthropic subscription). Runs the operator's own `claude` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs with every built-in tool removed and with the operator's hooks, plugins, skills and MCP servers switched off. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the Claude Code CLI was not found on PATH or at KALA_STUDIO_CLAUDE_CLI_PATH\",\"source\":\"subscription (CLI)\"},{\"id\":\"codex_cli\",\"name\":\"Codex CLI (ChatGPT subscription)\",\"configured\":false,\"notes\":\"Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH\",\"source\":\"subscription (CLI)\"},{\"id\":\"opencode_cli\",\"name\":\"OpenCode CLI (subscription)\",\"configured\":false,\"notes\":\"OpenCode CLI (subscription). Runs the operator's own `opencode` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs as an agent that may not call any tool, in a private working directory. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the OpenCode CLI was not found on PATH or at KALA_STUDIO_OPENCODE_CLI_PATH\",\"source\":\"subscription (CLI)\"}]}",
           "headers": {
             "cache-control": "no-store",
-            "content-length": "1132",
+            "content-length": "3454",
             "content-security-policy": "default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
             "content-type": "application/json",
             "cross-origin-opener-policy": "same-origin",
@@ -719,7 +990,7 @@
             "x-powered-by",
             "set-cookie"
           ],
-          "normalized_body_sha256": "08617ba84e730be78d6f453e01a1d4e557f6e5f683edd90b6ec7c4a6bcb0647c",
+          "normalized_body_sha256": "7b55a0846afbbb22d9ad51027fa88f91786d1cd3f1282bba8485646e8b8a6666",
           "status": 200
         },
         "id": "studio.providers.configured",
@@ -736,6 +1007,7 @@
         "expected": {
           "body": {
             "design_available": true,
+            "design_turn_budget_seconds": 3960,
             "integrations": [
               "solidworks",
               "solid_edge",
@@ -754,7 +1026,10 @@
               "local",
               "openai",
               "openrouter",
-              "codex"
+              "codex",
+              "claude_code",
+              "codex_cli",
+              "opencode_cli"
             ],
             "service": "kala-studio",
             "status": "ok",
@@ -763,14 +1038,14 @@
           },
           "body_comparison": "exact",
           "body_deterministic": true,
-          "body_length": 334,
+          "body_length": 409,
           "body_length_role": "length of the recorded body text; the recorded digest is the digest of the same text",
-          "body_sha256": "10241df722770f14aec3741812376ac5a9c1b694d1e2f5d74bb1000cd1e54312",
+          "body_sha256": "25d5cd1890068ffe8834f3ca04047ee43caa3a795532bc7d7ef8e12df32e112a",
           "body_sha256_role": "exact response bytes",
-          "body_text": "{\"status\":\"ok\",\"service\":\"kala-studio\",\"version\":\"0.1.0\",\"offline\":false,\"step_available\":true,\"design_available\":true,\"integrations\":[\"solidworks\",\"solid_edge\",\"autocad\",\"fusion360\",\"freecad\",\"openscad\",\"ansys_mechanical\",\"abaqus\",\"comsol\",\"simcenter_nastran\",\"altair_optistruct\"],\"providers\":[\"local\",\"openai\",\"openrouter\",\"codex\"]}",
+          "body_text": "{\"status\":\"ok\",\"service\":\"kala-studio\",\"version\":\"0.1.0\",\"offline\":false,\"design_turn_budget_seconds\":3960,\"step_available\":true,\"design_available\":true,\"integrations\":[\"solidworks\",\"solid_edge\",\"autocad\",\"fusion360\",\"freecad\",\"openscad\",\"ansys_mechanical\",\"abaqus\",\"comsol\",\"simcenter_nastran\",\"altair_optistruct\"],\"providers\":[\"local\",\"openai\",\"openrouter\",\"codex\",\"claude_code\",\"codex_cli\",\"opencode_cli\"]}",
           "headers": {
             "cache-control": "no-store",
-            "content-length": "334",
+            "content-length": "409",
             "content-security-policy": "default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
             "content-type": "application/json",
             "cross-origin-opener-policy": "same-origin",
@@ -784,7 +1059,7 @@
             "x-powered-by",
             "set-cookie"
           ],
-          "normalized_body_sha256": "a53eced89a1628d5ae3f1447bd1e669cdc6bf637a9f9341b8860fd8be2d112c1",
+          "normalized_body_sha256": "68d2fbcfa7468a1796da78dc716710cc8a29001f2f2c30d77d08c65a368ef0d8",
           "status": 200
         },
         "id": "studio.health.online",
@@ -812,46 +1087,109 @@
                 "env_var": "OPENROUTER_API_KEY",
                 "provider": "openrouter",
                 "source": "none"
+              },
+              {
+                "configured": false,
+                "env_var": "",
+                "provider": "codex",
+                "source": "subscription"
+              },
+              {
+                "configured": false,
+                "env_var": "",
+                "provider": "claude_code",
+                "source": "subscription"
+              },
+              {
+                "configured": false,
+                "env_var": "",
+                "provider": "codex_cli",
+                "source": "subscription"
+              },
+              {
+                "configured": false,
+                "env_var": "",
+                "provider": "opencode_cli",
+                "source": "subscription"
               }
             ],
             "offline": true,
             "providers": [
               {
+                "available": null,
                 "configured": true,
                 "id": "local",
                 "name": "Local Deterministic Helper",
-                "notes": "Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver."
+                "notes": "Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver.",
+                "reason": null,
+                "source": null
               },
               {
+                "available": null,
                 "configured": false,
                 "id": "openai",
                 "name": "OpenAI (Chat Completions)",
-                "notes": "API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time."
+                "notes": "API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time.",
+                "reason": null,
+                "source": null
               },
               {
+                "available": null,
                 "configured": false,
                 "id": "openrouter",
                 "name": "OpenRouter (Chat Completions)",
-                "notes": "API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time."
+                "notes": "API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time.",
+                "reason": null,
+                "source": null
               },
               {
+                "available": false,
                 "configured": false,
                 "id": "codex",
                 "name": "Codex CLI (ChatGPT subscription)",
-                "notes": "Codex CLI (ChatGPT subscription). This build does not ship the verified codex subprocess integration, so the provider is always unavailable and a request returns a 503. No request is sent."
+                "notes": "Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH",
+                "source": "subscription (CLI)"
+              },
+              {
+                "available": false,
+                "configured": false,
+                "id": "claude_code",
+                "name": "Claude Code CLI (Anthropic subscription)",
+                "notes": "Claude Code CLI (Anthropic subscription). Runs the operator's own `claude` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs with every built-in tool removed and with the operator's hooks, plugins, skills and MCP servers switched off. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the Claude Code CLI was not found on PATH or at KALA_STUDIO_CLAUDE_CLI_PATH",
+                "source": "subscription (CLI)"
+              },
+              {
+                "available": false,
+                "configured": false,
+                "id": "codex_cli",
+                "name": "Codex CLI (ChatGPT subscription)",
+                "notes": "Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH",
+                "source": "subscription (CLI)"
+              },
+              {
+                "available": false,
+                "configured": false,
+                "id": "opencode_cli",
+                "name": "OpenCode CLI (subscription)",
+                "notes": "OpenCode CLI (subscription). Runs the operator's own `opencode` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs as an agent that may not call any tool, in a private working directory. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.",
+                "reason": "the OpenCode CLI was not found on PATH or at KALA_STUDIO_OPENCODE_CLI_PATH",
+                "source": "subscription (CLI)"
               }
             ]
           },
           "body_comparison": "exact",
           "body_deterministic": true,
-          "body_length": 1340,
+          "body_length": 3987,
           "body_length_role": "length of the recorded body text; the recorded digest is the digest of the same text",
-          "body_sha256": "08f0c89b57e46ef734040d91be6af8790b231472d2ce3cb9ab519666d24e868c",
+          "body_sha256": "f71336fe7e06cdc496897a7381d987ecbe14297ab111948d09808aaa0a308d29",
           "body_sha256_role": "exact response bytes",
-          "body_text": "{\"credentials\":[{\"provider\":\"openai\",\"env_var\":\"OPENAI_API_KEY\",\"configured\":false,\"source\":\"none\"},{\"provider\":\"openrouter\",\"env_var\":\"OPENROUTER_API_KEY\",\"configured\":false,\"source\":\"none\"}],\"providers\":[{\"id\":\"local\",\"name\":\"Local Deterministic Helper\",\"configured\":true,\"notes\":\"Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver.\"},{\"id\":\"openai\",\"name\":\"OpenAI (Chat Completions)\",\"configured\":false,\"notes\":\"API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time.\"},{\"id\":\"openrouter\",\"name\":\"OpenRouter (Chat Completions)\",\"configured\":false,\"notes\":\"API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time.\"},{\"id\":\"codex\",\"name\":\"Codex CLI (ChatGPT subscription)\",\"configured\":false,\"notes\":\"Codex CLI (ChatGPT subscription). This build does not ship the verified codex subprocess integration, so the provider is always unavailable and a request returns a 503. No request is sent.\"}],\"offline\":true}",
+          "body_text": "{\"credentials\":[{\"provider\":\"openai\",\"env_var\":\"OPENAI_API_KEY\",\"configured\":false,\"source\":\"none\"},{\"provider\":\"openrouter\",\"env_var\":\"OPENROUTER_API_KEY\",\"configured\":false,\"source\":\"none\"},{\"provider\":\"codex\",\"env_var\":\"\",\"configured\":false,\"source\":\"subscription\"},{\"provider\":\"claude_code\",\"env_var\":\"\",\"configured\":false,\"source\":\"subscription\"},{\"provider\":\"codex_cli\",\"env_var\":\"\",\"configured\":false,\"source\":\"subscription\"},{\"provider\":\"opencode_cli\",\"env_var\":\"\",\"configured\":false,\"source\":\"subscription\"}],\"providers\":[{\"id\":\"local\",\"name\":\"Local Deterministic Helper\",\"configured\":true,\"notes\":\"Offline deterministic mechanical-engineering helper. Extracts dimensions and returns nominal analytic volume/surface-area estimates, and documents the built-in OpenCascade (OCP) STEP/STL estimate, neutral CAD/CAE handoff, and standalone build workflow. Opens no network connection and runs no solver.\",\"available\":null,\"reason\":null,\"source\":null},{\"id\":\"openai\",\"name\":\"OpenAI (Chat Completions)\",\"configured\":false,\"notes\":\"API-key route; uses the standard Chat Completions endpoint at https://api.openai.com/v1/chat/completions. Requires allow_remote=true at request time.\",\"available\":null,\"reason\":null,\"source\":null},{\"id\":\"openrouter\",\"name\":\"OpenRouter (Chat Completions)\",\"configured\":false,\"notes\":\"API-key route; uses the public OpenRouter endpoint at https://openrouter.ai/api/v1/chat/completions. Requires allow_remote=true at request time.\",\"available\":null,\"reason\":null,\"source\":null},{\"id\":\"codex\",\"name\":\"Codex CLI (ChatGPT subscription)\",\"configured\":false,\"notes\":\"Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH\",\"source\":\"subscription (CLI)\"},{\"id\":\"claude_code\",\"name\":\"Claude Code CLI (Anthropic subscription)\",\"configured\":false,\"notes\":\"Claude Code CLI (Anthropic subscription). Runs the operator's own `claude` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs with every built-in tool removed and with the operator's hooks, plugins, skills and MCP servers switched off. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the Claude Code CLI was not found on PATH or at KALA_STUDIO_CLAUDE_CLI_PATH\",\"source\":\"subscription (CLI)\"},{\"id\":\"codex_cli\",\"name\":\"Codex CLI (ChatGPT subscription)\",\"configured\":false,\"notes\":\"Codex CLI (ChatGPT subscription). Runs the operator's own `codex` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs in a read-only sandbox with no session transcript and without the operator's own Codex configuration. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH\",\"source\":\"subscription (CLI)\"},{\"id\":\"opencode_cli\",\"name\":\"OpenCode CLI (subscription)\",\"configured\":false,\"notes\":\"OpenCode CLI (subscription). Runs the operator's own `opencode` CLI as a sandboxed subprocess: no shell, no tools, a private working directory, a sanitized environment and a bounded run. The turn runs as an agent that may not call any tool, in a private working directory. Kala never sees or stores the CLI's credential. Requires allow_remote=true at request time.\",\"available\":false,\"reason\":\"the OpenCode CLI was not found on PATH or at KALA_STUDIO_OPENCODE_CLI_PATH\",\"source\":\"subscription (CLI)\"}],\"offline\":true}",
           "headers": {
             "cache-control": "no-store",
-            "content-length": "1340",
+            "content-length": "3987",
             "content-security-policy": "default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
             "content-type": "application/json",
             "cross-origin-opener-policy": "same-origin",
@@ -865,7 +1203,7 @@
             "x-powered-by",
             "set-cookie"
           ],
-          "normalized_body_sha256": "67f8d2b25fc2b669db7541d9212e682847724f45230551b2e5d18c931d20063c",
+          "normalized_body_sha256": "9f73c6bb806cc51af33a726c5488d6af7576ff3c56e842eef6abd8fcf9f9af86",
           "status": 200
         },
         "id": "studio.settings.clear_key",
@@ -889,6 +1227,7 @@
         "expected": {
           "body": {
             "design_available": true,
+            "design_turn_budget_seconds": 3960,
             "integrations": [
               "solidworks",
               "solid_edge",
@@ -907,7 +1246,10 @@
               "local",
               "openai",
               "openrouter",
-              "codex"
+              "codex",
+              "claude_code",
+              "codex_cli",
+              "opencode_cli"
             ],
             "service": "kala-studio",
             "status": "ok",
@@ -916,14 +1258,14 @@
           },
           "body_comparison": "exact",
           "body_deterministic": true,
-          "body_length": 333,
+          "body_length": 408,
           "body_length_role": "length of the recorded body text; the recorded digest is the digest of the same text",
-          "body_sha256": "db994c6ec8ed47b4d0f49d2a9b0d5cbfef98989b10a86e78f2233ecff2a1a670",
+          "body_sha256": "8e2abeb28d8958f5b2b6f4d2370a02c710aef3770c51db525606d2f2f428eff0",
           "body_sha256_role": "exact response bytes",
-          "body_text": "{\"status\":\"ok\",\"service\":\"kala-studio\",\"version\":\"0.1.0\",\"offline\":true,\"step_available\":true,\"design_available\":true,\"integrations\":[\"solidworks\",\"solid_edge\",\"autocad\",\"fusion360\",\"freecad\",\"openscad\",\"ansys_mechanical\",\"abaqus\",\"comsol\",\"simcenter_nastran\",\"altair_optistruct\"],\"providers\":[\"local\",\"openai\",\"openrouter\",\"codex\"]}",
+          "body_text": "{\"status\":\"ok\",\"service\":\"kala-studio\",\"version\":\"0.1.0\",\"offline\":true,\"design_turn_budget_seconds\":3960,\"step_available\":true,\"design_available\":true,\"integrations\":[\"solidworks\",\"solid_edge\",\"autocad\",\"fusion360\",\"freecad\",\"openscad\",\"ansys_mechanical\",\"abaqus\",\"comsol\",\"simcenter_nastran\",\"altair_optistruct\"],\"providers\":[\"local\",\"openai\",\"openrouter\",\"codex\",\"claude_code\",\"codex_cli\",\"opencode_cli\"]}",
           "headers": {
             "cache-control": "no-store",
-            "content-length": "333",
+            "content-length": "408",
             "content-security-policy": "default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
             "content-type": "application/json",
             "cross-origin-opener-policy": "same-origin",
@@ -937,7 +1279,7 @@
             "x-powered-by",
             "set-cookie"
           ],
-          "normalized_body_sha256": "1e9df9cb446bd9a7ee252c00b3eee8d82ce675fdc1227ec24f3bb265464fabfb",
+          "normalized_body_sha256": "274175b029578475647d2ee5ecf30ee21376f2ebdf0a6a5aa9a2f4c43f018fe9",
           "status": 200
         },
         "id": "studio.health.offline_again",
@@ -2529,20 +2871,20 @@
           "body": {
             "code": "provider_unavailable",
             "details": [
-              "provider=codex is not available in this studio build; the verified Codex CLI subprocess integration is not shipped yet, so no request is sent. Use provider=openai or provider=openrouter with an API key for remote chat."
+              "the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH"
             ],
             "message": "the chat provider is not available in this studio build"
           },
           "body_comparison": "exact",
           "body_deterministic": true,
-          "body_length": 332,
+          "body_length": 182,
           "body_length_role": "length of the recorded body text; the recorded digest is the digest of the same text",
-          "body_sha256": "5762e90863a91fcc94f7db915967980972e4d510efd357af24f930278d1cda7d",
+          "body_sha256": "78853165419804dd78827b62d3308be370b97a4cebdca4654bb5812494c05cbf",
           "body_sha256_role": "exact response bytes",
-          "body_text": "{\"code\":\"provider_unavailable\",\"details\":[\"provider=codex is not available in this studio build; the verified Codex CLI subprocess integration is not shipped yet, so no request is sent. Use provider=openai or provider=openrouter with an API key for remote chat.\"],\"message\":\"the chat provider is not available in this studio build\"}",
+          "body_text": "{\"code\":\"provider_unavailable\",\"details\":[\"the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH\"],\"message\":\"the chat provider is not available in this studio build\"}",
           "headers": {
             "cache-control": "no-store",
-            "content-length": "332",
+            "content-length": "182",
             "content-security-policy": "default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
             "content-type": "application/json",
             "cross-origin-opener-policy": "same-origin",
@@ -2556,7 +2898,7 @@
             "x-powered-by",
             "set-cookie"
           ],
-          "normalized_body_sha256": "5762e90863a91fcc94f7db915967980972e4d510efd357af24f930278d1cda7d",
+          "normalized_body_sha256": "78853165419804dd78827b62d3308be370b97a4cebdca4654bb5812494c05cbf",
           "status": 503
         },
         "id": "studio.chat.codex_unavailable",
@@ -3436,6 +3778,7 @@
         "expected": {
           "body": {
             "design_available": true,
+            "design_turn_budget_seconds": 3960,
             "integrations": [
               "solidworks",
               "solid_edge",
@@ -3454,7 +3797,10 @@
               "local",
               "openai",
               "openrouter",
-              "codex"
+              "codex",
+              "claude_code",
+              "codex_cli",
+              "opencode_cli"
             ],
             "service": "kala-studio",
             "status": "ok",
@@ -3463,14 +3809,14 @@
           },
           "body_comparison": "exact",
           "body_deterministic": true,
-          "body_length": 333,
+          "body_length": 408,
           "body_length_role": "length of the recorded body text; the recorded digest is the digest of the same text",
-          "body_sha256": "db994c6ec8ed47b4d0f49d2a9b0d5cbfef98989b10a86e78f2233ecff2a1a670",
+          "body_sha256": "8e2abeb28d8958f5b2b6f4d2370a02c710aef3770c51db525606d2f2f428eff0",
           "body_sha256_role": "exact response bytes",
-          "body_text": "{\"status\":\"ok\",\"service\":\"kala-studio\",\"version\":\"0.1.0\",\"offline\":true,\"step_available\":true,\"design_available\":true,\"integrations\":[\"solidworks\",\"solid_edge\",\"autocad\",\"fusion360\",\"freecad\",\"openscad\",\"ansys_mechanical\",\"abaqus\",\"comsol\",\"simcenter_nastran\",\"altair_optistruct\"],\"providers\":[\"local\",\"openai\",\"openrouter\",\"codex\"]}",
+          "body_text": "{\"status\":\"ok\",\"service\":\"kala-studio\",\"version\":\"0.1.0\",\"offline\":true,\"design_turn_budget_seconds\":3960,\"step_available\":true,\"design_available\":true,\"integrations\":[\"solidworks\",\"solid_edge\",\"autocad\",\"fusion360\",\"freecad\",\"openscad\",\"ansys_mechanical\",\"abaqus\",\"comsol\",\"simcenter_nastran\",\"altair_optistruct\"],\"providers\":[\"local\",\"openai\",\"openrouter\",\"codex\",\"claude_code\",\"codex_cli\",\"opencode_cli\"]}",
           "headers": {
             "cache-control": "no-store",
-            "content-length": "333",
+            "content-length": "408",
             "content-security-policy": "default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
             "content-type": "application/json",
             "cross-origin-opener-policy": "same-origin",
@@ -3484,7 +3830,7 @@
             "x-powered-by",
             "set-cookie"
           ],
-          "normalized_body_sha256": "1e9df9cb446bd9a7ee252c00b3eee8d82ce675fdc1227ec24f3bb265464fabfb",
+          "normalized_body_sha256": "274175b029578475647d2ee5ecf30ee21376f2ebdf0a6a5aa9a2f4c43f018fe9",
           "status": 200
         },
         "id": "studio.valid.same_origin",
@@ -5753,6 +6099,209 @@
           },
           "method": "GET",
           "path": "/api/studio/design/0000000000000000000000000000000000000000000000000000000000000000/drawing"
+        }
+      },
+      {
+        "expected": {
+          "body": {
+            "assembly": [
+              {
+                "component": "upright",
+                "components": [],
+                "op": "place",
+                "x": 0.0,
+                "y": 4.0,
+                "z": 0.0
+              },
+              {
+                "components": [
+                  "base",
+                  "upright"
+                ],
+                "op": "fuse",
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              }
+            ],
+            "components": [
+              {
+                "name": "base",
+                "steps": [
+                  {
+                    "height": 45.0,
+                    "op": "sketch",
+                    "plane": "XY",
+                    "profile": "rectangle",
+                    "reversed": false,
+                    "width": 60.0,
+                    "x": -30.0,
+                    "y": 0.0
+                  },
+                  {
+                    "length": 4.0,
+                    "op": "extrude",
+                    "plane": "XY",
+                    "reversed": false,
+                    "x": 0.0,
+                    "y": 0.0
+                  }
+                ]
+              },
+              {
+                "name": "upright",
+                "steps": [
+                  {
+                    "height": 30.0,
+                    "op": "sketch",
+                    "plane": "XZ",
+                    "profile": "rectangle",
+                    "reversed": false,
+                    "width": 60.0,
+                    "x": -30.0,
+                    "y": 0.0
+                  },
+                  {
+                    "length": 4.0,
+                    "op": "extrude",
+                    "plane": "XY",
+                    "reversed": false,
+                    "x": 0.0,
+                    "y": 0.0
+                  }
+                ]
+              }
+            ],
+            "summary": "L-bracket 60 x 45 x 30 mm"
+          },
+          "body_comparison": "exact",
+          "body_deterministic": true,
+          "body_length": 647,
+          "body_length_role": "length of the recorded body text; the recorded digest is the digest of the same text",
+          "body_sha256": "c801bce4da67638b95fb121335a2b191924fa38ee975ecdae2106b0d950cece9",
+          "body_sha256_role": "exact response bytes",
+          "body_text": "{\"assembly\":[{\"component\":\"upright\",\"components\":[],\"op\":\"place\",\"x\":0.0,\"y\":4.0,\"z\":0.0},{\"components\":[\"base\",\"upright\"],\"op\":\"fuse\",\"x\":0.0,\"y\":0.0,\"z\":0.0}],\"components\":[{\"name\":\"base\",\"steps\":[{\"height\":45.0,\"op\":\"sketch\",\"plane\":\"XY\",\"profile\":\"rectangle\",\"reversed\":false,\"width\":60.0,\"x\":-30.0,\"y\":0.0},{\"length\":4.0,\"op\":\"extrude\",\"plane\":\"XY\",\"reversed\":false,\"x\":0.0,\"y\":0.0}]},{\"name\":\"upright\",\"steps\":[{\"height\":30.0,\"op\":\"sketch\",\"plane\":\"XZ\",\"profile\":\"rectangle\",\"reversed\":false,\"width\":60.0,\"x\":-30.0,\"y\":0.0},{\"length\":4.0,\"op\":\"extrude\",\"plane\":\"XY\",\"reversed\":false,\"x\":0.0,\"y\":0.0}]}],\"summary\":\"L-bracket 60 x 45 x 30 mm\"}",
+          "headers": {
+            "cache-control": "no-store",
+            "content-disposition": "attachment; filename=\"corpus-bracket-c801bce4.json\"",
+            "content-length": "647",
+            "content-security-policy": "default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+            "content-type": "application/json",
+            "cross-origin-opener-policy": "same-origin",
+            "cross-origin-resource-policy": "same-origin",
+            "referrer-policy": "no-referrer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "DENY"
+          },
+          "headers_absent": [
+            "server",
+            "x-powered-by",
+            "set-cookie"
+          ],
+          "normalized_body_sha256": "c801bce4da67638b95fb121335a2b191924fa38ee975ecdae2106b0d950cece9",
+          "status": 200
+        },
+        "id": "studio.design.artifact.script",
+        "note": "the exact stored canonical construction script; the route verifies its sha256 against the journalled digest before sending",
+        "request": {
+          "body": null,
+          "headers": {
+            "Authorization": "Bearer corpus-studio-token-0123456789abcdef"
+          },
+          "method": "GET",
+          "path": "/api/studio/design/133c70ffb5f345265d7c36c9dc2a18a4e0839f0531a3a1437762b7da41a472bb/artifact/script"
+        }
+      },
+      {
+        "expected": {
+          "body": {
+            "code": "artifact_not_found",
+            "details": [
+              "design_id=133c70ffb5f345265d7c36c9dc2a18a4e0839f0531a3a1437762b7da41a472bb; kind=fcstd"
+            ],
+            "message": "no artifact of that kind is stored for this design"
+          },
+          "body_comparison": "exact",
+          "body_deterministic": true,
+          "body_length": 193,
+          "body_length_role": "length of the recorded body text; the recorded digest is the digest of the same text",
+          "body_sha256": "41c49ed62f52488e3af54ff75e0368915a69a032b43a2729bd71e66d7a48bdb3",
+          "body_sha256_role": "exact response bytes",
+          "body_text": "{\"code\":\"artifact_not_found\",\"details\":[\"design_id=133c70ffb5f345265d7c36c9dc2a18a4e0839f0531a3a1437762b7da41a472bb; kind=fcstd\"],\"message\":\"no artifact of that kind is stored for this design\"}",
+          "headers": {
+            "cache-control": "no-store",
+            "content-length": "193",
+            "content-security-policy": "default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+            "content-type": "application/json",
+            "cross-origin-opener-policy": "same-origin",
+            "cross-origin-resource-policy": "same-origin",
+            "referrer-policy": "no-referrer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "DENY"
+          },
+          "headers_absent": [
+            "server",
+            "x-powered-by",
+            "set-cookie"
+          ],
+          "normalized_body_sha256": "41c49ed62f52488e3af54ff75e0368915a69a032b43a2729bd71e66d7a48bdb3",
+          "status": 404
+        },
+        "id": "studio.design.artifact.not_stored",
+        "note": "the OpenCascade design stores no native document, so the kind is a 404 artifact_not_found, never an empty file",
+        "request": {
+          "body": null,
+          "headers": {
+            "Authorization": "Bearer corpus-studio-token-0123456789abcdef"
+          },
+          "method": "GET",
+          "path": "/api/studio/design/133c70ffb5f345265d7c36c9dc2a18a4e0839f0531a3a1437762b7da41a472bb/artifact/fcstd"
+        }
+      },
+      {
+        "expected": {
+          "body": {
+            "code": "invalid_request",
+            "details": [
+              "the artifact kind must be one of script, step, fcstd, stl"
+            ],
+            "message": "the request body or parameters are invalid"
+          },
+          "body_comparison": "exact",
+          "body_deterministic": true,
+          "body_length": 153,
+          "body_length_role": "length of the recorded body text; the recorded digest is the digest of the same text",
+          "body_sha256": "c50c3c2e0dd3b541bdf7ef5d1662362c628d745557fa3621db57f3d031dc9251",
+          "body_sha256_role": "exact response bytes",
+          "body_text": "{\"code\":\"invalid_request\",\"details\":[\"the artifact kind must be one of script, step, fcstd, stl\"],\"message\":\"the request body or parameters are invalid\"}",
+          "headers": {
+            "cache-control": "no-store",
+            "content-length": "153",
+            "content-security-policy": "default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+            "content-type": "application/json",
+            "cross-origin-opener-policy": "same-origin",
+            "cross-origin-resource-policy": "same-origin",
+            "referrer-policy": "no-referrer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "DENY"
+          },
+          "headers_absent": [
+            "server",
+            "x-powered-by",
+            "set-cookie"
+          ],
+          "normalized_body_sha256": "c50c3c2e0dd3b541bdf7ef5d1662362c628d745557fa3621db57f3d031dc9251",
+          "status": 422
+        },
+        "id": "studio.design.artifact.unknown_kind",
+        "note": "the artifact-kind allow-list is strict: 422 invalid_request",
+        "request": {
+          "body": null,
+          "headers": {
+            "Authorization": "Bearer corpus-studio-token-0123456789abcdef"
+          },
+          "method": "GET",
+          "path": "/api/studio/design/133c70ffb5f345265d7c36c9dc2a18a4e0839f0531a3a1437762b7da41a472bb/artifact/bogus"
         }
       },
       {

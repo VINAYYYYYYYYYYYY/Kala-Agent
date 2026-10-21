@@ -90,14 +90,14 @@ pub fn local_chat(prompt: &str, model: Option<&str>) -> Result<ChatOutcome, Prov
         .collect::<Vec<_>>()
         .join(" ");
     let body: String = joined.chars().take(MAX_RESPONSE_LENGTH).collect();
-    Ok(ChatOutcome {
-        text: body,
-        model: model
+    Ok(ChatOutcome::new(
+        body,
+        model
             .filter(|value| !value.is_empty())
             .unwrap_or(DEFAULT_LOCAL_MODEL)
             .to_owned(),
-        offline: true,
-    })
+        true,
+    ))
 }
 
 fn normalise(text: &str) -> String {

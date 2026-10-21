@@ -319,16 +319,20 @@ impl ProviderRegistry {
             .collect()
     }
 
-    /// Build one design with the named provider.
+    /// Build one design, stopping the provider when `cancel` is set.
+    ///
+    /// An out-of-process provider (FreeCAD) kills its own process group; an
+    /// in-process kernel (OpenCascade) finishes its current operation and the
+    /// caller cancels at the next phase boundary.
     ///
     /// # Errors
     ///
-    /// Returns the provider's own refusal: an unavailable provider, a build
-    /// refusal, or a provider error.
-    pub fn build(
+    /// Returns the provider's own refusal, including a cancellation.
+    pub fn build_cancellable(
         &mut self,
         provider: &str,
         script: &ConstructionScript,
+        cancel: &kala_process::CancelToken,
     ) -> Result<ProviderBuild, CadProviderError> {
         let slot = self.slot_for(provider).ok_or_else(|| {
             CadProviderError::Unavailable(CadProviderUnavailableError::new(
@@ -338,6 +342,6 @@ impl ProviderRegistry {
                 Vec::<String>::new(),
             ))
         })?;
-        slot.provider().build(script)
+        slot.provider().build_cancellable(script, cancel)
     }
 }

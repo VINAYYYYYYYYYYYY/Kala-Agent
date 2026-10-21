@@ -18,7 +18,7 @@ backend/fixtures/corpus/v1/
   stl/                       byte-exact default box/cylinder/sphere binary STL
   domain_provenance.json     LEGACY Python package/source digests
   cli_launch.json            command/option/exit-code/launch contract
-  studio_http.json          15 Studio routes + gates, 56 cases
+  studio_http.json          16 Studio routes + gates, 59 cases
   core_http.json             17 live core routes + gates, 49 cases
 ```
 
@@ -35,7 +35,7 @@ the manifest's own file list and refuses a mismatch. The current corpus
 digest is
 
 ```
-53dcb9da105589b5a92d37b16d63c7fe2d5e60b7630549102127e019c95dff28
+39e0c0a90f9d03704945c79cdb9e777e77549ef208ac2177d3f7bb003dade3fa
 ```
 
 The corpus was regenerated on 2026-10-20 by the `compat-drift` cell. That
@@ -49,6 +49,25 @@ STEP writer's timestamp, the OCCT translator's per-process counter, the
 temporary data directory in the core `/health` body and the Studio journal's
 wall clock are **environment artefacts**; there was **no unexplained
 difference**.
+
+The `polish` cell regenerated it again on 2026-10-20 after the design
+instruction grew a sketch-coordinate/pocket/step-limit paragraph in
+`src/kala_agent/studio/design/intent.py` and the OCCT compiler began naming
+the pocket step index in its no-material warning (both product-source
+changes move the source pin). The same run absorbed the concurrent
+`python-parity` cell's provider-list rows and Codex wording, which had
+already been visible as differential drift. The digest moved from
+`53dcb9da…` to `61328f91…`; the Studio corpus is still 56 cases / 15 routes.
+
+The `corpus-hermetic` cell regenerated it on 2026-10-21 without a product
+change: `studio_http.json` is byte-identical and the source pin did not move.
+The one functional change is the core `/health` case, whose raw length embeds
+the temporary data-directory path. `body_length` and the body digest are now
+taken over the normalised bytes, and the `content-length` header is declared
+in `normalised_headers` instead of being frozen, so `--check` no longer
+depends on the length of the `TMPDIR` the generator is given. The digest
+moved from `c0003bae…` to `39e0c0a9…`; the Studio corpus is 59 cases over 16
+routes and the core corpus 49 cases over 17 routes.
 
 ## Consumption rules for a Rust implementation
 
@@ -82,7 +101,12 @@ difference**.
    path, explicit headers (including the synthetic bearer token when used),
    and a tagged body (`json`, `raw_bytes`, or `chunked`). The default Host is
    `127.0.0.1`. Bodies up to 64 KiB are stored exactly with `body_text`;
-   larger bodies keep the exact SHA-256 and a structural summary.
+   larger bodies keep the exact SHA-256 and a structural summary. A case with
+   `normalizations` (the core `/health` `data_dir`) is frozen by its
+   **normalised** bytes: `body_text`, `body_sha256` and `body_length` all
+   describe the same normalised document, and `normalised_headers` names the
+   headers (today `content-length`) that a consumer must check against its own
+   response body instead of against a recorded number.
 7. **STL defaults are byte-exact.** The three small default files are stored.
    Maximum-tessellation STLs (box 2,457,684 B; cylinder 1,664,084 B; sphere
    1,216,084 B) are represented by SHA-256 and length; regenerate the mesh and
@@ -101,7 +125,7 @@ difference**.
     core commands, option contracts, exit codes 0/1/2/3, representative
     output, Studio/Electron `--host`/`--port`/`KALA_STUDIO_TOKEN` promises,
     and launch target validation. The serve command is not started.
-11. **The Studio corpus covers 15 routes and 56 cases; the core corpus 17
+11. **The Studio corpus covers 16 routes and 59 cases; the core corpus 17
     routes and 49 cases.** A Studio case is a **record of a run**, not
     always a contract: read `body_deterministic` and `volatile_fields` on
     every case before you compare it. Three of the four cases the 2026-10-20
@@ -121,6 +145,13 @@ difference**.
 - The SQLite file bytes are informational; logical rows are asserted.
 - STEP bytes are informational; structural fields are asserted.
 - Core `/health` `data_dir` and CLI temporary paths are `<DATA_DIR>`.
+- **A normalised body's length follows the normalised bytes.** For the core
+  `/health` case, `body_text`, `body_sha256` and `body_length` describe the
+  same `<DATA_DIR>` document, and the `content-length` header is listed in
+  `normalised_headers` rather than frozen, because the raw response length
+  embeds the length of the temporary data-directory path. The generator is
+  therefore independent of the `TMPDIR` it is given: `--check` passes with
+  `TMPDIR=/tmp` and with a path more than twice as long.
 - Journal timestamps are wall-clock in production. The HTTP and CLI fixtures
   inject a fixed clock into the journal module so event timestamps and digests
   are reproducible. This is a fixture override, recorded in the files.
@@ -162,9 +193,13 @@ difference**.
 
 `self_check.py` regenerates the whole corpus **in a temporary directory** and
 compares it with the checked-in files, so it never writes into
-`backend/fixtures/`. Observed on 2026-10-20: **exit 0, `self-check OK`**,
-with `corpus_sha256 53dcb9da…` (after corpus-sync declared per-case comparison contracts; previously `9993939b…`), 56 Studio cases / 15 Studio routes and
-49 core cases / 17 core routes.
+`backend/fixtures/`. Observed on 2026-10-21: **exit 0, `self-check OK`**, with
+`corpus_sha256 39e0c0a9…` (after the `corpus-hermetic` cell's normalised
+`/health` length; previously `c0003bae…`), 59 Studio cases / 16 Studio routes
+and 49 core cases / 17 core routes. `generate_corpus.py --check` passed with
+`TMPDIR=/tmp` and with an 82-character `TMPDIR` (a 126-character generator
+data directory), which previously differed by 78 bytes in the `/health`
+response.
 
 ## Known gaps
 

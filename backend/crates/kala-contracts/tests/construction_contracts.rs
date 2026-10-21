@@ -89,6 +89,69 @@ fn construction_error_messages_match_the_python_loader() {
     }
 }
 
+fn pairs(count: usize) -> String {
+    let mut steps = String::new();
+    for index in 0..count {
+        if index > 0 {
+            steps.push(',');
+        }
+        steps.push_str(r#"{"op":"sketch","profile":"rectangle","width":10,"height":10},{"op":"extrude","length":1}"#);
+    }
+    steps
+}
+
+#[test]
+fn the_whole_design_budget_is_five_hundred_steps() {
+    let five_hundred = format!(
+        r#"{{"summary":"hi","components":[{{"name":"plate","steps":[{}]}}]}}"#,
+        pairs(250)
+    );
+    let script = load_construction_json_str(&five_hundred).expect("500 steps are legal");
+    assert_eq!(script.components()[0].steps().len(), 500);
+
+    let three_hundred = format!(
+        r#"{{"summary":"hi","components":[{{"name":"plate","steps":[{}]}}]}}"#,
+        pairs(150)
+    );
+    let script = load_construction_json_str(&three_hundred).expect("300 steps are legal");
+    assert_eq!(script.components()[0].steps().len(), 300);
+
+    let over = format!(
+        r#"{{"summary":"hi","components":[{{"name":"plate","steps":[{}]}}],"assembly":[{{"op":"place","component":"plate"}}]}}"#,
+        pairs(250)
+    );
+    assert_eq!(
+        construction_error(&over),
+        "a script may use at most 500 steps in total; this one uses 501"
+    );
+}
+
+#[test]
+fn sixty_four_components_are_legal_and_sixty_five_are_not() {
+    let component = |index: usize| {
+        format!(
+            r#"{{"name":"part{index}","steps":[{{"op":"sketch","profile":"rectangle","width":8,"height":4}},{{"op":"extrude","length":8}}]}}"#
+        )
+    };
+    let legal: Vec<String> = (0..64).map(component).collect();
+    let script = load_construction_json_str(&format!(
+        r#"{{"summary":"hi","components":[{}]}}"#,
+        legal.join(",")
+    ))
+    .expect("64 components are legal");
+    assert_eq!(script.components().len(), 64);
+
+    let mut illegal = legal;
+    illegal.push(component(64));
+    assert_eq!(
+        construction_error(&format!(
+            r#"{{"summary":"hi","components":[{}]}}"#,
+            illegal.join(",")
+        )),
+        "Tuple should have at most 64 items after validation, not 65"
+    );
+}
+
 #[test]
 fn non_objects_keep_the_loader_message() {
     for source in ["[]", "1", "\"x\"", "null"] {

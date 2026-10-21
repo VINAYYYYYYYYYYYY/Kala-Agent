@@ -894,7 +894,7 @@ def test_executor_approval_binding_falls_back_for_uncanonicalizable_arguments(
 ) -> None:
     executor = _executor(tmp_path, registry=_evaluator_registry())
     tool = executor.registry.require("mechanical.reference-evaluator", "1.0.0")
-    oversized = '{"operation":"' + "x" * 300_000 + '"}'
+    oversized = '{"operation":"' + "x" * 600_000 + '"}'
     binding = executor._approval_binding(_call(arguments=oversized), tool)
     assert binding.envelope is None
     assert binding.arguments_digest == sha256_hex(f"uncanonicalized:{oversized}")
@@ -986,7 +986,7 @@ def test_executor_refuses_side_effects_without_a_sandbox(
 def test_executor_reports_uncanonicalizable_arguments(tmp_path: Path) -> None:
     executor = _executor(tmp_path, registry=_evaluator_registry())
     executor._select_isolation = lambda _tool: IsolationMode.SUBPROCESS  # type: ignore[assignment]
-    result = executor.execute(_call(arguments='{"operation":"' + "x" * 300_000 + '"}'))
+    result = executor.execute(_call(arguments='{"operation":"' + "x" * 600_000 + '"}'))
     assert result.status is ToolRunStatus.FAILED
     assert result.error_code == "invalid_arguments"
     assert "could not be canonicalized" in str(result.error_message)

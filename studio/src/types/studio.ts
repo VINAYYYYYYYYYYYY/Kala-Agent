@@ -48,9 +48,41 @@ export type IntegrationStatus =
   | 'native_api_unavailable'
   | 'not_configured';
 export type IntegrationCategory = 'cad' | 'analysis';
-export type ProviderId = 'local' | 'openai' | 'openrouter' | 'codex';
+/**
+ * The chat providers the Studio backend knows.
+ *
+ * `local` is the offline deterministic helper, `openai`/`openrouter` are the
+ * API-key routes, and the last three are the subscription CLIs (Claude Code,
+ * Codex, OpenCode) that run the operator's own already-authenticated
+ * command-line tool as a subprocess. `codex` is the historical id of the
+ * Codex CLI route and is kept as an alias so an old saved preference still
+ * resolves.
+ */
+export type ProviderId =
+  | 'local'
+  | 'openai'
+  | 'openrouter'
+  | 'codex'
+  | 'claude_code'
+  | 'codex_cli'
+  | 'opencode_cli';
+
+/** The closed provider set, in the backend's order. */
+export const PROVIDER_IDS: ReadonlyArray<ProviderId> = [
+  'local',
+  'openai',
+  'openrouter',
+  'codex',
+  'claude_code',
+  'codex_cli',
+  'opencode_cli',
+];
+
+/** The three subscription CLIs (Claude Code, Codex, OpenCode). */
+export type SubscriptionProviderId = 'claude_code' | 'codex_cli' | 'opencode_cli';
+
 export type CredentialProviderId = 'openai' | 'openrouter';
-export type CredentialSource = 'none' | 'environment' | 'stored';
+export type CredentialSource = 'none' | 'environment' | 'stored' | 'subscription';
 
 export const MIN_DIMENSION_MM = 0.1;
 export const MAX_DIMENSION_MM = 2000;
@@ -101,6 +133,12 @@ export interface HealthResponse {
   service: string;
   version: string;
   offline: boolean;
+  /**
+   * The backend's own worst-case design-turn wall time, in seconds
+   * (2 model calls + 2 CAD builds). Absent on older backends; the client
+   * then uses its documented 70-minute fallback.
+   */
+  design_turn_budget_seconds?: number;
   step_available: boolean;
   /**
    * True when the backend can compile and measure a design turn (ADR-0009).
@@ -131,6 +169,24 @@ export interface ProviderRecord {
   name: string;
   configured: boolean;
   notes: string;
+  /**
+   * The backend's availability probe for this provider, when it ran one.
+   *
+   * The subscription CLIs are probed on the host (binary on PATH + an auth
+   * status command); `null`/absent means the backend did not probe this
+   * provider, never "available".
+   */
+  available?: boolean | null;
+  /**
+   * Why the provider is unavailable. Shown next to the row; never invented
+   * by the UI.
+   */
+  reason?: string | null;
+  /**
+   * Where the credential comes from, e.g. `subscription (CLI)`. Absent when
+   * the backend does not name a source.
+   */
+  source?: string | null;
 }
 
 export interface ProvidersResponse {
@@ -138,10 +194,56 @@ export interface ProvidersResponse {
 }
 
 export interface ProviderCredentialStatus {
-  provider: CredentialProviderId;
+  /** The provider this credential belongs to (may be a subscription CLI). */
+  provider: string;
   env_var: string;
   configured: boolean;
   source: CredentialSource;
+}
+
+// --- Model catalog (GET /api/studio/providers/{id}/models) --------------------
+
+/**
+ * The price of one model, in the provider's own currency per token. The
+ * backend reports the numbers it read; the UI never converts or invents
+ * them.
+ */
+export interface ProviderModelPricing {
+  prompt: number;
+  completion: number;
+}
+
+/**
+ * One model the provider can use. `id` is what the chat request carries as
+ * `model`; `name` is the human label.
+ */
+export interface ProviderModel {
+  id: string;
+  name: string;
+  /** The context window in tokens, when the provider reports one. */
+  context_length?: number | null;
+  pricing?: ProviderModelPricing | null;
+  /**
+   * Whether the model costs nothing. The backend decides (both prices zero,
+   * or a `:free` id); the UI's "Free only" toggle filters on this flag.
+   */
+  free: boolean;
+  supports_tools?: boolean | null;
+}
+
+/**
+ * The catalog envelope of one provider.
+ *
+ * `source` names where the list came from (the provider's own API, or the
+ * `static` list a subscription CLI documents). `error` is the honest
+ * "the list could not be fetched" signal when it is present.
+ */
+export interface ProviderModelCatalog {
+  provider: string;
+  source: string;
+  fetched_at?: string | number | null;
+  models: ReadonlyArray<ProviderModel>;
+  error?: string | null;
 }
 
 export interface StudioSettingsResponse {
@@ -273,6 +375,9 @@ export const SECTION_PLANES: ReadonlyArray<SectionPlane> = ['XY', 'XZ', 'YZ'];
 
 /** Export formats a compiled design can be written in. */
 export type DesignExportFormat = 'step' | 'stl';
+
+/** The stored-artifact kinds `GET /design/{id}/artifact/{kind}` serves. */
+export type DesignArtifactKind = 'script' | 'step' | 'fcstd' | 'stl';
 
 /** Maximum number of designs the store keeps (least-recently-used evicted). */
 export const DESIGN_LRU_CAP = 16;
@@ -582,4 +687,20 @@ export interface DesignExportArtifact extends ExportArtifact {
   designId: string;
   digest: string | null;
   artifactKind: DesignExportFormat;
+}
+
+/**
+ * One stored artifact downloaded from
+ * `GET /api/studio/design/{design_id}/artifact/{kind}`.
+ *
+ * `digest` is the SHA-256 the backend verified and reported in
+ * `x-studio-digest`; the bytes are the exact stored ones.
+ */
+export interface DesignArtifactDownload {
+  blob: Blob;
+  filename: string;
+  bytes: number;
+  kind: DesignArtifactKind;
+  designId: string;
+  digest: string | null;
 }

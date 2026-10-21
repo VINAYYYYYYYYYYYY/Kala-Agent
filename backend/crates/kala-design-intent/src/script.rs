@@ -17,6 +17,7 @@ use crate::json::JsonValue;
 
 const MAX_COMPONENTS: usize = kala_contracts::MAX_COMPONENTS;
 const MAX_STEPS: usize = kala_contracts::MAX_STEPS;
+const MAX_TOTAL_STEPS: usize = kala_contracts::MAX_TOTAL_STEPS;
 const MAX_ASSEMBLY_STEPS: usize = 16;
 const MAX_DIMENSION_MM: f64 = 5_000.0;
 const MIN_DIMENSION_MM: f64 = 0.001;
@@ -267,6 +268,7 @@ fn flatten_profile(value: &JsonValue) -> JsonValue {
 #[derive(Clone, Debug)]
 struct StepData {
     op: String,
+    plane: String,
 }
 
 fn validate_step(
@@ -282,6 +284,7 @@ fn validate_step(
     };
     let mut issues = Vec::new();
     let mut op: Option<String> = None;
+    let mut plane: Option<String> = None;
     let mut profile: Option<String> = None;
     let mut width = None;
     let mut height = None;
@@ -310,7 +313,7 @@ fn validate_step(
                 "Input should be a valid string",
             )),
             Some(text) => match text.as_str() {
-                Some(value) if PLANES.contains(&value) => {}
+                Some(value) if PLANES.contains(&value) => plane = Some(value.to_owned()),
                 _ => issues.push(field_issue(
                     location,
                     "plane",
@@ -439,6 +442,7 @@ fn validate_step(
     if issues.is_empty() {
         Ok(StepData {
             op: op_value.to_owned(),
+            plane: plane.unwrap_or_else(|| "XY".to_owned()),
         })
     } else {
         Err(issues)
@@ -523,9 +527,50 @@ fn sequence_error(steps: &[StepData]) -> Option<&'static str> {
     None
 }
 
+/// The first pocket whose sketch plane cannot cut the solid it follows.
+///
+/// Mirrors `kala_agent.studio.design.intent._check_pocket_planes`: a pending
+/// sketch whose plane differs from the sketch that produced the current
+/// solid is refused with the OCCT compiler's wording. The pocket's own
+/// `plane` field is not checked, because the compiler never reads it and the
+/// shipped L-bracket template's canonical wire form states `XY` on its XZ
+/// upright pocket.
+fn pocket_plane_error(components: &[ComponentData]) -> Option<String> {
+    for component in components {
+        let mut pending: Option<&StepData> = None;
+        let mut solid_plane: Option<&str> = None;
+        for (index, step) in component.steps.iter().enumerate() {
+            match step.op.as_str() {
+                "sketch" => pending = Some(step),
+                "extrude" | "revolve" => {
+                    if let Some(sketch) = pending {
+                        solid_plane = Some(sketch.plane.as_str());
+                    }
+                    pending = None;
+                }
+                "pocket" => {
+                    let (Some(sketch), Some(solid)) = (pending, solid_plane) else {
+                        continue;
+                    };
+                    if sketch.plane != solid {
+                        return Some(format!(
+                            "component '{}': pocket at step index {index} on {} over a {solid} solid",
+                            component.name, sketch.plane
+                        ));
+                    }
+                    pending = None;
+                }
+                _ => {}
+            }
+        }
+    }
+    None
+}
+
 #[derive(Clone, Debug)]
 struct ComponentData {
     name: String,
+    steps: Vec<StepData>,
 }
 
 fn validate_component(
@@ -602,6 +647,7 @@ fn validate_component(
     if issues.is_empty() {
         Ok(ComponentData {
             name: name.expect("validated"),
+            steps,
         })
     } else {
         Err(issues)
@@ -869,6 +915,27 @@ pub(crate) fn validate_script(
                 );
             }
         }
+    }
+
+    let total = components
+        .iter()
+        .map(|component| component.steps.len())
+        .sum::<usize>()
+        + assembly.len();
+    if total > MAX_TOTAL_STEPS {
+        return (
+            None,
+            vec![issue(
+                prefix,
+                format!(
+                    "a script may use at most {MAX_TOTAL_STEPS} steps in total; this one uses {total}"
+                ),
+            )],
+        );
+    }
+
+    if let Some(message) = pocket_plane_error(&components) {
+        return (None, vec![issue(prefix, message)]);
     }
 
     let Some(canonical) = value.to_canonical() else {

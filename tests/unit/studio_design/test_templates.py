@@ -141,7 +141,7 @@ def test_stepped_shaft_refuses_no_segments() -> None:
 
 def test_stepped_shaft_refuses_more_than_the_component_budget() -> None:
     with pytest.raises(TemplateError):
-        stepped_shaft([(10, 10)] * 9)
+        stepped_shaft([(10, 10)] * 65)
 
 
 def test_housing_matches_the_shell_volume_and_envelope() -> None:

@@ -50,6 +50,7 @@
 const { spawn, spawnSync } = require('node:child_process');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 
 const freecadVendor = require('./freecad-python-vendor.cjs');
@@ -69,6 +70,9 @@ const ADAPTER_DIR_NAME = 'adapters';
 const FREECAD_SRC_RELATIVE = path.join('freecad', 'src', 'kala_agent_freecad');
 const FREECAD_MOD_RELATIVE = path.join('freecad', 'mod', 'Kala');
 const FREECAD_VENDOR_MANIFEST = freecadVendor.VENDOR_MANIFEST_NAME;
+// The marker the staged add-on prints when it imported itself inside
+// FreeCAD's own interpreter.
+const FREECAD_ADDON_VERIFY_MARKER = 'KALA_FREECAD_ADDON_OK ';
 // Vendored runtime dependencies of the adapter, resolved for every supported
 // FreeCAD Python by `freecad-python-vendor.cjs`. Each ABI owns one
 // `adapters/freecad/site-packages-cpNNN` directory; the provider selects the
@@ -510,7 +514,9 @@ function stageFreeCadAdapter({ repoRoot = REPO_ROOT, destination, vendor } = {})
   const pythonFiles = files.filter((relative) => path.extname(relative).toLowerCase() === '.py');
   for (const required of [
     path.join('src', 'kala_agent_freecad', '__init__.py'),
+    path.join('mod', 'Kala', 'Init.py'),
     path.join('mod', 'Kala', 'InitGui.py'),
+    path.join('mod', 'Kala', 'kala_paths.py'),
   ]) {
     if (!files.includes(required)) {
       throw new Error(`the staged FreeCAD adapter is incomplete: ${required} is missing`);
@@ -530,6 +536,22 @@ function stageFreeCadAdapter({ repoRoot = REPO_ROOT, destination, vendor } = {})
   if (pythonFiles.length === 0) {
     throw new Error('the staged FreeCAD adapter contained no Python modules');
   }
+  // The add-on has to find the adapter and the ABI-matched dependencies on
+  // its own: the check below puts only the add-on folder on `sys.path`, the
+  // way FreeCAD does when it loads the add-on from the user's Mod directory.
+  const addonVerification = verifyStagedFreeCadAddOn({
+    modRoot: stagedModRoot,
+    vendor: vendorManifest,
+    vendorMode,
+    env: vendor?.env,
+  });
+  // The check imports the adapter inside FreeCADCmd, which writes bytecode
+  // caches into the stage. They are removed again: a stage carries sources.
+  const prunedBytecode = pruneStagedBytecode(stagingRoot);
+  console.log(
+    `[native-backend] the staged FreeCAD add-on was verified inside FreeCADCmd ` +
+    `(${prunedBytecode} bytecode caches removed)`,
+  );
   return {
     root: stagingRoot,
     sourceRoot: stagedSourceRoot,
@@ -537,7 +559,140 @@ function stageFreeCadAdapter({ repoRoot = REPO_ROOT, destination, vendor } = {})
     fileCount: files.length,
     pythonFileCount: pythonFiles.length,
     vendor: vendorManifest,
+    addonVerification,
   };
+}
+
+/**
+ * Remove every bytecode cache from a staged tree.
+ *
+ * FreeCAD's embedded interpreter ignores `PYTHONDONTWRITEBYTECODE` while it
+ * imports the adapter and its dependencies, so the add-on check below leaves
+ * `__pycache__` directories behind. Bytecode never belongs in a stage: it is
+ * interpreter specific, it is not reproducible from the sources and it makes
+ * the stage digest depend on the build host's Python.
+ */
+function pruneStagedBytecode(root) {
+  let removed = 0;
+  const stack = [root];
+  while (stack.length > 0) {
+    const directory = stack.pop();
+    let entries;
+    try {
+      entries = fs.readdirSync(directory, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const candidate = path.join(directory, entry.name);
+      if (entry.isSymbolicLink()) continue;
+      if (entry.isDirectory()) {
+        if (entry.name === '__pycache__') {
+          fs.rmSync(candidate, { recursive: true, force: true });
+          removed += 1;
+          continue;
+        }
+        stack.push(candidate);
+        continue;
+      }
+      if (entry.isFile() && (entry.name.endsWith('.pyc') || entry.name.endsWith('.pyo'))) {
+        fs.rmSync(candidate, { force: true });
+        removed += 1;
+      }
+    }
+  }
+  return removed;
+}
+
+/**
+ * Import the staged add-on inside FreeCAD's own interpreter.
+ *
+ * Only the add-on folder is put on `sys.path`; the add-on resolves the
+ * adapter sources, the shared contracts package and the vendored
+ * dependencies for the running interpreter's ABI by itself. That is exactly
+ * what happens when FreeCAD loads the add-on from the user's Mod directory,
+ * so a stage that passes this check installs and works.
+ */
+function verifyStagedFreeCadAddOn({
+  modRoot,
+  vendor = null,
+  vendorMode = 'skip',
+  env = process.env,
+  timeout = 120_000,
+} = {}) {
+  const detected = vendor && vendor.freecad ? vendor.freecad : null;
+  if (!detected || !detected.detected || !detected.executable) {
+    const reason = 'FreeCAD was not detected on the build host';
+    if (vendorMode === 'require') {
+      throw new Error(
+        `${reason}; the staged FreeCAD add-on could not be verified inside FreeCADCmd`,
+      );
+    }
+    console.warn(
+      `[native-backend] ${reason}; the staged FreeCAD add-on was not verified inside FreeCADCmd`,
+    );
+    return { verified: false, reason };
+  }
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'kala-freecad-addon-verify-'));
+  const script = path.join(temporary, 'kala_freecad_addon_verify.py');
+  try {
+    const payload = [
+      'import json, sys',
+      `sys.path.insert(0, ${JSON.stringify(modRoot)})`,
+      'import kala_paths',
+      'state = kala_paths.prepare()',
+      'import kala_agent_freecad.cad.models as models',
+      `sys.stdout.write(${JSON.stringify(FREECAD_ADDON_VERIFY_MARKER)} + json.dumps({`,
+      '    "abi": state.get("abi"),',
+      '    "adapter": state.get("adapter"),',
+      '    "sitePackages": state.get("sitePackages"),',
+      '    "problems": kala_paths.problems(),',
+      '    "models": models.__file__,',
+      '}) + "\\n")',
+      '',
+    ].join('\n');
+    fs.writeFileSync(script, payload, 'utf8');
+    const verifyEnvironment = freecadVendor.cleanEnvironment(env, {
+      HOME: temporary,
+      PYTHONDONTWRITEBYTECODE: '1',
+      XDG_CONFIG_HOME: path.join(temporary, 'config'),
+      XDG_CACHE_HOME: path.join(temporary, 'cache'),
+      XDG_DATA_HOME: path.join(temporary, 'data'),
+    });
+    for (const directory of ['config', 'cache', 'data']) {
+      fs.mkdirSync(path.join(temporary, directory), { recursive: true });
+    }
+    const result = spawnSync(detected.executable, [script], {
+      cwd: temporary,
+      env: verifyEnvironment,
+      encoding: 'utf8',
+      shell: false,
+      windowsHide: true,
+      timeout,
+      maxBuffer: 8 * 1024 * 1024,
+    });
+    if (result.error) throw result.error;
+    const output = `${result.stdout || ''}\n${result.stderr || ''}`;
+    const line = output
+      .split(/\r?\n/)
+      .find((candidate) => candidate.startsWith(FREECAD_ADDON_VERIFY_MARKER));
+    if (!line) {
+      throw new Error(
+        `the staged FreeCAD add-on could not be imported by ${detected.executable} ` +
+        `(exit ${result.status}): ${output.trim().slice(-2000)}`,
+      );
+    }
+    const report = JSON.parse(line.slice(FREECAD_ADDON_VERIFY_MARKER.length));
+    if (Array.isArray(report.problems) && report.problems.length > 0) {
+      throw new Error(
+        `the staged FreeCAD add-on did not find its payload inside FreeCADCmd: ` +
+        `${report.problems.join('; ')}`,
+      );
+    }
+    return { verified: true, ...report };
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
 }
 
 function validateBundledFreeCadAdapter(paths) {
@@ -1658,6 +1813,7 @@ async function stageNativeBackend({
             }
           : { state: 'absent' },
       },
+      addonVerification: freeCadAdapter.addonVerification || null,
       sourceParity: currentSourceParity(),
       cargo: commandVersion('cargo', ['--version']),
       rustc: commandVersion('rustc', ['--version']),
@@ -2009,6 +2165,8 @@ module.exports = {
   assertStageUiMatches,
   validateStageOwnership,
   stageFreeCadAdapter,
+  verifyStagedFreeCadAddOn,
+  FREECAD_ADDON_VERIFY_MARKER,
   validateBundledFreeCadAdapter,
   validateFreeCadVendorManifest,
   isFreeCadVendorPath,

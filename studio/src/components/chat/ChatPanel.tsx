@@ -25,6 +25,7 @@ import {
   StudioApiError,
   StudioAuthError,
   StudioNetworkError,
+  StudioTimeoutError,
 } from '../../api/client';
 import type { ConnectionStatus } from '../../state/store';
 import { appendJournal, dispatch, selectActiveDesign, useUiState } from '../../state/store';
@@ -38,6 +39,16 @@ import { ProviderPanel } from '../panels/ProviderPanel';
 import { CadTargetSelector } from './CadTargetSelector';
 import { DesignAgentCard } from './DesignAgentCard';
 import { designSupport, measuredByLabel } from './designCard';
+import { ModelPicker } from './ModelPicker';
+import { ProviderPicker } from './ProviderPicker';
+import { readStoredModel } from '../../modelCatalog';
+import {
+  defaultModelLabel,
+  isLocalProvider,
+  describeProviderStatus,
+  requiresModel,
+  requiresRemoteConsent,
+} from '../../providerPolicy';
 import type { ChatRequest } from '../../types/studio';
 import type {
   BoxParameters,
@@ -47,8 +58,7 @@ import type {
   StudioParameters,
 } from '../../types/studio';
 import '../../styles/chat.css';
-
-const REMOTE_PROVIDERS: ReadonlySet<string> = new Set(['openai', 'openrouter', 'codex']);
+import '../../styles/models.css';
 
 // Starter prompts seed the composer; they never auto-send, so a stray click
 // can never spend a remote-provider call without the operator pressing the
@@ -93,6 +103,11 @@ export function ChatPanel(): ReactElement {
   const [prompt, setPrompt] = useState<string>('');
   const [allowRemote, setAllowRemote] = useState<boolean>(false);
   const [showKeySettings, setShowKeySettings] = useState<boolean>(false);
+  // The live elapsed clock of the turn in flight. `turnStartedAt` is the
+  // instant the request left the browser; `now` is the tick that keeps the
+  // readout honest while the backend works.
+  const [turnStartedAt, setTurnStartedAt] = useState<number | null>(null);
+  const [now, setNow] = useState<number>(() => Date.now());
   const controllerRef = useRef<AbortController | null>(null);
   const promptRef = useRef<HTMLTextAreaElement | null>(null);
   const threadRef = useRef<HTMLDivElement | null>(null);
@@ -141,7 +156,11 @@ export function ChatPanel(): ReactElement {
 
   useEffect(() => {
     if (!providerId && server.providers[0]) {
-      setProviderId(server.providers[0].id);
+      const first = server.providers[0].id;
+      setProviderId(first);
+      // The first provider of the session starts on the model the operator
+      // last used with it, when there is one.
+      setModel(readStoredModel(first) ?? '');
     }
   }, [server.providers, providerId]);
 
@@ -151,6 +170,19 @@ export function ChatPanel(): ReactElement {
       controllerRef.current = null;
     }
   }, []);
+
+  // The live elapsed clock of a turn in flight. It ticks once a second and
+  // is torn down with the turn (and with the component), so no timer
+  // outlives the request it measures. The tick is a text update, not an
+  // animation, so it honours `prefers-reduced-motion` without a special
+  // case.
+  useEffect(() => {
+    if (turnStartedAt === null) return;
+    const tick = (): void => setNow(Date.now());
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [turnStartedAt]);
 
   // Keep the newest turn in view unless the operator has scrolled up to read
   // an earlier answer. A cleared thread re-pins for the next turn. Layout
@@ -171,13 +203,22 @@ export function ChatPanel(): ReactElement {
 
   const provider = server.providers.find((p) => p.id === providerId);
   const configured = provider?.configured === true;
-  const isLocal = providerId === 'local' || providerId === 'local-helper';
-  const requiresRemoteConsent = REMOTE_PROVIDERS.has(providerId);
-  const requiresModel = !isLocal;
+  const isLocal = isLocalProvider(providerId);
+  // The provider policy decides what a turn means: whether it leaves the
+  // machine (and therefore needs the consent stamp) and whether a model id
+  // is mandatory. The subscription CLIs need the stamp like any remote
+  // route, but their model id is optional.
+  const needsConsent = requiresRemoteConsent(providerId);
+  const modelRequired = requiresModel(providerId);
   const providerLabel = provider?.name ?? (providerId.length > 0 ? providerId : 'No provider');
+  // The route stamp states the backend's own verdict: a provider it probed
+  // and found unavailable is not "configured", it is unavailable.
+  const providerState = provider ? describeProviderStatus(provider) : null;
   const providerStatusText = providerId.length === 0
     ? 'No provider selected'
-    : `${providerLabel} · ${configured ? 'configured' : 'not configured'}${isLocal ? ' · loopback only' : ''}`;
+    : `${providerLabel} · ${providerState?.badge.toLowerCase() ?? 'not configured'}${
+        isLocal ? ' · loopback only' : ''
+      }`;
 
   const canSend =
     connection.kind === 'ready' &&
@@ -185,8 +226,8 @@ export function ChatPanel(): ReactElement {
     prompt.trim().length > 0 &&
     providerId.length > 0 &&
     configured &&
-    (!requiresRemoteConsent || allowRemote) &&
-    (!requiresModel || model.trim().length > 0);
+    (!needsConsent || allowRemote) &&
+    (!modelRequired || model.trim().length > 0);
 
   async function onSend(): Promise<void> {
     if (!canSend || connection.kind !== 'ready') return;
@@ -221,6 +262,7 @@ export function ChatPanel(): ReactElement {
     // request left to the moment the answer arrived. It is a client-side
     // measurement of a real round trip, not a backend-reported figure.
     const startedAt = Date.now();
+    setTurnStartedAt(startedAt);
     try {
       const response = await postChat(connection.connection, payload, controller.signal);
       if (!controller.signal.aborted) {
@@ -242,8 +284,12 @@ export function ChatPanel(): ReactElement {
       }
     } catch (cause) {
       if (controller.signal.aborted) {
-        // Operator cancelled: clear the in-flight state without an error.
+        // Operator cancelled: the browser closes the request, which drops the
+        // backend's handler future; the backend cancels the turn's token and
+        // stops the CAD build. The line below says exactly that, and nothing
+        // about a design that is still running.
         dispatch({ type: 'chat/error', message: 'Cancelled', kind: 'cancelled' });
+        appendJournal({ kind: 'chat', message: 'Turn cancelled — the backend stopped it' });
         return;
       }
       const desc = describeError(cause);
@@ -251,11 +297,24 @@ export function ChatPanel(): ReactElement {
       appendJournal({ kind: 'chat', message: `Chat failed · ${desc.message}` });
     } finally {
       if (controllerRef.current === controller) controllerRef.current = null;
+      // Only the turn that owns the clock may stop it.
+      setTurnStartedAt((current) => (current === startedAt ? null : current));
     }
   }
 
   function onCancel(): void {
     if (controllerRef.current) controllerRef.current.abort();
+  }
+
+  /**
+   * A new provider is a new route: the consent stamp is cleared (it was
+   * granted for one provider only) and the model id falls back to the one
+   * the operator last used with THAT provider.
+   */
+  function onProviderChange(next: string): void {
+    setProviderId(next);
+    setAllowRemote(false);
+    setModel(readStoredModel(next) ?? '');
   }
 
   function onClear(): void {
@@ -413,13 +472,27 @@ export function ChatPanel(): ReactElement {
           <p className="chat-panel-pending" role="status">
             <span className="chat-panel-pending-dot" aria-hidden="true" />
             Awaiting response…
+            {turnStartedAt !== null ? (
+              // The clock is hidden from assistive technology: the status
+              // region must announce "Awaiting response…" once, not once a
+              // second. The text itself is the operator's elapsed readout.
+              <span
+                className="chat-panel-elapsed-live"
+                data-elapsed-live="yes"
+                aria-hidden="true"
+              >
+                {formatElapsed(Math.max(0, now - turnStartedAt))}
+              </span>
+            ) : null}
           </p>
         ) : null}
         {chat.lastError && chat.lastErrorKind !== 'cancelled' ? (
           <p className="chat-panel-error" role="alert">{chat.lastError}</p>
         ) : null}
         {chat.lastErrorKind === 'cancelled' ? (
-          <p className="chat-panel-pending" role="status">Request cancelled</p>
+          <p className="chat-panel-pending" role="status">
+            Cancelled — the backend stopped the turn.
+          </p>
         ) : null}
       </div>
       <form
@@ -430,39 +503,33 @@ export function ChatPanel(): ReactElement {
         }}
       >
         <div className="chat-panel-route">
-          <label className="chat-panel-field">
+          <div className="chat-panel-field chat-panel-field-provider">
             <span>Provider</span>
-            <select
-              id="chat-provider-select"
+            <ProviderPicker
+              providers={server.providers}
+              credentials={server.credentials}
               value={providerId}
-              onChange={(event) => {
-                setProviderId(event.target.value);
-                setAllowRemote(false);
-              }}
-            >
-              <option value="" disabled>Select a provider</option>
-              {server.providers.map((provider) => (
-                <option key={provider.id} value={provider.id} disabled={!provider.configured}>
-                  {provider.name}{provider.configured ? '' : ' (not configured)'}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="chat-panel-field">
-            <span>
-              Model{isLocal ? ' (optional for local helper)' : ''}
-            </span>
-            <input
-              id="chat-model-input"
-              type="text"
-              value={model}
-              onChange={(event) => setModel(event.target.value)}
-              placeholder={isLocal ? 'optional' : 'e.g. gpt-4o-mini'}
+              onChange={onProviderChange}
             />
-          </label>
+          </div>
+        </div>
+        <div className="chat-panel-field chat-panel-field-model">
+          <ModelPicker
+            providerId={providerId}
+            providerName={providerLabel}
+            value={model}
+            onChange={setModel}
+            configured={configured}
+            providerAvailable={provider?.available ?? null}
+            providerReason={provider?.reason ?? null}
+            allowRemote={allowRemote}
+            onGrantConsent={() => setAllowRemote(true)}
+            onOpenKeySettings={() => setShowKeySettings(true)}
+            optional={!modelRequired}
+          />
         </div>
         <CadTargetSelector />
-        {requiresRemoteConsent ? (
+        {needsConsent ? (
           <label
             className="chat-panel-consent"
             data-consent={allowRemote ? 'granted' : 'required'}
@@ -515,9 +582,11 @@ export function ChatPanel(): ReactElement {
               Cancel
             </button>
           ) : null}
-          {!configured && providerId ? (
+          {providerState && providerState.state !== 'configured' && providerId ? (
             <span className="chat-panel-warning">
-              Provider is not configured server-side.
+              {providerState.state === 'unavailable'
+                ? `Provider unavailable${providerState.reason ? `: ${providerState.reason}` : '.'}`
+                : 'Provider is not configured server-side.'}
             </span>
           ) : null}
         </div>
@@ -565,20 +634,32 @@ function isoTime(ts: number): string {
 // The badge states what the backend actually answered with: the provider
 // and model from the response, or the offline local helper. No model name
 // is invented when the response carried none.
+//
+// A subscription CLI that ran with its OWN default model reports the literal
+// id `default` (or nothing at all). The CLI does not say which model it
+// picked, so the badge says that instead of naming a model.
 function chatBadgeText(entry: ChatMessage): string {
   if (entry.offline === true) return 'local · offline';
   const provider = entry.provider ?? 'local';
   const model = entry.model ?? null;
+  const cliDefault = defaultModelLabel(provider, model);
+  if (cliDefault) return cliDefault;
   return model ? `${provider} · ${model}` : provider;
 }
 
 // Client-measured send-to-reply time, e.g. `1.2 s`. A reply that came back
 // in well under a tenth of a second is shown in milliseconds so the chip
-// never reads like a stuck value.
-function formatElapsed(durationMs: number): string {
+// never reads like a stuck value; a turn that ran for a minute or more is
+// shown as `m:ss`, so the live clock and the post-reply chip always read
+// the same way.
+export function formatElapsed(durationMs: number): string {
   if (!Number.isFinite(durationMs) || durationMs < 0) return '—';
   if (durationMs < 100) return `${Math.round(durationMs)} ms`;
-  return `${(durationMs / 1000).toFixed(1)} s`;
+  if (durationMs < 60_000) return `${(durationMs / 1000).toFixed(1)} s`;
+  const totalSeconds = Math.floor(durationMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
 // One-line, dimension-first summary of the active primitive. Only the
@@ -612,6 +693,17 @@ function truncate(text: string, limit: number): string {
 
 function describeError(cause: unknown): { message: string; kind: 'cancelled' | 'timeout' | 'network' | 'server' } {
   if (cause instanceof StudioAbortError) return { message: 'cancelled', kind: 'cancelled' };
+  // The client's own deadline expired. This is NOT a cancellation: the
+  // backend may still be working on the turn, and the operator must be told
+  // exactly that.
+  if (cause instanceof StudioTimeoutError) {
+    return {
+      message:
+        `timeout: ${cause.path} did not answer within the client deadline — ` +
+        'the backend may still be working on this turn. Press Cancel to stop waiting.',
+      kind: 'timeout',
+    };
+  }
   if (cause instanceof StudioAuthError) return { message: `auth: ${cause.message} (${cause.status})`, kind: 'server' };
   if (cause instanceof StudioApiError) {
     // A provider refusal carries its reason and the available provider ids

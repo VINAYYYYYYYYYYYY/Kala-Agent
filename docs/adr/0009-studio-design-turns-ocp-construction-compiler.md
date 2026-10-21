@@ -48,7 +48,7 @@ chat prompt ──► DesignIntent (template call or raw ConstructionScript + de
 - v1 subset: `sketch` (rectangle or circle, plane XY/XZ/YZ, offset x/y), `extrude` (length, `reversed`), `pocket` (finite depth or through-all, same-plane circle/rectangle), `revolve` (rectangle about the plane axis, as specified in construction-semantics), `place` (translation), `fuse`.
 - Refuse `helix`, `fillet`, `move`, `resize`, `compound`, and all analysis ops with `ConstructionError("unsupported by the Studio OCP compiler v1: <op>")`. Never approximate (no thread-as-cylinder, no skipped fillet).
 - Semantics must follow `docs/construction-semantics.md` exactly (plane normals, offset directions, reversed). Where the doc and intuition disagree, the doc wins.
-- Budget: the existing contract limits (MAX_STEPS, MAX_COMPONENTS, MAX_DIMENSION_MM) plus a wall-clock budget per compile (default 5 s). Exceeding it returns an error and leaves no partial artifact.
+- Budget: the contract limits (`MAX_TOTAL_STEPS` 500 whole-design steps across `MAX_COMPONENTS` 64 components, `MAX_STEPS` 500 per component, `MAX_DIMENSION_MM`) plus a wall-clock budget per compile (default 60 s; a 500-step design compiles in 16.9 s on the development host). Exceeding it returns an error and leaves no partial artifact.
 
 ### 2. Measure and checks (`design/measure.py`)
 - `BRepGProp.VolumeProperties_s` / `SurfaceProperties_s` give volume (mm³), area (mm²), and centroid. Bounds come from `BRepBndLib.AddOptimal_s` (not the loose box). `BRepCheck_Analyzer(shape).IsValid()` gives validity, and the solid count comes from a topology explorer.

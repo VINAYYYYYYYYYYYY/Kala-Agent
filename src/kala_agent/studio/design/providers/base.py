@@ -35,6 +35,107 @@ MAX_VERSION_LENGTH: Final[int] = 64
 MAX_WARNING_LENGTH: Final[int] = 256
 MAX_WARNINGS: Final[int] = 16
 
+#: The fragment of a provider warning that says a cut removed no material.
+CUT_NO_MATERIAL: Final[str] = "removed no material"
+#: The prefix of a display summary that stands for suppressed warnings.
+WARNING_SUMMARY_PREFIX: Final[str] = "… and "
+#: Two entries of ``MAX_WARNINGS`` are reserved for the two summary lines.
+_MAX_INDIVIDUAL_WARNINGS: Final[int] = MAX_WARNINGS - 2
+
+
+def cut_warning_summary(count: int) -> str:
+    """Return the summary line for ``count`` suppressed ineffective cuts."""
+    noun = "pocket" if count == 1 else "pockets"
+    return f"{WARNING_SUMMARY_PREFIX}{count} more {noun} {CUT_NO_MATERIAL}"
+
+
+def other_warning_summary(count: int) -> str:
+    """Return the summary line for ``count`` suppressed other warnings."""
+    noun = "warning" if count == 1 else "warnings"
+    return f"{WARNING_SUMMARY_PREFIX}{count} more {noun}"
+
+
+def parse_cut_summary(line: str) -> int | None:
+    """Return the number a cut-summary line states, if it is one."""
+    if not line.startswith(WARNING_SUMMARY_PREFIX):
+        return None
+    rest = line[len(WARNING_SUMMARY_PREFIX) :]
+    for noun in ("pockets", "pocket"):
+        suffix = f" more {noun} {CUT_NO_MATERIAL}"
+        if rest.endswith(suffix):
+            number = rest[: -len(suffix)]
+            return int(number) if number.isdigit() else None
+    return None
+
+
+def parse_other_summary(line: str) -> int | None:
+    """Return the number an other-warnings summary line states, if it is one."""
+    if not line.startswith(WARNING_SUMMARY_PREFIX):
+        return None
+    rest = line[len(WARNING_SUMMARY_PREFIX) :]
+    for noun in ("warnings", "warning"):
+        suffix = f" more {noun}"
+        if rest.endswith(suffix):
+            number = rest[: -len(suffix)]
+            return int(number) if number.isdigit() else None
+    return None
+
+
+def bound_warnings(warnings: Sequence[str]) -> tuple[str, ...]:
+    """Bound a warning display without losing the ineffective-cut count.
+
+    Up to ``MAX_WARNINGS - 2`` warnings are shown unchanged. The rest are
+    summarised in at most two lines: one carrying the exact number of
+    suppressed cuts, one carrying the number of suppressed other warnings. The
+    whole display never exceeds ``MAX_WARNINGS`` entries, and
+    :func:`ineffective_cut_count` over it is exact for any number of cuts. A
+    summary line in the input is folded into the new summary, so bounding an
+    already bounded display keeps both its shape and its exact count.
+    """
+    display: list[str] = []
+    suppressed_cuts = 0
+    suppressed_other = 0
+    for warning in warnings:
+        text = str(warning)[:MAX_WARNING_LENGTH]
+        cuts = parse_cut_summary(text)
+        if cuts is not None:
+            suppressed_cuts += cuts
+            continue
+        others = parse_other_summary(text)
+        if others is not None:
+            suppressed_other += others
+            continue
+        if len(display) < _MAX_INDIVIDUAL_WARNINGS:
+            display.append(text)
+        elif CUT_NO_MATERIAL in text:
+            suppressed_cuts += 1
+        else:
+            suppressed_other += 1
+    if suppressed_cuts:
+        display.append(cut_warning_summary(suppressed_cuts))
+    if suppressed_other:
+        display.append(other_warning_summary(suppressed_other))
+    return tuple(display)
+
+
+def ineffective_cut_count(warnings: Sequence[str]) -> int:
+    """Return the exact number of ineffective-cut warnings in a display.
+
+    Every individual cut warning counts once and a summary line contributes
+    the number it states, so the count does not depend on how many lines are
+    displayed.
+    """
+    total = 0
+    for warning in warnings:
+        text = str(warning)
+        cuts = parse_cut_summary(text)
+        if cuts is not None:
+            total += cuts
+            continue
+        if CUT_NO_MATERIAL in text:
+            total += 1
+    return total
+
 
 class CadProviderId(StrEnum):
     """The CAD providers ADR-0011 defines. This set is closed."""
@@ -144,9 +245,7 @@ class ProviderBuild:
             object.__setattr__(self, "provider_version", self.provider_version[:MAX_VERSION_LENGTH])
         if self.native_kind is not None and not self.native_kind:
             raise ValueError("a native artifact kind must not be empty")
-        bounded = tuple(
-            str(warning)[:MAX_WARNING_LENGTH] for warning in self.warnings[:MAX_WARNINGS]
-        )
+        bounded = bound_warnings(self.warnings)
         object.__setattr__(self, "warnings", bounded)
         if self.solid_count is not None and self.solid_count < 0:
             raise ValueError("a solid count must be non-negative")
@@ -213,10 +312,12 @@ class CadProvider(Protocol):
 
 __all__ = (
     "ALLOWED_PROVIDER_IDS",
+    "CUT_NO_MATERIAL",
     "MAX_REASON_LENGTH",
     "MAX_VERSION_LENGTH",
     "MAX_WARNINGS",
     "MAX_WARNING_LENGTH",
+    "WARNING_SUMMARY_PREFIX",
     "Availability",
     "CadProvider",
     "CadProviderBuildError",
@@ -227,4 +328,10 @@ __all__ = (
     "MeasuredProperties",
     "ProviderBuild",
     "ProviderStatus",
+    "bound_warnings",
+    "cut_warning_summary",
+    "ineffective_cut_count",
+    "other_warning_summary",
+    "parse_cut_summary",
+    "parse_other_summary",
 )

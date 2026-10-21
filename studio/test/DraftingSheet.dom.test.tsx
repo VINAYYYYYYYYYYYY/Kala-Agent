@@ -270,8 +270,13 @@ describe('design drawing on the sheet', () => {
     seedDesign({ ...bracketDesignResult, provider: 'opencascade', measured_by: 'OpenCascade (opt-in)' });
     const { container } = render(<DraftingSheet {...props({ renderMode: 'clay3d' })} />);
 
-    expect(container.textContent).toContain('view: OpenCascade (opt-in) build');
-    expect(container.textContent).not.toContain('view: OpenCascade import (view-only)');
+    // Even for the opt-in OpenCascade build the view is the OpenCascade
+    // import of that provider's STEP (view-only), never a model the
+    // OpenCascade kernel built.
+    expect(container.textContent).toContain(
+      'view: OpenCascade import (view-only) of the OpenCascade (opt-in) STEP',
+    );
+    expect(container.textContent).not.toContain('view: OpenCascade (opt-in) build');
   });
 
   it('keeps the three.js pencil rendering without a design', () => {

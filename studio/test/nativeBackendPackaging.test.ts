@@ -947,9 +947,9 @@ describe('native backend helper', () => {
 });
 
 describe('current-feature native readiness', () => {
-  it('reports the current Python surface and the computed Rust-native/proxied split', () => {
+  it('reports the current Python surface and the computed Rust-native/geometry-seam split', () => {
     const report = nativeReadiness.checkStudioReadiness();
-    expect(report.python.routeMethodCount).toBe(15);
+    expect(report.python.routeMethodCount).toBe(16);
     expect(report.python.internalRouteMethodCount).toBe(4);
     expect(report.python.internalRouteMethods).toEqual([
       'GET /internal/v1/intent/schema',
@@ -959,18 +959,22 @@ describe('current-feature native readiness', () => {
     ]);
     expect(report.python.routeMethods.every((route) => route.includes(' /api/studio/'))).toBe(true);
 
-    // r2: the native front door serves the public surface itself and forwards
-    // the geometry routes to the supervised Python worker. Both halves are
-    // read from the Rust route table, never pinned to a hardcoded readiness.
+    // r2: the native front door serves the public surface itself; the
+    // geometry, design, journal and import routes reach geometry through the
+    // geometry-backend seam, which the default build answers natively. Both
+    // halves are read from the Rust route table, never pinned to a hardcoded
+    // readiness.
     expect(report.native.rustNativeRouteMethods).toEqual([
       'GET /api/studio/health',
       'GET /api/studio/integrations',
       'GET /api/studio/providers',
+      'GET /api/studio/providers/{}/models',
       'GET /api/studio/settings',
       'POST /api/studio/chat',
       'POST /api/studio/settings',
     ]);
-    expect(report.native.proxiedRouteMethods).toEqual([
+    expect(report.native.geometrySeamRouteMethods).toEqual([
+      'GET /api/studio/design/{}/artifact/{}',
       'GET /api/studio/design/{}/drawing',
       'GET /api/studio/design/{}/section',
       'GET /api/studio/journal',
@@ -982,14 +986,34 @@ describe('current-feature native readiness', () => {
       'POST /api/studio/import',
       'POST /api/studio/preview',
     ]);
-    expect(report.native.rustNativeRouteMethodCount).toBe(6);
-    expect(report.native.proxiedRouteMethodCount).toBe(10);
-    expect(report.native.routeMethodCount).toBe(16);
-    expect(report.native.rustNativeRouteMethodCount + report.native.proxiedRouteMethodCount)
+    expect(report.native.rustNativeRouteMethodCount).toBe(7);
+    expect(report.native.geometrySeamRouteMethodCount).toBe(11);
+    expect(report.native.routeMethodCount).toBe(18);
+    // The old "proxied" field name survives as a compatible alias with the
+    // same values, so an older consumer keeps working.
+    expect(report.native.proxiedRouteMethods).toEqual(
+      report.native.geometrySeamRouteMethods,
+    );
+    expect(report.native.proxiedRouteMethodCount).toBe(
+      report.native.geometrySeamRouteMethodCount,
+    );
+    expect(report.native.rustNativeRouteMethodCount + report.native.geometrySeamRouteMethodCount)
       .toBe(report.native.routeMethodCount);
+    // The wording never claims the Python worker answers those routes.
+    expect(report.summary).toContain('answered natively by default');
+    expect(report.summary).not.toContain('proxied');
+    expect(nativeReadiness.formatReadinessReport(report)).toContain(
+      'geometry-backend seam route-methods (answered natively by default; Python worker is a development opt-in): 11',
+    );
+    expect(nativeReadiness.formatReadinessReport(report)).not.toContain('proxied route-methods');
 
     expect(report.missingRouteMethods).toEqual([]);
-    expect(report.extraNativeRouteMethods).toEqual(['POST /api/studio/import']);
+    // The native front door carries two routes the Python reference does
+    // not have: the STEP import and the provider model catalog.
+    expect(report.extraNativeRouteMethods).toEqual([
+      'GET /api/studio/providers/{}/models',
+      'POST /api/studio/import',
+    ]);
     expect(report.ready).toBe(
       report.missingRouteMethods.length === 0 && report.missingCapabilities.length === 0,
     );
@@ -1032,7 +1056,7 @@ describe('current-feature native readiness', () => {
     expect(analysis.ready).toBe(true);
   });
 
-  it('separates Rust-native routes from routes proxied to the geometry worker', () => {
+  it('separates Rust-native routes from routes through the geometry-backend seam', () => {
     const pythonSource = [
       '// FILE server.py',
       '@router.get("/health")',
@@ -1051,10 +1075,11 @@ describe('current-feature native readiness', () => {
       'GET /api/studio/journal',
     ]);
     expect(surface.rustNativeRouteMethods).toEqual(['GET /api/studio/health']);
-    expect(surface.proxiedRouteMethods).toEqual(['GET /api/studio/journal']);
+    expect(surface.geometrySeamRouteMethods).toEqual(['GET /api/studio/journal']);
 
     const analysis = nativeReadiness.analyzeStudioSources({ pythonSource, nativeSource });
     expect(analysis.rustNativeRouteMethodCount).toBe(1);
+    expect(analysis.geometrySeamRouteMethodCount).toBe(1);
     expect(analysis.proxiedRouteMethodCount).toBe(1);
     expect(analysis.missingRouteMethods).toEqual([]);
     expect(analysis.ready).toBe(true);
@@ -1132,7 +1157,7 @@ describe('current-feature native readiness', () => {
     expect(analysis.ready).toBe(true);
     expect(analysis.missingRouteMethods).toEqual([]);
     expect(analysis.missingCapabilities).toEqual([]);
-    expect(analysis.rustNativeRouteMethodCount + analysis.proxiedRouteMethodCount)
+    expect(analysis.rustNativeRouteMethodCount + analysis.geometrySeamRouteMethodCount)
       .toBe(analysis.nativeRouteMethods.length);
   });
 
@@ -1154,6 +1179,33 @@ describe('current-feature native readiness', () => {
     });
     expect(readyDecision.classification).toBe('release');
     expect(readyDecision.releaseEligible).toBe(true);
+    // The release warning names the seam honestly: the default build answers
+    // those routes natively, and the Python worker is a development opt-in.
+    expect(readyDecision.warning).toContain('go through the geometry-backend seam');
+    expect(readyDecision.warning).toContain('development opt-in');
+    expect(readyDecision.warning).not.toContain('delegated through');
+    expect(readyDecision.warning).not.toContain('proxied');
+
+    // An older readiness report carries only the deprecated field name; the
+    // alias still produces the same warning.
+    const legacyNative = {
+      ...pending.native,
+      geometrySeamRouteMethodCount: undefined,
+      geometrySeamRouteMethods: undefined,
+      proxiedRouteMethodCount: 10,
+      proxiedRouteMethods: pending.native.proxiedRouteMethods,
+    };
+    const legacyDecision = desktopPack.decidePackaging({
+      argv: ['--win', 'nsis', '--x64'],
+      report: {
+        ...pending,
+        ready: true,
+        missingRouteMethods: [],
+        missingCapabilities: [],
+        native: legacyNative,
+      },
+    });
+    expect(legacyDecision.warning).toContain('10 route-method(s) go through the geometry-backend seam');
   });
 
   it('classifies the effective installed builder targets, not raw --dir strings', () => {

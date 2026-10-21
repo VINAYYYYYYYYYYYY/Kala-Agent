@@ -51,9 +51,11 @@ Since the cutover (ADR-0010 phase 2, 2026-10-20) the packaged app starts
   `kala-studio.exe` on Windows.
 
 The Linux deliverable is the **unsigned** AppImage
-`studio/release/kala-studio-0.1.0-x86_64.AppImage` (163 642 516 bytes,
-sha256 `b069b7d4b73f8ae01b166744b61f090455ef989ce348f360826ccfd69aaba31e`).
-The Windows NSIS build script exists but **has never been executed**. See
+`studio/release/kala-studio-0.1.0-x86_64.AppImage`. Its **size and
+SHA-256 are recorded in
+[../packaging/linux/README.md](../packaging/linux/README.md)** — they change
+with every rebuild, so they are not duplicated here. The Windows NSIS build
+script exists but **has never been executed**. See
 [../docs/studio-install.md](../docs/studio-install.md).
 
 ## The four zones

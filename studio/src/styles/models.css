@@ -1,0 +1,373 @@
+/* The composer's provider picker and model picker.
+ *
+ * Both controls are drafted-sheet widgets: rectilinear, mono-labelled, and
+ * sized by the 4 px rhythm. The badge colours carry the state (configured,
+ * not configured, unavailable, free) so the operator reads the provider
+ * registry without opening a menu.
+ */
+
+/* Provider picker ------------------------------------------------------- */
+
+.provider-picker {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.provider-picker-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  width: 100%;
+  min-width: 0;
+  padding: 4px 7px;
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  cursor: pointer;
+}
+
+.provider-picker-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.provider-picker-trigger-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-picker-badge {
+  flex: 0 0 auto;
+  padding: 1px 5px;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--construction);
+  border: 1px solid var(--hairline);
+  background: var(--sheet);
+  white-space: nowrap;
+}
+
+.provider-picker-badge[data-state='configured'] {
+  color: var(--stamp);
+  border-color: var(--stamp);
+}
+
+.provider-picker-badge[data-state='not-configured'] {
+  color: var(--redline-ink);
+  border-color: var(--redline);
+}
+
+.provider-picker-badge[data-state='unavailable'] {
+  color: var(--redline-ink);
+  border-color: var(--redline);
+  border-style: dashed;
+}
+
+.provider-picker-badge[data-state='subscription'] {
+  color: var(--prussian);
+  border-color: var(--prussian);
+}
+
+.provider-picker-reason {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  line-height: 1.3;
+  color: var(--redline-ink);
+  overflow-wrap: anywhere;
+}
+
+.provider-picker-list {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--card);
+  border: 1px solid var(--ink);
+  /* The popup lives inside the composer's upper-case label field: the rows
+     are ordinary text, so the label typography is switched off here. */
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+
+.provider-picker-option {
+  display: grid;
+  gap: 2px;
+  padding: 5px 7px;
+  border-bottom: 1px solid var(--hairline);
+  cursor: pointer;
+}
+
+.provider-picker-option:last-child {
+  border-bottom: none;
+}
+
+.provider-picker-option[data-active='yes'] {
+  background: color-mix(in srgb, var(--prussian) 10%, var(--card));
+}
+
+.provider-picker-option[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.provider-picker-option-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-xs) var(--space-sm);
+  min-width: 0;
+}
+
+.provider-picker-option-name {
+  font-size: var(--text-body-sm);
+  color: var(--ink);
+}
+
+.provider-picker-option-id {
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  color: var(--construction);
+}
+
+.provider-picker-option-credential,
+.provider-picker-option-reason {
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  line-height: 1.35;
+  color: var(--construction);
+  overflow-wrap: anywhere;
+}
+
+.provider-picker-option-reason {
+  color: var(--redline-ink);
+}
+
+/* Model picker ---------------------------------------------------------- */
+
+.model-picker {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.model-picker-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.model-picker-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--construction);
+}
+
+.model-picker-count {
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  color: var(--construction);
+  white-space: nowrap;
+}
+
+.model-picker-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.model-picker-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 4px 7px;
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+}
+
+.model-picker-input:disabled {
+  opacity: 0.6;
+}
+
+.model-picker-free {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--construction);
+  white-space: nowrap;
+}
+
+.model-picker-free input {
+  margin: 0;
+  accent-color: var(--stamp);
+}
+
+.model-picker-reload {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  cursor: pointer;
+}
+
+.model-picker-reload:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.model-picker-list {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--card);
+  border: 1px solid var(--ink);
+  /* The popup lives inside the composer's upper-case label field: the rows
+     are ordinary text, so the label typography is switched off here. */
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+
+.model-picker-option {
+  display: grid;
+  gap: 1px;
+  padding: 4px 7px;
+  border-bottom: 1px solid var(--hairline);
+  cursor: pointer;
+}
+
+.model-picker-option:last-child {
+  border-bottom: none;
+}
+
+.model-picker-option[data-active='yes'] {
+  background: color-mix(in srgb, var(--prussian) 10%, var(--card));
+}
+
+.model-picker-option-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-xs) var(--space-sm);
+  min-width: 0;
+}
+
+.model-picker-option-name {
+  font-size: var(--text-body-sm);
+  color: var(--ink);
+}
+
+.model-picker-option-id {
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  color: var(--construction);
+  overflow-wrap: anywhere;
+}
+
+.model-picker-option-meta {
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  color: var(--construction);
+}
+
+.model-picker-badge[data-state='free'] {
+  color: var(--stamp);
+  border-color: var(--stamp);
+}
+
+.model-picker-note,
+.model-picker-error {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  line-height: 1.35;
+  color: var(--construction);
+  overflow-wrap: anywhere;
+}
+
+.model-picker-error {
+  color: var(--redline-ink);
+}
+
+.model-picker-consent {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  line-height: 1.35;
+  color: var(--construction);
+  border: 1px dashed var(--redline);
+  background: color-mix(in srgb, var(--redline) 5%, var(--card));
+}
+
+.model-picker-consent-stamp {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--redline-ink);
+}
+
+.model-picker-consent-text {
+  color: var(--construction);
+  overflow-wrap: anywhere;
+}
+
+.model-picker-action {
+  justify-self: start;
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--ink);
+  cursor: pointer;
+}

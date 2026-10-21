@@ -77,3 +77,7 @@
 - freecad-multi-abi ACCEPTED (Opus: AppImage sha256 b069b7d4… matches; fresh extraction with Electron-equivalent env, PATH=/usr/bin:/bin, no repo/venv → FreeCAD L-bracket 35571.416047 verified measured_by FreeCAD). docs-cutover launched (MiniMax). Remaining: MinGW (user), Windows run (user).
 - docs-cutover ACCEPTED (7 docs; workspace 449 pass; differentials 0; AppImage smoke pass). docs-cutover-2 for studio.md/studio-limitations.md/studio-providers.md (MiniMax).
 - docs-cutover-2 done.
+- AGENT-PROVIDERS wave (.mece/waves/agent-providers-20261020): live test found OpenRouter MiniMax M3.1 Flash free reply = prose, no design (instruction forbids LLM-authored scripts). Launched llm-design (DS), cli-providers (MM), model-catalog (DS), model-ui (MM). Opus will run live verification with user's stored key + subscriptions after.
+- model-catalog PROVISIONALLY ACCEPTED (Opus re-ran kala-studio: 201 passed). Full fmt/clippy gate after llm-design lands. Live OpenRouter model list test deferred to combined live run.
+- model-ui ACCEPTED (Opus re-ran: tc clean, 683/683, build ok; localStorage only stores model id per provider).
+- llm-design PROVISIONALLY ACCEPTED (Python 1567 pass; plate builds OCC+FreeCAD 24695.221316 = hand calc). kala-studio replay_all_56 failing — attributed to concurrent cli-providers provider-list changes; full gate after cli-providers.

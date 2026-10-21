@@ -15,10 +15,12 @@
 // `xvfb-run -a <AppImage>` separately.
 //
 // Default behaviour: every check that does not need native geometry is
-// mandatory; the L-bracket, drawing, section, STEP import and FreeCAD checks
-// are reported as PENDING until native-design lands. Pass
-// `--require-geometry` / `--require-freecad` to make them mandatory in the
-// cutover re-run.
+// mandatory; the L-bracket, drawing, section and STEP import checks are
+// reported as PENDING unless `--require-geometry` is passed, and the
+// FreeCAD provider check is reported as PENDING unless `--require-freecad`
+// is passed. The native-design backend HAS landed, so the release
+// workflow passes both flags and those checks are mandatory there; a
+// local run without them only reports them as PENDING.
 //
 // Two backend phases are used:
 //   1. `PATH=""` (no Python at all): health, UI, auth, OpenCascade L-bracket,

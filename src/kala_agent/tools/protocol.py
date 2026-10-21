@@ -25,8 +25,19 @@ from kala_agent.contracts import (
 
 PROTOCOL_VERSION: Final[str] = "1.0"
 MAX_JSON_BYTES: Final[int] = 1_048_576
-MAX_ARGUMENT_BYTES: Final[int] = 262_144
-MAX_STRING_LENGTH: Final[int] = 32_768
+#: The maximum size of the canonical encoding of a tool's arguments.
+#:
+#: A 500-step design whose 250 pairs are rectangle sketches compiles to 4 501
+#: FreeCAD calls and 303 813 characters of call JSON, so this bound is 512 KiB:
+#: it holds the worst case and stays below the 1 MB whole-envelope bound.
+MAX_ARGUMENT_BYTES: Final[int] = 524_288
+#: The longest JSON string in a tool envelope.
+#:
+#: A design inside Kala's 500-step budget passes its call list as one string:
+#: 130 000 characters for a 500-step pocket plate, 278 514 for a 500-step
+#: rectangle-pair design. 512 KiB holds the worst case with margin and still
+#: fits the 1 MB envelope even at its own limit.
+MAX_STRING_LENGTH: Final[int] = 524_288
 MAX_COLLECTION_ITEMS: Final[int] = 2_048
 MAX_KEY_LENGTH: Final[int] = 256
 MAX_JSON_DEPTH: Final[int] = 48

@@ -5,17 +5,20 @@ The tests cover:
 - The local helper produces a deterministic, offline reply.
 - The OpenAI/OpenRouter provider refuses to leave the process without an
   environment key and ``allow_remote=True``.
-- The Codex CLI provider refuses an unauthenticated CLI and reports
-  missing-binary errors as actionable configuration errors.
+- The subscription CLI routes refuse without the remote consent and report
+  a missing binary as an actionable availability failure.
 - The dispatch layer refuses every unknown provider id.
 
-The tests do not perform any paid live calls or read auth files.
+The tests do not perform any paid live calls, do not read auth files and
+never start a real ``claude``, ``codex`` or ``opencode``: the subscription
+routes are exercised with a fake executable in
+``tests/unit/test_studio_cli_providers.py``.
 """
 
 from __future__ import annotations
 
+import os
 import re
-import shutil
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -28,7 +31,7 @@ from kala_agent.studio.providers.base import (
     ProviderProtocolError,
     ProviderUnavailableError,
 )
-from kala_agent.studio.providers.codex import codex_chat
+from kala_agent.studio.providers.cli_runtime import CliProbe
 from kala_agent.studio.providers.dispatch import (
     fixed_endpoints,
     list_provider_records,
@@ -173,7 +176,7 @@ def test_local_chat_response_stays_within_limits_on_long_prompts() -> None:
 
 
 def test_local_provider_record_describes_engineering_helper() -> None:
-    records = list_provider_records(environ={})
+    records = list_provider_records(environ={}, clis=())
     local_row = next(row for row in records if row.id == "local")
     assert local_row.configured is True
     note = local_row.notes.lower()
@@ -275,7 +278,7 @@ def test_list_provider_records_never_includes_credentials(
 ) -> None:
     monkeypatch.setenv("OPENAI_API_KEY", "sk-secret-1234567890abcdef")
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-secret-9876543210abcdef")
-    records = list_provider_records()
+    records = list_provider_records(environ=os.environ, clis=())
     rendered = str(records)
     assert "sk-secret-1234567890abcdef" not in rendered
     assert "sk-secret-9876543210abcdef" not in rendered
@@ -284,33 +287,7 @@ def test_list_provider_records_never_includes_credentials(
     }
 
 
-# --- codex CLI provider (always fail-closed) ---
-
-
-def test_codex_chat_is_unavailable_regardless_of_env(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """The codex route is refused even with the opt-in flag and a CLI."""
-    monkeypatch.setenv("KALA_STUDIO_ENABLE_CODEX", "1")
-    monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/codex")
-    with pytest.raises(ProviderUnavailableError, match="not available"):
-        codex_chat("hello world")
-
-
-def test_codex_chat_is_unavailable_without_opt_in(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.delenv("KALA_STUDIO_ENABLE_CODEX", raising=False)
-    with pytest.raises(ProviderUnavailableError):
-        codex_chat("hello world")
-
-
-def test_codex_chat_rejects_non_string_prompt(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("KALA_STUDIO_ENABLE_CODEX", "1")
-    with pytest.raises(ProviderConfigurationError):
-        codex_chat(123)  # type: ignore[arg-type]
+# --- the subscription CLI routes ---
 
 
 def test_codex_dispatch_requires_allow_remote(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -326,30 +303,57 @@ def test_codex_dispatch_requires_allow_remote(monkeypatch: pytest.MonkeyPatch) -
         )
 
 
-def test_codex_dispatch_with_consent_is_unavailable(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_codex_dispatch_with_consent_reports_the_missing_cli() -> None:
+    """With the consent but no CLI, the route reports the honest reason."""
     from kala_agent.studio.providers.dispatch import chat as dispatch_chat
 
-    monkeypatch.setenv("KALA_STUDIO_ENABLE_CODEX", "1")
-    monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/codex")
-    with pytest.raises(ProviderUnavailableError):
+    with pytest.raises(ProviderUnavailableError) as failure:
         dispatch_chat(
             provider="codex",
             model=None,
             prompt="hi",
             allow_remote=True,
-            environ={},
+            environ={"PATH": str(Path(os.devnull).parent / "no-such-cli-directory")},
         )
+    assert "the Codex CLI was not found on PATH" in str(failure.value)
 
 
-def test_codex_record_is_never_configured_and_hides_cli_path(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("KALA_STUDIO_ENABLE_CODEX", "1")
-    monkeypatch.setattr(shutil, "which", lambda name: "/opt/secret/codex-binary")
-    records = list_provider_records()
+def test_the_subscription_rows_carry_the_probe_verdict() -> None:
+    """A row is configured only when the CLI is installed and signed in."""
+    probes = (
+        CliProbe(
+            id="codex_cli",
+            installed=True,
+            authenticated=True,
+            reason="Codex CLI 1.0.0 is installed and signed in",
+        ),
+    )
+    records = list_provider_records(environ={}, clis=probes)
+    codex = next(row for row in records if row.id == "codex_cli")
+    assert codex.configured is True
+    assert codex.available is True
+    assert codex.reason is None
+    assert codex.source == "subscription (CLI)"
+    alias = next(row for row in records if row.id == "codex")
+    assert alias.configured is True
+    claude = next(row for row in records if row.id == "claude_code")
+    assert claude.configured is False
+    assert claude.available is False
+    assert claude.reason is None
+
+
+def test_the_subscription_rows_hide_the_cli_path() -> None:
+    """The rows never disclose the local CLI installation path."""
+    probes = (
+        CliProbe(
+            id="codex_cli",
+            installed=False,
+            authenticated=False,
+            reason="the Codex CLI was not found on PATH or at KALA_STUDIO_CODEX_CLI_PATH",
+        ),
+    )
+    records = list_provider_records(environ={}, clis=probes)
     codex = next(row for row in records if row.id == "codex")
     assert codex.configured is False
     assert "/opt/secret/codex-binary" not in codex.notes
-    assert "503" in codex.notes
+    assert "codex" in codex.notes

@@ -105,12 +105,21 @@ class ProviderId(StrEnum):
     ``openrouter`` are the API routes, and ``local`` is the deterministic
     offline design helper. Unknown identifiers are a validation failure
     rather than a silent no-op.
+
+    ``claude_code``, ``codex_cli`` and ``opencode_cli`` are the three
+    subscription routes of the native Studio product: each one runs the
+    operator's own, already-authenticated command-line tool as a sandboxed
+    subprocess. The Python reference runs the same three CLIs with the same
+    contract, so a design turn can be built through any of them.
     """
 
     LOCAL = "local"
     OPENAI = "openai"
     OPENROUTER = "openrouter"
     CODEX = "codex"
+    CLAUDE_CODE = "claude_code"
+    CODEX_CLI = "codex_cli"
+    OPENCODE_CLI = "opencode_cli"
 
 
 class CredentialProviderId(StrEnum):
@@ -126,6 +135,7 @@ class CredentialSource(StrEnum):
     NONE = "none"
     ENVIRONMENT = "environment"
     STORED = "stored"
+    SUBSCRIPTION = "subscription"
 
 
 class _StrictModel(BaseModel):
@@ -319,12 +329,21 @@ class ProviderRecord(_StrictModel):
 
     ``configured`` is reported by inspecting what the environment actually
     exposes, so it can never claim an API key that is not set.
+
+    ``available`` is the availability probe's verdict for a subscription
+    route and is ``null`` for a route the studio did not probe. ``reason``
+    names the honest reason a subscription route is unavailable, and
+    ``source`` names where the credential comes from; a subscription route's
+    credential lives in the operator's own CLI, never in Kala.
     """
 
     id: Annotated[str, Field(min_length=1, max_length=64, pattern=PROVIDER_ID_PATTERN)]
     name: Annotated[str, Field(min_length=1, max_length=MAX_PROVIDER_NAME_LENGTH)]
     configured: bool
     notes: Annotated[str, Field(max_length=MAX_NOTES_LENGTH)] = ""
+    available: bool | None = None
+    reason: Annotated[str | None, Field(max_length=MAX_NOTES_LENGTH)] = None
+    source: Annotated[str | None, Field(max_length=64)] = None
 
 
 class ProvidersResponse(_StrictModel):
@@ -332,10 +351,15 @@ class ProvidersResponse(_StrictModel):
 
 
 class ProviderCredentialStatus(_StrictModel):
-    """Non-secret status of a configurable provider credential."""
+    """Non-secret status of a configurable provider credential.
 
-    provider: CredentialProviderId
-    env_var: Annotated[str, Field(min_length=1, max_length=64)]
+    The two API-key rows name the environment variable the key comes from;
+    a subscription row names no variable at all, because its credential is
+    the operator's own CLI login.
+    """
+
+    provider: Annotated[str, Field(min_length=1, max_length=64)]
+    env_var: Annotated[str, Field(max_length=64)] = ""
     configured: bool
     source: CredentialSource
 
@@ -397,6 +421,10 @@ class HealthResponse(_StrictModel):
     service: Annotated[str, Field(min_length=1, max_length=64)] = SERVICE_NAME
     version: Annotated[str, Field(min_length=1, max_length=64)]
     offline: bool
+    #: The backend's own worst-case design-turn wall time, in seconds. The
+    #: client derives its deadline from this value plus a margin instead of
+    #: pinning one that the design budget can outgrow.
+    design_turn_budget_seconds: Annotated[int, Field(ge=1, le=86_400)]
     step_available: bool
     design_available: bool = False
     integrations: tuple[str, ...]

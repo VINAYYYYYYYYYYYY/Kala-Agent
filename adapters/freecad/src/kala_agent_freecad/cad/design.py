@@ -51,7 +51,13 @@ from kala_agent_freecad.errors import (
 
 MAX_DIMENSION_MM: Final[float] = 5_000.0
 MAX_COORDINATE_MM: Final[float] = 5_000.0
+#: The display bound of one build's warnings. Two entries are reserved for the
+#: two summary lines, so a design with hundreds of ineffective cuts still
+#: reports the exact count.
 MAX_WARNINGS: Final[int] = 16
+_MAX_INDIVIDUAL_WARNINGS: Final[int] = MAX_WARNINGS - 2
+CUT_NO_MATERIAL: Final[str] = "removed no material"
+WARNING_SUMMARY_PREFIX: Final[str] = "… and "
 MAX_NAME_LENGTH: Final[int] = 64
 MAX_VERSION_LENGTH: Final[int] = 64
 MAX_PATH_LENGTH: Final[int] = 1_024
@@ -177,7 +183,8 @@ def run(
                 "stage": "solid",
                 "tool_trace": cast("list[JSONValue]", session.trace[:MAX_TRACE]),
                 "valid": bool(getattr(shape, "isValid", False)),
-                "warnings": cast("list[JSONValue]", session.warnings[:MAX_WARNINGS]),
+                "warnings": cast("list[JSONValue]", session.display_warnings()),
+                "ineffective_cuts": session.ineffective_cuts,
             }
         finally:
             _close(modules.freecad, document)
@@ -209,6 +216,9 @@ class _Session:
         self.redesign: list[str] = []
         self.names: list[str] = []
         self.warnings: list[str] = []
+        self.ineffective_cuts = 0
+        self._suppressed_cuts = 0
+        self._suppressed_other = 0
         self.degrees_of_freedom = 0
         self.analysis_status = "not_run"
         self.analysis_detail = "analysis was not requested"
@@ -217,6 +227,7 @@ class _Session:
         self._bodies: dict[str, FreeCADObject] = {}
         self._features: dict[str, FreeCADObject] = {}
         self._component = ""
+        self._sketch_plane = "XY"
         self._occurrences: list[FreeCADObject] = []
         self._joined = False
 
@@ -319,8 +330,38 @@ class _Session:
         self.trace.append(tool)
 
     def _warn(self, message: str) -> None:
-        if len(self.warnings) < MAX_WARNINGS:
-            self.warnings.append(message[:MAX_DETAIL_LENGTH])
+        text = message[:MAX_DETAIL_LENGTH]
+        if CUT_NO_MATERIAL in text:
+            self.ineffective_cuts += 1
+        if len(self.warnings) < _MAX_INDIVIDUAL_WARNINGS:
+            self.warnings.append(text)
+        elif CUT_NO_MATERIAL in text:
+            self._suppressed_cuts += 1
+        else:
+            self._suppressed_other += 1
+
+    def display_warnings(self) -> list[str]:
+        """Return the bounded warning display.
+
+        The first ``MAX_WARNINGS - 2`` warnings are shown unchanged. Any
+        further warnings are counted, and up to two summary lines carry the
+        exact number of suppressed ineffective cuts and of suppressed other
+        warnings, so ``cuts_effective`` stays exact for 500 pockets while the
+        display stays bounded.
+        """
+        rows = list(self.warnings)
+        if self._suppressed_cuts:
+            noun = "pocket" if self._suppressed_cuts == 1 else "pockets"
+            rows.append(
+                f"{WARNING_SUMMARY_PREFIX}{self._suppressed_cuts} more {noun} "
+                f"{CUT_NO_MATERIAL}"
+            )
+        if self._suppressed_other:
+            noun = "warning" if self._suppressed_other == 1 else "warnings"
+            rows.append(
+                f"{WARNING_SUMMARY_PREFIX}{self._suppressed_other} more {noun}"
+            )
+        return rows
 
     def _remember(self, feature: FreeCADObject) -> None:
         name = getattr(feature, "Name", None)
@@ -367,6 +408,7 @@ class _Session:
         sketch.MapMode = "FlatFace"
         _recompute(self.document)
         self.sketch = sketch
+        self._sketch_plane = plane_name
         self._remember(sketch)
 
     def sketch_rectangle(self, arguments: Mapping[str, object]) -> None:
@@ -547,7 +589,9 @@ class _Session:
         self._remember(pad)
 
     def pocket(self, arguments: Mapping[str, object]) -> None:
-        pocket = self._require_body().newObject("PartDesign::Pocket", "Pocket")
+        body = self._require_body()
+        before = _feature_volume_mm3(self.feature)
+        pocket = body.newObject("PartDesign::Pocket", "Pocket")
         pocket.Profile = self._profile()
         if "length" in arguments:
             pocket.Type = "Length"
@@ -556,6 +600,23 @@ class _Session:
             pocket.Type = "ThroughAll"
         pocket.Reversed = True
         _recompute(self.document)
+        after = _feature_volume_mm3(pocket)
+        if before is not None and after is not None:
+            # The same tolerance the OCCT compiler's removed-material rule
+            # needs: an OpenCascade boolean can move the volume by a few
+            # ulps around a no-op, so a sub-nanometric change is not a cut.
+            tolerance = max(before * 1e-9, 1e-6)
+            if before - after <= tolerance:
+                name = self._component or str(
+                    getattr(body, "Label", "") or getattr(body, "Name", "") or "body"
+                )
+                step_index = _index(arguments, "step_index", default=-1)
+                where = (
+                    f"pocket at step index {step_index} on {self._sketch_plane}"
+                    if step_index >= 0
+                    else f"pocket on {self._sketch_plane}"
+                )
+                self._warn(f"component '{name}': {where} removed no material")
         self.feature = pocket
         self._keep_feature(pocket)
         self._remember(pocket)
@@ -1003,6 +1064,23 @@ def _solid_shape(feature: FreeCADObject | None) -> FreeCADObject:
         if getattr(inner, "ShapeType", "") == "Solid":
             return inner
     raise FreeCADOperationError("the feature did not produce one valid solid")
+
+
+def _feature_volume_mm3(feature: FreeCADObject | None) -> float | None:
+    """Return a feature's measured volume, or ``None`` when it cannot be read.
+
+    A pocket must report a cut that removed nothing instead of raising; a
+    kernel object without a measurable shape is therefore a skipped check,
+    not an error.
+    """
+    if feature is None:
+        return None
+    try:
+        shape = getattr(feature, "Shape", None)
+        volume = float(getattr(shape, "Volume", None))
+    except (AttributeError, TypeError, ValueError):
+        return None
+    return volume if math.isfinite(volume) else None
 
 
 def _closed(shape: FreeCADObject) -> bool:

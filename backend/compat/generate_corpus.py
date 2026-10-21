@@ -432,7 +432,7 @@ def _apply_body_contracts(cases: list[dict[str, object]]) -> None:
             expected["volatile_paths"] = declarations
         else:
             expected["body_comparison"] = "exact"
-        if isinstance(expected.get("body_text"), str):
+        if isinstance(expected.get("body_text"), str) and not expected.get("normalizations"):
             expected["body_length"] = len(str(expected["body_text"]))
             expected["body_length_role"] = (
                 "length of the recorded body text; the recorded digest is the "
@@ -610,7 +610,7 @@ def generate_all(output: Path) -> dict[str, object]:
             "step_bytes_asserted": False,
             "stl_bytes_asserted": True,
             "normalized_fields": [
-                "core GET /health data_dir",
+                "core GET /health data_dir, body length and content-length header",
                 "CLI temporary data directory",
                 "journal occurred_at via a fixture-only fixed clock",
                 "studio journal occurred_at via a fixture-only fixed clock",

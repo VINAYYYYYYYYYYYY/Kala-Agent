@@ -17,6 +17,7 @@ import type { ReactElement } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   exportDesign,
+  getDesignArtifact,
   postExport,
   postHandoff,
   StudioAbortError,
@@ -27,13 +28,16 @@ import {
 import { useUiState, appendJournal, selectActiveDesign } from '../../state/store';
 import type { ExportFormat } from '../../api/client';
 import type {
+  DesignArtifactDownload,
+  DesignArtifactKind,
   DesignExportArtifact,
   DesignExportFormat,
   IntegrationRecord,
   IntegrationStatus,
 } from '../../types/studio';
 import { CopyButton } from '../journal/CopyButton';
-import { measuredByLabel, nativeKindLabel } from '../chat/designCard';
+import { measuredByLabel, nativeKindLabel, downloadableKind } from '../chat/designCard';
+import { saveBlob } from '../../saveBlob';
 
 const SUPPORTED_FORMATS: ReadonlyArray<ExportFormat> = ['stl', 'step'];
 
@@ -76,6 +80,11 @@ export function ExportPanel(props: ExportPanelProps = {}): ReactElement {
   const [designBusy, setDesignBusy] = useState(false);
   const [designArtifact, setDesignArtifact] = useState<DesignExportArtifact | null>(null);
   const [designError, setDesignError] = useState<string | null>(null);
+  // One download control per digest chip: `downloading` names the artifact
+  // kind in flight, `downloaded` is the receipt of the last one.
+  const [downloading, setDownloading] = useState<DesignArtifactKind | null>(null);
+  const [downloaded, setDownloaded] = useState<DesignArtifactDownload | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const target: TargetDescriptor = useMemo(() => {
     if (targetId === 'native') {
@@ -161,9 +170,14 @@ export function ExportPanel(props: ExportPanelProps = {}): ReactElement {
   // activates another design, the old receipt is dropped instead of being
   // shown next to the wrong part.
   const activeDesignId = activeDesign?.design_id ?? null;
+  const nativeDownloadKind = activeDesign
+    ? downloadableKind(activeDesign.artifacts.native_kind)
+    : null;
   useEffect(() => {
     setDesignArtifact(null);
     setDesignError(null);
+    setDownloaded(null);
+    setDownloadError(null);
   }, [activeDesignId]);
 
   const canExportDesign =
@@ -207,6 +221,34 @@ export function ExportPanel(props: ExportPanelProps = {}): ReactElement {
     }
   }
 
+  async function onDownloadArtifact(kind: DesignArtifactKind): Promise<void> {
+    if (!activeDesign || connection.kind !== 'ready' || downloading !== null) return;
+    setDownloading(kind);
+    setDownloadError(null);
+    try {
+      appendJournal({
+        kind: 'export',
+        message: `GET /api/studio/design/${activeDesign.design_id.slice(0, 8)}/artifact/${kind}`,
+      });
+      const artifact = await getDesignArtifact(connection.connection, activeDesign.design_id, kind);
+      saveBlob(artifact.blob, artifact.filename);
+      setDownloaded(artifact);
+      appendJournal({
+        kind: 'export',
+        message: `Saved ${artifact.filename}`,
+        digest: artifact.digest
+          ? `${artifact.bytes.toLocaleString()} bytes · sha256 ${artifact.digest.slice(0, 8)}`
+          : `${artifact.bytes.toLocaleString()} bytes · sha256 —`,
+      });
+    } catch (cause) {
+      const message = describeError(cause).message;
+      setDownloadError(message);
+      appendJournal({ kind: 'export', message: `Artifact download failed · ${message}` });
+    } finally {
+      setDownloading(null);
+    }
+  }
+
   return (
     <section className="export-panel" aria-label="Export and handoff">
       {showHeading ? (
@@ -230,6 +272,17 @@ export function ExportPanel(props: ExportPanelProps = {}): ReactElement {
               <code title={activeDesign.artifacts.script_sha256}>
                 {activeDesign.artifacts.script_sha256.slice(0, 8)}
               </code>
+              <button
+                type="button"
+                className="export-panel-design-download"
+                data-artifact="script"
+                aria-label="Download script"
+                title="Download the stored construction script (JSON)"
+                disabled={downloading !== null}
+                onClick={() => void onDownloadArtifact('script')}
+              >
+                {downloading === 'script' ? '…' : 'download'}
+              </button>
             </span>
             {activeDesign.artifacts.step_sha256 ? (
               <span className="export-panel-design-artifact" data-artifact="step">
@@ -237,6 +290,17 @@ export function ExportPanel(props: ExportPanelProps = {}): ReactElement {
                 <code title={activeDesign.artifacts.step_sha256}>
                   {activeDesign.artifacts.step_sha256.slice(0, 8)}
                 </code>
+                <button
+                  type="button"
+                  className="export-panel-design-download"
+                  data-artifact="step"
+                  aria-label="Download step"
+                  title="Download the provider's stored STEP file"
+                  disabled={downloading !== null}
+                  onClick={() => void onDownloadArtifact('step')}
+                >
+                  {downloading === 'step' ? '…' : 'download'}
+                </button>
               </span>
             ) : null}
             {activeDesign.artifacts.native_sha256 ? (
@@ -247,9 +311,51 @@ export function ExportPanel(props: ExportPanelProps = {}): ReactElement {
                 <code title={activeDesign.artifacts.native_sha256}>
                   {activeDesign.artifacts.native_sha256.slice(0, 8)}
                 </code>
+                {nativeDownloadKind ? (
+                  <button
+                    type="button"
+                    className="export-panel-design-download"
+                    data-artifact="native"
+                    aria-label={`Download ${nativeKindLabel(activeDesign.artifacts.native_kind)}`}
+                    title="Download the provider's own native file"
+                    disabled={downloading !== null}
+                    onClick={() => void onDownloadArtifact(nativeDownloadKind)}
+                  >
+                    {downloading === nativeDownloadKind ? '…' : 'download'}
+                  </button>
+                ) : null}
               </span>
             ) : null}
           </p>
+          {downloaded ? (
+            <div className="export-panel-receipt" role="status">
+              <p className="export-panel-receipt-line">
+                Saved <code>{downloaded.filename}</code> ·{' '}
+                {downloaded.bytes.toLocaleString()} bytes
+              </p>
+              <p className="export-panel-receipt-line">
+                <span className="export-panel-receipt-label">sha256</span>
+                <code
+                  className="export-panel-receipt-digest"
+                  {...(downloaded.digest ? { title: downloaded.digest } : {})}
+                >
+                  {downloaded.digest ?? '—'}
+                </code>
+                {downloaded.digest ? (
+                  <CopyButton
+                    value={downloaded.digest}
+                    label="Copy sha256"
+                    className="export-receipt-copy"
+                  />
+                ) : null}
+              </p>
+            </div>
+          ) : null}
+          {downloadError ? (
+            <p className="export-panel-error" role="alert">
+              {downloadError}
+            </p>
+          ) : null}
           <div className="export-panel-design-actions">
             <label className="export-panel-field">
               <span>Design format</span>
@@ -395,18 +501,6 @@ function statusOptionLabel(status: IntegrationStatus): string {
 function filterFormats(values: ReadonlyArray<string>): ExportFormat[] {
   const set = new Set<string>(SUPPORTED_FORMATS);
   return values.filter((value): value is ExportFormat => set.has(value));
-}
-
-function saveBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.rel = 'noopener';
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  URL.revokeObjectURL(url);
 }
 
 function describeError(cause: unknown): { message: string; kind: 'cancelled' | 'timeout' | 'network' | 'server' } {

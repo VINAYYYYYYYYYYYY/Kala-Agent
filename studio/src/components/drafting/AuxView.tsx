@@ -36,6 +36,7 @@ import {
   type SectionView,
 } from '../../viewer/draftingGeometry';
 import { fitPolylineGroups, type DrawingCell } from '../../viewer/hlr';
+import { designViewStamp, drawingSourceStamp } from '../../viewer/designSource';
 import {
   drawingCacheKey,
   sectionCacheKey,
@@ -264,7 +265,7 @@ export function AuxView(props: AuxViewProps): ReactElement {
             <span>PROJ: 3RD ANGLE</span>
             {activeDesign ? (
               <span>
-                SOURCE: OCP HLR · VIEW: {activeDesign.provider === 'opencascade' ? 'OPC BUILD' : 'IMPORT'}
+                {drawingSourceStamp()} · {designViewStamp(activeDesign.provider)}
               </span>
             ) : (
               <span>{props.bounds ? 'BOUNDS: LIVE' : 'BOUNDS: —'}</span>

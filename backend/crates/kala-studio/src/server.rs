@@ -7,8 +7,8 @@
 //!
 //! # Which routes are native and which are proxied (ADR-0010)
 //!
-//! * **Rust-native:** `/health`, `/integrations`, `/providers`, `/settings`
-//!   and `/chat`.
+//! * **Rust-native:** `/health`, `/integrations`, `/providers` (and
+//!   `/providers/{id}/models`), `/settings` and `/chat`.
 //! * **Proxied to the supervised Python geometry worker:** `/preview`,
 //!   `/export`, `/handoff`, `/design*`, `/journal*`, `/providers/cad` and
 //!   `/import`. The front door enforces the body, response and time limits
@@ -45,6 +45,7 @@ use hyper_util::rt::TokioIo;
 use serde_json::Value;
 use tokio::net::TcpListener;
 
+use crate::artifacts::ARTIFACT_KINDS;
 use crate::boundary::{
     HOST_REFUSED_MESSAGE, OriginParse, STUDIO_BEARER_REALM, STUDIO_TOKEN_ENV_VAR,
     TOKEN_REQUIRED_MESSAGE, header_value_text, is_permitted_authority, origins_match,
@@ -60,7 +61,9 @@ use crate::integrations::build_registry;
 use crate::json::Json;
 use crate::providers::remote::{HttpTransport, ReqwestTransport};
 use crate::providers::{
-    ChatOutcome, ProviderFailure, any_remote_provider_configured, dispatch, list_provider_records,
+    ChatOutcome, PROVIDER_IDS, ProviderFailure, STUDIO_DESIGN_REQUEST_TIMEOUT_SECONDS,
+    STUDIO_REQUEST_TIMEOUT_SECONDS, any_remote_route_available, dispatch, list_provider_records,
+    probe_subscription_clis_cached,
 };
 use crate::pytext;
 use crate::schemas::{
@@ -183,6 +186,7 @@ enum RouteKind {
     Health,
     Integrations,
     Providers,
+    ProviderModels,
     ProvidersCad,
     Settings,
     Preview,
@@ -195,6 +199,7 @@ enum RouteKind {
     JournalVerify,
     Drawing,
     Section,
+    Artifact,
 }
 
 impl RouteKind {
@@ -207,7 +212,9 @@ impl RouteKind {
                 | Self::JournalVerify
                 | Self::Drawing
                 | Self::Section
+                | Self::Artifact
                 | Self::ProvidersCad
+                | Self::ProviderModels
         )
     }
 }
@@ -229,6 +236,13 @@ fn classify(path: &str) -> Option<(RouteKind, Option<String>)> {
         "/api/studio/journal" => RouteKind::Journal,
         "/api/studio/journal/verify" => RouteKind::JournalVerify,
         other => {
+            if let Some(rest) = other.strip_prefix("/api/studio/providers/") {
+                if let Some(provider_id) = rest.strip_suffix("/models") {
+                    if !provider_id.is_empty() && !provider_id.contains('/') {
+                        return Some((RouteKind::ProviderModels, Some(provider_id.to_owned())));
+                    }
+                }
+            }
             if let Some(rest) = other.strip_prefix("/api/studio/design/") {
                 if let Some(design_id) = rest.strip_suffix("/drawing") {
                     if !design_id.is_empty() && !design_id.contains('/') {
@@ -238,6 +252,18 @@ fn classify(path: &str) -> Option<(RouteKind, Option<String>)> {
                 if let Some(design_id) = rest.strip_suffix("/section") {
                     if !design_id.is_empty() && !design_id.contains('/') {
                         return Some((RouteKind::Section, Some(design_id.to_owned())));
+                    }
+                }
+                // `GET /design/{design_id}/artifact/{kind}`: both segments
+                // are validated by the route handler against strict patterns;
+                // a slash inside either one is not this route.
+                if let Some((design_id, kind)) = rest.split_once("/artifact/") {
+                    if !design_id.is_empty()
+                        && !design_id.contains('/')
+                        && !kind.is_empty()
+                        && !kind.contains('/')
+                    {
+                        return Some((RouteKind::Artifact, Some(format!("{design_id}/{kind}"))));
                     }
                 }
             }
@@ -253,11 +279,13 @@ fn allowed_methods(kind: RouteKind) -> &'static [Method] {
         RouteKind::Health
         | RouteKind::Integrations
         | RouteKind::Providers
+        | RouteKind::ProviderModels
         | RouteKind::ProvidersCad
         | RouteKind::Journal
         | RouteKind::JournalVerify
         | RouteKind::Drawing
-        | RouteKind::Section => &[Method::GET],
+        | RouteKind::Section
+        | RouteKind::Artifact => &[Method::GET],
         RouteKind::Settings => &[Method::GET, Method::POST],
         RouteKind::Preview
         | RouteKind::Export
@@ -297,6 +325,7 @@ struct State {
     custom_environ: Option<BTreeMap<String, String>>,
     step_exporter: Arc<dyn crate::geometry::StepExporter>,
     transport: Arc<dyn HttpTransport>,
+    catalog: crate::providers::catalog::ModelCatalog,
     backend: Option<Arc<dyn GeometryBackend>>,
 }
 
@@ -385,6 +414,7 @@ impl StudioService {
                 custom_environ: config.environ.map(|environ| environ.into_iter().collect()),
                 step_exporter: config.step_exporter,
                 transport,
+                catalog: crate::providers::catalog::ModelCatalog::new(),
                 backend: config.geometry_backend,
             }),
         })
@@ -686,8 +716,9 @@ async fn handle_request(state: Arc<State>, request: Request<Incoming>) -> Respon
         );
     }
 
-    // 7. The read-only design, journal and CAD provider routes carry their
-    //    own bearer gate, like the source's `_require_bearer`.
+    // 7. The read-only design, journal, CAD provider and model-catalog
+    //    routes carry their own bearer gate, like the source's
+    //    `_require_bearer`.
     if kind.requires_route_bearer() && !bearer_matches(&headers.values(AUTHORIZATION), &state.token)
     {
         return finish(
@@ -956,16 +987,17 @@ async fn route(
     match kind {
         RouteKind::Health => health(&state).await,
         RouteKind::Integrations => integrations_response(),
-        RouteKind::Providers => providers_response(&state),
+        RouteKind::Providers => providers_response(&state).await,
+        RouteKind::ProviderModels => provider_models_route(&state, design_id, query).await,
         RouteKind::Settings => {
             if *method == Method::GET {
-                settings_get(&state)
+                settings_get(&state).await
             } else {
                 with_request(
                     body,
                     content_type,
                     validate_settings,
-                    |request| async move { settings_post(state.clone(), request) },
+                    |request| async move { settings_post(state.clone(), request).await },
                 )
                 .await
             }
@@ -985,6 +1017,7 @@ async fn route(
         | RouteKind::JournalVerify
         | RouteKind::Drawing
         | RouteKind::Section
+        | RouteKind::Artifact
         | RouteKind::ProvidersCad => {
             proxy_route(&state, kind, design_id, method, body, content_type, query).await
         }
@@ -1072,17 +1105,30 @@ async fn health(state: &State) -> OutResponse {
         .iter()
         .map(|row| Json::String(row.id.to_owned()))
         .collect();
-    let providers: Vec<Json> = list_provider_records(&environ, &stored)
-        .into_iter()
-        .map(|row| Json::String(row.id.to_owned()))
+    let providers: Vec<Json> = PROVIDER_IDS
+        .iter()
+        .map(|id| Json::String((*id).to_owned()))
         .collect();
+    // `offline` is an evidence-backed answer, not an API-key check: a
+    // signed-in subscription CLI makes a remote turn possible even with no
+    // stored key, so the CLI verdicts take part in the decision. The cached
+    // probe never holds this liveness route open for a CLI.
+    let clis = probe_subscription_clis_cached(&environ).await;
     let body = Json::object(vec![
         ("status", Json::String("ok".to_owned())),
         ("service", Json::String(SERVICE_NAME.to_owned())),
         ("version", Json::String(STUDIO_VERSION.to_owned())),
         (
             "offline",
-            Json::Bool(!any_remote_provider_configured(&environ, &stored)),
+            Json::Bool(!any_remote_route_available(&environ, &stored, &clis)),
+        ),
+        // The backend's own worst-case design-turn wall time, computed from
+        // the real provider budgets (2 model calls + 2 builds). A client
+        // derives its own deadline from this value instead of pinning one
+        // that the design budget can outgrow.
+        (
+            "design_turn_budget_seconds",
+            Json::UInt(crate::providers::design_turn_budget_seconds()),
         ),
         ("step_available", Json::Bool(backend_health.step_available)),
         (
@@ -1148,7 +1194,7 @@ fn integration_json(row: &crate::integrations::IntegrationRecord) -> Json {
     ])
 }
 
-fn providers_response(state: &State) -> OutResponse {
+async fn providers_response(state: &State) -> OutResponse {
     let (environ, stored) = match state.environ_and_stored() {
         Ok(value) => value,
         Err(error) => {
@@ -1159,7 +1205,8 @@ fn providers_response(state: &State) -> OutResponse {
             return internal_error();
         }
     };
-    let records = list_provider_records(&environ, &stored);
+    let clis = probe_subscription_clis_cached(&environ).await;
+    let records = list_provider_records(&environ, &stored, &clis);
     json_response(
         StatusCode::OK,
         &Json::object(vec![(
@@ -1175,14 +1222,84 @@ fn provider_json(record: &crate::providers::ProviderRecord) -> Json {
         ("name", Json::String(record.name.to_owned())),
         ("configured", Json::Bool(record.configured)),
         ("notes", Json::String(record.notes.clone())),
+        (
+            "available",
+            match record.available {
+                Some(value) => Json::Bool(value),
+                None => Json::Null,
+            },
+        ),
+        (
+            "reason",
+            match &record.reason {
+                Some(reason) => Json::String(reason.clone()),
+                None => Json::Null,
+            },
+        ),
+        (
+            "source",
+            match record.source {
+                Some(source) => Json::String(source.to_owned()),
+                None => Json::Null,
+            },
+        ),
     ])
 }
 
-fn settings_get(state: &State) -> OutResponse {
-    settings_body(state, &state.base_environ())
+/// `GET /api/studio/providers/{id}/models`.
+///
+/// The model catalog needs the operator's per-request remote-egress consent:
+/// listing a remote provider is egress like a chat turn. A refused consent is
+/// a route-level 403; an unknown provider is a 404; every provider, transport
+/// or parse failure is carried inside the catalog envelope so the picker can
+/// show the honest reason (HTTP 200, `models: []`, `error` set).
+async fn provider_models_route(
+    state: &State,
+    provider_id: Option<&str>,
+    query: Option<&str>,
+) -> OutResponse {
+    let Some(provider_id) = provider_id else {
+        return not_found();
+    };
+    let (environ, stored) = match state.environ_and_stored() {
+        Ok(value) => value,
+        Err(error) => {
+            eprintln!(
+                "unhandled studio failure: {}",
+                error.python_exception_name()
+            );
+            return internal_error();
+        }
+    };
+    let allow_remote = crate::providers::catalog::query_flag_true(query, "allow_remote");
+    match crate::providers::catalog::list_models(
+        &state.catalog,
+        provider_id,
+        allow_remote,
+        &environ,
+        &stored,
+        state.transport.as_ref(),
+    )
+    .await
+    {
+        Ok(listing) => json_response(StatusCode::OK, &listing.to_json()),
+        Err(crate::providers::catalog::CatalogFailure::UnknownProvider) => not_found(),
+        Err(crate::providers::catalog::CatalogFailure::ConsentRequired) => sorted(FlatError::new(
+            403,
+            "consent_required",
+            "the remote model listing requires explicit consent",
+            vec![format!(
+                "pass allow_remote=true to list models for provider '{provider_id}'"
+            )],
+        )),
+    }
 }
 
-fn settings_post(state: Arc<State>, request: UpdateProviderKeyRequest) -> OutResponse {
+async fn settings_get(state: &State) -> OutResponse {
+    settings_body(state, &state.base_environ()).await
+}
+
+async fn settings_post(state: Arc<State>, request: UpdateProviderKeyRequest) -> OutResponse {
     let data_dir = if state.data_dir.as_os_str().is_empty() {
         let fallback = fallback_settings_dir();
         if let Err(_error) = std::fs::create_dir_all(&fallback) {
@@ -1208,10 +1325,10 @@ fn settings_post(state: Arc<State>, request: UpdateProviderKeyRequest) -> OutRes
         }
         Err(WriteKeyError::Io(_)) => return internal_error(),
     }
-    settings_body(&state, &state.base_environ())
+    settings_body(&state, &state.base_environ()).await
 }
 
-fn settings_body(state: &State, base: &BTreeMap<String, String>) -> OutResponse {
+async fn settings_body(state: &State, base: &BTreeMap<String, String>) -> OutResponse {
     let stored = match read_stored_keys_checked(Some(&state.data_dir)) {
         Ok(stored) => stored,
         Err(error) => {
@@ -1222,9 +1339,10 @@ fn settings_body(state: &State, base: &BTreeMap<String, String>) -> OutResponse 
             return internal_error();
         }
     };
-    let credentials = describe_provider_credentials(base, &stored);
     let environ = effective_environ(base, &stored);
-    let providers = list_provider_records(&environ, &stored);
+    let clis = probe_subscription_clis_cached(&environ).await;
+    let credentials = describe_provider_credentials(base, &stored, &clis);
+    let providers = list_provider_records(&environ, &stored, &clis);
     let body = Json::object(vec![
         (
             "credentials",
@@ -1236,7 +1354,7 @@ fn settings_body(state: &State, base: &BTreeMap<String, String>) -> OutResponse 
         ),
         (
             "offline",
-            Json::Bool(!any_remote_provider_configured(&environ, &stored)),
+            Json::Bool(!any_remote_route_available(&environ, &stored, &clis)),
         ),
     ]);
     json_response(StatusCode::OK, &body)
@@ -1277,6 +1395,36 @@ async fn proxy_route(
             ));
         }
     }
+    // Both path segments of the artifact route are validated against strict
+    // patterns before anything is read: a sha256 design id and an allow-listed
+    // artifact kind.
+    if kind == RouteKind::Artifact {
+        let Some(encoded) = design_id else {
+            return not_found();
+        };
+        let Some((design_id, artifact_kind)) = encoded.split_once('/') else {
+            return not_found();
+        };
+        if !valid_design_id(design_id) {
+            return sorted(FlatError::new(
+                422,
+                "invalid_request",
+                VALIDATION_MESSAGE,
+                vec!["the design id is not a sha256 digest".to_owned()],
+            ));
+        }
+        if !ARTIFACT_KINDS.contains(&artifact_kind) {
+            return sorted(FlatError::new(
+                422,
+                "invalid_request",
+                VALIDATION_MESSAGE,
+                vec![format!(
+                    "the artifact kind must be one of {}",
+                    ARTIFACT_KINDS.join(", ")
+                )],
+            ));
+        }
+    }
     let outcome = match kind {
         RouteKind::Preview => backend.preview(body, content_type).await,
         RouteKind::Export => backend.export(body, content_type).await,
@@ -1292,6 +1440,11 @@ async fn proxy_route(
         RouteKind::Section => {
             let design_id = design_id.unwrap_or_default();
             backend.section(design_id, query).await
+        }
+        RouteKind::Artifact => {
+            let encoded = design_id.unwrap_or_default();
+            let (design_id, artifact_kind) = encoded.split_once('/').unwrap_or((encoded, ""));
+            backend.artifact(design_id, artifact_kind).await
         }
         RouteKind::ProvidersCad => backend.providers_cad().await,
         _ => return not_found(),
@@ -1381,12 +1534,18 @@ async fn chat_route(state: Arc<State>, request: ChatRequest) -> OutResponse {
             .ok(),
         None => None,
     };
-    let is_design_request = parsed
+    let parsed_is_design_request = parsed
         .as_ref()
         .is_some_and(chat_design::ParsedIntent::is_design_request);
+    // A remote provider with an explicit CAD target is a design turn even when
+    // no template family matches: the model authors a ConstructionScript from
+    // the dimensions in the prompt. The local helper stays template-only.
+    let is_remote_design_request = parsed_is_design_request
+        || (request.provider != crate::schemas::ProviderId::Local
+            && request.cad_provider.is_some());
 
     let (outcome, turn) =
-        if is_design_request && request.provider != crate::schemas::ProviderId::Local {
+        if is_remote_design_request && request.provider != crate::schemas::ProviderId::Local {
             let Some(backend) = state.backend.clone() else {
                 return geometry_unavailable("no geometry worker is attached to this studio");
             };
@@ -1396,6 +1555,10 @@ async fn chat_route(state: Arc<State>, request: ChatRequest) -> OutResponse {
             let provider = request.provider;
             let model = request.model.clone();
             let allow_remote = request.allow_remote;
+            // The design path is the only caller that selects the longer
+            // remote budget: the first call and the single repair call both
+            // get it. A client cannot choose it; the route decides.
+            let timeout = Duration::from_secs(STUDIO_DESIGN_REQUEST_TIMEOUT_SECONDS);
             let call = move |prompt: String| {
                 let environ = environ.clone();
                 let stored = stored.clone();
@@ -1410,6 +1573,7 @@ async fn chat_route(state: Arc<State>, request: ChatRequest) -> OutResponse {
                         &environ,
                         &stored,
                         transport.as_ref(),
+                        timeout,
                     )
                     .await
                 }
@@ -1427,14 +1591,30 @@ async fn chat_route(state: Arc<State>, request: ChatRequest) -> OutResponse {
                         .model
                         .clone()
                         .unwrap_or_else(|| request.model.clone().unwrap_or_default());
-                    let outcome = ChatOutcome {
-                        text: turn.text.clone(),
-                        model,
-                        offline: false,
-                    };
+                    let outcome = ChatOutcome::new(turn.text.clone(), model, false);
                     (outcome, turn)
                 }
                 Err(chat_design::DesignTurnError::Provider(failure)) => {
+                    // A failed remote design turn is still one turn: journal
+                    // it with the envelope code before answering. A journal
+                    // failure must never mask the provider error.
+                    let code = failure.envelope_code();
+                    if let Err(error) = chat_design::append_chat_turn(
+                        backend.as_ref(),
+                        request.provider.as_str(),
+                        request.model.as_deref(),
+                        false,
+                        &request.prompt,
+                        None,
+                        true,
+                        request.cad_provider.as_deref(),
+                        &[],
+                        Some(code),
+                    )
+                    .await
+                    {
+                        eprintln!("the failed studio chat turn could not be journalled: {error}");
+                    }
                     return provider_failure(failure);
                 }
                 Err(chat_design::DesignTurnError::Backend(error)) => {
@@ -1450,13 +1630,14 @@ async fn chat_route(state: Arc<State>, request: ChatRequest) -> OutResponse {
                 &environ,
                 &stored,
                 state.transport.as_ref(),
+                Duration::from_secs(STUDIO_REQUEST_TIMEOUT_SECONDS),
             )
             .await
             {
                 Ok(outcome) => outcome,
                 Err(failure) => return provider_failure(failure),
             };
-            if is_design_request {
+            if parsed_is_design_request {
                 let Some(backend) = state.backend.clone() else {
                     return geometry_unavailable("no geometry worker is attached to this studio");
                 };
@@ -1467,10 +1648,8 @@ async fn chat_route(state: Arc<State>, request: ChatRequest) -> OutResponse {
                     request.cad_provider.as_deref(),
                 )
                 .await;
-                let outcome = ChatOutcome {
-                    text: turn.text.clone(),
-                    ..outcome
-                };
+                let outcome =
+                    ChatOutcome::new(turn.text.clone(), outcome.model.clone(), outcome.offline);
                 (outcome, turn)
             } else {
                 (outcome, chat_design::DesignTurn::default())
@@ -1484,13 +1663,14 @@ async fn chat_route(state: Arc<State>, request: ChatRequest) -> OutResponse {
         if let Err(error) = chat_design::append_chat_turn(
             backend.as_ref(),
             request.provider.as_str(),
-            &outcome.model,
+            Some(outcome.model.as_str()),
             outcome.offline,
             &request.prompt,
             turn.design_id.as_deref(),
             turn.design_requested,
             request.cad_provider.as_deref(),
             &turn.missing,
+            None,
         )
         .await
         {
@@ -1536,44 +1716,36 @@ fn chat_success(
     json_response(StatusCode::OK, &body)
 }
 
+/// The error envelope for one provider failure.
 fn provider_failure(failure: ProviderFailure) -> OutResponse {
-    let (status, code, message, detail) = match failure {
+    let code = failure.envelope_code();
+    let (status, message, detail) = match failure {
         ProviderFailure::Unavailable(message) => (
             503,
-            "provider_unavailable",
             "the chat provider is not available in this studio build",
             message,
         ),
-        ProviderFailure::Configuration { code, message } => (
+        ProviderFailure::Configuration { message, .. } => (
             400,
-            code,
             "the chat provider is not configured for this request",
             message,
         ),
         ProviderFailure::Timeout(message) => (
             504,
-            "provider_timeout",
             "the chat provider exceeded its bounded timeout",
             message,
         ),
         ProviderFailure::Network(message) => (
             502,
-            "provider_network_error",
             "the studio could not reach the configured provider",
             message,
         ),
-        ProviderFailure::Protocol(message) => (
-            502,
-            "provider_protocol_error",
-            "the provider returned an unparseable payload",
-            message,
-        ),
-        ProviderFailure::Subprocess(message) => (
-            502,
-            "provider_subprocess_error",
-            "the chat provider subprocess failed",
-            message,
-        ),
+        ProviderFailure::Protocol(message) => {
+            (502, "the provider returned an unparseable payload", message)
+        }
+        ProviderFailure::Subprocess(message) => {
+            (502, "the chat provider subprocess failed", message)
+        }
         ProviderFailure::Internal(message) => {
             eprintln!("unhandled studio provider failure");
             let _ = message;
@@ -1623,6 +1795,12 @@ mod tests {
         let (kind, design_id) = classify("/api/studio/design/abc/drawing").unwrap();
         assert_eq!(kind, RouteKind::Drawing);
         assert_eq!(design_id.as_deref(), Some("abc"));
+        let (kind, provider) = classify("/api/studio/providers/openrouter/models").unwrap();
+        assert_eq!(kind, RouteKind::ProviderModels);
+        assert_eq!(provider.as_deref(), Some("openrouter"));
+        assert!(classify("/api/studio/providers//models").is_none());
+        assert!(classify("/api/studio/providers/a/b/models").is_none());
+        assert!(classify("/api/studio/providers/openrouter").is_none());
         assert!(classify("/api/studio/design//drawing").is_none());
         assert!(classify("/api/studio/design/a/b/drawing").is_none());
         assert!(classify("/api/studio/nope").is_none());
@@ -1641,6 +1819,7 @@ mod tests {
     #[test]
     fn the_cad_provider_route_carries_the_route_bearer_gate() {
         assert!(RouteKind::ProvidersCad.requires_route_bearer());
+        assert!(RouteKind::ProviderModels.requires_route_bearer());
         assert!(RouteKind::Journal.requires_route_bearer());
         assert!(!RouteKind::Health.requires_route_bearer());
         assert!(!RouteKind::Providers.requires_route_bearer());

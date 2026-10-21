@@ -39,10 +39,12 @@ mod freecad;
 mod solidedge;
 
 pub use base::{
-    ALLOWED_PROVIDER_IDS, Availability, CadProvider, CadProviderBuildError, CadProviderConfigError,
-    CadProviderError, CadProviderId, CadProviderUnavailableError, CadValueError, MAX_REASON_LENGTH,
-    MAX_VERSION_LENGTH, MAX_WARNING_LENGTH, MAX_WARNINGS, MeasuredBounds, MeasuredProperties,
-    ProviderBuild, ProviderStatus,
+    ALLOWED_PROVIDER_IDS, Availability, CUT_NO_MATERIAL, CadProvider, CadProviderBuildError,
+    CadProviderConfigError, CadProviderError, CadProviderId, CadProviderUnavailableError,
+    CadValueError, MAX_REASON_LENGTH, MAX_VERSION_LENGTH, MAX_WARNING_LENGTH, MAX_WARNINGS,
+    MeasuredBounds, MeasuredProperties, ProviderBuild, ProviderStatus, WARNING_SUMMARY_PREFIX,
+    bound_warnings, cut_warning_summary, ineffective_cut_count, other_warning_summary,
+    parse_cut_summary, parse_other_summary,
 };
 pub use freecad::{
     BundledPythonSelection, DEFAULT_MAX_STEP_BYTES, DEFAULT_PROBE_CACHE_SECONDS,

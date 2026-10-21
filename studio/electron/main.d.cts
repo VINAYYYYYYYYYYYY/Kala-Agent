@@ -22,6 +22,7 @@ export interface BackendProcessOptions {
   env: NodeJS.ProcessEnv;
   port: number;
   token: string;
+  logger?: RotatingLogInstance | null;
 }
 
 export type BackendMode =
@@ -59,6 +60,7 @@ export interface BackendProcessInstance {
   start(): void;
   waitForHealth(timeoutMs: number): Promise<void>;
   shutdown(): void;
+  writeLog(chunk: string): void;
   readonly error: Error | null;
   readonly exited: boolean;
   readonly ready: boolean;
@@ -66,6 +68,40 @@ export interface BackendProcessInstance {
   readonly exitCode: number | null;
   readonly exitSignal: NodeJS.Signals | null;
   onUnexpectedExit: ((info: BackendExitInfo) => void) | null;
+}
+
+export interface RotatingLogOptions {
+  dir: string;
+  name?: string;
+  maxBytes?: number;
+  maxFiles?: number;
+  secrets?: string[];
+  recentLines?: number;
+}
+
+export interface RotatingLogInstance {
+  readonly filePath: string;
+  readonly filePaths: string[];
+  write(chunk: string): void;
+  tail(count?: number): string[];
+  rotate(): void;
+  existingFiles(): string[];
+}
+
+export interface StartupFailureOptions {
+  dialog?: { showErrorBox(title: string, content: string): void } | null;
+  logger?: RotatingLogInstance | null;
+  title?: string;
+  reason?: string;
+  tailLines?: number;
+  console?: { error(...args: unknown[]): void } | null;
+}
+
+export interface StartupFailureBodyOptions {
+  reason?: string;
+  logPath?: string | null;
+  lines?: string[];
+  tailLines?: number;
 }
 
 export interface FakeWin {
@@ -91,6 +127,15 @@ export function packagedBackendEnvironment(options?: {
 export function validateIpcSender(event: FakeEvent, win: FakeWin, trustedOrigin: string): void;
 export function pickFreePort(): Promise<number>;
 export function generateToken(): string;
+export function resolveLogsDirectory(appLike?: { getPath(name: string): string } | null): string;
+export function createBackendLogger(options?: {
+  token?: string;
+  directory?: string;
+} & Partial<Omit<RotatingLogOptions, 'dir'>>): RotatingLogInstance;
+export function formatStartupFailure(options?: StartupFailureBodyOptions): string;
+export function reportStartupFailure(options?: StartupFailureOptions): string;
+export function scrubSecrets(text: string, secrets?: string[]): string;
+export const RotatingLog: new (options: RotatingLogOptions) => RotatingLogInstance;
 export const BackendProcess: new (options: BackendProcessOptions) => BackendProcessInstance;
 export function attachSecurityPolicy(win: unknown, trustedOrigin: string): void;
 export function registerIpc(win: unknown, trustedOrigin: string, baseUrl: string, token: string): void;

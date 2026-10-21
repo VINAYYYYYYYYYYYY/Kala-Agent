@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   getIntegrations: vi.fn(),
   getProviders: vi.fn(),
   getSettings: vi.fn(),
+  getProviderModels: vi.fn(),
   postPreview: vi.fn(),
   postChat: vi.fn(),
   postSettings: vi.fn(),
@@ -32,6 +33,7 @@ vi.mock('../src/api/client', async (importOriginal) => {
     getIntegrations: mocks.getIntegrations,
     getProviders: mocks.getProviders,
     getSettings: mocks.getSettings,
+    getProviderModels: mocks.getProviderModels,
     postPreview: mocks.postPreview,
     postChat: mocks.postChat,
     postSettings: mocks.postSettings,
@@ -48,6 +50,7 @@ vi.mock('../src/api/connection', async (importOriginal) => {
 
 import { App } from '../src/App';
 import { getState, resetStore, THEME_STORAGE_KEY } from '../src/state/store';
+import { openProviderPicker, pickProvider, providerOption } from './providerFixtures';
 
 const BASE_URL = 'http://127.0.0.1:8765';
 
@@ -105,6 +108,12 @@ beforeEach(() => {
     ],
     offline: false,
   });
+  mocks.getProviderModels.mockResolvedValue({
+    provider: 'local',
+    source: 'static',
+    fetched_at: null,
+    models: [],
+  });
   mocks.postPreview.mockResolvedValue({
     positions: [0, 0, 0, 1, 0, 0, 0, 1, 0],
     normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
@@ -128,6 +137,7 @@ afterEach(() => {
   mocks.getIntegrations.mockReset();
   mocks.getProviders.mockReset();
   mocks.getSettings.mockReset();
+  mocks.getProviderModels.mockReset();
   mocks.postPreview.mockReset();
   mocks.postChat.mockReset();
   mocks.postSettings.mockReset();
@@ -483,14 +493,14 @@ describe('agent composer and geometry context', () => {
 
     expect(textarea.value).toContain('shaft spacer');
     expect(textarea.value).toContain('25 mm diameter by 120 mm long');
-    expect(fetch).not.toHaveBeenCalled();
+    expect(mocks.postChat).not.toHaveBeenCalled();
   });
 
   it('keeps the documented composer selectors in the left zone', async () => {
     const view = await bootShell();
     const panel = left(view.container);
 
-    expect(panel.querySelector('select#chat-provider-select')).toBeTruthy();
+    expect(panel.querySelector('#chat-provider-trigger')).toBeTruthy();
     expect(panel.querySelector('input#chat-model-input[type="text"]')).toBeTruthy();
     expect(panel.querySelector('textarea.chat-panel-prompt')).toBeTruthy();
     expect(panel.querySelector('textarea.chat-panel-prompt')!.getAttribute('placeholder'))
@@ -500,7 +510,9 @@ describe('agent composer and geometry context', () => {
     );
     expect(panel.querySelector('button.chat-panel-clear')!.textContent).toBe('Clear');
     expect(panel.querySelector('.chat-panel-empty')).toBeTruthy();
-    expect(panel.querySelector('select')!.id).toBe('chat-provider-select');
+    expect(panel.querySelector('#chat-provider-trigger')!.getAttribute('aria-haspopup')).toBe(
+      'listbox',
+    );
     expect(panel.querySelector('textarea')).toBe(panel.querySelector('textarea.chat-panel-prompt'));
   });
 
@@ -508,11 +520,9 @@ describe('agent composer and geometry context', () => {
     const view = await bootShell();
     const panel = left(view.container);
 
-    fireEvent.change(panel.querySelector<HTMLSelectElement>('#chat-provider-select')!, {
-      target: { value: 'openai' },
-    });
+    pickProvider(panel, 'openai');
     await waitFor(() => {
-      expect(panel.querySelector('input[type="checkbox"]')).toBeTruthy();
+      expect(panel.querySelector('.chat-panel-consent input[type="checkbox"]')).toBeTruthy();
     });
 
     const textarea = panel.querySelector<HTMLTextAreaElement>('textarea.chat-panel-prompt')!;
@@ -527,11 +537,13 @@ describe('agent composer and geometry context', () => {
       expect(panel.querySelector<HTMLButtonElement>('button.chat-panel-send')!.disabled).toBe(true);
     });
 
-    fireEvent.click(panel.querySelector<HTMLInputElement>('input[type="checkbox"]')!);
+    fireEvent.click(
+      panel.querySelector<HTMLInputElement>('.chat-panel-consent input[type="checkbox"]')!,
+    );
     await waitFor(() => {
       expect(panel.querySelector<HTMLButtonElement>('button.chat-panel-send')!.disabled).toBe(false);
     });
-    expect(fetch).not.toHaveBeenCalled();
+    expect(mocks.postChat).not.toHaveBeenCalled();
   });
 
   it('lets the operator configure or clear provider API keys from the chat panel', async () => {
@@ -551,10 +563,10 @@ describe('agent composer and geometry context', () => {
     const view = await bootShell();
     const panel = left(view.container);
 
-    const openrouterOption = panel.querySelector<HTMLOptionElement>(
-      'select#chat-provider-select option[value="openrouter"]',
-    )!;
-    expect(openrouterOption.disabled).toBe(true);
+    openProviderPicker(panel);
+    expect(providerOption(panel, 'openrouter').getAttribute('data-provider-state')).toBe(
+      'not-configured',
+    );
 
     const toggle = panel.querySelector<HTMLButtonElement>('button.chat-panel-settings-toggle')!;
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
@@ -577,11 +589,10 @@ describe('agent composer and geometry context', () => {
 
     await waitFor(() => {
       expect(keyInput.value).toBe('');
-      expect(
-        panel.querySelector<HTMLOptionElement>(
-          'select#chat-provider-select option[value="openrouter"]',
-        )!.disabled,
-      ).toBe(false);
+      openProviderPicker(panel);
+      expect(providerOption(panel, 'openrouter').getAttribute('data-provider-state')).toBe(
+        'configured',
+      );
     });
   });
 });
@@ -598,9 +609,7 @@ describe('journal appenders', () => {
     });
 
     const panel = left(view.container);
-    fireEvent.change(panel.querySelector<HTMLSelectElement>('#chat-provider-select')!, {
-      target: { value: 'local' },
-    });
+    pickProvider(panel, 'local');
     fireEvent.change(panel.querySelector<HTMLTextAreaElement>('textarea.chat-panel-prompt')!, {
       target: { value: 'check journal' },
     });

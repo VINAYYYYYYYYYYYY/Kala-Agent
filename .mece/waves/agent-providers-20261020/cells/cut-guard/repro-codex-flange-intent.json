@@ -1,0 +1,211 @@
+{
+ "material": "steel",
+ "label": "100 mm diameter flange, 12 mm thick, with a 30 mm centre bore and six 8 mm bolt holes on an 80 mm pitch circle",
+ "script": {
+  "summary": "100 mm diameter flange, 12 mm thick, with a 30 mm centre bore and six 8 mm bolt holes on an 80 mm pitch circle",
+  "components": [
+   {
+    "name": "half_a",
+    "steps": [
+     {
+      "op": "sketch",
+      "plane": "XY",
+      "profile": "rectangle",
+      "width": 35.0,
+      "height": 12.0,
+      "x": 15.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "revolve",
+      "plane": "XY",
+      "angle": 180.0,
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "sketch",
+      "plane": "XZ",
+      "profile": "circle",
+      "diameter": 8.0,
+      "x": 40.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "pocket",
+      "plane": "XY",
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "sketch",
+      "plane": "XZ",
+      "profile": "circle",
+      "diameter": 8.0,
+      "x": 20.0,
+      "y": -34.64101615137754,
+      "reversed": false
+     },
+     {
+      "op": "pocket",
+      "plane": "XY",
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "sketch",
+      "plane": "XZ",
+      "profile": "circle",
+      "diameter": 8.0,
+      "x": -20.0,
+      "y": -34.64101615137754,
+      "reversed": false
+     },
+     {
+      "op": "pocket",
+      "plane": "XY",
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "sketch",
+      "plane": "XZ",
+      "profile": "circle",
+      "diameter": 8.0,
+      "x": -40.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "pocket",
+      "plane": "XY",
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     }
+    ]
+   },
+   {
+    "name": "half_b",
+    "steps": [
+     {
+      "op": "sketch",
+      "plane": "XY",
+      "profile": "rectangle",
+      "width": 35.0,
+      "height": 12.0,
+      "x": -50.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "revolve",
+      "plane": "XY",
+      "angle": 180.0,
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "sketch",
+      "plane": "XZ",
+      "profile": "circle",
+      "diameter": 8.0,
+      "x": 40.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "pocket",
+      "plane": "XY",
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "sketch",
+      "plane": "XZ",
+      "profile": "circle",
+      "diameter": 8.0,
+      "x": 20.0,
+      "y": 34.64101615137754,
+      "reversed": false
+     },
+     {
+      "op": "pocket",
+      "plane": "XY",
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "sketch",
+      "plane": "XZ",
+      "profile": "circle",
+      "diameter": 8.0,
+      "x": -20.0,
+      "y": 34.64101615137754,
+      "reversed": false
+     },
+     {
+      "op": "pocket",
+      "plane": "XY",
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "sketch",
+      "plane": "XZ",
+      "profile": "circle",
+      "diameter": 8.0,
+      "x": -40.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "pocket",
+      "plane": "XY",
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     }
+    ]
+   }
+  ],
+  "assembly": [
+   {
+    "op": "place",
+    "component": "half_a",
+    "components": [],
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0
+   },
+   {
+    "op": "place",
+    "component": "half_b",
+    "components": [],
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0
+   },
+   {
+    "op": "fuse",
+    "components": [
+     "half_a",
+     "half_b"
+    ],
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0
+   }
+  ]
+ }
+}

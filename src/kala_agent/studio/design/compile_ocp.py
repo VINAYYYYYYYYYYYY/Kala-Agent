@@ -79,7 +79,13 @@ from kala_agent.contracts.construction import (
     EditStep,
 )
 
-DEFAULT_COMPILE_TIMEOUT_SECONDS: Final[float] = 5.0
+#: The default wall-clock compile budget.
+#:
+#: A 500-step design (a 2 000 x 2 000 x 5 mm plate with 249 through holes)
+#: compiles and measures in 16.9 s on this host, and the 202-step 100-hole
+#: plate in 2.5 s. Sixty seconds covers the whole budget with margin while
+#: still refusing a runaway compile.
+DEFAULT_COMPILE_TIMEOUT_SECONDS: Final[float] = 60.0
 SUPPORTED_COMPONENT_OPS: Final[frozenset[str]] = frozenset(
     {"sketch", "extrude", "revolve", "pocket"}
 )
@@ -242,7 +248,7 @@ def _build_component(
     last_solid_plane: str | None = None
     warnings: list[str] = []
 
-    for step in component.steps:
+    for index, step in enumerate(component.steps):
         _check_budget(started, timeout_seconds)
         if step.op == "sketch":
             pending = step
@@ -271,7 +277,8 @@ def _build_component(
             shape, removed = _cut(shape, pending, step, component.name)
             if not removed:
                 warnings.append(
-                    f"component {component.name!r}: pocket on {pending.plane} removed no material"
+                    f"component {component.name!r}: pocket at step index {index} on "
+                    f"{pending.plane} removed no material"
                 )
             pending = None
             continue

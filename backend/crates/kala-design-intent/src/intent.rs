@@ -12,8 +12,6 @@ use kala_contracts::{ConstructionScript, ContractError, ContractModel, Text, Wir
 use kala_json::{CanonicalValue, Limits, canonical_dumps};
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
-use regex::Regex;
-use std::sync::LazyLock;
 
 use crate::format::parse_python_float;
 use crate::json::{JsonValue, parse_python_json};
@@ -36,12 +34,29 @@ pub const DEFAULT_BRACKET_WIDTH_MM: f64 = 60.0;
 pub const DEFAULT_BRACKET_DEPTH_MM: f64 = 45.0;
 
 /// The instruction a remote provider prompt carries.
-pub const DESIGN_INTENT_INSTRUCTION: &str = "You are Kala Studio's design planner. When the user asks you to design, size, or draft a part, answer with a short prose explanation and exactly one fenced ```json block containing a DesignIntent object. The block must validate against the JSON Schema below. All dimensions are millimetres. Use a template call when one of the templates matches the request; use a raw ConstructionScript only when the user supplied a complete script. Never invent a dimension the user did not state, and never state a volume, surface area, or envelope as a result: the geometry kernel measures those. If required values are missing, do not emit a JSON block; ask for the missing values in prose instead.";
+pub const DESIGN_INTENT_INSTRUCTION: &str = r#"You are Kala Studio's design planner. When the user asks you to design, size, or draft a part, answer with a short prose explanation and exactly one fenced ```json block containing a DesignIntent object that validates against the JSON Schema below. All dimensions are millimetres.
 
-static JSON_BLOCK_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?is)```(?:json)?[\s\x{1c}-\x{1f}]*(\{.*\})[\s\x{1c}-\x{1f}]*```")
-        .expect("the design block pattern is valid")
-});
+Use a template call when one of the templates (l_bracket, stepped_shaft, housing_envelope) matches the request, and only when every value it needs is stated. When no template matches, author a ConstructionScript from the dimensions the user stated, using only this supported subset: sketch a rectangle (width, height) or circle (diameter) on XY, XZ or YZ at an optional x/y offset; extrude it by length (reversed stays false); pocket on the same plane, omitting length for through-all or giving length for a finite depth; revolve a rectangle on XY or YZ by angle about the local Y axis (default 360); place each component once with x/y/z; fuse two or more placed components. A component is one solid: each sketch must be consumed by an extrude, revolve or pocket before the next operation, and the component must end with a solid.
+
+Sketch coordinates are in the sketch plane: a rectangle's x/y is its lower-left corner, so it spans x to x+width and y to y+height; a circle's x/y is its centre. Every pocket must cut into material that its own component already has at that step; a cut where the component has no material removes nothing, and the build is rejected. A design may use up to 500 steps in total across up to 64 components, and one component may use all of them. Each solid body is one component: do not split a body into components just to save steps.
+
+Never invent a dimension the user did not state: no guessed thickness, diameter, spacing, radius or angle. You may compute coordinates from stated positions, such as a hole centre given as an edge distance. Never state a volume, surface area, or envelope as a result; the geometry kernel measures those. Include material, tolerances or a label only when the user stated them.
+
+If a value needed to build the part is missing, ask for it in prose and do not emit a JSON block.
+
+Worked examples (each is a complete DesignIntent; do not copy one unless it matches the request):
+
+```json
+{"script":{"summary":"80 x 40 x 8 mm plate with four 6 mm through holes","components":[{"name":"plate","steps":[{"op":"sketch","plane":"XY","profile":"rectangle","width":80,"height":40},{"op":"extrude","length":8},{"op":"sketch","plane":"XY","profile":"circle","diameter":6,"x":8,"y":8},{"op":"pocket"},{"op":"sketch","plane":"XY","profile":"circle","diameter":6,"x":72,"y":8},{"op":"pocket"},{"op":"sketch","plane":"XY","profile":"circle","diameter":6,"x":72,"y":32},{"op":"pocket"},{"op":"sketch","plane":"XY","profile":"circle","diameter":6,"x":8,"y":32},{"op":"pocket"}]}]}}
+```
+
+```json
+{"script":{"summary":"stepped 30/20 mm round post, 40 and 25 mm long","components":[{"name":"post","steps":[{"op":"sketch","plane":"XY","profile":"rectangle","width":15,"height":40},{"op":"revolve","angle":360},{"op":"sketch","plane":"XY","profile":"rectangle","width":10,"height":25,"y":40},{"op":"revolve","angle":360}]}]}}
+```
+
+```json
+{"script":{"summary":"40 x 30 x 5 mm base with a 12 mm boss placed on top","components":[{"name":"base","steps":[{"op":"sketch","plane":"XY","profile":"rectangle","width":40,"height":30},{"op":"extrude","length":5}]},{"name":"boss","steps":[{"op":"sketch","plane":"XY","profile":"circle","diameter":12},{"op":"extrude","length":10}]}],"assembly":[{"op":"place","component":"base"},{"op":"place","component":"boss","x":20,"y":15,"z":5}]}}
+```"#;
 
 static DESIGN_INTENT_SCHEMA_TEXT: &str = include_str!("../assets/design_intent_schema.json");
 
@@ -1300,7 +1315,202 @@ fn validate_design_intent(value: &JsonValue) -> Result<DesignIntent, DesignInten
 // Reply parsing
 // ---------------------------------------------------------------------------
 
-/// Parse and validate the fenced JSON block in a model reply.
+/// One fenced block: the whole fence and the content inside it.
+struct FenceSpan {
+    outer_start: usize,
+    outer_end: usize,
+    content_start: usize,
+    content_end: usize,
+}
+
+/// Return the fenced blocks of a reply, with an unclosed fence running to the
+/// end. The language tag is skipped, so an unlabelled fence behaves like a
+/// ```json fence.
+fn fence_spans(text: &str) -> Vec<FenceSpan> {
+    let bytes = text.as_bytes();
+    let mut spans = Vec::new();
+    let mut index = 0;
+    while let Some(offset) = text[index..].find("```") {
+        let opening = index + offset;
+        let mut cursor = opening + 3;
+        while cursor < bytes.len() && matches!(bytes[cursor], b' ' | b'\t') {
+            cursor += 1;
+        }
+        while cursor < bytes.len()
+            && (bytes[cursor].is_ascii_alphanumeric() || matches!(bytes[cursor], b'_' | b'-'))
+        {
+            cursor += 1;
+        }
+        while cursor < bytes.len() && matches!(bytes[cursor], b' ' | b'\t') {
+            cursor += 1;
+        }
+        if text[cursor..].starts_with("\r\n") {
+            cursor += 2;
+        } else if bytes.get(cursor) == Some(&b'\n') {
+            cursor += 1;
+        }
+        match text[cursor..].find("```") {
+            Some(close_offset) => {
+                let closing = cursor + close_offset;
+                spans.push(FenceSpan {
+                    outer_start: opening,
+                    outer_end: closing + 3,
+                    content_start: cursor,
+                    content_end: closing,
+                });
+                index = closing + 3;
+            }
+            None => {
+                spans.push(FenceSpan {
+                    outer_start: opening,
+                    outer_end: text.len(),
+                    content_start: cursor,
+                    content_end: text.len(),
+                });
+                break;
+            }
+        }
+    }
+    spans
+}
+
+/// Return the text outside every fence.
+fn outside_fences(text: &str) -> String {
+    let mut outside = String::with_capacity(text.len());
+    let mut last = 0;
+    for fence in fence_spans(text) {
+        outside.push_str(&text[last..fence.outer_start]);
+        last = fence.outer_end;
+    }
+    outside.push_str(&text[last..]);
+    outside
+}
+
+/// Return the spans of balanced `{...}` objects, string escapes respected.
+fn object_spans(text: &str) -> Vec<(usize, usize)> {
+    let mut spans = Vec::new();
+    let mut depth = 0usize;
+    let mut start = 0usize;
+    let mut in_string = false;
+    let mut escaped = false;
+    for (index, byte) in text.bytes().enumerate() {
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'"' {
+                in_string = false;
+            }
+            continue;
+        }
+        match byte {
+            b'"' if depth > 0 => in_string = true,
+            b'{' => {
+                if depth == 0 {
+                    start = index;
+                }
+                depth += 1;
+            }
+            b'}' if depth > 0 => {
+                depth -= 1;
+                if depth == 0 {
+                    spans.push((start, index + 1));
+                }
+            }
+            _ => {}
+        }
+    }
+    spans
+}
+
+/// Parse every candidate object, keeping the first CPython error text.
+fn parse_object_spans(text: &str, spans: &[(usize, usize)]) -> (Vec<JsonValue>, Option<String>) {
+    let mut values = Vec::new();
+    let mut first_error = None;
+    for (start, end) in spans {
+        match parse_python_json(&text[*start..*end]) {
+            Ok(value) => values.push(value),
+            Err(message) => {
+                if first_error.is_none() {
+                    first_error = Some(message);
+                }
+            }
+        }
+    }
+    (values, first_error)
+}
+
+/// Return the one design object, refusing conflicting candidates.
+fn single_payload(values: Vec<JsonValue>) -> Result<JsonValue, DesignIntentParseError> {
+    let first = &values[0];
+    let first_canonical = first.to_canonical();
+    for value in &values[1..] {
+        let equal = match (&first_canonical, value.to_canonical()) {
+            (Some(left), Some(right)) => left == &right,
+            _ => first == value,
+        };
+        if !equal {
+            return Err(DesignIntentParseError::new(
+                "the model reply contained more than one conflicting JSON block",
+            ));
+        }
+    }
+    Ok(values
+        .into_iter()
+        .next()
+        .expect("the candidates are not empty"))
+}
+
+/// Return the one design object in a reply, or a parse error.
+fn extract_design_payload(text: &str) -> Result<JsonValue, DesignIntentParseError> {
+    let fences = fence_spans(text);
+    if !fences.is_empty() {
+        let mut spans = Vec::new();
+        for fence in &fences {
+            let content = &text[fence.content_start..fence.content_end];
+            spans.extend(
+                object_spans(content)
+                    .into_iter()
+                    .map(|(start, end)| (fence.content_start + start, fence.content_start + end)),
+            );
+        }
+        let (values, first_error) = parse_object_spans(text, &spans);
+        if !values.is_empty() {
+            return single_payload(values);
+        }
+        if fences
+            .iter()
+            .any(|fence| text[fence.content_start..fence.content_end].contains('{'))
+        {
+            return Err(DesignIntentParseError::new(format!(
+                "the design JSON is not valid JSON: {}",
+                first_error.unwrap_or_else(|| "Expecting value".to_owned())
+            )));
+        }
+        return Err(DesignIntentParseError::new(
+            "the model reply did not contain a fenced json block",
+        ));
+    }
+
+    let outside = outside_fences(text);
+    let spans = object_spans(&outside);
+    let (values, first_error) = parse_object_spans(&outside, &spans);
+    if !values.is_empty() {
+        return single_payload(values);
+    }
+    if outside.contains('{') {
+        return Err(DesignIntentParseError::new(format!(
+            "the design JSON is not valid JSON: {}",
+            first_error.unwrap_or_else(|| "Expecting value".to_owned())
+        )));
+    }
+    Err(DesignIntentParseError::new(
+        "the model reply did not contain a fenced json block",
+    ))
+}
+
+/// Parse and validate the JSON design block in a model reply.
 ///
 /// The failure text is exactly the message Python's
 /// `DesignIntentParseError` carries.
@@ -1308,28 +1518,20 @@ pub fn parse_design_intent_text(text: &str) -> Result<DesignIntent, DesignIntent
     if python_strip(text).is_empty() {
         return Err(DesignIntentParseError::new("the model reply was empty"));
     }
-    let candidate = match JSON_BLOCK_PATTERN.captures(text) {
-        Some(captures) => captures.get(1).map_or_else(
-            || python_strip(text).to_owned(),
-            |value| value.as_str().to_owned(),
-        ),
-        None => python_strip(text).to_owned(),
-    };
-    if !candidate.starts_with('{') {
-        return Err(DesignIntentParseError::new(
-            "the model reply did not contain a fenced json block",
-        ));
-    }
-    let payload = parse_python_json(&candidate).map_err(|message| {
-        DesignIntentParseError::new(format!("the design JSON is not valid JSON: {message}"))
-    })?;
+    let payload = extract_design_payload(text)?;
     validate_design_intent(&payload).map_err(|error| DesignIntentParseError::new(error.message()))
 }
 
-/// Return the prose of a reply with its fenced design block removed.
+/// Return the prose of a reply with its design JSON removed.
 pub fn strip_design_json_block(text: &str) -> String {
-    let stripped = JSON_BLOCK_PATTERN.replace_all(text, "");
-    let stripped = python_strip(stripped.as_ref());
+    let mut without_fences = outside_fences(text);
+    let spans = object_spans(&without_fences);
+    for (start, end) in spans.iter().rev() {
+        if parse_python_json(&without_fences[*start..*end]).is_ok() {
+            without_fences.replace_range(*start..*end, "");
+        }
+    }
+    let stripped = python_strip(&without_fences);
     if stripped.is_empty() {
         "Design intent received.".to_owned()
     } else {

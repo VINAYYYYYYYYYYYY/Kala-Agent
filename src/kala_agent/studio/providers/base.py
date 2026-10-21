@@ -57,7 +57,13 @@ class TooLargeResponseError(RuntimeError):
 
 
 class ChatOutcome:
-    """Bundles the chat reply with the model identity and offline flag."""
+    """Bundles the chat reply with the model identity and offline flag.
+
+    ``text`` is the display text; ``reply`` is the model's full reply before
+    the display bound. A design inside a reply can be longer than the prose
+    that is displayed, so design extraction reads ``reply`` while the API
+    response shows ``text``.
+    """
 
     def __init__(
         self,
@@ -66,8 +72,10 @@ class ChatOutcome:
         provider: str,
         model: str | None,
         offline: bool,
+        reply: str | None = None,
     ) -> None:
         self.text = text
+        self.reply = text if reply is None else reply
         self.provider = provider
         self.model = model
         self.offline = offline

@@ -30,7 +30,10 @@ from kala_agent_freecad.cad.catalog import (
 )
 from kala_agent_freecad.errors import FreeCADInputError
 
-MAX_CALLS: Final[int] = 2_000
+#: A 500-step design compiles to at most 4 501 FreeCAD calls on this host (a
+#: rectangle-pair worst case); 8 000 holds that with margin. This is the bound
+#: on one design's call list, not a per-component limit.
+MAX_CALLS: Final[int] = 8_000
 _SKETCH_TOOLS: Final[frozenset[str]] = frozenset(
     (
         *SKETCH_GEOMETRY,

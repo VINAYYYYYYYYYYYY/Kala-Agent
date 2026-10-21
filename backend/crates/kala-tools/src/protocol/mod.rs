@@ -40,10 +40,19 @@ pub const PROTOCOL_VERSION: &str = "1.0";
 pub const MAX_JSON_BYTES: usize = 1_048_576;
 
 /// The maximum size of the canonical encoding of a tool's arguments.
-pub const MAX_ARGUMENT_BYTES: usize = 262_144;
+///
+/// A 500-step design whose 250 pairs are rectangle sketches compiles to 4 501
+/// FreeCAD calls and 303 813 characters of call JSON, so this bound is 512 KiB:
+/// it holds the worst case and stays below the 1 MB whole-envelope bound.
+pub const MAX_ARGUMENT_BYTES: usize = 524_288;
 
 /// The maximum length of a JSON string, in Unicode code points.
-pub const MAX_STRING_LENGTH: usize = 32_768;
+///
+/// A design inside Kala's 500-step budget passes its call list as one string:
+/// 130 000 characters for a 500-step pocket plate, 278 514 for a 500-step
+/// rectangle-pair design. 512 KiB holds the worst case with margin and still
+/// fits the 1 MB envelope even at its own limit.
+pub const MAX_STRING_LENGTH: usize = 524_288;
 
 /// The maximum number of items in a JSON array.
 pub const MAX_COLLECTION_ITEMS: usize = 2_048;

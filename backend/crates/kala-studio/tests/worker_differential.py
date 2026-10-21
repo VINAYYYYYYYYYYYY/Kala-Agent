@@ -846,6 +846,81 @@ def main() -> int:
             if bucket is known_gaps:
                 known_gaps.append(f"{item['name']}: {item['known_gap']}")
 
+        # The stored-artifact download route (`GET /design/{id}/artifact/{kind}`):
+        # the same design id, the same digest-verified script bytes, and the same
+        # envelope for a kind the design did not store. The STEP bytes carry a
+        # timestamp and a per-process entity numbering, so their byte contract is
+        # covered by the in-tree tests (the download serves exactly the stored
+        # digest), not by a cross-process equality here.
+        artifact_request = {
+            "template": {
+                "template": "l_bracket",
+                "width": 60.0,
+                "depth": 45.0,
+                "height": 40.0,
+                "wall": 6.0,
+            },
+            "provider": "opencascade",
+        }
+        artifact_payload = json.dumps(artifact_request, separators=(",", ":")).encode()
+        python_design_response = python_client.post(
+            "/api/studio/design",
+            headers={
+                "Authorization": f"Bearer {TOKEN}",
+                "content-type": "application/json",
+            },
+            content=artifact_payload,
+        )
+        native_design_status, _headers, native_design_body = native_request(
+            port,
+            "POST",
+            "/api/studio/design",
+            [("Authorization", f"Bearer {TOKEN}"), ("content-type", "application/json")],
+            artifact_payload,
+            None,
+        )
+        if python_design_response.status_code == 200 and native_design_status == 200:
+            python_design_id = python_design_response.json()["design_id"]
+            native_design_id = json.loads(native_design_body)["design_id"]
+            if python_design_id != native_design_id:
+                mismatches.append(
+                    f"design.artifact: design ids differ python={python_design_id} "
+                    f"native={native_design_id}"
+                )
+            for kind in ("script", "fcstd", "bogus"):
+                path = f"/api/studio/design/{python_design_id}/artifact/{kind}"
+                python_response = python_client.get(
+                    path, headers={"Authorization": f"Bearer {TOKEN}"}
+                )
+                native_status, native_headers, native_body = native_request(
+                    port,
+                    "GET",
+                    path,
+                    [("Authorization", f"Bearer {TOKEN}")],
+                    None,
+                    None,
+                )
+                checked += 1
+                compare(
+                    f"design.artifact.{kind}",
+                    python_response.status_code,
+                    {key.lower(): value for key, value in python_response.headers.items()},
+                    python_response.content,
+                    native_status,
+                    native_headers,
+                    native_body,
+                    False,
+                    False,
+                    mismatches,
+                )
+        else:
+            mismatches.append(
+                "design.artifact: the design turn did not build on both sides "
+                f"(python={python_design_response.status_code}, "
+                f"native={native_design_status}, "
+                f"python body={python_design_response.content[:300]!r})"
+            )
+
     # The worker-only routes: the public Python server does not mount them
     # yet, so the directly launched worker is the oracle.
     worker_only = [

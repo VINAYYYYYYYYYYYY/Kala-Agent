@@ -18,6 +18,7 @@ from kala_agent.studio.design.measure import SOLID_COUNT_TOLERANCE
 from kala_agent.studio.design.providers.base import MeasuredProperties
 from kala_agent.studio.design.service import (
     build_provider_checks,
+    expected_pocket_count,
     expected_solid_count,
 )
 from kala_agent.studio.design.templates import l_bracket
@@ -169,3 +170,126 @@ def test_a_multi_solid_result_still_fails_a_single_part_script() -> None:
     row = checks[1]
     assert row.id == "single_solid"
     assert row.status == "failed"
+
+
+def test_a_passing_build_keeps_its_exact_check_list() -> None:
+    script = _two_part_script([])
+    checks = build_provider_checks(
+        measured=MeasuredProperties(),
+        valid=True,
+        solid_count=1,
+        expected_envelope=None,
+        expected_pockets=expected_pocket_count(script),
+        warnings=(),
+    )
+    assert [check.id for check in checks] == ["brep_valid", "single_solid"]
+
+
+def test_an_ineffective_cut_adds_one_failed_row() -> None:
+    script = _case_script("pocket_circle_xy_through_all")
+    assert expected_pocket_count(script) == 1
+    checks = build_provider_checks(
+        measured=MeasuredProperties(),
+        valid=True,
+        solid_count=1,
+        expected_envelope=None,
+        expected_pockets=expected_pocket_count(script),
+        warnings=("component 'plate': pocket at step index 3 on XY removed no material",),
+    )
+    assert [check.id for check in checks] == [
+        "brep_valid",
+        "single_solid",
+        "cuts_effective",
+    ]
+    row = checks[-1]
+    assert row.label == "Cuts removed material"
+    assert (row.expected, row.measured) == (1.0, 0.0)
+    assert row.tolerance == 0.0
+    assert row.unit == "cut"
+    assert row.passed is False
+    assert row.status == "failed"
+    assert not all(check.passed for check in checks)
+
+
+def test_unrelated_warnings_do_not_add_the_cut_row() -> None:
+    checks = build_provider_checks(
+        measured=MeasuredProperties(),
+        valid=True,
+        solid_count=1,
+        expected_envelope=None,
+        expected_pockets=1,
+        warnings=("FreeCAD could not reopen the exported FCStd: RuntimeError",),
+    )
+    assert [check.id for check in checks] == ["brep_valid", "single_solid"]
+
+
+def test_five_hundred_ineffective_cuts_are_counted_exactly() -> None:
+    from kala_agent.studio.design.providers.base import (
+        ProviderBuild,
+        bound_warnings,
+        ineffective_cut_count,
+    )
+
+    warnings = tuple(
+        f"component 'plate': pocket at step index {index} on XY removed no material"
+        for index in range(500)
+    )
+    build = ProviderBuild(
+        step_bytes=b"ISO-10303-21",
+        measured=MeasuredProperties(),
+        warnings=warnings,
+    )
+    # The display keeps fourteen lines plus one summary that states the rest.
+    assert len(build.warnings) == 15
+    assert build.warnings[-1] == "… and 486 more pockets removed no material"
+    assert ineffective_cut_count(build.warnings) == 500
+    assert bound_warnings(build.warnings) == build.warnings
+
+    checks = build_provider_checks(
+        measured=MeasuredProperties(),
+        valid=True,
+        solid_count=1,
+        expected_envelope=None,
+        expected_pockets=500,
+        warnings=build.warnings,
+    )
+    row = checks[-1]
+    assert row.id == "cuts_effective"
+    assert (row.expected, row.measured) == (500.0, 0.0)
+    assert not all(check.passed for check in checks)
+
+
+def test_a_cut_summary_and_an_other_summary_both_fit_the_display() -> None:
+    from kala_agent.studio.design.providers.base import (
+        MAX_WARNINGS,
+        bound_warnings,
+        ineffective_cut_count,
+    )
+
+    warnings = [
+        f"component 'plate': pocket at step index {index} on XY removed no material"
+        for index in range(20)
+    ]
+    warnings.extend(f"warning number {index}" for index in range(5))
+
+    display = bound_warnings(warnings)
+
+    assert len(display) == MAX_WARNINGS
+    assert ineffective_cut_count(display) == 20
+    assert display[-2] == "… and 6 more pockets removed no material"
+    assert display[-1] == "… and 5 more warnings"
+
+
+def test_a_single_suppressed_cut_uses_the_singular_summary() -> None:
+    from kala_agent.studio.design.providers.base import bound_warnings, ineffective_cut_count
+
+    warnings = [
+        f"component 'plate': pocket at step index {index} on XY removed no material"
+        for index in range(15)
+    ]
+
+    display = bound_warnings(warnings)
+
+    assert len(display) == 15
+    assert display[-1] == "… and 1 more pocket removed no material"
+    assert ineffective_cut_count(display) == 15

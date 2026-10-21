@@ -94,6 +94,12 @@ export function Inspector(props: InspectorProps = {}): ReactElement {
     : source === 'local'
       ? 'Local preview'
       : 'No mesh yet';
+  // The server's own refusal is shown, never hidden behind a "Local
+  // preview" badge: the store keeps the message of the failed attempt, and
+  // it is cleared by the next attempt (a new request or a new parameter
+  // set), so it recovers on its own.
+  const previewError = preview.lastError;
+  const previewBusy = preview.inFlight;
   return (
     <section className="inspector" aria-label="Inspector">
       {showHeading ? (
@@ -103,6 +109,16 @@ export function Inspector(props: InspectorProps = {}): ReactElement {
             {sourceLabel}
           </span>
         </header>
+      ) : null}
+      {previewBusy ? (
+        <p className="inspector-preview-state" role="status">
+          Verifying the mesh on the server…
+        </p>
+      ) : null}
+      {previewError ? (
+        <p className="inspector-preview-error" role="alert">
+          {`Server preview refused: ${previewError}`}
+        </p>
       ) : null}
       <PrimitivePicker primitive={primitive} />
       <SurfaceMaterial />

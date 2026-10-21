@@ -24,8 +24,12 @@ from pydantic import (
     model_validator,
 )
 
-MAX_COMPONENTS: Final[int] = 8
-MAX_STEPS: Final[int] = 12
+MAX_COMPONENTS: Final[int] = 64
+MAX_STEPS: Final[int] = 500
+#: The whole-script step budget: every component's steps plus the assembly
+#: steps. A per-body cap alone would either stop an honest one-body design or
+#: leave the model input unbounded.
+MAX_TOTAL_STEPS: Final[int] = 500
 MAX_DIMENSION_MM: Final[float] = 5_000.0
 
 _MIN_DIMENSION_MM: Final[float] = 0.001
@@ -427,6 +431,12 @@ class ConstructionScript(_ScriptModel):
             for name in referenced:
                 if name not in known:
                     raise ValueError(f"assembly names a missing component {name}")
+        total = sum(len(component.steps) for component in self.components) + len(self.assembly)
+        if total > MAX_TOTAL_STEPS:
+            raise ValueError(
+                f"a script may use at most {MAX_TOTAL_STEPS} steps in total; "
+                f"this one uses {total}"
+            )
         return self
 
 
@@ -609,6 +619,7 @@ __all__ = (
     "MAX_COMPONENTS",
     "MAX_DIMENSION_MM",
     "MAX_STEPS",
+    "MAX_TOTAL_STEPS",
     "AnalysisReading",
     "AnalysisScript",
     "AnalysisStep",

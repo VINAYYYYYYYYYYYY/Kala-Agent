@@ -28,7 +28,7 @@ use std::collections::BTreeMap;
 use kala_contracts::{AnalysisScript, ComponentScript, ComponentStep, ConstructionScript};
 
 use crate::errors::{SolidEdgeClientError, python_repr};
-use crate::protocol::{BridgeOp, BuildRequest, MAX_OPERATIONS, Plane, REVOLVE_AXIS};
+use crate::protocol::{BridgeOp, BuildRequest, MAX_OPERATIONS, MAX_PARTS, Plane, REVOLVE_AXIS};
 
 /// The assembly name used when it cannot collide with a component name.
 pub const ASSEMBLY_NAME: &str = "Assembly";
@@ -123,6 +123,12 @@ pub fn compile_operations(
         return Err(SolidEdgeClientError::compile(
             "the construction script did not compile",
         ));
+    }
+    if script.components().len() > MAX_PARTS {
+        return Err(SolidEdgeClientError::compile(format!(
+            "the script has {} components; the wire cap is {MAX_PARTS} parts",
+            script.components().len()
+        )));
     }
     if operations.len() > MAX_OPERATIONS {
         return Err(SolidEdgeClientError::compile(format!(
@@ -490,6 +496,59 @@ mod tests {
                 "part.save",
                 "part.export_step",
             ]
+        );
+    }
+
+    #[test]
+    fn a_whole_budget_script_lowers_under_the_wire_operation_cap() {
+        // Eight parts (the wire cap) and 500 steps in total (the core cap).
+        // Every consumed sketch-and-solid pair is two wire operations, every
+        // part adds four, and the assembly adds one operation per part plus
+        // three, so the worst case is 543 operations: inside the 600 cap.
+        let pairs = 31; // 62 steps per part, 8 parts: 496 component steps
+        let component = {
+            let mut body = String::from(
+                r#"{"op":"sketch","profile":"rectangle","width":10,"height":10},{"op":"extrude","length":1}"#,
+            );
+            for _ in 1..pairs {
+                body.push_str(
+                    r#",{"op":"sketch","profile":"circle","diameter":2,"x":1,"y":1},{"op":"extrude","length":1}"#,
+                );
+            }
+            body
+        };
+        let components: Vec<String> = (0..8)
+            .map(|index| format!(r#"{{"name":"part{index}","steps":[{component}]}}"#))
+            .collect();
+        let parsed = script(&format!(
+            r#"{{"summary":"s","components":[{}]}}"#,
+            components.join(",")
+        ));
+        let operations = compile_operations(&parsed, None, None).expect("compiled");
+        assert_eq!(operations.len(), 8 * (4 + 2 * pairs) + 8 + 3);
+        assert!(operations.len() <= 600, "{}", operations.len());
+    }
+
+    #[test]
+    fn a_script_over_the_wire_part_cap_is_refused() {
+        let components: Vec<String> = (0..9)
+            .map(|index| {
+                format!(
+                    r#"{{"name":"part{index}","steps":[{{"op":"sketch","profile":"rectangle","width":1,"height":1}},{{"op":"extrude","length":1}}]}}"#
+                )
+            })
+            .collect();
+        let parsed = script(&format!(
+            r#"{{"summary":"s","components":[{}]}}"#,
+            components.join(",")
+        ));
+        let error = compile_operations(&parsed, None, None).expect_err("refused");
+        assert!(
+            error
+                .message()
+                .contains("the script has 9 components; the wire cap is 8 parts"),
+            "{}",
+            error.message()
         );
     }
 

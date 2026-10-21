@@ -417,6 +417,27 @@ def _capture(
                     normalised_bytes = normalised_bytes.replace(
                         needle.encode("utf-8"), b"<DATA_DIR>"
                     )
+            # The raw body length and the raw `content-length` header embed the
+            # run-specific data directory path, so both grow with the length of
+            # the temporary directory the generator happens to create. Record
+            # the length of the *normalised* bytes instead -- the same bytes
+            # whose digest `body_sha256` already covers -- and hand the header
+            # to the consumer as a self-consistency check: the live service
+            # must report the length of the body it actually sent.
+            expected["body_length"] = len(normalised_bytes)
+            expected["body_length_role"] = (
+                "length of the normalised response bytes; the raw response embeds "
+                "the run-specific data directory path"
+            )
+            raw_headers = expected["headers"]
+            assert isinstance(raw_headers, dict)
+            if "content-length" in raw_headers:
+                raw_headers.pop("content-length")
+                expected["normalised_headers"] = ["content-length"]
+                expected["normalised_headers_role"] = (
+                    "the live header must describe the body the service sent; the "
+                    "raw value embeds the run-specific data directory path"
+                )
         expected["body_sha256_role"] = (
             "digest of the normalised response bytes; the raw response embeds the "
             "run-specific data directory path"
@@ -1195,6 +1216,30 @@ def _studio_cases(work_root: Path) -> list[dict[str, object]]:
                 f"/api/studio/design/{'0' * 64}/drawing",
                 note="a design id that was never stored is a 404, not an empty drawing",
             )
+            add(
+                "studio.design.artifact.script",
+                "GET",
+                f"/api/studio/design/{design_id}/artifact/script",
+                note=(
+                    "the exact stored canonical construction script; the route "
+                    "verifies its sha256 against the journalled digest before sending"
+                ),
+            )
+            add(
+                "studio.design.artifact.not_stored",
+                "GET",
+                f"/api/studio/design/{design_id}/artifact/fcstd",
+                note=(
+                    "the OpenCascade design stores no native document, so the kind "
+                    "is a 404 artifact_not_found, never an empty file"
+                ),
+            )
+            add(
+                "studio.design.artifact.unknown_kind",
+                "GET",
+                f"/api/studio/design/{design_id}/artifact/bogus",
+                note="the artifact-kind allow-list is strict: 422 invalid_request",
+            )
 
             journal_case, journal_body = add(
                 "studio.journal.page",
@@ -1372,9 +1417,9 @@ def build(work_root: Path) -> dict[str, object]:
             },
             {
                 "service": "core",
-                "field": "GET /health body digest",
-                "value": "digest of the normalised response bytes",
-                "reason": "the raw response embeds the temporary data directory path",
+                "field": "GET /health body digest, body length and content-length header",
+                "value": "digest and length of the normalised response bytes; the header is declared in normalised_headers",
+                "reason": "the raw response embeds the temporary data directory path, so its length follows the TMPDIR the generator was given",
             },
             {
                 "service": "studio",
@@ -1392,8 +1437,13 @@ def build(work_root: Path) -> dict[str, object]:
         "nondeterministic_fields": [
             {
                 "service": "core",
-                "field": "GET /health data_dir",
-                "treatment": "normalized to <DATA_DIR>",
+                "field": "GET /health data_dir, body_length and content-length",
+                "treatment": (
+                    "data_dir normalized to <DATA_DIR>; body_length and the body "
+                    "digest are taken over the normalised bytes; content-length is "
+                    "declared in normalised_headers and checked against the body the "
+                    "service sent"
+                ),
             },
             {
                 "service": "core",

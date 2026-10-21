@@ -455,14 +455,81 @@ fn a_no_op_pocket_is_reported_not_claimed_as_removal() {
         json!([]),
     );
     let result = compile_json(&script_text);
-    assert!(!result.warnings.is_empty());
-    assert!(
-        result.warnings[0].contains("removed no material"),
-        "warning was {:?}",
-        result.warnings[0]
+    assert_eq!(
+        result.warnings,
+        ["component 'plate': pocket at step index 3 on XY removed no material"]
     );
     let measured = measure(&result);
     assert_volume(measured.volume_mm3, 4000.0, 1e-6, "no-op pocket");
+}
+
+/// One 12-step half of the 2026-10-20 MiniMax flange repro.
+///
+/// The half is a full 100 x 12 disc with the Ø30 bore, then a pocket that
+/// removes its own side, then three Ø8 holes that now land in empty space.
+fn flange_repro_half(name: &str, rectangle_x: f64, holes: [(f64, f64); 3]) -> Value {
+    let mut steps = vec![
+        json!({"op": "sketch", "profile": "circle", "plane": "XY", "diameter": 100.0}),
+        json!({"op": "extrude", "length": 12.0}),
+        json!({"op": "sketch", "profile": "circle", "plane": "XY", "diameter": 30.0}),
+        json!({"op": "pocket"}),
+        json!({"op": "sketch", "profile": "rectangle", "plane": "XY",
+               "width": 100.0, "height": 100.0, "x": rectangle_x, "y": -50.0}),
+        json!({"op": "pocket"}),
+    ];
+    for (x, y) in holes {
+        steps.push(json!({"op": "sketch", "profile": "circle", "plane": "XY",
+                          "diameter": 8.0, "x": x, "y": y}));
+        steps.push(json!({"op": "pocket"}));
+    }
+    json!({"name": name, "steps": steps})
+}
+
+#[test]
+fn the_flange_repro_warns_once_for_every_ineffective_pocket() {
+    let script_text = script(
+        json!([
+            flange_repro_half(
+                "flange_right",
+                0.0,
+                [
+                    (40.0, 0.0),
+                    (20.0, 34.641_016_151_377_55),
+                    (20.0, -34.641_016_151_377_55),
+                ]
+            ),
+            flange_repro_half(
+                "flange_left",
+                -100.0,
+                [
+                    (-40.0, 0.0),
+                    (-20.0, 34.641_016_151_377_55),
+                    (-20.0, -34.641_016_151_377_55),
+                ]
+            ),
+        ]),
+        json!([
+            {"op": "place", "component": "flange_right"},
+            {"op": "place", "component": "flange_left"},
+            {"op": "fuse", "components": ["flange_right", "flange_left"]},
+        ]),
+    );
+    let result = compile_json(&script_text);
+    assert_eq!(
+        result.warnings,
+        [
+            "component 'flange_right': pocket at step index 7 on XY removed no material",
+            "component 'flange_right': pocket at step index 9 on XY removed no material",
+            "component 'flange_right': pocket at step index 11 on XY removed no material",
+            "component 'flange_left': pocket at step index 7 on XY removed no material",
+            "component 'flange_left': pocket at step index 9 on XY removed no material",
+            "component 'flange_left': pocket at step index 11 on XY removed no material",
+        ]
+    );
+    let measured = measure(&result);
+    // Both halves remove their own side, so the fused result is the full
+    // flange with the bore but with no bolt hole: 85765.479443 mm3.
+    assert_volume(measured.volume_mm3, 85_765.479_443, 1e-6, "flange repro");
 }
 
 #[test]

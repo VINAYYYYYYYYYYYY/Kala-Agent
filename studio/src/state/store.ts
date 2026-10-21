@@ -145,6 +145,13 @@ export interface ServerState {
    */
   designAvailable: boolean | null;
   /**
+   * The backend's own worst-case design-turn budget, from `/health`.
+   *
+   * `null` means the backend did not report one (an older build), so the
+   * client uses its documented fallback deadline.
+   */
+  designTurnBudgetSeconds: number | null;
+  /**
    * The live CAD provider probe (`GET /providers/cad`). Empty until the
    * design-turn backend answers; the composer never guesses an entry.
    */
@@ -242,7 +249,7 @@ export type Action =
   | { type: 'server/integrations'; integrations: ReadonlyArray<IntegrationRecord> }
   | { type: 'server/providers'; providers: ReadonlyArray<ProviderRecord>; health: 'ok' | 'unreachable'; healthMessage: string; version: string; stepAvailable: boolean }
   | { type: 'server/settings'; settings: StudioSettingsResponse }
-  | { type: 'server/capabilities'; designAvailable: boolean | null }
+  | { type: 'server/capabilities'; designAvailable: boolean | null; designTurnBudgetSeconds?: number | null }
   | { type: 'server/cad-providers-start' }
   | { type: 'server/cad-providers'; providers: ReadonlyArray<CadProviderRecord> }
   | { type: 'server/cad-providers-error'; message: string }
@@ -317,6 +324,7 @@ export function createInitialUiState(): UiState {
       healthMessage: '',
       stepAvailable: false,
       designAvailable: null,
+      designTurnBudgetSeconds: null,
       cadProviders: [],
       cadProvidersStatus: 'idle',
       cadProvidersError: null,
@@ -503,7 +511,14 @@ export function reducer(state: UiState, action: Action): UiState {
     case 'server/capabilities':
       return {
         ...state,
-        server: { ...state.server, designAvailable: action.designAvailable },
+        server: {
+          ...state.server,
+          designAvailable: action.designAvailable,
+          designTurnBudgetSeconds:
+            action.designTurnBudgetSeconds !== undefined
+              ? action.designTurnBudgetSeconds
+              : state.server.designTurnBudgetSeconds,
+        },
       };
     case 'server/cad-providers-start':
       return {
@@ -556,6 +571,7 @@ export function reducer(state: UiState, action: Action): UiState {
           health: 'unknown',
           healthMessage: '',
           designAvailable: null,
+          designTurnBudgetSeconds: null,
           cadProviders: [],
           cadProvidersStatus: 'idle',
           cadProvidersError: null,

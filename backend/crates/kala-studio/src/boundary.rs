@@ -18,6 +18,17 @@ use crate::settings::atomic_write_text;
 pub const STUDIO_TOKEN_ENV_VAR: &str = "KALA_STUDIO_TOKEN";
 pub const STUDIO_TOKEN_FILE_NAME: &str = "studio-token";
 pub const STUDIO_SUBDIRECTORY_NAME: &str = "studio";
+/// The environment variable that names the studio data directory itself.
+///
+/// Unlike [`AGENT_DATA_DIR_ENV`] it is not a Kala data directory: the value
+/// *is* the studio directory, so no `studio` child is appended.
+pub const STUDIO_DATA_DIR_ENV: &str = "KALA_STUDIO_DATA_DIR";
+/// The environment variable that names the shared Kala data directory.
+pub const AGENT_DATA_DIR_ENV: &str = "KALA_AGENT_DATA_DIR";
+/// The environment variable that names the XDG data home.
+pub const XDG_DATA_HOME_ENV: &str = "XDG_DATA_HOME";
+/// The directory name the studio child carries under a Kala data directory.
+pub const AGENT_DIRECTORY_NAME: &str = "kala-agent";
 pub const STUDIO_API_TOKEN_BYTES: usize = 32;
 pub const MIN_API_TOKEN_LENGTH: usize = 16;
 pub const MAX_API_TOKEN_LENGTH: usize = 128;
@@ -335,15 +346,41 @@ pub fn process_environ() -> std::collections::BTreeMap<String, String> {
 /// Resolve the default data directory from the same environment variables
 /// the Python Settings loader uses, falling back to the temporary directory.
 ///
-/// The default path gets the per-studio `studio` child and owner-only mode;
-/// an explicit `--data-dir` does not (the CLI passes it directly).
+/// The precedence is identical in the Python reference
+/// (`kala_agent.studio.settings.resolve_studio_data_dir_from_env`):
+///
+/// 1. `--data-dir` is used as-is by the caller; it never reaches this
+///    function.
+/// 2. [`STUDIO_DATA_DIR_ENV`] is used as-is, because it *is* the studio
+///    directory. A value that is not an absolute, non-root directory path is
+///    ignored and the next row is tried.
+/// 3. [`AGENT_DATA_DIR_ENV`] is the shared Kala data directory: the `studio`
+///    child is appended. An unusable value ends the search with the
+///    temporary fallback, exactly like the Python `Settings` validator's
+///    failure path.
+/// 4. `$`[`XDG_DATA_HOME_ENV`]`/kala-agent/studio`.
+/// 5. `$HOME/.local/share/kala-agent/studio` (the historical default; a
+///    launch with none of these variables set resolves here unchanged).
+/// 6. `$TMPDIR/kala-studio`.
+///
+/// Every directory this function resolves is created, and the studio child
+/// is tightened to owner-only mode. An explicit `--data-dir` does not pass
+/// through here (the CLI passes it directly).
 #[must_use]
 pub fn default_studio_data_dir(environ: &std::collections::BTreeMap<String, String>) -> PathBuf {
     let fallback = std::env::temp_dir().join("kala-studio");
-    if let Some(raw) = environ.get("KALA_AGENT_DATA_DIR") {
+    let home = home_directory_from(environ);
+    if let Some(raw) = environ.get(STUDIO_DATA_DIR_ENV) {
+        if let Some(directory) = valid_studio_data_dir(raw, home.as_deref()) {
+            let _ = fs::create_dir_all(&directory);
+            tighten_directory_mode(&directory);
+            return directory;
+        }
+    }
+    if let Some(raw) = environ.get(AGENT_DATA_DIR_ENV) {
         // The Python Settings validator rejects empty, relative and root
         // values, and the CLI then falls back to the temporary directory.
-        let Some(parent) = expand_home(raw) else {
+        let Some(parent) = expand_home_in(raw, home.as_deref()) else {
             return fallback;
         };
         if !parent.is_absolute() || parent.parent().is_none() {
@@ -354,8 +391,16 @@ pub fn default_studio_data_dir(environ: &std::collections::BTreeMap<String, Stri
         }
         return resolve_studio_data_dir(&parent).unwrap_or(fallback);
     }
-    if let Some(home) = home_directory() {
-        let parent = home.join(".local").join("share").join("kala-agent");
+    if let Some(raw) = environ.get(XDG_DATA_HOME_ENV) {
+        if let Some(data_home) = valid_studio_data_dir(raw, home.as_deref()) {
+            let parent = data_home.join(AGENT_DIRECTORY_NAME);
+            if let Ok(child) = resolve_studio_data_dir(&parent) {
+                return child;
+            }
+        }
+    }
+    if let Some(home) = home {
+        let parent = home.join(".local").join("share").join(AGENT_DIRECTORY_NAME);
         if parent.is_absolute()
             && parent.parent().is_some()
             && resolve_studio_data_dir(&parent).is_ok()
@@ -364,6 +409,22 @@ pub fn default_studio_data_dir(environ: &std::collections::BTreeMap<String, Stri
         }
     }
     fallback
+}
+
+/// Whether a value names a usable studio data directory: absolute, not a
+/// filesystem root and not an existing non-directory.
+///
+/// The rules are the ones the Python `Settings` validator applies to
+/// `data_dir`; `~` is expanded against the caller's home.
+fn valid_studio_data_dir(value: &str, home: Option<&Path>) -> Option<PathBuf> {
+    let path = expand_home_in(value, home)?;
+    if !path.is_absolute() || path.parent().is_none() {
+        return None;
+    }
+    if path.exists() && !path.is_dir() {
+        return None;
+    }
+    Some(path)
 }
 
 /// The per-user home directory on the current platform.
@@ -384,13 +445,36 @@ pub(crate) fn home_directory() -> Option<PathBuf> {
     }
 }
 
-fn expand_home(value: &str) -> Option<PathBuf> {
+/// The home directory named by an environment view, without consulting the
+/// process environment.
+///
+/// Resolution must be reproducible from the environment the caller passes
+/// (the Python loader reads the same mapping), so a test can prove every
+/// precedence row without mutating the process.
+fn home_directory_from(environ: &std::collections::BTreeMap<String, String>) -> Option<PathBuf> {
+    if let Some(home) = environ.get("HOME").filter(|value| !value.is_empty()) {
+        return Some(PathBuf::from(home));
+    }
+    if let Some(profile) = environ.get("USERPROFILE").filter(|value| !value.is_empty()) {
+        return Some(PathBuf::from(profile));
+    }
+    match (environ.get("HOMEDRIVE"), environ.get("HOMEPATH")) {
+        (Some(drive), Some(path)) if !drive.is_empty() && !path.is_empty() => {
+            let mut home = PathBuf::from(drive);
+            home.push(path);
+            Some(home)
+        }
+        _ => None,
+    }
+}
+
+fn expand_home_in(value: &str, home: Option<&Path>) -> Option<PathBuf> {
     let trimmed = value.trim();
     if trimmed == "~" {
-        return home_directory();
+        return home.map(Path::to_path_buf);
     }
     if let Some(rest) = trimmed.strip_prefix("~/") {
-        return home_directory().map(|home| home.join(rest));
+        return home.map(|home| home.join(rest));
     }
     let path = PathBuf::from(trimmed);
     if path.is_absolute() { Some(path) } else { None }
@@ -534,6 +618,120 @@ mod tests {
                 "value {value:?}"
             );
         }
+    }
+
+    /// Every precedence row of the data-directory search, in order.
+    ///
+    /// Each row runs in its own temporary tree, so the assertions prove the
+    /// resolved directory and not merely that a directory exists.
+    #[test]
+    fn data_dir_precedence_matches_the_documented_order() {
+        let work = tempfile::tempdir().unwrap();
+        let home = work.path().join("home");
+        let studio = work.path().join("studio-dir");
+        let agent = work.path().join("agent-dir");
+        let xdg = work.path().join("xdg");
+        fs::create_dir_all(&home).unwrap();
+
+        let environ = |pairs: &[(&str, &str)]| {
+            let mut map = std::collections::BTreeMap::new();
+            map.insert("HOME".to_owned(), home.display().to_string());
+            for (name, value) in pairs {
+                map.insert((*name).to_owned(), (*value).to_owned());
+            }
+            map
+        };
+
+        // 1. KALA_STUDIO_DATA_DIR is the studio directory itself: no
+        //    `studio` child is appended.
+        let resolved = default_studio_data_dir(&environ(&[(
+            STUDIO_DATA_DIR_ENV,
+            &studio.display().to_string(),
+        )]));
+        assert_eq!(resolved, studio);
+        assert!(resolved.is_dir());
+
+        // 2. It wins over every lower row, including KALA_AGENT_DATA_DIR.
+        let resolved = default_studio_data_dir(&environ(&[
+            (STUDIO_DATA_DIR_ENV, &studio.display().to_string()),
+            (AGENT_DATA_DIR_ENV, &agent.display().to_string()),
+            (XDG_DATA_HOME_ENV, &xdg.display().to_string()),
+        ]));
+        assert_eq!(resolved, studio);
+
+        // 3. KALA_AGENT_DATA_DIR gets the per-studio child.
+        let resolved = default_studio_data_dir(&environ(&[
+            (AGENT_DATA_DIR_ENV, &agent.display().to_string()),
+            (XDG_DATA_HOME_ENV, &xdg.display().to_string()),
+        ]));
+        assert_eq!(resolved, agent.join(STUDIO_SUBDIRECTORY_NAME));
+
+        // 4. XDG_DATA_HOME carries the kala-agent directory and the child.
+        let resolved =
+            default_studio_data_dir(&environ(&[(XDG_DATA_HOME_ENV, &xdg.display().to_string())]));
+        assert_eq!(
+            resolved,
+            xdg.join(AGENT_DIRECTORY_NAME)
+                .join(STUDIO_SUBDIRECTORY_NAME)
+        );
+
+        // 5. No variable at all resolves the historical home path unchanged.
+        let resolved = default_studio_data_dir(&environ(&[]));
+        assert_eq!(
+            resolved,
+            home.join(".local")
+                .join("share")
+                .join(AGENT_DIRECTORY_NAME)
+                .join(STUDIO_SUBDIRECTORY_NAME)
+        );
+    }
+
+    #[test]
+    fn an_unusable_studio_override_is_ignored() {
+        let work = tempfile::tempdir().unwrap();
+        let home = work.path().join("home");
+        let agent = work.path().join("agent-dir");
+        fs::create_dir_all(&home).unwrap();
+        let file = work.path().join("a-file");
+        fs::write(&file, "not a directory").unwrap();
+        let mut environ = std::collections::BTreeMap::new();
+        environ.insert("HOME".to_owned(), home.display().to_string());
+        environ.insert(AGENT_DATA_DIR_ENV.to_owned(), agent.display().to_string());
+        for value in [
+            "relative/studio".to_owned(),
+            "/".to_owned(),
+            file.display().to_string(),
+        ] {
+            environ.insert(STUDIO_DATA_DIR_ENV.to_owned(), value.clone());
+            assert_eq!(
+                default_studio_data_dir(&environ),
+                agent.join(STUDIO_SUBDIRECTORY_NAME),
+                "value {value:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn no_environment_resolves_the_home_path_or_the_temporary_fallback() {
+        // A home is the historical default; without one the fallback is the
+        // system temporary directory. Neither case reads the process
+        // environment, so the assertion is reproducible.
+        let work = tempfile::tempdir().unwrap();
+        let home = work.path().join("home");
+        fs::create_dir_all(&home).unwrap();
+        let mut environ = std::collections::BTreeMap::new();
+        environ.insert("HOME".to_owned(), home.display().to_string());
+        assert_eq!(
+            default_studio_data_dir(&environ),
+            home.join(".local")
+                .join("share")
+                .join(AGENT_DIRECTORY_NAME)
+                .join(STUDIO_SUBDIRECTORY_NAME)
+        );
+        assert_eq!(
+            default_studio_data_dir(&std::collections::BTreeMap::new()),
+            std::env::temp_dir().join("kala-studio")
+        );
     }
 
     #[test]

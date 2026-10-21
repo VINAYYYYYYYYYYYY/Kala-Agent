@@ -2,13 +2,15 @@ name: studio
 
 # Build and validate the native Kala Studio backend and Electron shell.
 #
-# The product target is a native Rust runtime, but the accepted native slice
-# currently covers the original nine Studio route-methods. The working Python
-# reference has ADR-0009 design/journal routes and DTO fields, so:
-#   - development defaults to the Python reference;
-#   - explicit native development testing remains available;
-#   - Windows NSIS/release generation is blocked by the readiness gate below
-#     until the expanded native port passes compatibility gates.
+# The product target is a native Rust runtime, and the native front door now
+# answers the whole public surface itself: 17 route-methods (the 15 of the
+# Python reference plus the view-only STEP import and the provider model
+# catalog), all in-process, with the Python geometry worker opt-in. So:
+#   - development defaults to the NATIVE runtime;
+#   - the Python reference stays available as the explicit
+#     development-only parity oracle;
+#   - Windows NSIS/release generation stays behind the native-design
+#     readiness gate below.
 #
 # Linux is development/testing only. This is not a Solid Edge release, not a
 # Linux CAD product, and not a packaging cutover.

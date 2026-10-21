@@ -30,6 +30,127 @@ pub const MAX_WARNING_LENGTH: usize = 256;
 /// Maximum warnings retained on one build.
 pub const MAX_WARNINGS: usize = 16;
 
+/// The fragment of a provider warning that says a cut removed no material.
+pub const CUT_NO_MATERIAL: &str = "removed no material";
+
+/// The prefix of a display summary that stands for suppressed warnings.
+pub const WARNING_SUMMARY_PREFIX: &str = "… and ";
+
+/// How many individual warnings a bounded display keeps.
+///
+/// Two entries of [`MAX_WARNINGS`] are reserved for the two possible summary
+/// lines, so a build never loses the exact ineffective-cut count.
+const MAX_INDIVIDUAL_WARNINGS: usize = MAX_WARNINGS - 2;
+
+/// The summary line that stands for suppressed ineffective-cut warnings.
+///
+/// The exact count is in the line, so
+/// [`ineffective_cut_count`] recovers it however many lines are displayed.
+#[must_use]
+pub fn cut_warning_summary(count: usize) -> String {
+    let noun = if count == 1 { "pocket" } else { "pockets" };
+    format!("{WARNING_SUMMARY_PREFIX}{count} more {noun} {CUT_NO_MATERIAL}")
+}
+
+/// The summary line that stands for any other suppressed warnings.
+#[must_use]
+pub fn other_warning_summary(count: usize) -> String {
+    let noun = if count == 1 { "warning" } else { "warnings" };
+    format!("{WARNING_SUMMARY_PREFIX}{count} more {noun}")
+}
+
+/// The number a cut-summary line states, if the line is a cut summary.
+#[must_use]
+pub fn parse_cut_summary(line: &str) -> Option<usize> {
+    let rest = line.strip_prefix(WARNING_SUMMARY_PREFIX)?;
+    for suffix in [
+        format!(" more pockets {CUT_NO_MATERIAL}"),
+        format!(" more pocket {CUT_NO_MATERIAL}"),
+    ] {
+        if let Some(number) = rest.strip_suffix(&suffix) {
+            return number.parse().ok();
+        }
+    }
+    None
+}
+
+/// The number an other-warnings summary line states, if it is one.
+#[must_use]
+pub fn parse_other_summary(line: &str) -> Option<usize> {
+    let rest = line.strip_prefix(WARNING_SUMMARY_PREFIX)?;
+    for suffix in [" more warnings", " more warning"] {
+        if let Some(number) = rest.strip_suffix(suffix) {
+            return number.parse().ok();
+        }
+    }
+    None
+}
+
+/// Bound a warning display without losing the ineffective-cut count.
+///
+/// Up to [`MAX_INDIVIDUAL_WARNINGS`] warnings are shown unchanged. The rest
+/// are summarised in at most two lines: one carrying the exact number of
+/// suppressed cuts, one carrying the number of suppressed other warnings. The
+/// whole display therefore never exceeds [`MAX_WARNINGS`] entries, and
+/// [`ineffective_cut_count`] over it is exact for any number of cuts. A
+/// summary line in the input is folded into the new summary, so bounding an
+/// already bounded display keeps both its shape and its exact count.
+#[must_use]
+pub fn bound_warnings<I>(warnings: I) -> Vec<String>
+where
+    I: IntoIterator<Item = String>,
+{
+    let mut display: Vec<String> = Vec::new();
+    let mut suppressed_cuts = 0usize;
+    let mut suppressed_other = 0usize;
+    for warning in warnings {
+        let text = truncate_chars(&warning, MAX_WARNING_LENGTH);
+        if let Some(count) = parse_cut_summary(&text) {
+            suppressed_cuts += count;
+            continue;
+        }
+        if let Some(count) = parse_other_summary(&text) {
+            suppressed_other += count;
+            continue;
+        }
+        let is_cut = text.contains(CUT_NO_MATERIAL);
+        if display.len() < MAX_INDIVIDUAL_WARNINGS {
+            display.push(text);
+        } else if is_cut {
+            suppressed_cuts += 1;
+        } else {
+            suppressed_other += 1;
+        }
+    }
+    if suppressed_cuts > 0 {
+        display.push(cut_warning_summary(suppressed_cuts));
+    }
+    if suppressed_other > 0 {
+        display.push(other_warning_summary(suppressed_other));
+    }
+    display
+}
+
+/// The exact number of ineffective-cut warnings in a bounded display.
+///
+/// Every individual cut warning counts once and a summary line contributes
+/// the number it states, so the count does not depend on how many lines are
+/// displayed.
+#[must_use]
+pub fn ineffective_cut_count(warnings: &[String]) -> usize {
+    let mut total = 0usize;
+    for warning in warnings {
+        if let Some(count) = parse_cut_summary(warning) {
+            total += count;
+            continue;
+        }
+        if warning.contains(CUT_NO_MATERIAL) {
+            total += 1;
+        }
+    }
+    total
+}
+
 /// The CAD providers ADR-0011 defines. This set is closed.
 ///
 /// `opencascade` is named because it is part of the closed provider set and the
@@ -266,8 +387,9 @@ impl ProviderBuild {
     ///
     /// The checks and messages match the Python `ProviderBuild` model. The
     /// step bytes must be present and non-empty; a native artifact kind, when
-    /// present, must be non-empty; warnings keep the first sixteen, each
-    /// truncated to 256 characters; a solid count must be non-negative.
+    /// present, must be non-empty; warnings keep a bounded display whose last
+    /// lines carry the exact number of suppressed warnings, each truncated to
+    /// 256 characters; a solid count must be non-negative.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         step_bytes: Vec<u8>,
@@ -292,11 +414,7 @@ impl ProviderBuild {
         if solid_count.is_some_and(|count| count < 0) {
             return Err(CadValueError::new("a solid count must be non-negative"));
         }
-        let warnings = warnings
-            .iter()
-            .take(MAX_WARNINGS)
-            .map(|warning| truncate_chars(warning, MAX_WARNING_LENGTH))
-            .collect();
+        let warnings = bound_warnings(warnings);
         Ok(Self {
             step_bytes,
             measured,
@@ -568,7 +686,7 @@ impl fmt::Display for CadProviderBuildError {
 
 impl std::error::Error for CadProviderBuildError {}
 
-/// A provider refusal: either unavailable or a failed build.
+/// A provider refusal: unavailable, a failed build, or a cancelled build.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum CadProviderError {
     /// The selected provider cannot build on this host.
@@ -577,6 +695,9 @@ pub enum CadProviderError {
     /// The provider was available but refused or failed the build.
     #[error(transparent)]
     Build(#[from] CadProviderBuildError),
+    /// The caller cancelled the build and the provider stopped it.
+    #[error("{0}")]
+    Cancelled(String),
 }
 
 impl CadProviderError {
@@ -585,13 +706,14 @@ impl CadProviderError {
         match self {
             Self::Unavailable(error) => error.message(),
             Self::Build(error) => error.message(),
+            Self::Cancelled(message) => message,
         }
     }
 
     /// The failing assembly operation, when the provider named one.
     pub fn op(&self) -> Option<&str> {
         match self {
-            Self::Unavailable(_) => None,
+            Self::Unavailable(_) | Self::Cancelled(_) => None,
             Self::Build(error) => error.op(),
         }
     }
@@ -600,14 +722,14 @@ impl CadProviderError {
     pub const fn unavailable(&self) -> Option<&CadProviderUnavailableError> {
         match self {
             Self::Unavailable(error) => Some(error),
-            Self::Build(_) => None,
+            Self::Build(_) | Self::Cancelled(_) => None,
         }
     }
 
     /// The build error, when this is one.
     pub const fn build_error(&self) -> Option<&CadProviderBuildError> {
         match self {
-            Self::Unavailable(_) => None,
+            Self::Unavailable(_) | Self::Cancelled(_) => None,
             Self::Build(error) => Some(error),
         }
     }
@@ -633,6 +755,21 @@ pub trait CadProvider {
 
     /// Build `script`, export STEP, and report the provider's own facts.
     fn build(&mut self, script: &ConstructionScript) -> Result<ProviderBuild, CadProviderError>;
+
+    /// Build `script`, stopping at the next safe point when `cancel` is set.
+    ///
+    /// The default is the uninterruptible [`Self::build`]: an in-process
+    /// kernel cannot be stopped in the middle of an operation, so its caller
+    /// cancels at the next phase boundary instead. An out-of-process provider
+    /// (FreeCAD) overrides this and kills its own process group.
+    fn build_cancellable(
+        &mut self,
+        script: &ConstructionScript,
+        cancel: &kala_process::CancelToken,
+    ) -> Result<ProviderBuild, CadProviderError> {
+        let _ = cancel;
+        self.build(script)
+    }
 
     /// A probe result plus the static identity the API publishes.
     fn status(&mut self) -> ProviderStatus {
@@ -661,4 +798,69 @@ pub(crate) fn truncate_chars(value: &str, limit: usize) -> String {
         return value.to_owned();
     }
     value.chars().take(limit).collect()
+}
+
+#[cfg(test)]
+mod warning_tests {
+    use super::{
+        MAX_WARNINGS, bound_warnings, ineffective_cut_count, parse_cut_summary, parse_other_summary,
+    };
+
+    fn cut(index: usize) -> String {
+        format!("component 'plate': pocket at step index {index} on XY removed no material")
+    }
+
+    #[test]
+    fn five_hundred_cut_warnings_keep_an_exact_count() {
+        let warnings: Vec<String> = (0..500).map(cut).collect();
+        let display = bound_warnings(warnings);
+        assert_eq!(display.len(), MAX_WARNINGS - 1);
+        assert_eq!(ineffective_cut_count(&display), 500);
+        assert_eq!(
+            display[MAX_WARNINGS - 2],
+            "… and 486 more pockets removed no material"
+        );
+        assert_eq!(parse_cut_summary(&display[MAX_WARNINGS - 2]), Some(486));
+        assert_eq!(parse_other_summary(&display[MAX_WARNINGS - 2]), None);
+    }
+
+    #[test]
+    fn a_cut_summary_and_an_other_summary_both_fit() {
+        let mut warnings: Vec<String> = (0..20).map(cut).collect();
+        warnings.extend((0..5).map(|index| format!("warning number {index}")));
+        let display = bound_warnings(warnings);
+        assert_eq!(display.len(), MAX_WARNINGS);
+        assert_eq!(ineffective_cut_count(&display), 20);
+        assert_eq!(
+            display[MAX_WARNINGS - 2],
+            "… and 6 more pockets removed no material"
+        );
+        assert_eq!(display[MAX_WARNINGS - 1], "… and 5 more warnings");
+    }
+
+    #[test]
+    fn bounding_an_already_bounded_display_is_idempotent() {
+        let warnings: Vec<String> = (0..37).map(cut).collect();
+        let once = bound_warnings(warnings);
+        let twice = bound_warnings(once.clone());
+        assert_eq!(once, twice);
+        assert_eq!(ineffective_cut_count(&twice), 37);
+    }
+
+    #[test]
+    fn a_single_suppressed_cut_uses_the_singular_summary() {
+        let warnings: Vec<String> = (0..15).map(cut).collect();
+        let display = bound_warnings(warnings);
+        assert_eq!(display.len(), 15);
+        assert_eq!(display[14], "… and 1 more pocket removed no material");
+        assert_eq!(ineffective_cut_count(&display), 15);
+    }
+
+    #[test]
+    fn a_short_display_is_unchanged_and_exact() {
+        let warnings = vec![cut(1), "a plain warning".to_owned(), cut(3)];
+        let display = bound_warnings(warnings);
+        assert_eq!(display.len(), 3);
+        assert_eq!(ineffective_cut_count(&display), 2);
+    }
 }

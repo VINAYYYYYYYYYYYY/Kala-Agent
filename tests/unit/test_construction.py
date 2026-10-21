@@ -339,3 +339,37 @@ def test_sizes_and_names_stay_inside_the_protocol() -> None:
         load_construction(_script([_component("plate", [_rectangle(0.0009, 10), _extrude(8)])]))
     with pytest.raises(ConstructionError, match="pressure_mpa"):
         load_analysis({"steps": [{"op": "pressure", "pressure_mpa": 5000.1}, {"op": "solve"}]})
+
+
+def _pairs(count: int) -> list[dict[str, object]]:
+    """Return ``count`` legal sketch-and-extrude pairs."""
+    steps: list[dict[str, object]] = []
+    for _ in range(count):
+        steps.extend([_rectangle(10, 10), _extrude(1)])
+    return steps
+
+
+def test_the_whole_design_budget_is_five_hundred_steps() -> None:
+    # 500 steps in one body is legal, and so is 300 steps in one component.
+    script = load_construction(_script([_component("plate", _pairs(250))]))
+    assert len(script.components[0].steps) == 500
+
+    short = load_construction(_script([_component("plate", _pairs(150))]))
+    assert len(short.components[0].steps) == 300
+
+    with pytest.raises(ConstructionError, match="at most 500 steps in total; this one uses 501"):
+        load_construction(
+            _script(
+                [_component("plate", _pairs(250))],
+                [{"component": "plate", "op": "place"}],
+            )
+        )
+
+
+def test_sixty_four_components_are_legal_and_sixty_five_are_not() -> None:
+    components = [_plate_body(f"part{index}") for index in range(64)]
+    script = load_construction(_script(components))
+    assert len(script.components) == 64
+
+    with pytest.raises(ConstructionError, match="at most 64 items after validation, not 65"):
+        load_construction(_script([*components, _plate_body("part64")]))

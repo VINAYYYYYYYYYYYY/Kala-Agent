@@ -386,10 +386,13 @@ fn unreported_values_are_never_invented() {
         build.provider_version().expect("version").chars().count(),
         MAX_VERSION_LENGTH
     );
-    assert_eq!(build.warnings().len(), 14);
+    // The payload carries 22 usable warnings: fourteen are shown unchanged
+    // and one summary states the eight that were suppressed.
+    assert_eq!(build.warnings().len(), 15);
     assert_eq!(build.warnings()[0], "kept");
     assert_eq!(build.warnings()[1].chars().count(), MAX_WARNING_LENGTH);
     assert_eq!(build.warnings()[13], "www");
+    assert_eq!(build.warnings()[14], "… and 8 more warnings");
 }
 
 #[test]
@@ -408,10 +411,13 @@ fn warnings_and_versions_are_bounded() {
     let (_directory, executable) = fake_freecad();
     let mut provider = fake_provider(&executable, "warning_truncation");
     let build = build(&mut provider).expect("the fake build succeeds");
-    assert_eq!(build.warnings().len(), MAX_WARNINGS);
-    for warning in build.warnings() {
+    // Twenty warnings bound to the first fourteen unchanged lines plus one
+    // summary that keeps the number of suppressed warnings.
+    assert_eq!(build.warnings().len(), MAX_WARNINGS - 1);
+    for warning in &build.warnings()[..MAX_WARNINGS - 2] {
         assert_eq!(warning.chars().count(), MAX_WARNING_LENGTH);
     }
+    assert_eq!(build.warnings()[MAX_WARNINGS - 2], "… and 6 more warnings");
 }
 
 #[test]
@@ -424,17 +430,17 @@ fn constructor_validation_matches_python() {
     .expect_err("below the minimum");
     assert_eq!(
         error.message(),
-        "the FreeCAD build timeout must be between 5 and 600 seconds"
+        "the FreeCAD build timeout must be between 5 and 3600 seconds"
     );
     let error = FreeCadProvider::new(FreeCadProviderOptions {
-        timeout_seconds: Some(600.5),
+        timeout_seconds: Some(3_600.5),
         environ: Some(BTreeMap::new()),
         ..FreeCadProviderOptions::default()
     })
     .expect_err("above the maximum");
     assert_eq!(
         error.message(),
-        "the FreeCAD build timeout must be between 5 and 600 seconds"
+        "the FreeCAD build timeout must be between 5 and 3600 seconds"
     );
     let error = FreeCadProvider::new(FreeCadProviderOptions {
         probe_cache_seconds: Some(-1.0),
@@ -697,13 +703,11 @@ fn the_contract_models_validate_like_python() {
         build.provider_version().expect("version").chars().count(),
         MAX_VERSION_LENGTH
     );
-    assert_eq!(build.warnings().len(), MAX_WARNINGS);
-    assert!(
-        build
-            .warnings()
-            .iter()
-            .all(|warning| warning.chars().count() == MAX_WARNING_LENGTH)
-    );
+    assert_eq!(build.warnings().len(), MAX_WARNINGS - 1);
+    for warning in &build.warnings()[..MAX_WARNINGS - 2] {
+        assert_eq!(warning.chars().count(), MAX_WARNING_LENGTH);
+    }
+    assert_eq!(build.warnings()[MAX_WARNINGS - 2], "… and 6 more warnings");
     assert_eq!(build.solid_count(), Some(0));
     assert_eq!(build.valid(), Some(false));
 

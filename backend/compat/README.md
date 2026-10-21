@@ -27,7 +27,9 @@ Run from the repository root, using the repository virtual environment:
 ```
 
 The corpus is written to `backend/fixtures/corpus/v1`. `--check` never writes
-to the checked-in fixture directory.
+to the checked-in fixture directory. It is independent of the temporary
+directory it is handed: the fixture records the normalised `/health` body
+length, so the check passes with `TMPDIR=/tmp` and with a much longer path.
 
 ## Corpus digest
 
@@ -43,6 +45,23 @@ digest from the manifest's own file list and refuses a mismatch.
 | before this cell's regeneration (2026-10-19 15:58) | `685d10d17c12ecb6b89afa19756d8d98865203f9cb479054a8f143016a015175` |
 | after compat-drift's regeneration | `9993939bfea5e01553438e680fe3a9ea4b24335ee9077da5b8dc453b5a987e8b` |
 | after corpus-sync (per-case `body_comparison`, `volatile_paths`, `host_dependent`) | `53dcb9da105589b5a92d37b16d63c7fe2d5e60b7630549102127e019c95dff28` |
+| after polish (design instruction paragraph, per-pocket warning, concurrent provider rows) | `61328f9143238ca85eeabc99d8ccd9c983ead0f1481ee491573e047ab52367ee` |
+| after design-budget (500/64 step budget, exact cut count, 512 KiB tool string) | `e86c7d93157fb844af0e4cf8711824df4e75a782ac9f88b94318d57f21df0f6b` |
+| after downloads-cancel (`design_turn_budget_seconds`, artifact download cases) | `c0003bae333f27a079adcf3e86f2618741a6606334a17ffe3fafe727fcd6c330` |
+| after corpus-hermetic (normalised `body_length`/`content-length` for `/health`) | `39e0c0a90f9d03704945c79cdb9e777e77549ef208ac2177d3f7bb003dade3fa` |
+
+The corpus-hermetic regeneration changes no fixture content except the core
+`/health` length fields and the two metadata tables that explain them: the
+corpus digest moved from `c0003bae…` to `39e0c0a9…`, `studio_http.json` is
+byte-identical, and the product source pin did not move. Before it, `--check`
+failed on a clean run whenever the generator's temporary directory was
+shorter than the one that produced the committed fixture: the raw `/health`
+body embeds the temporary data-dir path, so `body_length` and the frozen
+`content-length` header grew with the path. The recorded length is now the
+length of the normalised bytes (the same bytes `body_sha256` covers), and the
+`content-length` header is declared in `normalised_headers` for a
+self-consistency check instead of being frozen. `--check` therefore passes
+under any `TMPDIR` length.
 
 The generator command for both is
 `.venv/bin/python backend/compat/generate_corpus.py`.
@@ -101,11 +120,19 @@ listed in this cell's `REPORT.md`, so the reconstruction can be recomputed.
 7. **No external model calls.** Studio provider cases use the deterministic
    local provider or refused/unconfigured paths. The synthetic provider key in
    the fixture is not a live credential and is cleared in the same run.
-8. **Temporary paths are normalized.** Only the core `/health` `data_dir` and
-   CLI temporary paths are replaced with `<DATA_DIR>`. Every other byte is
-   preserved; meaningful differences are not normalized away. The core
-   `/health` body digest is the digest of the normalised bytes, because the
-   raw bytes embed the temporary path.
+8. **Temporary paths are normalized, together with everything derived from
+   them.** Only the core `/health` `data_dir` and CLI temporary paths are
+   replaced with `<DATA_DIR>`. Every other byte is preserved; meaningful
+   differences are not normalized away. The core `/health` body digest **and
+   `body_length`** are taken over the normalised bytes, because the raw bytes
+   embed the temporary path. The raw `content-length` header is not frozen:
+   the case lists it in `normalised_headers`, and a consumer checks it against
+   the body the service actually sent. Freezing the raw length made `--check`
+   depend on the length of the temporary directory the generator was given,
+   so a CI `TMPDIR=/tmp` failed against a fixture generated under a longer
+   one. `self_check.py` refuses a normalised case whose `body_length` is not
+   the length of its recorded (normalised) body or that freezes
+   `content-length`.
 9. **OCP output is not fixture data.** The STEP writer prints transfer
    statistics from native code. The generator silences those descriptors and
    leaves them silenced only after the final report is flushed.

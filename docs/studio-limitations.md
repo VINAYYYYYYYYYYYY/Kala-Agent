@@ -131,6 +131,82 @@ never substitutes a stand-in computation for a real one.
   `design: null`; **no other provider is tried**. There is no fallback and
   no automatic selection. See
   [cad-providers.md](cad-providers.md#chat-and-design-through-the-front-door).
+- **The Solid Edge bridge caps a procedure at 8 parts.** The script budget
+  is 64 components, so a Solid Edge design can never use the whole
+  budget: a script that compiles to more than 8 parts is refused before it
+  reaches the bridge. The protocol's 600-operation cap is a second line of
+  defence that a contract-valid script cannot reach (the maximum is 543
+  operations).
+
+### What is still slow, capped or unbounded
+
+These are the limits that remain after the 2026-10-21 wave. Each one is
+measured or configured, not estimated.
+
+- **A 500-step FreeCAD build is slow.** Measured on FreeCAD 1.1.4 with
+  the real `FreeCADCmd`: a 202-step plate with 100 pockets takes **58.8 s**
+  in the provider (59.8 s through the Studio), and a 500-step plate with
+  249 pockets takes **1 009.5 s (16.8 min)** idle and **1 250 s (20.8 min)**
+  under load. The contract allows the 500-step design and the **1 800 s**
+  FreeCAD deadline covers it, but with much less margin on a loaded host,
+  and it is not a pleasant chat turn. The cost is superlinear in the
+  number of pockets, because every pocket recomputes the body to measure
+  what it removed.
+- **The Solid Edge 8-part cap** is far below the 64-component script
+  budget, so a Solid Edge design cannot use the whole design budget.
+- **The Windows process-tree kill uses `taskkill /T /F`, not a Job
+  Object.** Every CLI turn runs in its own process group, and a timeout,
+  a failure or a client disconnect kills the **whole group**, not only the
+  direct child. On Unix that is `kill_process_group(SIGKILL)` with a direct
+  kill of the child as a backstop. On Windows the documented OS tool
+  `taskkill /T /F /PID <pid>` walks the parent/child tree instead of a Job
+  Object with `KILL_ON_JOB_CLOSE`. A Job Object would be the stronger
+  mechanism (it is what the sandboxed tool runner uses), but it needs a
+  Windows host to land and prove safely. **Neither the `.cmd` resolution
+  nor the `taskkill` fallback has been executed on a Windows host from
+  this repository**: the Windows-only fragments are type-checked against
+  the `x86_64-pc-windows-msvc` target, and that is the honest limit of
+  the proof.
+- **The journal and the artifact store grow without bound.** Every design
+  stores its script, its STEP and its native artefact (for FreeCAD, the
+  `.FCStd`) in the content-addressed store, and the journal appends the
+  turn's events. The files live under the studio data directory:
+
+  ```
+  <studio data dir>/studio-journal.sqlite3     the hash-chained journal
+  <studio data dir>/artifacts/objects/<xx>/<digest>   the artefacts
+  ```
+
+  There is **no retention policy, no prune route and no size budget
+  today**: nothing in the journal or the artifact store deletes anything,
+  so the directory grows with every design. The in-memory design cache is
+  only 32 entries. Reclaiming the space is a manual operation today
+  (delete the files under the studio data directory). A retention policy
+  (last N designs or a size budget) and a safe prune path are **not**
+  implemented.
+- **The live model name of a subscription CLI is unknown.** The CLIs do
+  not report which model they picked, so the studio says
+  `Codex CLI default model (chosen by Codex)` and points at the model
+  picker, where pinning a model makes the reply name it. See
+  [Provider honesty](#provider-honesty).
+- **The artifact download cap is 64 MiB, and it is independent of the
+  STEP-import ceiling.** The download route refuses anything larger than
+  **64 MiB** with `413 artifact_too_large`, while the journal's own
+  per-artifact ceiling is `max(64 MiB, KALA_STEP_IMPORT_MAX_BYTES)`. So a
+  host that raises `KALA_STEP_IMPORT_MAX_BYTES` above 64 MiB can *store*
+  a bigger STEP and still cannot *download* it. The cap is the download
+  contract, not an accident.
+- **A cancel cannot interrupt the in-process OpenCascade build.** The
+  out-of-process FreeCAD build has its **whole process group** killed when
+  the client closes the request, promptly. The in-process OCCT build
+  cannot be interrupted inside a single compile, so the cancellation token
+  is honoured at the **next phase boundary** — the worst case is one
+  **60 s** compile that finishes first. And the **Python reference**
+  cannot cancel a running synchronous build at all: its `/design` route
+  runs inside the FastAPI thread pool, and a thread cannot be dropped by
+  the event loop. The cancellation is **native-only**, and the native
+  service is the shipped path. See
+  [studio.md](studio.md#cancelling-a-turn).
 
 ### The geometry viewport
 
@@ -210,21 +286,30 @@ primitive. Their exact scope:
 
 - The studio never claims to use a model the user has not configured.
   The `/api/studio/providers` route is the source of truth.
-- The `codex` (ChatGPT subscription) route is **not implemented** in
-  this build. It fails closed with a sanitised `503` and sends no
-  request. A `codex` binary merely present on `PATH` does **not**
-  make the provider usable, and the studio does not report the CLI's
-  location or claim the CLI is signed in. The
-  `KALA_STUDIO_ENABLE_CODEX` flag is inert.
+- The three **subscription** routes (`claude_code`, `codex_cli`,
+  `opencode_cli`, plus the historical alias `codex`) run the operator's
+  own CLI as a subprocess. A route is `configured` only when the probe
+  found the binary **and** the CLI reported that it is signed in; the
+  studio reports *that* the CLI is signed in, never *as whom*, because the
+  probe reads only the exit status of the CLI's own status command.
+- The live **model name of a subscription CLI is unknown**. The CLIs do
+  not report which model they picked when the request names none, so the
+  studio says exactly that — `Codex CLI default model (chosen by Codex)` —
+  and never invents a model name. Pinning a model in the picker makes the
+  reply name it.
+- The availability probe is **cached and non-blocking**: a route answers
+  from the cache, and a first probe that has not finished inside the 600 ms
+  route budget is reported as `checking...`, never as "unavailable". The
+  verdict lands in the background; the Studio loads the provider list once
+  at boot, so a first render can show `checking...` until the workspace is
+  reloaded.
 - Subscription access and API access are distinct plans billed
-  separately by the provider. In this build only the `openai` and
-  `openrouter` routes make a real API call; they call fixed endpoints
-  with the operator's key. The studio never converts a `codex`
-  request into a paid API call and never reuses an inherited
+  separately by the provider. The studio never converts a subscription
+  turn into a paid API call and never reuses an inherited
   `OPENAI_API_KEY` for the subscription path.
 - The studio exposes no arbitrary-provider escape hatch: the accepted
   provider identifiers are fixed in the request schema, and only
-  `openai` and `openrouter` perform a real remote call.
+  `openai` and `openrouter` perform a real remote API call.
 - The studio does not assert legal or terms-of-service claims about
   third-party products. Provider-side eligibility is the provider's
   decision, not the studio's.
@@ -330,7 +415,7 @@ Consequences a user must understand:
   decides whether it can build here. FreeCAD builds through the service,
   Solid Edge refuses honestly on Linux, and no fallback provider is tried.
   The live differential passes the real release binary against the live
-  Python server: **292 / 268 / 20 / 56 cases, 0 mismatches**. See
+  Python server: **295 / 268 / 20 / 56 cases, 0 mismatches**. See
   [The frozen corpus is not all contract](#the-frozen-corpus-is-not-all-contract).
 - The **Python reference server** still exists and is still the parity
   oracle. Nothing was deleted; the Python tree survives as the oracle every
@@ -516,17 +601,20 @@ Solid Edge test, which needs Windows).
 
 ### What is still open
 
-- The **normal** (non-worker) Studio CLI still ignores `KALA_STUDIO_DATA_DIR`
-  when `--data-dir` is absent; only worker mode accepts the variable as the
-  explicit alternative to the flag. This is pre-existing and deliberate.
-  The **native** service resolves its default from `KALA_AGENT_DATA_DIR`
-  (and then from `HOME`), and an explicit `--data-dir` always wins.
+- The **normal** Studio CLI resolves its data directory from the
+  environment when `--data-dir` is absent. The precedence is now the
+  documented one — `--data-dir` > `KALA_STUDIO_DATA_DIR` >
+  `KALA_AGENT_DATA_DIR/studio` > `$XDG_DATA_HOME/kala-agent/studio` >
+  `$HOME/.local/share/kala-agent/studio` > `$TMPDIR/kala-studio` — and it
+  is implemented identically in the native service and in the Python
+  reference. `KALA_STUDIO_DATA_DIR` is no longer ignored: it is the studio
+  directory itself and it wins over every lower row.
 - The **packaging smokes** (`packaging/studio_smoke.py`,
   `packaging/native_studio_smoke.py`) and
-  `studio/test/nativeBackendPackaging.test.ts` set `KALA_STUDIO_DATA_DIR`
-  but start the backend without `--data-dir`, so they use the home/temp
-  default rather than the smoke's temporary directory. They are outside the
-  ownership of the cells that found this, and it is not fixed.
+  `studio/test/nativeBackendPackaging.test.ts` now launch the backend with
+  an explicit temporary `--data-dir` **and** a temporary `HOME`, and they
+  assert that the launch banner names that temporary directory and never
+  `.local/share/kala-agent`.
 - The adapter suites (`adapters/freecad`, `adapters/solidedge`,
   `adapters/solidedge-bridge`) have their own roots and do not load the
   repository's `conftest.py`. They do not reference the Kala data directory
@@ -543,10 +631,12 @@ native binary plus the staged OCCT closure, the packaged UI and the FreeCAD
 adapter. There is no Python geometry worker in it.
 
 - The **Linux AppImage exists and has been smoke-tested**:
-  `studio/release/kala-studio-0.1.0-x86_64.AppImage`, **163 642 516
-  bytes** (156.1 MiB), sha256
-  `b069b7d4b73f8ae01b166744b61f090455ef989ce348f360826ccfd69aaba31e`.
-  The smoke ran from the **extracted** image under a literal `env -i`:
+  `studio/release/kala-studio-0.1.0-x86_64.AppImage`, **unsigned**. Its
+  exact size and SHA-256 are recorded in
+  [packaging/linux/README.md](../packaging/linux/README.md) — they change
+  with every rebuild, so they are not duplicated here, and a digest quoted
+  anywhere else in the tree goes stale. The smoke ran from the **extracted**
+  image under a literal `env -i`:
   the backend starts with `PATH=""` (no Python at all), the health document
   is `status: ok` with `design_available: true` and `step_available: true`,
   the OpenCascade L-bracket is **35571.416047113315 mm³**, the XZ section
@@ -596,7 +686,8 @@ adapter. There is no Python geometry worker in it.
   `npm run build`, the native staging
   (`node scripts/native-backend.cjs --require-freecad-vendor`) and then
   `node scripts/desktop-pack.cjs --linux AppImage --x64 --publish never`.
-  The **SHA-256 above is the provenance** of that file.
+  The **SHA-256 in [packaging/linux/README.md](../packaging/linux/README.md)**
+  is the provenance of that file.
 - The release workflow (`.github/workflows/studio-release.yml`) is
   **written but was not pushed or run**. No CI artefact is published, and
   the older `.github/workflows/studio.yml` still describes the pre-cutover
@@ -773,14 +864,15 @@ Run from the repository root:
 | Command | What it proves | When |
 |---|---|---|
 | `.venv/bin/python -m pytest tests -q` | the whole Python suite (unit, security, integration), with the data-isolation fixture active — **1761 passed** | `test-isolation` |
-| `.venv/bin/python -m pytest tests/unit -q` | the Python studio, the design turns, the providers and the API error handler — **1555 passed** | earlier pass |
+| `.venv/bin/python -m pytest tests/unit -q` | the Python studio, the design turns, the providers and the API error handler — **1667 passed** | **2026-10-21 downloads-cancel cell** |
 | `.venv/bin/python -m pytest tests/security -q` | the boundary gates (Host, Origin, bearer, body limit) — **189 passed** | earlier pass |
 | `.venv/bin/python -m pytest tests/unit/studio_design/test_cad_providers_freecad.py -q` | the real FreeCAD provider against the frozen 28-case corpus — **8 passed in 19.96 s** | earlier pass |
 | `cd adapters/freecad && <repo>/.venv/bin/python -m pytest tests -q` | the FreeCAD adapter — **388 passed** | `test-isolation` |
 | `cd adapters/solidedge-bridge && <repo>/.venv/bin/python -m pytest tests -q` | the Solid Edge bridge — **186 passed, 1 skipped** (the live Windows test) | `test-isolation` |
 | `cd adapters/solidedge && <repo>/.venv/bin/python -m pytest tests -q` | the Solid Edge adapter — **138 passed** | `test-isolation` |
-| `cd studio && npm run typecheck && npm test && npm run build` | the UI: **43 test files, 628 tests**; typecheck and Vite build clean | **cutover wave** |
-| `cd backend && cargo test --workspace --locked --release` | the accepted root-workspace crates — **449 passed**, 0 failed, 0 ignored (of which `kala-studio` is 175) | **cutover wave** |
+| `cd studio && npm run typecheck && npm test && npm run build` | the UI: **53 test files, 769 tests**; typecheck and Vite build clean | **2026-10-21 downloads-cancel cell** |
+| `cd backend && cargo test --workspace --locked --release` | the accepted root-workspace crates — **554 passed**, 0 failed, 0 ignored | **2026-10-21 design-budget cell** |
+| `cd backend && cargo test -p kala-studio --no-fail-fast` | the native Studio service — **289 passed**, 0 failed (22 test binaries) | **2026-10-21 downloads-cancel cell** |
 | `cd backend/crates/kala-cad && cargo test --locked --release` | the native OpenCascade adapter — **118 passed** | **cutover wave** |
 | `cd backend/crates/kala-studio-journal && cargo test --locked --release` | the native session journal — **60 passed** | **cutover wave** |
 | `cd backend/crates/kala-cad-providers && cargo test --locked --release` | the CAD provider connections — **40 passed** | **cutover wave** |
@@ -789,12 +881,12 @@ Run from the repository root:
 | `cd backend/crates/kala-application && cargo test --locked --release` | the composition root — **53 passed**, including the 20 independent review probes | earlier pass |
 | `cd backend/crates/kala-api && cargo test --locked --release` | the core API — **124 passed** | earlier pass |
 | `cd backend/crates/kala-cli && cargo test --locked --release` | the CLI — **22 passed** | earlier pass |
-| `cd backend && ../.venv/bin/python crates/kala-studio/tests/worker_differential.py` | the native service against the live Python reference — **292 cases, 0 mismatches, 0 known gaps** | **cutover wave** |
+| `cd backend && ../.venv/bin/python crates/kala-studio/tests/worker_differential.py` | the native service against the live Python reference — **295 cases, 0 mismatches, 0 known gaps** | **2026-10-21 downloads-cancel cell** |
 | `crates/kala-studio/tests/python_differential.py` | the native service against the live Python server — **268 cases, 0 mismatches** | **cutover wave** |
 | `crates/kala-studio/tests/python_provider_dto_oracle.py` | the provider DTOs — **20 cases, 0 failures** | **cutover wave** |
 | `crates/kala-studio/tests/replay_binary_corpus.py` | the frozen corpus against the release binary — **56 cases, 0 mismatches** (see below) | **cutover wave** |
 | `.venv/bin/python backend/compat/self_check.py` | the corpus is reproducible and matches the checked-in files — **exit 0, `self-check OK`** | earlier pass |
-| `cd studio && npm run check:native-readiness` | the route-surface parity report — **READY**, 15 Python route-methods covered, 16 in the native service, 0 missing; the built stage is classified `release` / `releaseEligible: true` | earlier pass |
+| `cd studio && npm run check:native-readiness` | the route-surface parity report — **READY**, 16 Python route-methods covered, **18 in the native service** (7 answered directly, 11 through the geometry-backend seam), 0 missing; the built stage is classified `release` / `releaseEligible: true` | **2026-10-21** |
 | `env -i … node packaging/linux/smoke-appimage.mjs --require-geometry --require-freecad` | the built AppImage, from the extracted image with no Python on `PATH` — **PASS** | **cutover wave** |
 
 ### The frozen corpus is not all contract
@@ -819,9 +911,12 @@ declared volatile paths, of which one — `studio.cad_providers` — is host
 evidence compared against the current host's probe), `step structural: 2`
 (a real ISO 10303-21 solid compared structurally, not byte for byte) and
 `skipped: 2` (the two cases that need the 16 384-byte library body-limit
-configuration and are covered by `corpus_fixture`). The corpus digest is
-unchanged at
-`53dcb9da105589b5a92d37b16d63c7fe2d5e60b7630549102127e019c95dff28`.
+configuration and are covered by `corpus_fixture`). That replay ran against
+corpus digest `c0003bae333f27a079adcf3e86f2618741a6606334a17ffe3fafe727fcd6c330`.
+The corpus was regenerated again later on 2026-10-21 (corpus-hermetic) to
+`39e0c0a90f9d03704945c79cdb9e777e77549ef208ac2177d3f7bb003dade3fa`, the value
+`backend/crates/kala-studio/tests/corpus_fixture.rs` pins now;
+`studio_http.json` did not change, so the replay result stands.
 
 **What this does not mean.** A host-dependent record is still not a
 contract: the `studio.cad_providers` case records the CAD-provider probe
@@ -866,13 +961,36 @@ not turn the record into a portable expectation. The analysis is in
 - The wave did **not** run the studio against a real analysis
   product. The integration rows remain honest placeholders, and the
   studio holds no solver automation.
-- The wave did **not** implement app/OpenCode orchestration; the
-  studio produces a neutral handoff only.
+- The wave did **not** run a **real subscription CLI**. Every CLI test
+  drives a fake executable: the argv, the prompt-on-stdin, the sanitized
+  environment, the private working directory, the budget, the process-tree
+  kill and the `PATHEXT`/`.cmd` resolution are proven against fakes and
+  against the pure resolution functions — never against a signed-in
+  `claude`, `codex` or `opencode`.
+- The wave did **not** execute the Windows-only CLI paths. The `.cmd`
+  shim resolution and the `taskkill /T /F` tree kill are type-checked
+  against the `x86_64-pc-windows-msvc` target and nothing more.
+- The wave did **not** implement app orchestration; the studio produces a
+  neutral handoff only. The subscription CLIs are used as **chat
+  providers**, with every tool denied.
 - The wave did **not** submit the artefact to VirusTotal, Microsoft,
   or any other reputation service. A user who needs that should
   arrange it separately.
 - The wave ran **no benchmark**, so no speed, memory or readiness number
   is claimed anywhere in these documents.
+- The wave did **not** execute the **Windows** FreeCAD kill. The cancelled
+  build is terminated through `kala_process`'s supervisor; the Windows
+  path is type-checked against the `x86_64-pc-windows-msvc` target by the
+  runtime-fixes cell, and **no Windows host ran it**.
+- The wave did **not** rebuild a **500-step** FreeCAD design after the
+  cancellation landed. The live cancellation experiment used a real
+  FreeCAD part on this host; the 500-step timing (1 009.5 s idle) is the
+  design-budget cell's measurement, which is what sized the 1 800 s build
+  deadline the backend now publishes.
+- The wave did **not** exercise the **Python reference's** cancellation,
+  because it has none: the reference's `/design` route is synchronous in
+  the FastAPI thread pool and cannot be dropped by the event loop. The
+  cancellation is native-only, and the native service is the shipped path.
 
 ## What changes would close these gaps
 

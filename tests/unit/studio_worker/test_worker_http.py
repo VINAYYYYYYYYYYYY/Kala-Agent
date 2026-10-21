@@ -41,6 +41,7 @@ EXPECTED_ROUTES = {
     f"{INTERNAL_PREFIX}/design",
     f"{INTERNAL_PREFIX}/design/{{design_id}}/drawing",
     f"{INTERNAL_PREFIX}/design/{{design_id}}/section",
+    f"{INTERNAL_PREFIX}/design/{{design_id}}/artifact/{{kind}}",
     f"{INTERNAL_PREFIX}/import",
     f"{INTERNAL_PREFIX}/intent/parse",
     f"{INTERNAL_PREFIX}/intent/validate",

@@ -5,13 +5,14 @@ name: studio-release
 #   * Windows: NSIS, built with MSVC + vcpkg OpenCascade; the final runtime
 #     check is the post-install checklist in packaging/windows/README.md.
 #
-# FreeCAD: FreeCAD itself is never bundled. At stage time the helper asks the
-# build host's FreeCADCmd for its Python version/ABI and vendors the adapter
-# dependencies for that interpreter. If FreeCAD is absent, the pins' declared
-# default (3.14/cp314) is used and vendor.json records detected=false. The
-# vendored set is therefore coupled to the FreeCAD build used at build time;
-# rebuild with --freecad-python (Linux) or -FreeCadExe (Windows) for a
-# different FreeCAD interpreter.
+# FreeCAD: FreeCAD itself is never bundled. At stage time the helper vendors
+# the adapter dependencies for EVERY CPython ABI current FreeCAD releases
+# ship (cp311, cp312, cp313, cp314), so one build covers every supported
+# FreeCAD Python. The build host's FreeCADCmd is used only to verify that
+# the adapter imports inside that exact interpreter and to record the
+# detected version; if FreeCAD is absent, the vendored set is still
+# resolved and only the in-FreeCAD verification is skipped
+# (vendor.json records detected=false).
 #
 # This workflow never publishes or signs. Artifacts are uploaded for manual
 # inspection only. It is triggered by a tag or manually; it is not evidence

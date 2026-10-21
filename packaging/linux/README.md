@@ -77,7 +77,70 @@ with an unsupported Python (for example 3.10) is reported as
 provider-unavailable with its exact version in the reason instead of crashing.
 
 The `mod/Kala` workbench addon is staged for copying into FreeCAD's user `Mod`
-directory; it is not auto-installed.
+directory; it is not auto-installed. See **Installing the FreeCAD add-on**
+below for the one supported way to install it.
+
+## Installing the FreeCAD add-on
+
+The add-on is self-contained: it carries the adapter modules, the shared
+`kala_agent` contracts package and the vendored dependencies for your
+FreeCAD's Python ABI. It never reads a repository checkout and never uses a
+virtualenv.
+
+**The one supported install method: copy the staged add-on and its payload
+into FreeCAD's user `Mod` directory.**
+
+```bash
+# 1. Extract the AppImage once (the AppDir of a mounted AppImage works too).
+./kala-studio-0.1.0-x86_64.AppImage --appimage-extract
+ADAPTER=./squashfs-root/resources/backend/adapters/freecad
+
+# 2. Ask FreeCAD which Python it runs. The add-on needs that exact ABI:
+#    cp311, cp312, cp313 or cp314.
+ABI=$(FreeCADCmd -c 'import sys; print("cp%d%d" % sys.version_info[:2])')
+
+# 3. Copy the add-on and its payload into FreeCAD's user Mod directory.
+MOD="${XDG_DATA_HOME:-$HOME/.local/share}/FreeCAD"
+[ -d "$MOD/v1-1" ] && MOD="$MOD/v1-1"
+mkdir -p "$MOD/Mod/Kala"
+cp -r "$ADAPTER/mod/Kala/." "$MOD/Mod/Kala/"
+cp -r "$ADAPTER/src" "$MOD/Mod/Kala/src"
+cp -r "$ADAPTER/site-packages-$ABI" "$MOD/Mod/Kala/site-packages-$ABI"
+```
+
+The result is a self-contained add-on:
+
+```
+~/.local/share/FreeCAD/Mod/Kala/
+  Init.py  InitGui.py  kala_gui.py  kala_paths.py
+  src/kala_agent_freecad/    adapter modules
+  src/kala_agent/            shared contracts package
+  site-packages-cpNNN/       the dependencies for your FreeCAD's Python
+```
+
+FreeCAD picks it up on the next start: the **Kala** workbench appears in the
+workbench selector and the design box opens on the right.
+
+Only the wheel set that matches your FreeCAD is copied (about 9 MiB); the
+other three ABIs stay inside the AppImage.
+
+**The developer symlink still works.** `python -m kala_agent_freecad.panel`
+links `mod/Kala` into the same user `Mod` directory. Point it at the staged
+tree (`studio/backend-native/adapters/freecad/`) when you want the
+ABI-matched dependencies as well — the repository checkout itself has no
+vendored wheel sets.
+
+The add-on finds its payload in three shapes, in this order:
+
+1. `KALA_FREECAD_SYS_PATH` — the directory that holds the adapter sources
+   (the native provider sets it to `<adapter root>/src`);
+2. the add-on's own folder — `src/` and `site-packages-<abi>/` next to it,
+   which is the copied install above;
+3. the adapter root one level above the add-on folder — which is the linked
+   (symlinked) install.
+
+If the payload is missing, the design box says so in its status line instead
+of failing with a traceback.
 
 ### OCCT shared libraries
 
@@ -116,6 +179,31 @@ report also states how many route-methods go through the geometry-backend seam
 (the default build answers them natively; the Python worker is opt-in).
 
 Output: `studio/release/kala-studio-<version>-x86_64.AppImage`.
+
+## The built artefact (size and SHA-256)
+
+The digest below belongs to the file **in this tree right now**. It
+changes with **every** rebuild — the Rust backend is compiled from
+sources other cells are still editing — so it is recorded here and
+**only** here. Every other document points at this file instead of
+quoting a digest that would go stale.
+
+| | |
+|---|---|
+| File | `studio/release/kala-studio-0.1.0-x86_64.AppImage` |
+| Size | **163 889 259 bytes** (156.3 MiB) |
+| SHA-256 | `bf4734e18843fceb1d9bc98a305deddb5de771684f27772bd8c50dfa1d23149e` |
+| Built | 2026-10-21, final build of the completeness wave; smoke `--require-geometry --require-freecad` PASS. Unsigned. |
+
+Verify it with:
+
+```bash
+sha256sum studio/release/kala-studio-0.1.0-x86_64.AppImage
+stat -c %s studio/release/kala-studio-0.1.0-x86_64.AppImage
+```
+
+The build script prints the same three numbers (path, size, SHA-256) after
+it builds, so a user never has to trust a digest from a document.
 
 ## Smoke test
 

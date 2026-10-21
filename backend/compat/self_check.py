@@ -290,6 +290,41 @@ def _check_http(root: Path, name: str) -> dict[str, object]:
                 sha256_bytes(bytes.fromhex(str(expected["body_hex"]))) == expected["body_sha256"],
                 f"{case['id']}: body_hex does not match body_sha256",
             )
+        # A normalised body is frozen by its *normalised* bytes. Its length and
+        # every header that embeds that length must follow the normalised body,
+        # never the run-specific path the generator saw; otherwise the fixture
+        # silently depends on the length of TMPDIR.
+        normalised_headers = expected.get("normalised_headers") or []
+        _require(isinstance(normalised_headers, list), f"{case['id']}: normalised_headers")
+        for name in normalised_headers:
+            _require(isinstance(name, str) and bool(name), f"{case['id']}: normalised header")
+            _require(
+                name not in expected["headers"],
+                f"{case['id']}: {name} is both frozen and normalised",
+            )
+        if expected.get("normalizations"):
+            _require(
+                expected["body_deterministic"] is False,
+                f"{case['id']}: a normalised body is marked deterministic",
+            )
+            _require(
+                "content-length" not in expected["headers"],
+                f"{case['id']}: content-length is frozen on a normalised body",
+            )
+            _require(
+                "content-length" in normalised_headers,
+                f"{case['id']}: content-length is neither frozen nor declared normalised",
+            )
+            if "body_text" in expected:
+                _require(
+                    expected["body_length"] == len(str(expected["body_text"]).encode("utf-8")),
+                    f"{case['id']}: body_length is not the length of the normalised body",
+                )
+        else:
+            _require(
+                not normalised_headers,
+                f"{case['id']}: normalised_headers declared without normalizations",
+            )
         for header in (
             "cache-control",
             "content-security-policy",
@@ -342,8 +377,8 @@ def _check_coverage(manifest: dict[str, object]) -> None:
         _require(not missing, f"{name}: uncovered declared routes {missing}")
     studio_count = len(coverage["studio_http"]["declared"])  # type: ignore[index]
     _require(
-        studio_count == 15,
-        f"expected 15 studio routes, found {studio_count}",
+        studio_count == 16,
+        f"expected 16 studio routes, found {studio_count}",
     )
     core_count = len(coverage["core_http"]["declared"])  # type: ignore[index]
     # The audit/task text says 18 core routes. The live route table is the

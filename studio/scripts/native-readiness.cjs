@@ -2,13 +2,16 @@
 // Current-feature native readiness gate.
 //
 // The native Rust `kala-studio` is the front door of the public `/api/studio`
-// surface: it answers the non-geometry routes itself and proxies the geometry,
-// design, journal, CAD-provider and import routes to the supervised Python
-// geometry worker. The working Python reference is still the oracle. This
-// helper compares the *actual* source surfaces (routes, route-methods and the
-// DTO/capability fields the desktop consumes) instead of trusting a hardcoded
-// "ready" flag. The report separates the Rust-native route-methods from the
-// proxied ones, and computes readiness from what the sources actually expose.
+// surface: it answers every route itself, and the geometry, design, journal,
+// CAD-provider and import routes reach geometry through the
+// **geometry-backend seam**. The seam is answered natively by default; the
+// supervised Python geometry worker is a development opt-in
+// (`KALA_STUDIO_GEOMETRY_WORKER`), not the shipped architecture. The working
+// Python reference is still the oracle. This helper compares the *actual*
+// source surfaces (routes, route-methods and the DTO/capability fields the
+// desktop consumes) instead of trusting a hardcoded "ready" flag. The report
+// separates the route-methods answered directly from the geometry-backend
+// seam, and computes readiness from what the sources actually expose.
 //
 // It is used in two places:
 //   * `native-backend.cjs` snapshots the source digests/readiness into
@@ -279,9 +282,11 @@ function rustFunctionBody(source, name) {
 
 /**
  * The current r2 route table is two functions: `classify(path)` maps a path
- * (or a `strip_prefix`/`strip_suffix` family) to a `RouteKind`, and
- * `allowed_methods(kind)` maps each kind to its methods. The `route` dispatch
- * then decides which kinds call `proxy_route` (the Python geometry worker).
+ * (or a `strip_prefix`/`strip_suffix`/`split_once` family) to a `RouteKind`,
+ * and `allowed_methods(kind)` maps each kind to its methods. The `route`
+ * dispatch then decides which kinds use the geometry-backend seam
+ * (`proxy_route`). The seam is answered natively by default; the supervised
+ * Python geometry worker is a development opt-in.
  *
  * The parser requires both tables, requires every classified kind to have a
  * method arm and vice versa, and refuses any classifier arm it does not
@@ -334,6 +339,22 @@ function parseRustRouteSurface(source) {
       }
       addClassified(`${arm[1]}{}${suffix[1]}`, kind[1]);
       suffixArm.lastIndex = suffixBlock.end;
+    }
+    // `strip_prefix(...)` + `split_once("<separator>")`: a route with two
+    // path parameters, e.g. `/design/{}/artifact/{}`.
+    const splitArm = /split_once\(\s*"([^"]+)"\s*\)\s*\{/g;
+    let split;
+    while ((split = splitArm.exec(prefixBlock.body)) !== null) {
+      const splitBlock = rustBraceBlock(prefixBlock.body, splitArm.lastIndex - 1);
+      const kind = /RouteKind::(\w+)/.exec(splitBlock.body);
+      if (!kind) {
+        throw new Error(
+          'the native Studio classifier has a `split_once` arm with no RouteKind; ' +
+          'the readiness checker refuses to guess that route',
+        );
+      }
+      addClassified(`${arm[1]}{}${split[1]}{}`, kind[1]);
+      splitArm.lastIndex = splitBlock.end;
     }
     prefixArm.lastIndex = prefixBlock.end;
   }
@@ -401,16 +422,17 @@ function parseRustRouteSurface(source) {
     }
   }
 
-  // Which kinds are forwarded to the geometry worker? Read the real dispatch,
-  // never a label. A source that contains `proxy_route` must expose a
-  // parseable `fn route` with at least one proxy arm.
-  const proxiedVariants = new Set();
+  // Which kinds reach geometry through the geometry-backend seam? Read the
+  // real dispatch, never a label. A source that contains `proxy_route` must
+  // expose a parseable `fn route` with at least one seam arm. The seam is
+  // answered natively by default; the Python worker is a development opt-in.
+  const seamVariants = new Set();
   if (/\bfn\s+proxy_route\s*\(/.test(source)) {
     const routeBody = rustFunctionBody(source, 'route');
     if (routeBody === null) {
       throw new Error(
         'the native Studio source has a `proxy_route` but no `fn route` dispatch; ' +
-        'the readiness checker refuses to guess which routes are proxied',
+        'the readiness checker refuses to guess which routes use the geometry-backend seam',
       );
     }
     const dispatchArm = /((?:RouteKind::\w+\s*\|\s*)*RouteKind::\w+)\s*=>\s*/g;
@@ -425,35 +447,36 @@ function parseRustRouteSurface(source) {
         armBody = routeBody.slice(dispatchArm.lastIndex).split('\n', 1)[0];
       }
       if (/\bproxy_route\s*\(/.test(armBody)) {
-        for (const variant of variants) proxiedVariants.add(variant);
+        for (const variant of variants) seamVariants.add(variant);
       }
     }
-    if (proxiedVariants.size === 0) {
+    if (seamVariants.size === 0) {
       throw new Error(
         'the native Studio route dispatch contains no `proxy_route` arm; ' +
-        'the readiness checker refuses to guess the native/proxied split',
+        'the readiness checker refuses to guess the native/geometry-backend split',
       );
     }
-    for (const variant of proxiedVariants) {
+    for (const variant of seamVariants) {
       if (!classifiedVariants.has(variant)) {
         throw new Error(
-          `the native Studio dispatch proxies ${variant} but the classifier ` +
-          'never returns it; the readiness checker refuses the inconsistent table',
+          `the native Studio dispatch routes ${variant} through the geometry-backend seam ` +
+          'but the classifier never returns it; the readiness checker refuses the ' +
+          'inconsistent table',
         );
       }
     }
   }
 
   const nativeRoutes = new Set();
-  const proxiedRoutes = new Set();
+  const seamRoutes = new Set();
   for (const [routePath, variant] of classified) {
     for (const method of methodTable.get(variant)) {
       const key = routeKey(method, routePath);
-      if (proxiedVariants.has(variant)) proxiedRoutes.add(key);
+      if (seamVariants.has(variant)) seamRoutes.add(key);
       else nativeRoutes.add(key);
     }
   }
-  const routes = new Set([...nativeRoutes, ...proxiedRoutes]);
+  const routes = new Set([...nativeRoutes, ...seamRoutes]);
   if (routes.size === 0) {
     throw new Error(
       'the native Studio route table was parsed but contained no route-methods; ' +
@@ -463,7 +486,7 @@ function parseRustRouteSurface(source) {
   return {
     routeMethods: [...routes].sort(),
     rustNativeRouteMethods: [...nativeRoutes].sort(),
-    proxiedRouteMethods: [...proxiedRoutes].sort(),
+    geometrySeamRouteMethods: [...seamRoutes].sort(),
   };
 }
 
@@ -528,8 +551,13 @@ function analyzeStudioSources({ pythonSource, nativeSource }) {
     nativeRouteMethods,
     rustNativeRouteMethods: rustSurface.rustNativeRouteMethods,
     rustNativeRouteMethodCount: rustSurface.rustNativeRouteMethods.length,
-    proxiedRouteMethods: rustSurface.proxiedRouteMethods,
-    proxiedRouteMethodCount: rustSurface.proxiedRouteMethods.length,
+    geometrySeamRouteMethods: rustSurface.geometrySeamRouteMethods,
+    geometrySeamRouteMethodCount: rustSurface.geometrySeamRouteMethods.length,
+    // Deprecated compatibility alias: older consumers read the old field
+    // name, which described the same routes as "proxied" even though the
+    // default build answers them natively.
+    proxiedRouteMethods: rustSurface.geometrySeamRouteMethods,
+    proxiedRouteMethodCount: rustSurface.geometrySeamRouteMethods.length,
     missingRouteMethods,
     extraNativeRouteMethods,
     capabilities,
@@ -633,8 +661,13 @@ function checkStudioReadiness(options = {}) {
       routeMethods: analysis.nativeRouteMethods,
       rustNativeRouteMethodCount: analysis.rustNativeRouteMethodCount,
       rustNativeRouteMethods: analysis.rustNativeRouteMethods,
-      proxiedRouteMethodCount: analysis.proxiedRouteMethodCount,
-      proxiedRouteMethods: analysis.proxiedRouteMethods,
+      // The geometry-backend seam: answered natively by default; the Python
+      // worker is a development opt-in.
+      geometrySeamRouteMethodCount: analysis.geometrySeamRouteMethodCount,
+      geometrySeamRouteMethods: analysis.geometrySeamRouteMethods,
+      // Deprecated compatibility alias for older consumers.
+      proxiedRouteMethodCount: analysis.geometrySeamRouteMethodCount,
+      proxiedRouteMethods: analysis.geometrySeamRouteMethods,
     },
     missingRouteMethods: analysis.missingRouteMethods,
     extraNativeRouteMethods: analysis.extraNativeRouteMethods,
@@ -643,9 +676,9 @@ function checkStudioReadiness(options = {}) {
     pendingFeatures: analysis.pendingFeatures,
     summary: analysis.ready
       ? `native Studio front door covers all ${analysis.pythonRouteMethods.length} current Python route-methods and DTO capabilities ` +
-        `(${analysis.rustNativeRouteMethodCount} answered directly, ${analysis.proxiedRouteMethodCount} through the geometry-backend seam, native by default)`
+        `(${analysis.rustNativeRouteMethodCount} answered directly, ${analysis.geometrySeamRouteMethodCount} through the geometry-backend seam, answered natively by default)`
       : `native Studio front door covers ${coveredPythonRoutes} of ${analysis.pythonRouteMethods.length} current Python route-methods ` +
-        `(${analysis.rustNativeRouteMethodCount} answered directly, ${analysis.proxiedRouteMethodCount} through the geometry-backend seam); ` +
+        `(${analysis.rustNativeRouteMethodCount} answered directly, ${analysis.geometrySeamRouteMethodCount} through the geometry-backend seam); ` +
         `${analysis.missingRouteMethods.length} route-method(s) and ${analysis.missingCapabilities.length} capability field(s) remain`,
   };
 }
@@ -671,7 +704,7 @@ function formatReadinessReport(report) {
     `[native-readiness] native source ${report.native.sourceSha256} (${report.native.fileCount} files)`,
     `[native-readiness] internal worker route-methods (not public parity): ${report.python.internalRouteMethodCount}`,
     `[native-readiness] Rust-native route-methods (in-process): ${report.native.rustNativeRouteMethodCount}`,
-    `[native-readiness] proxied route-methods (Python geometry worker): ${report.native.proxiedRouteMethodCount}`,
+    `[native-readiness] geometry-backend seam route-methods (answered natively by default; Python worker is a development opt-in): ${report.native.geometrySeamRouteMethodCount}`,
   ];
   if (report.python.internalRouteMethods.length > 0) {
     lines.push('[native-readiness] worker-only route-methods:');
@@ -681,9 +714,9 @@ function formatReadinessReport(report) {
     lines.push('[native-readiness] Rust-native route-methods:');
     for (const route of report.native.rustNativeRouteMethods) lines.push(`  - ${route}`);
   }
-  if (report.native.proxiedRouteMethods.length > 0) {
-    lines.push('[native-readiness] proxied route-methods:');
-    for (const route of report.native.proxiedRouteMethods) lines.push(`  - ${route}`);
+  if (report.native.geometrySeamRouteMethods.length > 0) {
+    lines.push('[native-readiness] geometry-backend seam route-methods:');
+    for (const route of report.native.geometrySeamRouteMethods) lines.push(`  - ${route}`);
   }
   if (report.missingRouteMethods.length > 0) {
     lines.push('[native-readiness] missing route-methods:');

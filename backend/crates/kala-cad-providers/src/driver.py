@@ -107,6 +107,7 @@ try:
             "measurement": result.get("measurement"),
             "freecad_version": result.get("freecad_version"),
             "warnings": list(result.get("warnings") or []),
+            "ineffective_cuts": result.get("ineffective_cuts"),
             "valid": result.get("valid"),
             "artifacts": artifacts,
         }

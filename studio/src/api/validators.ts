@@ -31,6 +31,9 @@ import type {
   JournalPage,
   JournalVerify,
   ProviderId,
+  ProviderModel,
+  ProviderModelCatalog,
+  ProviderModelPricing,
   SectionBounds2D,
   SectionLoop,
   SectionPlane,
@@ -52,7 +55,15 @@ export class StudioValidationError extends Error {
 
 const DESIGN_ID_PATTERN = /^[0-9a-f]{64}$/;
 const HEX64_PATTERN = /^[0-9a-f]{64}$/;
-const PROVIDER_IDS: ReadonlyArray<ProviderId> = ['local', 'openai', 'openrouter', 'codex'];
+const PROVIDER_IDS: ReadonlyArray<ProviderId> = [
+  'local',
+  'openai',
+  'openrouter',
+  'codex',
+  'claude_code',
+  'codex_cli',
+  'opencode_cli',
+];
 
 function describe(value: unknown): string {
   if (value === null) return 'null';
@@ -583,6 +594,82 @@ export function parseJournalVerify(value: unknown, path = 'journal/verify'): Jou
       firstBad === undefined || firstBad === null
         ? null
         : requirePositiveInteger(firstBad, `${path}.first_bad_sequence`),
+  };
+}
+
+// --- Model catalog ------------------------------------------------------------
+
+/**
+ * One model row of `GET /api/studio/providers/{id}/models`.
+ *
+ * The rules are the backend's own: `free` is true when both prices are zero
+ * or the id ends with `:free`. A payload that carries a non-numeric price or
+ * a non-boolean `free` is a contract break and is refused; a field the
+ * backend may honestly omit (context length, pricing, tool support) is
+ * carried as "not reported" rather than filled in.
+ */
+function parseProviderModel(value: unknown, path: string): ProviderModel {
+  const source = requireObject(value, path);
+  const id = requireString(source['id'], `${path}.id`);
+  const name = source['name'] === undefined ? id : requireString(source['name'], `${path}.name`);
+  const contextLength = source['context_length'];
+  const pricing = source['pricing'];
+  const free = source['free'];
+  const supportsTools = source['supports_tools'];
+  return {
+    id,
+    name,
+    context_length:
+      contextLength === undefined || contextLength === null
+        ? null
+        : requireFiniteNumber(contextLength, `${path}.context_length`),
+    pricing:
+      pricing === undefined || pricing === null
+        ? null
+        : parseProviderModelPricing(pricing, `${path}.pricing`),
+    free: free === undefined ? id.endsWith(':free') : requireBoolean(free, `${path}.free`),
+    supports_tools:
+      supportsTools === undefined || supportsTools === null
+        ? null
+        : requireBoolean(supportsTools, `${path}.supports_tools`),
+  };
+}
+
+function parseProviderModelPricing(value: unknown, path: string): ProviderModelPricing {
+  const source = requireObject(value, path);
+  return {
+    prompt: requireFiniteNumber(source['prompt'], `${path}.prompt`),
+    completion: requireFiniteNumber(source['completion'], `${path}.completion`),
+  };
+}
+
+/**
+ * Validate the catalog envelope.
+ *
+ * `provider`, `source` and `models` are required; `fetched_at` and `error`
+ * are optional (a timestamp format the UI does not need, and the honest
+ * "the list could not be fetched" signal).
+ */
+export function parseProviderModelCatalog(
+  value: unknown,
+  path = 'providers/{id}/models',
+): ProviderModelCatalog {
+  const source = requireObject(value, path);
+  const fetchedAt = source['fetched_at'];
+  const error = source['error'];
+  return {
+    provider: requireString(source['provider'], `${path}.provider`),
+    source: source['source'] === undefined ? '' : requireString(source['source'], `${path}.source`),
+    fetched_at:
+      fetchedAt === undefined || fetchedAt === null
+        ? null
+        : typeof fetchedAt === 'number'
+          ? requireFiniteNumber(fetchedAt, `${path}.fetched_at`)
+          : requireString(fetchedAt, `${path}.fetched_at`),
+    models: requireArray(source['models'], `${path}.models`).map((item, index) =>
+      parseProviderModel(item, `${path}.models[${index}]`),
+    ),
+    error: error === undefined || error === null ? null : requireString(error, `${path}.error`),
   };
 }
 

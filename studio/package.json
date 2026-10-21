@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Kala Studio desktop UI — standalone React + Three.js workspace for parametric mechanical design",
+  "desktopName": "kala-studio.desktop",
   "author": {
     "name": "Kala Agent contributors"
   },

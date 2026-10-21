@@ -71,7 +71,7 @@ recorded as such; a review that recommends **ACCEPT** is recorded as such.
 | `src/kala_agent/studio/geometry/{limits,primitives,meshes,stl}.py` (analytic preview meshes, binary STL) | `kala-geometry` | accepted, **on the default path** — the `native-geometry` feature enables `native-primitives` (§2.3) | 32 (16 unit, 8 validation, 4 fixture, 3 invariants, 1 differential) | corpus `geometry_stl.json` 6 meshes + 3 byte-exact STL digests; live Python differential, 0 mismatches | `geometry` REVIEW-1 |
 | `src/kala_agent/studio/geometry/step.py` (the OCP STEP export) | `kala-step` — `export_step_primitive`, `StepExporter`, `probe_capability` | accepted, **on the default path** — the `native-geometry` feature enables `native-primitives` (§2.3) | 35 (16 native export, 9 lib, 7 CLI, 1 OCP differential, 1 FreeCAD differential, 1 doc) | independent OCP **and** FreeCAD re-import of the emitted solid; 28 structural cases | `step` (round 1) |
 | `src/kala_agent/persistence/artifacts.py` (the content-addressed store) | `kala-artifacts` — `ContentAddressedArtifactStore` | accepted | 44 (17 semantics, 12 security, 8 concurrency, 4 lib, 3 cross-reader) | Python↔Rust cross-reader of the same store; 0 mismatches | `artifacts` REVIEW-1, REVIEW-2 |
-| `src/kala_agent/studio/**` — the *public* Studio server (`server.py`, `cli.py`, `settings.py`, `providers/**`, `boundary.py`, `middleware.py`, `errors.py`, `schemas.py`, `static.py`) | `kala-studio` — the **front door and the native geometry backend** (the HTTP boundary, the settings/token stores, the static UI, the chat providers, the CAD-provider routing, and the design, drawing, section, import, journal, intent and CAD-provider routes) | accepted, **on the product path** (§3.1) — the Python geometry worker is now a **development-only opt-in** | 175 | `python_differential.py` **268 cases, 0 mismatches**; `worker_differential.py` **292 cases, 0 mismatches, 0 known gaps**; `python_provider_dto_oracle.py` 20 cases, 0 failures; `replay_binary_corpus.py` **56 cases, 0 mismatches** (§5) | `studio` REVIEW-1…4; `r1-worker-mode`; `r2-studio-proxy`; `r2-followup`; `r2-chat-providers`; `r2-datadir-fix`; `delivery` REVIEW-1/2; `rust-e2e-qa`; `cad-r2`; `cad-r3`; `native-journal`; `native-design`; `packaging` |
+| `src/kala_agent/studio/**` — the *public* Studio server (`server.py`, `cli.py`, `settings.py`, `providers/**`, `boundary.py`, `middleware.py`, `errors.py`, `schemas.py`, `static.py`) | `kala-studio` — the **front door and the native geometry backend** (the HTTP boundary, the settings/token stores, the static UI, the chat providers, the CAD-provider routing, and the design, drawing, section, import, journal, intent and CAD-provider routes) | accepted, **on the product path** (§3.1) — the Python geometry worker is now a **development-only opt-in** | 175 | `python_differential.py` **268 cases, 0 mismatches**; `worker_differential.py` **295 cases, 0 mismatches, 0 known gaps**; `python_provider_dto_oracle.py` 20 cases, 0 failures; `replay_binary_corpus.py` **56 cases, 0 mismatches** (§5) | `studio` REVIEW-1…4; `r1-worker-mode`; `r2-studio-proxy`; `r2-followup`; `r2-chat-providers`; `r2-datadir-fix`; `delivery` REVIEW-1/2; `rust-e2e-qa`; `cad-r2`; `cad-r3`; `native-journal`; `native-design`; `packaging` |
 
 ### 2.2 The standalone crates — own workspace, own lock
 
@@ -374,8 +374,7 @@ Each item below is **open**. None of them is a claim that something is done.
   | Field | Value |
   |---|---|
   | Path | `studio/release/kala-studio-0.1.0-x86_64.AppImage` |
-  | Size | **163 642 516 bytes** (156.1 MiB) |
-  | SHA-256 | `b069b7d4b73f8ae01b166744b61f090455ef989ce348f360826ccfd69aaba31e` |
+  | Size and SHA-256 | see [packaging/linux/README.md](../packaging/linux/README.md#the-built-artefact-size-and-sha-256) — the digest changes with every rebuild, so it is recorded there only |
   | Signature | **none** — the AppImage is unsigned |
 
   The smoke ran from the extracted image under a literal `env -i`: the backend
@@ -486,7 +485,7 @@ those models against the live Pydantic models.
 | **kernel D1** — policy `decide()` dropped the accountable actor from a non-approved decision | `kala-kernel` | `kernel-review` recommended **REPAIR**. The current source passes the actor on that path; no separate repair-acceptance report was filed, so the closure is recorded here as "the source carries the fix", not as an accepted re-review. |
 | ~~`replay_binary_corpus.py` is red — 56 cases, 5 mismatches~~ | `backend/crates/kala-studio/tests/replay_binary_corpus.py` | **closed (2026-10-20)**. The harness now normalises the corpus' own declared volatile paths and the native identity; it reports **56 cases, 0 mismatches** (§5.7). |
 | ~~`corpus_fixture.rs` fails in the parked build~~ | `backend/crates/kala-studio/tests/corpus_fixture.rs` | **closed (2026-10-20)**. The test now follows the feature that actually links the STEP exporter and asserts the regenerated 56-case corpus; it passes in the default build (2 tests). |
-| ~~the six new Studio routes are not in the 268-case differential~~ | the Rust front door | **closed (2026-10-20)**. The routes are answered natively and the 292-case worker differential covers them; the six routes are in the corpus and in the 292 cases. |
+| ~~the six new Studio routes are not in the 268-case differential~~ | the Rust front door | **closed (2026-10-20)**. The routes are answered natively and the 295-case worker differential covers them; the six routes are in the corpus and in the 295 cases. |
 
 ### 5.7 The corpus replay, precisely
 
@@ -504,7 +503,7 @@ step structural (real ISO 10303-21 solid): 2
 skipped for library body-limit config: 2
   skip studio.negative.oversized_declared: requires 16,384-byte library config; covered by corpus_fixture
   skip studio.negative.oversized_chunked: requires 16,384-byte library config; covered by corpus_fixture
-corpus digest: 53dcb9da105589b5a92d37b16d63c7fe2d5e60b7630549102127e019c95dff28
+corpus digest: c0003bae333f27a079adcf3e86f2618741a6606334a17ffe3fafe727fcd6c330
 mismatches: 0
 ```
 
@@ -514,10 +513,17 @@ the wall clock of the write) and the one **host-evidence** case
 (`studio.cad_providers`, the recorded CAD-provider probe of the machine that
 generated the corpus) is compared against the current host's probe. The two
 skips need the 16 384-byte library body-limit configuration and are covered
-by `corpus_fixture`. The corpus digest is unchanged.
+by `corpus_fixture`. The digest in that output (`c0003bae…`) is the corpus
+the replay ran against. It was regenerated when the artifact-download route
+landed, so it is not the digest the 2026-10-20 cutover run compared against.
+On 2026-10-21 the corpus was regenerated again (corpus-hermetic: normalised
+bodies are frozen by their normalised length, so `--check` no longer depends
+on the TMPDIR path length) to `39e0c0a9…`, which `corpus_fixture.rs` pins
+now. `studio_http.json` is byte-identical across that change, so this replay
+result stands.
 
 The two live differentials are green as well: `python_differential.py` is
-**268 cases, 0 mismatches** and `worker_differential.py` is **292 cases, 0
+**268 cases, 0 mismatches** and `worker_differential.py` is **295 cases, 0
 mismatches, 0 known gaps**.
 
 ### 5.8 The test-data hygiene work
@@ -570,15 +576,15 @@ not opened, read, written or listed by any of them.**
 | `cd backend/crates/kala-cad && cargo test --locked --release` | **118 passed** (the phase-2 OCCT adapter) |
 | `cd backend/crates/kala-studio-journal && cargo test --locked --release` | **60 passed** (the native session journal) |
 | `cd backend/crates/kala-cad-providers && cargo test --locked --release` | **40 passed** (the CAD provider connections) |
-| `cd backend && ../.venv/bin/python crates/kala-studio/tests/worker_differential.py` | **292 cases, 0 mismatches, 0 known gaps** |
+| `cd backend && ../.venv/bin/python crates/kala-studio/tests/worker_differential.py` | **295 cases, 0 mismatches, 0 known gaps** |
 | `cd backend && ../.venv/bin/python crates/kala-studio/tests/python_differential.py` | **268 cases, 0 mismatches** |
 | `cd backend && ../.venv/bin/python crates/kala-studio/tests/python_provider_dto_oracle.py` | **20 cases, 0 failures** |
-| `cd backend && ../.venv/bin/python crates/kala-studio/tests/replay_binary_corpus.py` | **56 cases, 0 mismatches**; `exact: 48`, `fields: 4`, `step structural: 2`, `skipped: 2`; corpus digest `53dcb9da…` (§5.7) |
+| `cd backend && ../.venv/bin/python crates/kala-studio/tests/replay_binary_corpus.py` | **56 cases, 0 mismatches**; `exact: 48`, `fields: 4`, `step structural: 2`, `skipped: 2`; corpus digest `c0003bae…` (§5.7) |
 | `cd studio && npm run typecheck` | **exit 0** |
 | `cd studio && npm test` | **43 files, 628 tests passed** |
 | `cd studio && npm run build` | **exit 0** (the pre-existing `three` >500 kB warning) |
 | `env -i … node packaging/linux/smoke-appimage.mjs --require-geometry --require-freecad` | **PASS** — the extracted AppImage, `PATH=""` in phase 1, the host FreeCAD in phase 2 (§5.1) |
-| `sha256sum studio/release/kala-studio-0.1.0-x86_64.AppImage` | `b069b7d4b73f8ae01b166744b61f090455ef989ce348f360826ccfd69aaba31e`, 163 642 516 bytes |
+| `sha256sum studio/release/kala-studio-0.1.0-x86_64.AppImage` | see [packaging/linux/README.md](../packaging/linux/README.md#the-built-artefact-size-and-sha-256) — the digest moves with every rebuild |
 | the workspace root `cargo test --workspace --locked --release` per-crate split | `kala-json` 33, `kala-persistence` 65, `kala-geometry` 32, `kala-budget` 65, `kala-step` 35, `kala-artifacts` 44, `kala-studio` 175 (of which the new `native_geometry` suite is 10) |
 
 The counts of the **other** standalone crates in §2.2 are **not** re-run in
@@ -657,10 +663,11 @@ this pass; they stand as filed in their cell reports:
   retired from the package and survives only as a development opt-in and as
   the oracle.
 - **The Linux deliverable exists**: an **unsigned** AppImage,
-  `studio/release/kala-studio-0.1.0-x86_64.AppImage`, 163 642 516 bytes,
-  sha256 `b069b7d4b73f8ae01b166744b61f090455ef989ce348f360826ccfd69aaba31e`,
+  `studio/release/kala-studio-0.1.0-x86_64.AppImage` (its size and
+  SHA-256 are recorded in
+  [packaging/linux/README.md](../packaging/linux/README.md#the-built-artefact-size-and-sha-256)),
   smoke-tested end to end from the extracted image under a literal `env -i`.
-- **The differentials are green**: 292 / 268 / 20 / 56 at **0 mismatches**
+- **The differentials are green**: 295 / 268 / 20 / 56 at **0 mismatches**
   against the live Python reference with the native backend, and every
   declared difference is written down (§4).
 - **Two things are deliberately still Python**: the FreeCAD adapter (it runs

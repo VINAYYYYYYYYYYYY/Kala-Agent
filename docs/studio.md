@@ -4,7 +4,7 @@
 > builds, measures and shows today, and the limits a user must understand
 > before trusting anything on the screen.
 >
-> **Current state (2026-10-20).** The studio is **Rust-only** (ADR-0010
+> **Current state (2026-10-21).** The studio is **Rust-only** (ADR-0010
 > phase 2). The shipped app runs the native `kala-studio` service and
 > **no Python process at all**; the geometry comes from the **real
 > OpenCascade 7.9.3** through the `kala-cad` adapter. The Python geometry
@@ -198,10 +198,11 @@ chat prompt ──► DesignIntent (template call, or a raw ConstructionScript
 ```
 
 The viewer is a separate statement from the measurer. The viewport says
-`view: OpenCascade import (view-only)` for every provider, and
-`view: OpenCascade (opt-in) build` only when the selected provider **is**
-`opencascade` — the native `kala-cad` adapter, which is then both the
-builder and the viewer.
+`view: OpenCascade import (view-only) of the FreeCAD STEP` — or of the
+Solid Edge STEP, or of the OpenCascade (opt-in) STEP — **for every
+provider**. The picture on the screen is always the OpenCascade *import*
+of the provider's STEP; the label never claims that the OpenCascade kernel
+built the geometry the operator is looking at.
 
 The local helper is a **strict parser**: it reads the prompt into a
 declared intent, and when a value is missing it asks for exactly that value
@@ -212,6 +213,318 @@ and **one** repair round-trip is allowed before the turn fails honestly.
 
 The studio also refuses to build a design from an *unparseable* prompt: the
 answer asks for the missing values and no design is compiled.
+
+## Design checks and limits
+
+Everything in this section is enforced by the code, and every number is a
+measured or a configured value — never an estimate.
+
+### The whole-design budget
+
+| bound | value | where it is enforced |
+|---|---|---|
+| components per script | **64** | the construction contract |
+| steps per component | **500** | the construction contract |
+| **steps in the whole script** | **500** | the construction contract: the steps of every component **plus** the assembly steps |
+| assembly steps | 16 | the construction contract |
+| Solid Edge parts | **8** | the bridge wire cap |
+
+A script with 500 steps is accepted and a script with 501 is refused, with
+the message `a script may use at most 500 steps in total; this one uses
+501`. The same budget is stated to the model in the design instruction, so
+the model knows the number it may spend.
+
+**Solid Edge refuses more than 8 parts.** The bridge protocol caps a
+procedure at 8 parts, so a script that compiles to more is refused before
+it reaches the bridge: `the script has 9 components; the wire cap is 8
+parts`. The protocol's 600-operation cap is kept as a second line of
+defence, but a contract-valid script cannot reach it: with at most 8 parts
+and at most 500 steps the maximum is 543 operations. **The parts cap is
+the real Solid Edge limit**, and it is much lower than the script budget.
+
+### The build deadline, and what a big build costs
+
+| item | value |
+|---|---|
+| FreeCAD provider wall time | **1 800 s** by default (up to 3 600 s) |
+| FreeCAD adapter deadline | **1 800 s** |
+| OpenCascade compile budget | **60 s** |
+
+Measured on FreeCAD 1.1.4 with the real `FreeCADCmd`:
+
+| design | steps | pockets | wall time |
+|---|---:|---:|---|
+| a 200 × 200 × 5 plate with a 10 × 10 grid of Ø3 holes | 202 | 100 | **58.8 s** in the provider, **59.8 s** through the Studio |
+| the same plate with 3 holes off the plate | 202 | 100 | ≈ 57 s |
+| a 2 000 × 2 000 × 5 plate with 249 Ø6 holes | 500 | 249 | **1 009.5 s (16.8 min)** idle, **1 250 s (20.8 min)** under load |
+
+So a **500-step FreeCAD build takes roughly 17–21 minutes**. The 1 800 s
+deadline covers it with margin when the host is idle and with less when it
+is loaded, but it is not a pleasant chat turn. The cost is superlinear in
+the number of pockets (100 pockets ≈ 59 s, 249 pockets ≈ 1 009 s), because
+every pocket recomputes the body to measure what it removed. The
+OpenCascade path is far quicker: the same 100-hole plate builds through the
+Studio in **3.2 s** (2.5 s of compile time), and the 500-step plate
+compiles in **16.9 s**.
+
+### The check rows
+
+A build's `checks[]` are computed from the provider's own facts. Their
+ids are:
+
+| id | when it appears | expected | measured |
+|---|---|---|---|
+| `brep_valid` | always | `true` | the provider's B-Rep validity |
+| `single_solid` | when the script expects exactly one solid | `1` | the provider's solid count |
+| `solid_count` | when the script expects more than one solid | the script's solid count | the provider's solid count |
+| `envelope_x`, `envelope_y`, `envelope_z` | when the intent declares an envelope | the declared bounds on that axis | the measured bounds on that axis |
+| `cuts_effective` | **only when a cut removed no material** | the number of pocket steps in the script | the number of pockets that removed material |
+
+`cuts_effective` has tolerance `0.0` and unit `cut`, and it is the row
+that makes a design with a dead cut **`verified: false`**. It is
+**appended only for that failure**, so a passing design keeps its exact
+check list and its exact digest.
+
+### The cut rules
+
+**The same-plane pocket rule.** A pocket cuts into material that its own
+component already has at that step, and the pocket's sketch plane must be
+the plane of the sketch that produced the current solid. A script that
+breaks the rule is refused before any build is attempted, with
+
+```
+component '<name>': pocket at step index <i> on <PLANE> over a <SOLID_PLANE> solid
+```
+
+as a `422 invalid_request` detail.
+
+**The per-pocket warning.** A cut that removes no material is reported,
+never claimed as a removal. FreeCAD measures the feature's volume before
+and after the pocket; OpenCascade compares the solid's volume before and
+after the cut. The warning names the component, the step index and the
+plane:
+
+```
+component '<name>': pocket at step index <i> on <PLANE> removed no material
+```
+
+The warning list shown on screen is bounded to **16** entries — the first
+14 verbatim, then at most two summary lines
+(`… and 486 more pockets removed no material`, `… and 5 more warnings`) —
+but the **exact** number of ineffective cuts is preserved, so
+`cuts_effective` stays exact even for a 500-pocket design.
+
+### One repair round per turn
+
+A design turn spends **at most one repair call in total**, and that one
+call is **shared** by the two ways a turn can go wrong:
+
+| what went wrong | is the repair spent? |
+|---|---|
+| the reply did not validate as a DesignIntent | yes — the **validation** repair |
+| the design built but did not verify, or the builder refused the script | yes — the **build** repair |
+| the CAD provider is not available on this host | no |
+| the host has no native kernel | no |
+| no CAD target was chosen | no |
+| the design built and verified | no |
+
+The **validation** repair prompt carries: the full design instruction, the
+full DesignIntent JSON Schema, **the model's own previous JSON block**,
+the validation error (bounded to 512 characters), a schema excerpt for the
+failing field (bounded to 700 characters) and the user's request,
+unchanged. The model therefore sees exactly what it wrote before, not a
+summary of it.
+
+The **build** repair prompt carries: the same instruction, the build
+feedback (the failed check rows, the provider's warnings and the refusal),
+the script the model sent (bounded to 200 000 characters) and the user's
+request.
+
+If the repair call itself fails, the **first build is kept** and the turn
+still answers `200` with the honest reason (`the repair attempt failed:
+provider_timeout.`). A turn never claims a verification its design does
+not carry.
+
+### The reply and the design are read from different places
+
+The **displayed** reply text is bounded to **4 096 characters**. The
+**design** is extracted from the **full** reply, so a long script is never
+cut in the middle of its JSON: a reply of more than 6 000 characters with
+a 100-pocket design still builds, and the text the operator reads has the
+design block removed.
+
+## Downloading what a design stored
+
+A design stores its files in the content-addressed store under the studio
+data directory. The **download route** serves those exact bytes:
+
+```
+GET /api/studio/design/{design_id}/artifact/{kind}
+```
+
+`kind` is an exact allow-list of four names — `script`, `step`, `fcstd`,
+`stl` — and **only the kinds that design actually stored** can be
+downloaded. A kind the design did not store is a `404 artifact_not_found`
+with the detail `design_id=<id>; kind=<kind>`.
+
+| what | value |
+|---|---|
+| `design_id` | a 64-character lowercase hex sha256; anything else is `422 invalid_request` |
+| an unknown `kind` | `422 invalid_request`, and the detail names the four allowed kinds |
+| a kind the design did not store | `404 artifact_not_found` |
+| a stored object above **64 MiB** | `413 artifact_too_large` |
+| a stored object that does not hash to its journalled digest | `500 artifact_digest_mismatch` — a refusal, not a download |
+| no bearer | `401` (the route carries its own bearer gate, like `/drawing` and `/journal`) |
+
+**The bytes are the stored bytes.** The service reads the object out of the
+store, re-hashes it, compares it with the sha256 the journal recorded, and
+refuses the download on a mismatch — so a download can never hand over a
+file that is not the file the design was measured with. The bytes are never
+re-exported from the model.
+
+The response headers are:
+
+| header | value |
+|---|---|
+| `content-type` | `application/json` (script), `application/step` (step), `model/stl` (stl), `application/octet-stream` (the native document) |
+| `content-disposition` | `attachment; filename="<label-slug>-<digest8>.<ext>"` |
+| `x-studio-design-id` | the design the bytes belong to |
+| `x-studio-digest` | the sha256 the bytes hash to |
+| `x-studio-artifact-kind` | the kind that was served |
+
+The **filename** is the design's label, slugged: ASCII alphanumerics are
+lowercased, every other run of characters becomes a single `-`, the result
+is bounded to **40 characters**, and a label with no usable character
+becomes `kala-studio`. The extension follows the kind — `json`, `step`,
+`stl`, and `FCStd` for the provider's own native document. A hostile label
+cannot escape the filename: the slug keeps it to a bounded, alphanumeric
+name.
+
+The **UI** offers the download next to every digest chip: the **design
+card** in the chat panel (the script chip, the STEP chip and the provider's
+native chip) and the **export panel** (the same three chips). Each button
+saves the bytes under the backend's own `content-disposition` filename and
+writes a receipt into the local ledger (`Saved <filename>`, plus the byte
+count and the first eight characters of the digest). A refusal is shown
+verbatim as `code: message`.
+
+Two honest notes. The **`stl`** kind exists in the route, but the studio
+only stores an STL when the design was exported as one, and the chat and
+export panels offer no STL chip — an STL download is an API call today.
+And the **native chip** offers a button only when the provider's format is
+one the route can serve: a FreeCAD design offers `fcstd`, a provider whose
+native format is `stp` or `step` offers the STEP download, and a provider
+with an unknown native format offers no button rather than a broken one.
+
+## Cancelling a turn
+
+The Cancel button in the chat panel aborts the browser's request. The
+backend's request future is dropped with it, and the native service turns
+that drop into a real stop:
+
+* A **cancellation token** is created for the design turn and checked at
+  every **phase boundary**: validation → intent, probe → build request,
+  build → import, import → measure/journal, and again before each
+  `artifact.stored` / `design.*` event of the post-build record.
+* The **FreeCAD build is killed**, not asked to stop: the provider's own
+  process group is terminated, and the killed build is reported as a
+  *cancellation*, never as a "build refused".
+* The **in-process OpenCascade build cannot be interrupted mid-operation**:
+  the token is honoured at the next phase boundary, so the worst case is
+  one **60 s** compile that finishes before the turn stops. The FreeCAD
+  build is the long case (up to 1 800 s), and that one dies promptly.
+* The **subscription CLI** turns die with their **whole process group** —
+  `SIGKILL` to the group on Unix, `taskkill /T /F` on Windows — because
+  the guard that owns the group is dropped with the request future. See
+  [studio-providers.md](studio-providers.md#the-180-s-budget-and-killing-the-whole-process-tree).
+* The **journal** records **exactly one** `design.cancelled` event, with
+  the design id and a bounded reason and nothing else — no prompt, no
+  credential, no provider output. The reason is the honest one
+  (`the client disconnected, so the design turn stopped`, or the
+  provider's `the FreeCAD build was cancelled; the FreeCADCmd process group
+  was stopped`). **No later `design.*`, `provider.build.*`,
+  `artifact.stored` or `chat.turn` event is written**, so a cancelled turn
+  is never journaled as a design.
+* The service's own refusal for a cancelled turn is a `499
+  design_cancelled` — *"the client closed the request, so the design turn
+  was stopped"*. The client that closed the request is, of course, the one
+  that will not read it.
+
+The UI says exactly that: the turn line reads `Cancelled — the backend
+stopped the turn.` and the local ledger records `Turn cancelled — the
+backend stopped it`. A timeout is still a timeout and is reported as one.
+
+**The Python reference cannot cancel a running build.** Its `/design`
+route is synchronous inside the FastAPI thread pool, and the event loop
+cannot drop a thread, so a disconnected client does not stop that build.
+The reference says so in its own `DesignService.design` docstring rather
+than pretending a cancelled turn stopped. The **native Rust service is the
+shipped path**, and the cancellation described above is native-only.
+
+## What the workspace shows you
+
+These are the behaviours of the shipped Studio UI. Each of them states a
+fact the studio can actually back.
+
+* **A live elapsed clock while a turn is in flight.** The pending row
+  carries a running counter (`0 ms`, `1.2 s`, `m:ss`) that starts when the
+  request leaves the browser and stops when the reply lands. It is a text
+  update, not an animation, and it is `aria-hidden`, so the surrounding
+  status region announces *"Awaiting response…"* once and not once a
+  second. The same formatter produces the post-reply `(1.2 s)` chip, so
+  the two can never disagree.
+* **A client deadline for a chat turn.** The deadline is **derived from
+  the backend**, not pinned in the UI: `/health` publishes the backend's
+  own worst-case design-turn budget (`design_turn_budget_seconds`), and
+  the client adds **5 minutes** to it. With the shipped budget of
+  **3 960 s** (66 min) the browser abandons an unanswered turn after
+  **71 minutes**; a backend that reports no usable budget falls back to
+  **70 minutes**. It is a *client* safety net for a wedged backend, not a
+  limit on how long a turn may take: the backend's own budget is two
+  model calls of up to 180 s each plus two CAD builds of up to 1 800 s
+  each. A timeout is reported as a timeout; an operator cancellation
+  stays a cancellation, with its own message.
+* **A download button on every stored file.** The design card and the
+  export panel each carry a `download` button next to the script, the
+  STEP and the provider's native digest chips. The button saves the
+  **stored bytes** under the backend's own filename and writes a receipt
+  (`Saved <filename>` and the digest) into the local ledger; a refusal
+  is shown verbatim.
+* **A cancellation that says what happened.** A cancelled turn reads
+  `Cancelled — the backend stopped the turn.` and the ledger records
+  `Turn cancelled — the backend stopped it`. The wording is not
+  "Request cancelled", because the backend really does stop the work.
+* **Keyboard access to the 3D viewport.** The viewport is focusable and
+  answers the **arrow keys** (orbit), **`+` / `-`** (zoom) and **`0`**
+  (reset the view). Every other key is left to the browser. The viewport
+  announces its own keys in its accessible name.
+* **Honest view and source labels.** The viewport, the HLR sheet and the
+  AuxView footer all say the same thing: the picture is the **OpenCascade
+  import** of the provider's STEP (`view: OpenCascade import (view-only)
+  of the FreeCAD STEP`, footer `VIEW: OCC IMPORT OF FREECAD STEP`), and
+  the drawing is `SOURCE: OCP HLR OF THE IMPORTED MODEL` — a hidden-line
+  view *of the imported model*. No label ever claims the kernel built the
+  geometry on screen.
+* **Honest default-model wording.** A reply that ran on the CLI's own
+  default model reads `Codex CLI default model (chosen by Codex)` (or the
+  Claude Code / OpenCode equivalent), never a model name the studio
+  invented. Under the model field the picker says that an empty field
+  means *"the CLI's own default model — the CLI does not report which
+  model it picked"*.
+* **The failed turn says so.** A `chat.turn` row that failed reads
+  `failed: <code>` instead of `design requested`, so a turn that died can
+  never read as a turn that was merely asked for.
+* **Real errors, where they happen.** A refused server preview is shown
+  in the inspector, on the drafting sheet and in the bottom bar; a failed
+  journal poll says the ledger below may be stale. The chain verdict is
+  untouched: a failed poll never claims `HASH-CHAIN OK`.
+* **One Codex row.** The provider picker shows one Codex entry, not two:
+  the historical `codex` id is the same route as `codex_cli`, and the
+  picker folds it into the canonical row.
+* **A key that cannot be cleared is not offered.** "Clear key" appears
+  only for a key the backend says it stored. A key that comes from the
+  environment carries the note that it is not stored by the Studio and
+  cannot be removed there.
 
 ## The journal, the ledger, and the two stamps
 
@@ -260,55 +573,64 @@ failure never lights `HASH-CHAIN OK`; a failed check never lights
 | Tab | With a design | Without a design |
 |---|---|---|
 | **Section A–A** | the kernel's section of the imported model: the exact area (`KERNEL AREA`), the offset, the outer/inner loop counts, a 45° ANSI hatch | the analytic profile of the active primitive |
-| **Ortho** | the kernel's hidden-line front/top/right views in third-angle order, labelled `SOURCE: OCP HLR · VIEW: IMPORT` | the AABB silhouettes of the live mesh |
+| **Ortho** | the kernel's hidden-line front/top/right views in third-angle order, labelled `SOURCE: OCP HLR OF THE IMPORTED MODEL` | the AABB silhouettes of the live mesh |
 | **Tolerance** | the **declared** tolerance list, labelled `declared — not analysed` | an explicit empty state |
 
 The tolerance tab never computes a fit, a limit or a GD&T call. It states
 plainly: *"The backend reports declared limits only. Kala Studio computes no
 fits, GD&T, or stack-up."*
 
-> The `SOURCE: OCP HLR` stamp is the **literal on-screen label** the UI
-> prints. The drawing behind it is now produced by the native `kala-cad`
-> adapter over the real OpenCascade 7.9.3; the label text was not changed
-> by the cutover.
+> The AuxView footer prints two honest labels: the source of the drawing
+> (`SOURCE: OCP HLR OF THE IMPORTED MODEL`) and the provenance of the model
+> it draws (`VIEW: OCC IMPORT OF FREECAD STEP`, or of the Solid Edge STEP,
+> or of the OpenCascade (opt-in) STEP). The drawing behind them is
+> produced by the native `kala-cad` adapter over the real OpenCascade
+> 7.9.3 — but it is a hidden-line view **of the imported STEP**, so the
+> label says exactly that.
 
 ## The API contract
 
-All routes live under `/api/studio`. The **Python reference surface is 15
-route-methods**; the native service answers **16** (the same 15 plus the
-ADR-0011 view-only import).
+All routes live under `/api/studio`. The **Python reference surface is 16
+route-methods**; the native service answers **18** (the same 16 plus the
+ADR-0011 view-only import and the provider model catalog).
 
-**All 16 are answered natively, in-process.** There is no proxied route and
-no Python process in the default path:
+**All 18 are answered natively, in-process.** In the default build no route
+is handed to a Python worker and no Python process runs at all:
 
 | Route | Owner |
 |---|---|
 | `GET /health` | the HTTP boundary and the capability probe |
 | `GET /integrations` | the integration registry |
 | `GET /providers` | the chat provider rows |
+| `GET /providers/{id}/models` | the provider model catalog (the live OpenRouter list, the static CLI alias lists) |
 | `GET /settings`, `POST /settings` | the settings and token stores |
 | `POST /chat` | the chat providers and the design turn |
 | `POST /preview`, `POST /export`, `POST /handoff` | the analytic primitives (`kala-geometry`, `kala-step`) |
 | `POST /design` | the native geometry backend |
 | `GET /design/{id}/drawing`, `GET /design/{id}/section` | the native geometry backend (the OCCT hidden-line drawing and the exact-area section) |
+| `GET /design/{id}/artifact/{kind}` | the native geometry backend (the stored script, STEP, native document or STL) |
 | `GET /journal`, `GET /journal/verify` | the native journal |
 | `GET /providers/cad` | the CAD provider connections |
 | `POST /import` | the native view-only STEP import |
 
-`POST /import` is the one **native-only** route: the ADR-0011 view-only
-STEP import exists on the service and on the Python reference server, but
-the Python public server does not mount it. The readiness scanner reports it
-as "native-only (allowed, not parity)" and does not count it as a
-difference.
+`POST /import` and `GET /providers/{id}/models` are the two **native-only**
+routes: the ADR-0011 view-only STEP import and the model catalog exist on
+the service, but the Python public server does not mount them. The
+readiness scanner reports them as "native-only (allowed, not parity)" and
+does not count them as a difference.
 
 `npm run check:native-readiness` in `studio/` parses the real Python and
-Rust sources and reports **READY**: **15** Python route-methods covered,
-**0** missing, **0** missing DTO capabilities, and the built stage
+Rust sources and reports **READY**: **16** Python route-methods covered,
+**0** missing, **0** missing DTO capabilities, **7** answered directly and
+**11** through the **geometry-backend seam**. That seam is answered by the
+**default** native build — the supervised Python worker is a development
+opt-in — and the report now names it that way instead of calling those
+route-methods "proxied". The built stage
 (`studio/release/native-readiness.json`) classifies the artefact `release`
-with `releaseEligible: true`. That report still *labels* ten route-methods
-"proxied" — they travel through the geometry-backend seam — but the default
-build answers all sixteen from the native backend, and the Python worker is
-opt-in.
+with `releaseEligible: true`. That file is a snapshot of the sources at
+build time; the final 2026-10-21 build regenerated it with the current
+split (11 route-methods through the geometry-backend seam, answered
+natively).
 
 Highlights:
 
@@ -319,6 +641,12 @@ Highlights:
   block reports the **native** geometry backend (`state: "ready"`,
   `version: "7.9.3"`); it reports the Python worker only when the
   development fallback is in use.
+- `GET /health` also publishes **`design_turn_budget_seconds`**: the
+  backend's own worst-case design-turn wall time, computed from the real
+  provider budgets as `2 × (180 s model call + 1 800 s build) = 3 960 s`
+  (66 min). The Studio client derives its own deadline from it (the budget
+  plus a 5-minute margin, with a 70-minute fallback), so the browser
+  never pins a number the design budget can outgrow.
 - `POST /chat` accepts `{provider, model, prompt, allow_remote}` plus the
   optional `cad_provider`, and returns `{text, provider, model, offline}`
   plus an optional `design` (the `DesignResult`) when the turn produced one.
@@ -326,6 +654,10 @@ Highlights:
   There is no default.
 - `GET /providers/cad` reports each provider's live availability, version
   and reason.
+- `GET /providers/{id}/models` answers the model catalog; see
+  [studio-providers.md](studio-providers.md#the-model-catalog).
+- `GET /design/{id}/artifact/{kind}` serves a design's stored bytes; see
+  [Downloading what a design stored](#downloading-what-a-design-stored).
 
 ### Security posture
 
@@ -476,7 +808,8 @@ and to the Python reference server; the native service answers the public
 routes itself:
 
 `POST /preview`, `POST /export`, `POST /handoff`, `POST /design`,
-`GET /design/{id}/drawing`, `GET /design/{id}/section`, `POST /import`,
+`GET /design/{id}/drawing`, `GET /design/{id}/section`,
+`GET /design/{id}/artifact/{kind}`, `POST /import`,
 `GET /journal`, `GET /journal/verify`, `POST /journal/append`,
 `POST /intent/parse`, `POST /intent/validate`, `GET /intent/schema`,
 `GET /providers/cad`.
@@ -525,10 +858,17 @@ Windows.
 - **No arbitrary LLM code execution.** Prompts are returned as text. The
   studio never evaluates prompt text as Python, CSG, or any other
   instruction language.
-- **The `codex` route is not implemented** in this build; it fails closed
-  with a sanitised `503` and sends no request.
-- **No app or OpenCode orchestration.** The studio does not drive other
-  applications, editors or agent runtimes.
+- **The subscription CLIs are chat providers, not app orchestrators.** The
+  studio runs Claude Code, Codex and OpenCode only to answer a chat turn,
+  with every tool denied, a read-only sandbox where the CLI offers one, a
+  sanitized environment and a private working directory. It does **not**
+  drive other applications, editors or agent runtimes, and it never asks
+  a CLI to touch the user's project. See
+  [studio-providers.md](studio-providers.md#the-three-subscription-clis).
+- **A subscription CLI's default model is not named.** The CLIs do not
+  report which model they picked, so the studio says
+  `Codex CLI default model (chosen by Codex)` instead of inventing a name.
+  Pin a model in the picker to see it named in the reply.
 
 ## How the desktop shell runs
 
@@ -547,7 +887,15 @@ child process with a random bearer token. It:
   `PYTHONHOME`, `KALA_STUDIO_PYTHON`, `KALA_STUDIO_DEV_BACKEND` and
   `KALA_STUDIO_GEOMETRY_WORKER` from the child environment;
 - shuts the back door down on `before-quit` and on startup failure, and does
-  not terminate unrelated processes.
+  not terminate unrelated processes;
+- **writes the backend's output to a bounded, rotating log** in Electron's
+  own log directory (`~/.config/kala-studio/logs/backend.log` on Linux,
+  `%APPDATA%\kala-studio\logs\backend.log` on Windows; at most five files
+  of 1 MiB each), with the bearer token scrubbed out of every line;
+- **reports a startup failure in a dialog** — the missing binary, the
+  early exit and the health timeout each open a modal that names what
+  failed, where the log is and the last lines of the log, before the app
+  exits.
 
 The browser-fallback path requires manual token entry. There is no
 auto-login and no third-party auth flow.
@@ -597,12 +945,14 @@ beyond what those sources state.
 - A **Solid Edge** build: it needs a Windows host with the ADR-0008 bridge,
   and no Solid Edge build has ever been executed.
 - A performance, memory or readiness number. No benchmark was run.
-- App/OpenCode orchestration; the studio only produces a neutral handoff.
+- App orchestration; the studio only produces a neutral handoff.
 
 The **Linux AppImage is built and smoke-tested**:
-`studio/release/kala-studio-0.1.0-x86_64.AppImage`, 163 642 516 bytes,
-sha256 `b069b7d4b73f8ae01b166744b61f090455ef989ce348f360826ccfd69aaba31e`,
-**unsigned**. The release workflow is written but was not pushed or run. See
+`studio/release/kala-studio-0.1.0-x86_64.AppImage`, **unsigned**. Its
+size and SHA-256 are recorded in
+[packaging/linux/README.md](../packaging/linux/README.md) — they change
+with every rebuild, so they are not duplicated here. The release workflow
+is written but was not pushed or run. See
 [studio-install.md](studio-install.md) and
 [studio-limitations.md](studio-limitations.md) for the complete honesty
 notes.

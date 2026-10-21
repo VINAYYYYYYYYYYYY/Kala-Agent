@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Kala Studio — application icon.
+
+  The mark is drawn in the Vellum Drafting Board language: a vellum sheet
+  (`#F6F3EB`) with a drafted hairline frame (`#C8C2B6`), a construction line
+  (`#DFDBD0`) and the K of Kala in Prussian blue (`#2B5B84`). Nothing is
+  filled, nothing is shaded and there is no gradient: it is a line drawing on
+  a sheet, the same way the workspace draws.
+
+  The strokes are deliberately heavy (64 of 512 units) so that the mark still
+  reads at 16 px, where the hairline frame and the construction line fall
+  away on their own.
+
+  This file is the source of truth. `icon.png` (512), `icon-256.png` and
+  `icon.ico` are generated from it with `rsvg-convert` and ImageMagick:
+
+      rsvg-convert -w 512 -h 512 icon.svg -o icon.png
+      rsvg-convert -w 256 -h 256 icon.svg -o icon-256.png
+      magick icon.png -define icon:auto-resize=256,128,64,48,32,16 icon.ico
+
+  Replace this file to replace the icon.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <title>Kala Studio</title>
+  <desc>A drafting mark in Prussian blue on vellum: the K of Kala drawn with drafting strokes inside a framed sheet.</desc>
+
+  <!-- the vellum sheet -->
+  <rect x="0" y="0" width="512" height="512" rx="96" fill="#F6F3EB"/>
+
+  <!-- the drafted sheet frame (hairline) -->
+  <rect x="26" y="26" width="460" height="460" rx="72" fill="none" stroke="#C8C2B6" stroke-width="6"/>
+
+  <!-- the construction line through the mark -->
+  <path d="M 116 256 H 396" fill="none" stroke="#DFDBD0" stroke-width="6"/>
+
+  <!-- the K: one stem, two drafting arms -->
+  <g fill="none" stroke="#2B5B84" stroke-width="64" stroke-linecap="butt" stroke-linejoin="miter">
+    <path d="M 176 140 V 372"/>
+    <path d="M 168 256 L 340 140"/>
+    <path d="M 168 256 L 340 372"/>
+  </g>
+</svg>

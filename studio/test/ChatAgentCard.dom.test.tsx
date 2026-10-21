@@ -7,6 +7,7 @@ import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 
 const mocks = vi.hoisted(() => ({
   postChat: vi.fn(),
+  getProviderModels: vi.fn(),
 }));
 
 vi.mock('../src/api/client', async (importOriginal) => {
@@ -14,11 +15,13 @@ vi.mock('../src/api/client', async (importOriginal) => {
   return {
     ...actual,
     postChat: mocks.postChat,
+    getProviderModels: mocks.getProviderModels,
   };
 });
 
 import { ChatPanel } from '../src/components/chat/ChatPanel';
 import { dispatch, resetStore } from '../src/state/store';
+import { pickProvider } from './providerFixtures';
 
 const BASE_URL = 'http://127.0.0.1:8765';
 
@@ -43,11 +46,18 @@ beforeEach(() => {
     version: '0.1.0',
     stepAvailable: false,
   });
+  mocks.getProviderModels.mockResolvedValue({
+    provider: 'local',
+    source: 'static',
+    fetched_at: null,
+    models: [],
+  });
 });
 
 afterEach(() => {
   cleanup();
   mocks.postChat.mockReset();
+  mocks.getProviderModels.mockReset();
   vi.restoreAllMocks();
 });
 
@@ -71,8 +81,7 @@ describe('agent card badge', () => {
     });
 
     const view = render(<ChatPanel />);
-    const provider = view.container.querySelector<HTMLSelectElement>('#chat-provider-select')!;
-    fireEvent.change(provider, { target: { value: 'local' } });
+    pickProvider(view.container, 'local');
     const textarea = view.container.querySelector<HTMLTextAreaElement>('textarea.chat-panel-prompt')!;
     fireEvent.change(textarea, { target: { value: 'size the bracket' } });
 

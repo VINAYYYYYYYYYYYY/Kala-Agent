@@ -5,6 +5,10 @@ import type { ReactElement } from 'react';
 // Keys are sent once to `POST /api/studio/settings` over loopback and stored
 // in the backend's owner-only `studio-settings.json`. The backend never
 // echoes secret values back to the browser.
+//
+// The subscription CLIs (Claude Code, Codex, OpenCode) are listed here too.
+// They carry no key: they use the session the operator's own CLI already
+// holds, and Kala never sees or stores those credentials.
 
 import {
   getSettings,
@@ -14,7 +18,8 @@ import {
   StudioNetworkError,
 } from '../../api/client';
 import { dispatch, useUiState } from '../../state/store';
-import type { CredentialProviderId, ProviderCredentialStatus } from '../../types/studio';
+import { describeProviderStatus, isSubscriptionProvider } from '../../providerPolicy';
+import type { CredentialProviderId, CredentialSource, ProviderCredentialStatus } from '../../types/studio';
 
 const CONFIGURABLE_PROVIDERS: ReadonlySet<string> = new Set(['openai', 'openrouter']);
 
@@ -52,6 +57,10 @@ export function ProviderPanel({ compact = false }: { compact?: boolean }): React
     setBusyProvider(providerId);
     setStatusByProvider((prev) => ({ ...prev, [providerId]: '' }));
     setErrorByProvider((prev) => ({ ...prev, [providerId]: '' }));
+    // The credential source decides what "cleared" may claim. A key that
+    // comes from the environment is not removed by clearing the stored
+    // entry, so the message must not claim that it was.
+    const wasStored = credentialSourceFor(providerId) === 'stored';
     try {
       const updated = await postSettings(connection.connection, {
         provider: providerId,
@@ -61,7 +70,11 @@ export function ProviderPanel({ compact = false }: { compact?: boolean }): React
       dispatch({ type: 'server/settings', settings: updated });
       setStatusByProvider((prev) => ({
         ...prev,
-        [providerId]: rawKey ? 'API key saved on backend.' : 'API key cleared.',
+        [providerId]: rawKey
+          ? 'API key saved on backend.'
+          : wasStored
+            ? 'Stored API key cleared.'
+            : 'The stored API key entry was cleared; the key in the environment is still in force.',
       }));
     } catch (cause) {
       setErrorByProvider((prev) => ({
@@ -73,10 +86,18 @@ export function ProviderPanel({ compact = false }: { compact?: boolean }): React
     }
   }
 
+  /** The credential source the backend reported for one provider. */
+  function credentialSourceFor(providerId: string): CredentialSource | null {
+    const entry = credentials.find((cred) => cred.provider === providerId);
+    return entry?.source ?? null;
+  }
+
   return (
     <ul className={compact ? 'panel-list panel-list-compact' : 'panel-list'}>
       {providers.map((provider) => {
         const isConfigurable = CONFIGURABLE_PROVIDERS.has(provider.id);
+        const subscription = isSubscriptionProvider(provider.id);
+        const status = describeProviderStatus(provider);
         const cred: ProviderCredentialStatus | undefined = credentials.find(
           (c) => c.provider === provider.id,
         );
@@ -89,17 +110,34 @@ export function ProviderPanel({ compact = false }: { compact?: boolean }): React
           <li
             key={provider.id}
             className="panel-list-item"
+            data-provider-id={provider.id}
+            data-provider-state={status.state}
             title={compact && provider.notes ? provider.notes : undefined}
           >
             <header>
               <span className="panel-list-name">{provider.name}</span>
               <span
-                className={`panel-list-status panel-list-status-${provider.configured ? 'on' : 'off'}`}
+                className={`panel-list-status panel-list-status-${status.state === 'configured' ? 'on' : 'off'}`}
               >
-                {provider.configured ? 'Configured server-side' : 'Not configured'}
+                {status.badge}
               </span>
             </header>
-            {provider.notes && !compact ? <p className="panel-list-notes">{provider.notes}</p> : null}
+            {subscription ? (
+              <p className="panel-list-notes">
+                {provider.source
+                  ? `Credential source: ${provider.source}.`
+                  : `Uses the ${provider.name} session already signed in on this machine.`}{' '}
+                Kala never sees or stores that credential.
+              </p>
+            ) : null}
+            {status.reason ? (
+              <p className="panel-list-notes" role="note">
+                {status.reason}
+              </p>
+            ) : null}
+            {provider.notes && !compact && !subscription ? (
+              <p className="panel-list-notes">{provider.notes}</p>
+            ) : null}
             {isConfigurable ? (
               <form
                 className="provider-key-form"
@@ -140,7 +178,10 @@ export function ProviderPanel({ compact = false }: { compact?: boolean }): React
                   >
                     {isBusy ? 'Saving…' : 'Save key'}
                   </button>
-                  {provider.configured ? (
+                  {/* Only a STORED key can be removed here. A key that comes
+                      from the environment stays in force whatever this panel
+                      does, so the panel must not offer to clear it. */}
+                  {cred?.source === 'stored' ? (
                     <button
                       type="button"
                       className="provider-key-clear"
@@ -153,6 +194,12 @@ export function ProviderPanel({ compact = false }: { compact?: boolean }): React
                     </button>
                   ) : null}
                 </div>
+                {cred?.source === 'environment' ? (
+                  <p className="provider-key-source-note" role="note">
+                    {`This key comes from the environment (${cred.env_var}) — it is not stored by ` +
+                      'Studio and cannot be removed here. Clear it in the environment to revoke it.'}
+                  </p>
+                ) : null}
                 {statusMsg ? (
                   <p className="provider-key-status" role="status">
                     {statusMsg}

@@ -7,6 +7,18 @@
 //
 // `linux.desktop` follows the `LinuxDesktopFile` schema from
 // app-builder-lib (entry object holding `[Desktop Entry]` metadata).
+// electron-builder derives `Categories` from `linux.category` and the
+// `Comment` from `linux.description`, so the entry only carries the fields
+// it alone can set. `desktopName` (package.json) plus `syncDesktopName` pin
+// the `.desktop` file name, Electron's app id and `StartupWMClass` to
+// `kala-studio`, which is what a Wayland desktop needs to link the window to
+// its launcher entry.
+//
+// The icon lives in the build resources directory (`electron/`, which is
+// `directories.buildResources`): `icon.svg` is the source, `icon.png` (512)
+// and `icon-256.png` are the Linux sizes and `icon.ico` (16, 32, 48, 64, 128,
+// 256) is the Windows one. Replace `icon.svg` to replace the mark; see the
+// header of that file for the two commands that regenerate the rest.
 
 {
   "appId": "com.kala-agent.studio",
@@ -17,6 +29,7 @@
     "buildResources": "electron"
   },
   "files": [
+    "electron/backend-log.cjs",
     "electron/bootstrap.cjs",
     "electron/main.cjs",
     "electron/preload.cjs",
@@ -35,6 +48,7 @@
         "arch": ["x64"]
       }
     ],
+    "icon": "icon.ico",
     "artifactName": "kala-studio-${version}-setup.${ext}"
   },
   "nsis": {
@@ -46,13 +60,16 @@
   "linux": {
     "target": ["AppImage"],
     "category": "Engineering",
+    "icon": "icon.png",
+    "synopsis": "Standalone mechanical design workspace",
+    "description": "Kala Studio — a standalone parametric mechanical design workspace: agent chat, drafting sheet, STEP/STL export and FreeCAD.",
+    "syncDesktopName": true,
     "desktop": {
       "entry": {
         "Name": "Kala Studio",
         "Comment": "Standalone mechanical design workspace",
-        "Categories": "Engineering;Science;Graphics;",
         "Keywords": "cad;mechanical;design;fea;stl;step",
-        "StartupWMClass": "Kala Studio"
+        "StartupWMClass": "kala-studio"
       }
     },
     "artifactName": "kala-studio-${version}-${arch}.${ext}",

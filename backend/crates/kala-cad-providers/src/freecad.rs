@@ -88,11 +88,16 @@ pub const SUPPORTED_FREECAD_PYTHON_ABIS: [&str; 4] = ["cp311", "cp312", "cp313",
 /// The generated Python-identity probe's file name.
 pub const PYTHON_PROBE_FILENAME: &str = "kala_freecad_python_probe.py";
 /// Default bounded build wall time.
-pub const DEFAULT_TIMEOUT_SECONDS: f64 = 120.0;
+///
+/// A 500-step design (a 2 000 x 2 000 x 5 mm plate with 249 through holes)
+/// built in 1 009.5 s on this host (1 250 s under load), and the 202-step
+/// 100-hole plate in 58.8 s. 1 800 s covers the measured whole-budget case
+/// with 78 % margin when idle and 44 % margin under load.
+pub const DEFAULT_TIMEOUT_SECONDS: f64 = 1_800.0;
 /// Smallest accepted build wall time.
 pub const MIN_TIMEOUT_SECONDS: f64 = 5.0;
 /// Largest accepted build wall time.
-pub const MAX_TIMEOUT_SECONDS: f64 = 600.0;
+pub const MAX_TIMEOUT_SECONDS: f64 = 3_600.0;
 /// Default probe cache duration.
 pub const DEFAULT_PROBE_CACHE_SECONDS: f64 = 30.0;
 /// Bound on the `FreeCADCmd --version` probe.
@@ -591,6 +596,25 @@ impl FreeCadProvider {
         &mut self,
         script: &ConstructionScript,
     ) -> Result<ProviderBuild, CadProviderError> {
+        self.build_cancellable(script, &CancelToken::new())
+    }
+
+    /// Build `script`, killing the `FreeCADCmd` process group when `cancel`
+    /// is set.
+    ///
+    /// The kill is the supervised process tree's own: `kala_process` polls the
+    /// token on every slice and terminates the whole group, so a cancelled
+    /// 17-minute build does not keep running in the background.
+    pub fn build_cancellable(
+        &mut self,
+        script: &ConstructionScript,
+        cancel: &CancelToken,
+    ) -> Result<ProviderBuild, CadProviderError> {
+        if cancel.is_cancelled() {
+            return Err(CadProviderError::Cancelled(
+                "the FreeCAD build was cancelled before it started".to_owned(),
+            ));
+        }
         let availability = self.probe();
         if !availability.is_available() {
             return Err(CadProviderUnavailableError::new(
@@ -650,12 +674,13 @@ impl FreeCadProvider {
                     environment_error_name(&error)
                 ))
             })?;
-        let outcome = run_bounded(
+        let outcome = run_bounded_with_cancel(
             &executable,
             &[driver_path.clone().into_os_string()],
             root,
             environment,
             self.timeout_seconds,
+            cancel,
         )
         .map_err(|error| {
             CadProviderBuildError::new(format!(
@@ -663,6 +688,12 @@ impl FreeCadProvider {
                 probe_error_name(&error, &executable)
             ))
         })?;
+        if let ProcessEnd::Cancelled(_) = outcome.end {
+            return Err(CadProviderError::Cancelled(
+                "the FreeCAD build was cancelled; the FreeCADCmd process group was stopped"
+                    .to_owned(),
+            ));
+        }
         if let ProcessEnd::TimedOut(_) = outcome.end {
             return Err(CadProviderBuildError::new(format!(
                 "FreeCAD did not finish within {} seconds",
@@ -881,6 +912,14 @@ impl CadProvider for FreeCadProvider {
 
     fn build(&mut self, script: &ConstructionScript) -> Result<ProviderBuild, CadProviderError> {
         FreeCadProvider::build(self, script)
+    }
+
+    fn build_cancellable(
+        &mut self,
+        script: &ConstructionScript,
+        cancel: &CancelToken,
+    ) -> Result<ProviderBuild, CadProviderError> {
+        FreeCadProvider::build_cancellable(self, script, cancel)
     }
 }
 
@@ -1115,7 +1154,6 @@ fn string_tuple(value: &CanonicalValue) -> Vec<String> {
     };
     items
         .iter()
-        .take(16)
         .filter_map(|item| match item {
             CanonicalValue::Text(text) => text.to_utf8().ok(),
             _ => None,
@@ -1213,6 +1251,24 @@ fn run_bounded(
     environment: ChildEnvironment,
     wall_seconds: f64,
 ) -> Result<ProcessOutcome, ProcessError> {
+    run_bounded_with_cancel(
+        executable,
+        arguments,
+        working_directory,
+        environment,
+        wall_seconds,
+        &CancelToken::new(),
+    )
+}
+
+fn run_bounded_with_cancel(
+    executable: &Path,
+    arguments: &[OsString],
+    working_directory: &Path,
+    environment: ChildEnvironment,
+    wall_seconds: f64,
+    cancel: &CancelToken,
+) -> Result<ProcessOutcome, ProcessError> {
     let limits = ProcessLimits {
         wall_timeout: Duration::from_secs_f64(wall_seconds),
         bootstrap_timeout: Duration::from_secs_f64(wall_seconds.min(BOOTSTRAP_TIMEOUT_SECONDS)),
@@ -1229,7 +1285,7 @@ fn run_bounded(
         .args(arguments.iter().cloned())
         .with_environment(environment)
         .with_limits(limits);
-    supervise(&spec, b"", &CancelToken::new())
+    supervise(&spec, b"", cancel)
 }
 
 fn current_directory() -> PathBuf {

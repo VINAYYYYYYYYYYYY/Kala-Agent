@@ -86,12 +86,21 @@ impl ExportFormat {
 }
 
 /// Chat providers understood by the route.
+///
+/// `local` is the offline deterministic helper, `openai` and `openrouter`
+/// are the API-key routes, and `claude_code`, `codex_cli` and `opencode_cli`
+/// are the subscription routes that run the operator's own, already
+/// authenticated command-line tool as a sandboxed subprocess. `codex` is the
+/// historical id of the Codex CLI route and stays an alias of `codex_cli`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ProviderId {
     Local,
     OpenAi,
     OpenRouter,
     Codex,
+    ClaudeCode,
+    CodexCli,
+    OpenCodeCli,
 }
 
 impl ProviderId {
@@ -102,6 +111,9 @@ impl ProviderId {
             Self::OpenAi => "openai",
             Self::OpenRouter => "openrouter",
             Self::Codex => "codex",
+            Self::ClaudeCode => "claude_code",
+            Self::CodexCli => "codex_cli",
+            Self::OpenCodeCli => "opencode_cli",
         }
     }
 
@@ -111,6 +123,9 @@ impl ProviderId {
             "openai" => Some(Self::OpenAi),
             "openrouter" => Some(Self::OpenRouter),
             "codex" => Some(Self::Codex),
+            "claude_code" => Some(Self::ClaudeCode),
+            "codex_cli" => Some(Self::CodexCli),
+            "opencode_cli" => Some(Self::OpenCodeCli),
             _ => None,
         }
     }
@@ -809,7 +824,15 @@ pub fn validate_chat(map: &Map<String, Value>) -> Result<ChatRequest, FlatError>
     let provider = required_enum(
         map,
         "provider",
-        &["local", "openai", "openrouter", "codex"],
+        &[
+            "local",
+            "openai",
+            "openrouter",
+            "codex",
+            "claude_code",
+            "codex_cli",
+            "opencode_cli",
+        ],
         ProviderId::from_variant,
         &mut errors,
     );

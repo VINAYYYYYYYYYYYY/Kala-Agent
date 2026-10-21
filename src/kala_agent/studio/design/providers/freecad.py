@@ -49,9 +49,9 @@ if TYPE_CHECKING:
     from kala_agent.studio.design.intent import DesignIntent
 
 FREECAD_EXECUTABLE_NAMES: Final[tuple[str, ...]] = ("FreeCADCmd", "freecadcmd")
-DEFAULT_TIMEOUT_SECONDS: Final[float] = 120.0
+DEFAULT_TIMEOUT_SECONDS: Final[float] = 1_800.0
 MIN_TIMEOUT_SECONDS: Final[float] = 5.0
-MAX_TIMEOUT_SECONDS: Final[float] = 600.0
+MAX_TIMEOUT_SECONDS: Final[float] = 3_600.0
 DEFAULT_PROBE_CACHE_SECONDS: Final[float] = 30.0
 VERSION_PROBE_TIMEOUT_SECONDS: Final[float] = 20.0
 NATIVE_MAX_BYTES: Final[int] = 64 * 1024 * 1024
@@ -475,7 +475,7 @@ def _bounds_or_none(value: object) -> MeasuredBounds | None:
 def _string_tuple(value: object) -> tuple[str, ...]:
     if not isinstance(value, (list, tuple)):
         return ()
-    return tuple(str(item)[:256] for item in value[:16] if isinstance(item, str) and item)
+    return tuple(str(item)[:256] for item in value if isinstance(item, str) and item)
 
 
 _DRIVER_SOURCE: Final[str] = r'''
@@ -587,6 +587,7 @@ try:
             "measurement": result.get("measurement"),
             "freecad_version": result.get("freecad_version"),
             "warnings": list(result.get("warnings") or []),
+            "ineffective_cuts": result.get("ineffective_cuts"),
             "valid": result.get("valid"),
             "artifacts": artifacts,
         }

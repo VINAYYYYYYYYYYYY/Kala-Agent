@@ -75,6 +75,10 @@ export function JournalPanel(props: JournalPanelProps): ReactElement {
   const serverEvents = useUiState((s) => s.sessionJournal.events);
   const storeChainStatus = useUiState((s) => s.sessionJournal.chainStatus);
   const storeFirstBadSequence = useUiState((s) => s.sessionJournal.firstBadSequence);
+  // The last polling failure. It is shown: a frozen ledger with a stale
+  // "HASH-CHAIN OK" stamp is a lie the operator must not read. The note
+  // clears itself as soon as a poll succeeds.
+  const pollError = useUiState((s) => s.sessionJournal.lastError);
   const listRef = useRef<HTMLDivElement | null>(null);
   const announceTimerRef = useRef<number | null>(null);
   const pendingAnnouncementRef = useRef<string>('');
@@ -195,6 +199,11 @@ export function JournalPanel(props: JournalPanelProps): ReactElement {
         </span>
       </div>
       <div className="journal-body">
+        {pollError ? (
+          <p className="journal-panel-note journal-panel-poll-error" role="status">
+            {`Journal poll failed: ${pollError} — the ledger below may be stale.`}
+          </p>
+        ) : null}
         <div
           className="journal-list"
           ref={listRef}

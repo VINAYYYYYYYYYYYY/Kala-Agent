@@ -256,7 +256,7 @@ fn build_component(
     let mut last_solid_plane: Option<&str> = None;
     let mut warnings = Vec::new();
 
-    for step in component.steps() {
+    for (index, step) in component.steps().iter().enumerate() {
         check_budget(started, timeout_seconds)?;
         match step.op() {
             "sketch" => {
@@ -301,8 +301,9 @@ fn build_component(
                 let (result, removed) = cut(current, sketch, step, component.name())?;
                 if !removed {
                     warnings.push(format!(
-                        "component '{}': pocket on {} removed no material",
+                        "component '{}': pocket at step index {} on {} removed no material",
                         component.name(),
+                        index,
                         sketch.plane()
                     ));
                 }

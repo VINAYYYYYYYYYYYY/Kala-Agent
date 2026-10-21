@@ -48,6 +48,12 @@ from typing import TYPE_CHECKING, Final
 from kala_agent.contracts.construction import (
     ConstructionScript,
 )
+from kala_agent.studio.design.artifacts import (
+    ARTIFACT_KINDS,
+    MAX_ARTIFACT_DOWNLOAD_BYTES,
+    content_type as _artifact_content_type,
+    filename as _artifact_filename,
+)
 from kala_agent.studio.design.importer import (
     StepImportError,
     StepImportOutcome,
@@ -64,6 +70,7 @@ from kala_agent.studio.design.intent import (
 from kala_agent.studio.design.providers import build_providers, probe_providers
 from kala_agent.studio.design.providers.base import (
     ALLOWED_PROVIDER_IDS,
+    CUT_NO_MATERIAL,
     CadProvider,
     CadProviderBuildError,
     CadProviderUnavailableError,
@@ -71,6 +78,8 @@ from kala_agent.studio.design.providers.base import (
     MeasuredProperties,
     ProviderBuild,
     ProviderStatus,
+    bound_warnings as _bounded_warning_lines,
+    ineffective_cut_count,
 )
 from kala_agent.studio.session_journal import (
     DEFAULT_MAX_ARTIFACT_BYTES,
@@ -96,8 +105,7 @@ PROVIDER_BUILD_FAILED: Final[str] = "provider.build.failed"
 VIEW_IMPORTED: Final[str] = "view.imported"
 _REFUSED_EVENT: Final[str] = "design.rejected"
 _GEOMETRY_LOCK: Final[threading.RLock] = threading.RLock()
-_MAX_WARNINGS: Final[int] = 16
-_MAX_WARNING_LENGTH: Final[int] = 256
+CUTS_EFFECTIVE_TOLERANCE: Final[float] = 0.0
 
 __all__ = (
     "DEFAULT_CACHE_SIZE",
@@ -107,6 +115,7 @@ __all__ = (
     "PROVIDER_BUILD_FAILED",
     "PROVIDER_BUILD_REQUESTED",
     "VIEW_IMPORTED",
+    "ArtifactDownload",
     "DesignError",
     "DesignNotFoundError",
     "DesignOutcome",
@@ -119,6 +128,7 @@ __all__ = (
     "check_payload",
     "design_available",
     "design_id_for",
+    "expected_pocket_count",
     "expected_solid_count",
 )
 
@@ -142,6 +152,14 @@ class DesignNotFoundError(DesignError):
 
 class DesignUnavailableError(DesignError):
     """The optional OCP geometry kernel is not importable in this process."""
+
+
+class ArtifactTooLargeError(DesignError):
+    """A stored artifact exceeds the download ceiling."""
+
+
+class ArtifactDigestMismatchError(DesignError):
+    """A stored artifact does not match its journalled digest."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -187,6 +205,26 @@ class ExportOutcome:
     filename: str
     sha256: str
     data: bytes
+
+
+@dataclass(frozen=True, slots=True)
+class ArtifactDownload:
+    """One stored artifact served by the download route."""
+
+    design_id: str
+    kind: str
+    sha256: str
+    content_type: str
+    filename: str
+    data: bytes
+
+
+@dataclass(frozen=True, slots=True)
+class _ArtifactRecord:
+    """The label and the recorded digest of one downloadable artifact."""
+
+    label: str
+    digest: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -286,6 +324,13 @@ def expected_solid_count(script: ConstructionScript) -> int:
     return max(count, 1)
 
 
+def expected_pocket_count(script: ConstructionScript) -> int:
+    """Return the number of pocket steps the script declares."""
+    return sum(
+        1 for component in script.components for step in component.steps if step.op == "pocket"
+    )
+
+
 def build_provider_checks(
     *,
     measured: MeasuredProperties,
@@ -293,6 +338,8 @@ def build_provider_checks(
     solid_count: int | None,
     expected_solids: int = 1,
     expected_envelope: Bounds | None,
+    expected_pockets: int = 0,
+    warnings: Sequence[str] = (),
 ) -> tuple[Check, ...]:
     """Build the honesty checks from the provider's own facts.
 
@@ -304,6 +351,12 @@ def build_provider_checks(
     OpenCascade measurement. The three envelope checks are present only when
     the intent declared an envelope. A missing provider bound makes the
     envelope row ``not_reported`` too.
+
+    A build whose warnings report a cut that ``removed no material`` appends
+    one failed ``cuts_effective`` row: expected is the number of pocket steps
+    in the script, measured is the number that did remove material (expected
+    minus the ineffective-cut warnings). The row is appended only for that
+    failure, so every passing design keeps its exact check list.
     """
     from kala_agent.studio.design.measure import (
         BREP_VALID_TOLERANCE,
@@ -385,6 +438,22 @@ def build_provider_checks(
                     passed=passed,
                 )
             )
+    # A provider that reports a cut which removed nothing is never verified,
+    # even when its B-Rep and envelope are valid. The row is added only for
+    # that failure, so every passing design keeps its exact check list.
+    ineffective = ineffective_cut_count(warnings)
+    if ineffective:
+        checks.append(
+            Check(
+                id="cuts_effective",
+                label="Cuts removed material",
+                expected=float(expected_pockets),
+                measured=float(max(expected_pockets - ineffective, 0)),
+                tolerance=CUTS_EFFECTIVE_TOLERANCE,
+                unit="cut",
+                passed=False,
+            )
+        )
     return tuple(checks)
 
 
@@ -476,7 +545,18 @@ class DesignService:
     # ------------------------------------------------------------- design turns
 
     def design(self, intent: DesignIntent, *, provider: str) -> DesignOutcome:
-        """Build, measure, import, and journal one design with one provider."""
+        """Build, measure, import, and journal one design with one provider.
+
+        Cancellation boundary: this reference route is synchronous inside the
+        FastAPI thread pool, so a client disconnect cannot drop it (the event
+        loop cannot cancel a thread). The shipped native service threads a
+        cancellation token from the request into this same pipeline, checks it
+        between phases and kills an out-of-process FreeCAD build's process
+        group; it records one ``design.cancelled`` event and no later
+        ``design.*``/``provider.build.*``/``artifact.stored`` event. The
+        Python reference keeps no equivalent path, and says so instead of
+        pretending a cancelled turn stopped.
+        """
         if not design_available():
             raise DesignUnavailableError("the design pipeline requires the OCP bindings")
         self._validate_provider(provider)
@@ -577,6 +657,8 @@ class DesignService:
             solid_count=build.solid_count,
             expected_solids=expected_solid_count(resolved.script),
             expected_envelope=resolved.envelope,
+            expected_pockets=expected_pocket_count(resolved.script),
+            warnings=build.warnings,
         )
         verified = bool(checks) and all(check.passed for check in checks)
 
@@ -890,6 +972,8 @@ class DesignService:
             solid_count=solid_count,
             expected_solids=expected_solid_count(script),
             expected_envelope=envelope,
+            expected_pockets=expected_pocket_count(script),
+            warnings=_string_tuple(build.get("warnings")),
         )
         verified = bool(checks) and all(check.passed for check in checks)
         provider_version = build.get("provider_version")
@@ -1020,6 +1104,73 @@ class DesignService:
                 sha256=digest,
                 data=data,
             )
+
+    def artifact(self, design_id: str, kind: str) -> ArtifactDownload:
+        """Read one stored artifact of one design for download.
+
+        The bytes are the exact bytes the provider returned (never a
+        re-export), and their SHA-256 must equal the digest the journal
+        recorded before a single byte is served. A kind the design did not
+        store is a 404, an artifact above the download ceiling is a 413, and a
+        digest mismatch is a refusal rather than a download.
+        """
+        _validate_design_id(design_id)
+        normalized = kind.strip().lower()
+        if normalized not in ARTIFACT_KINDS:
+            raise DesignError(
+                "the artifact kind must be one of " + ", ".join(ARTIFACT_KINDS)
+            )
+        record = self._find_artifact_record(design_id, normalized)
+        if record is None:
+            raise DesignNotFoundError(f"design_id={design_id[:64]}")
+        digest = record.digest
+        if digest is None:
+            raise DesignNotFoundError(
+                f"no {normalized} artifact is stored for design_id={design_id[:64]}"
+            )
+        try:
+            data = self._journal.get_artifact(digest)
+        except FileNotFoundError:
+            raise DesignNotFoundError(
+                f"the stored {normalized} artifact is missing for "
+                f"design_id={design_id[:64]}"
+            ) from None
+        except ValueError as error:
+            # The content-addressed store verifies the digest on read. A
+            # mismatch is an integrity refusal, not a missing file; a size
+            # refusal is the download ceiling.
+            message = str(error)
+            if "digest verification failed" in message:
+                raise ArtifactDigestMismatchError(
+                    f"the stored {normalized} artifact does not match its "
+                    "journalled digest"
+                ) from None
+            if "exceeds the configured size limit" in message:
+                raise ArtifactTooLargeError(
+                    f"the stored {normalized} artifact exceeds the download limit"
+                ) from None
+            raise DesignNotFoundError(
+                f"the stored {normalized} artifact could not be read for "
+                f"design_id={design_id[:64]}"
+            ) from None
+        if len(data) > MAX_ARTIFACT_DOWNLOAD_BYTES:
+            raise ArtifactTooLargeError(
+                f"the stored {normalized} artifact is {len(data)} bytes; the "
+                f"download limit is {MAX_ARTIFACT_DOWNLOAD_BYTES} bytes"
+            )
+        actual = hashlib.sha256(data).hexdigest()
+        if actual != digest:
+            raise ArtifactDigestMismatchError(
+                f"the stored {normalized} artifact does not match its journalled digest"
+            )
+        return ArtifactDownload(
+            design_id=design_id,
+            kind=normalized,
+            sha256=digest,
+            content_type=_artifact_content_type(normalized),
+            filename=_artifact_filename(record.label, digest, normalized),
+            data=data,
+        )
 
     def step_digest(self, design_id: str) -> str | None:
         """Return the stored provider STEP digest for ``design_id``."""
@@ -1273,6 +1424,57 @@ class DesignService:
             build=build_payload,
         )
 
+    def _find_artifact_record(
+        self, design_id: str, kind: str
+    ) -> _ArtifactRecord | None:
+        """Return the label and recorded digest of one artifact kind.
+
+        The completed build record is authoritative for ``script``, ``step``
+        and the provider's native kind; an ``artifact.stored`` record supplies
+        the kinds only an export writes (``stl``), and is the fallback for the
+        rest. The scan is the same bounded page walk as
+        :meth:`_find_journal_design`, so an evicted cache entry still
+        downloads.
+        """
+        label: str | None = None
+        build_digest: str | None = None
+        stored_digest: str | None = None
+        seen = False
+        after = 0
+        page_size = self._journal.max_page_size
+        while True:
+            events = self._journal.page(after, page_size)
+            if not events:
+                break
+            for event in events:
+                payload = event.payload
+                if payload is None or payload.get("design_id") != design_id:
+                    continue
+                seen = True
+                if event.event_type == JournalEventType.DESIGN_INTENT.value:
+                    value = payload.get("label")
+                    label = value if isinstance(value, str) else None
+                elif event.event_type == PROVIDER_BUILD_COMPLETED:
+                    if kind in {"script", "step"}:
+                        value = payload.get(f"{kind}_sha256")
+                        build_digest = value if isinstance(value, str) else None
+                    elif payload.get("native_kind") == kind:
+                        value = payload.get("native_sha256")
+                        build_digest = value if isinstance(value, str) else None
+                elif (
+                    event.event_type == JournalEventType.ARTIFACT_STORED.value
+                    and payload.get("kind") == kind
+                ):
+                    value = payload.get("sha256")
+                    stored_digest = value if isinstance(value, str) else None
+            after = events[-1].sequence
+        if not seen:
+            return None
+        return _ArtifactRecord(
+            label=label or "",
+            digest=build_digest or stored_digest,
+        )
+
     def _stored_design_is_available(self, stored: _StoredDesign) -> bool:
         build = stored.build
         if build is None:
@@ -1391,17 +1593,21 @@ def _measured_bounds_from_payload(value: object) -> MeasuredBounds | None:
 
 
 def _bounded_warnings(warnings: Sequence[str]) -> tuple[str, ...]:
+    """Return the bounded, de-duplicated display of a design's warnings.
+
+    Duplicates are dropped first, then the shared bounding rule keeps at most
+    ``MAX_WARNINGS`` lines and writes the number of any suppressed warnings on
+    the last lines, so the ineffective-cut count stays exact.
+    """
     seen: set[str] = set()
-    bounded: list[str] = []
+    unique: list[str] = []
     for warning in warnings:
         text = str(warning).strip()
         if not text or text in seen:
             continue
         seen.add(text)
-        bounded.append(text[:_MAX_WARNING_LENGTH])
-        if len(bounded) >= _MAX_WARNINGS:
-            break
-    return tuple(bounded)
+        unique.append(text)
+    return _bounded_warning_lines(unique)
 
 
 def _string_tuple(value: object) -> tuple[str, ...]:

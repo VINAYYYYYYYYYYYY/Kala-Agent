@@ -38,6 +38,7 @@ from kala_agent.contracts.construction import (
 )
 from kala_solidedge_bridge.protocol import (
     MAX_OPERATIONS,
+    MAX_PARTS,
     AssemblyExportStep,
     AssemblyNew,
     AssemblyPlace,
@@ -118,6 +119,11 @@ def compile_operations(
 
     if not operations:
         raise CompileError("the construction script did not compile")
+    if len(script.components) > MAX_PARTS:
+        raise CompileError(
+            f"the script has {len(script.components)} components; the wire cap is "
+            f"{MAX_PARTS} parts"
+        )
     if len(operations) > MAX_OPERATIONS:
         raise CompileError(
             f"the compiled procedure has {len(operations)} operations; the wire cap is "

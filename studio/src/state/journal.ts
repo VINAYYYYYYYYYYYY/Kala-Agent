@@ -377,10 +377,19 @@ export function summarisePayload(
       const cadProvider = typeof payload['cad_provider'] === 'string'
         ? payload['cad_provider']
         : null;
+      // A turn that failed carries the reason it failed. It must not read
+      // like a turn that was merely requested: the ledger is the audit trail
+      // of the session, and a turn that died with `provider_timeout` has to
+      // say so.
+      const failure = typeof payload['failure'] === 'string' ? payload['failure'] : null;
       if (provider) parts.push(provider);
       if (cadProvider) parts.push(`CAD ${cadProvider}`);
       if (payload['offline'] === true) parts.push('offline');
-      if (payload['design_requested'] === true) parts.push('design requested');
+      if (failure && failure.trim().length > 0) {
+        parts.push(`failed: ${failure.trim()}`);
+      } else if (payload['design_requested'] === true) {
+        parts.push('design requested');
+      }
       break;
     }
     default:

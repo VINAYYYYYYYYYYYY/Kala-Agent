@@ -20,7 +20,14 @@ export function normalizeBuilderInvocation(argv: string[]): BuilderInvocation;
 export function isDevelopmentDirectoryBuild(argv: string[]): boolean;
 export function decidePackaging(options: {
   argv: string[];
-  report: { ready: boolean; missingRouteMethods?: string[]; missingCapabilities?: string[] } | null;
+  report:
+    | {
+        ready: boolean;
+        missingRouteMethods?: string[];
+        missingCapabilities?: string[];
+        native?: Record<string, unknown>;
+      }
+    | null;
 }): PackagingDecision;
 export function writeReadinessArtifact(
   report: unknown,

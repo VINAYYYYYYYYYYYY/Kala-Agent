@@ -54,7 +54,7 @@ SOLVER_STATUSES: Final[tuple[str, ...]] = (
 
 GEOMETRY_TIMEOUT_SECONDS: Final[float] = 180.0
 FEM_TIMEOUT_SECONDS: Final[float] = 900.0
-DESIGN_TIMEOUT_SECONDS: Final[float] = 180.0
+DESIGN_TIMEOUT_SECONDS: Final[float] = 1_800.0
 # The builder truncates its own tool and redesign traces at this length, and
 # the shipped output schema allows exactly the same number. One constant keeps
 # a long, successful build (the ADR-0009 L-bracket has 85 calls) from being
@@ -543,7 +543,7 @@ FEM_OUTPUT_DIGEST: Final[str] = canonical_json_digest(FEM_OUTPUT_SCHEMA)
 _CALLS_JSON: Final[Mapping[str, object]] = MappingProxyType(
     {
         "description": "JSON list of FreeCAD toolbar calls, in procedure order.",
-        "maxLength": 24_000,
+        "maxLength": 524_288,
         "minLength": 2,
         "type": "string",
     }
@@ -611,6 +611,7 @@ DESIGN_OUTPUT_SCHEMA: Final[Mapping[str, object]] = MappingProxyType(
                 "document_name": _OBJECT_NAME,
                 "freecad_version": {"maxLength": 64, "type": "string"},
                 "import_root": {"maxLength": 1_024, "type": "string"},
+                "ineffective_cuts": {"maximum": 100_000, "minimum": 0, "type": "integer"},
                 "measurement": _MEASUREMENT,
                 "object_count": {"maximum": 32, "minimum": 1, "type": "integer"},
                 "object_names": _OBJECT_NAMES,

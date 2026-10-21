@@ -1,6 +1,6 @@
 {
   "corpus_schema_version": 1,
-  "corpus_sha256": "53dcb9da105589b5a92d37b16d63c7fe2d5e60b7630549102127e019c95dff28",
+  "corpus_sha256": "39e0c0a90f9d03704945c79cdb9e777e77549ef208ac2177d3f7bb003dade3fa",
   "corpus_sha256_scope": "SHA-256 over the sorted (path, digest) list of the indexed fixture files; the SQLite fixture's file bytes are recorded as not-asserted because the SQLite library version changes them",
   "coverage": {
     "canonical_json_cases": 66,
@@ -155,7 +155,7 @@
     "domain_packages": 3,
     "geometry_meshes": 6,
     "studio_body_comparisons": {
-      "exact": 50,
+      "exact": 53,
       "fields": 4,
       "structural": 2
     },
@@ -168,6 +168,10 @@
         {
           "method": "POST",
           "path": "/api/studio/design"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/design/{design_id}/artifact/{kind}"
         },
         {
           "method": "GET",
@@ -230,6 +234,10 @@
         {
           "method": "POST",
           "path": "/api/studio/design"
+        },
+        {
+          "method": "GET",
+          "path": "/api/studio/design/{design_id}/artifact/{kind}"
         },
         {
           "method": "GET",
@@ -318,7 +326,7 @@
       }
     ],
     "normalized_fields": [
-      "core GET /health data_dir",
+      "core GET /health data_dir, body length and content-length header",
       "CLI temporary data directory",
       "journal occurred_at via a fixture-only fixed clock",
       "studio journal occurred_at via a fixture-only fixed clock",
@@ -334,9 +342,9 @@
   "files": [
     {
       "path": "canonical_json.json",
-      "sha256": "d8a2fefcd5d70f05556938896bada27affa2a1a8288d3d1a788d17b1fde4ba07",
+      "sha256": "0c2a4bd95ce0bd7d0c0951382fc8d56aa46f9417d503bb3deb920daf28d90533",
       "sha256_role": "exact",
-      "size_bytes": 61715
+      "size_bytes": 61860
     },
     {
       "path": "cli_launch.json",
@@ -346,9 +354,9 @@
     },
     {
       "path": "core_http.json",
-      "sha256": "2e8dae93a48bf70751da40fa152e99cd35d63e0f081309a03dda242ee2e11cc6",
+      "sha256": "780d72fdab7e8367f94d6f28d19521071dc0a2bf29671b00cf92306faddd5403",
       "sha256_role": "exact",
-      "size_bytes": 434623
+      "size_bytes": 435312
     },
     {
       "path": "decimal_budget.json",
@@ -400,9 +408,9 @@
     },
     {
       "path": "studio_http.json",
-      "sha256": "9b313cd90a726182297ed0cc109bdb98a4cb2e195631e841457f4c5fdfbc7549",
+      "sha256": "3eebaedd641df52f45945b2266f579514a0be035cf77dfdd48100003456b9c59",
       "sha256_role": "exact",
-      "size_bytes": 268981
+      "size_bytes": 315882
     }
   ],
   "fixture_root": "backend/fixtures/corpus/v1",
@@ -489,168 +497,219 @@
   },
   "source_state": {
     "git": {
-      "commit": "966c185bffa10f9d0524f3a2ee322c646729940a",
+      "commit": "92bb7e4c854631debe16d7ea7448635207241f4e",
       "dirty": true,
       "tracked_changes": [
-        ".github/workflows/solidedge.yml",
+        ".github/workflows/studio-release.yml",
         ".github/workflows/studio.yml",
-        ".mece/waves/design-turns-20261019/",
-        ".mece/waves/rust-backend-20261019/",
-        ".mece/waves/solidedge-20261019/",
-        ".mece/waves/vellum-ui-20261019/",
-        "Rust+buid123/",
+        ".mece/waves/agent-providers-20261020/",
+        ".mece/waves/completeness-20261021/",
+        ".mece/waves/design-turns-20261019/LEDGER.md",
+        "README.md",
+        "adapters/freecad/mod/Kala/Init.py",
+        "adapters/freecad/mod/Kala/InitGui.py",
+        "adapters/freecad/mod/Kala/kala_gui.py",
+        "adapters/freecad/mod/Kala/kala_paths.py",
+        "adapters/freecad/src/kala_agent_freecad/cad/compile.py",
         "adapters/freecad/src/kala_agent_freecad/cad/design.py",
+        "adapters/freecad/src/kala_agent_freecad/cad/models.py",
+        "adapters/freecad/src/kala_agent_freecad/cad/procedure.py",
         "adapters/freecad/src/kala_agent_freecad/contracts.py",
-        "adapters/freecad/tests/test_cad_live.py",
-        "adapters/freecad/tests/test_design_assembly.py",
-        "adapters/freecad/tests/test_worker_envelopes.py",
-        "adapters/solidedge-bridge/",
-        "adapters/solidedge/",
-        "backend/",
-        "docs/adr/0008-solid-edge-windows-bridge.md",
+        "adapters/freecad/tests/test_addon_paths.py",
+        "adapters/freecad/tests/test_compile.py",
+        "adapters/freecad/tests/test_design.py",
+        "adapters/solidedge-bridge/src/kala_solidedge_bridge/protocol.py",
+        "adapters/solidedge/src/kala_agent_solidedge/compile.py",
+        "adapters/solidedge/tests/test_compile.py",
+        "backend/Cargo.lock",
+        "backend/compat/README.md",
+        "backend/compat/corpuslib/canonical_json_cases.py",
+        "backend/compat/corpuslib/http_cases.py",
+        "backend/compat/generate_corpus.py",
+        "backend/compat/self_check.py",
+        "backend/crates/kala-cad-providers/src/base.rs",
+        "backend/crates/kala-cad-providers/src/driver.py",
+        "backend/crates/kala-cad-providers/src/freecad.rs",
+        "backend/crates/kala-cad-providers/src/lib.rs",
+        "backend/crates/kala-cad-providers/tests/freecad_budget.rs",
+        "backend/crates/kala-cad-providers/tests/freecad_cut_guard.rs",
+        "backend/crates/kala-cad-providers/tests/freecad_unit.rs",
+        "backend/crates/kala-cad/src/lib.rs",
+        "backend/crates/kala-cad/src/native/compile.rs",
+        "backend/crates/kala-cad/tests/native_compile.rs",
+        "backend/crates/kala-contracts/src/construction.rs",
+        "backend/crates/kala-contracts/src/lib.rs",
+        "backend/crates/kala-contracts/tests/construction_contracts.rs",
+        "backend/crates/kala-design-intent/assets/design_intent_schema.json",
+        "backend/crates/kala-design-intent/src/intent.rs",
+        "backend/crates/kala-design-intent/src/script.rs",
+        "backend/crates/kala-design-intent/tests/design_contract.rs",
+        "backend/crates/kala-design-intent/tests/python_differential.rs",
+        "backend/crates/kala-json/src/limits.rs",
+        "backend/crates/kala-solidedge-client/src/compile.rs",
+        "backend/crates/kala-studio/Cargo.toml",
+        "backend/crates/kala-studio/src/artifacts.rs",
+        "backend/crates/kala-studio/src/boundary.rs",
+        "backend/crates/kala-studio/src/chat_design.rs",
+        "backend/crates/kala-studio/src/geometry_backend.rs",
+        "backend/crates/kala-studio/src/lib.rs",
+        "backend/crates/kala-studio/src/native_geometry/mod.rs",
+        "backend/crates/kala-studio/src/native_geometry/providers.rs",
+        "backend/crates/kala-studio/src/native_geometry/service.rs",
+        "backend/crates/kala-studio/src/providers/catalog.rs",
+        "backend/crates/kala-studio/src/providers/claude_cli.rs",
+        "backend/crates/kala-studio/src/providers/cli_runtime.rs",
+        "backend/crates/kala-studio/src/providers/codex_cli.rs",
+        "backend/crates/kala-studio/src/providers/local.rs",
+        "backend/crates/kala-studio/src/providers/mod.rs",
+        "backend/crates/kala-studio/src/providers/opencode_cli.rs",
+        "backend/crates/kala-studio/src/providers/remote.rs",
+        "backend/crates/kala-studio/src/schemas.rs",
+        "backend/crates/kala-studio/src/server.rs",
+        "backend/crates/kala-studio/src/settings.rs",
+        "backend/crates/kala-studio/tests/chat_and_remote.rs",
+        "backend/crates/kala-studio/tests/chat_mock_provider_design.rs",
+        "backend/crates/kala-studio/tests/cli_launch.rs",
+        "backend/crates/kala-studio/tests/cli_providers.rs",
+        "backend/crates/kala-studio/tests/corpus_fixture.rs",
+        "backend/crates/kala-studio/tests/design_cancel.rs",
+        "backend/crates/kala-studio/tests/geometry_exports.rs",
+        "backend/crates/kala-studio/tests/model_catalog.rs",
+        "backend/crates/kala-studio/tests/native_geometry.rs",
+        "backend/crates/kala-studio/tests/repair_prompt_oracle.py",
+        "backend/crates/kala-studio/tests/repair_prompt_parity.rs",
+        "backend/crates/kala-studio/tests/worker_differential.py",
+        "backend/crates/kala-tools/src/protocol/mod.rs",
+        "backend/fixtures/README.md",
+        "backend/fixtures/corpus/v1/canonical_json.json",
+        "backend/fixtures/corpus/v1/core_http.json",
+        "backend/fixtures/corpus/v1/manifest.json",
+        "backend/fixtures/corpus/v1/studio_http.json",
         "docs/adr/0009-studio-design-turns-ocp-construction-compiler.md",
         "docs/adr/0010-rust-control-plane-cad-kernel-geometry-worker.md",
-        "docs/adr/0011-cad-provider-model-opencascade-viewer-and-opt-in-builder.md",
         "docs/cad-providers.md",
-        "docs/construction-semantics.md",
         "docs/rust-migration-status.md",
         "docs/rust-studio.md",
-        "docs/solidedge.md",
         "docs/studio-install.md",
         "docs/studio-limitations.md",
         "docs/studio-providers.md",
         "docs/studio.md",
-        "docs/ui-screens-wireframes.md",
+        "packaging/linux/README.md",
+        "packaging/linux/smoke-appimage.mjs",
         "packaging/native_studio_smoke.py",
-        "pyproject.toml",
-        "rust-implementation.md",
-        "src/kala_agent/__init__.py",
-        "src/kala_agent/api/__init__.py",
-        "src/kala_agent/api/envelope.py",
-        "src/kala_agent/api/errors.py",
-        "src/kala_agent/api/middleware.py",
-        "src/kala_agent/api/schemas.py",
+        "packaging/studio_smoke.py",
+        "src/kala_agent/contracts/__init__.py",
+        "src/kala_agent/contracts/construction.py",
         "src/kala_agent/studio/cli.py",
-        "src/kala_agent/studio/design/",
+        "src/kala_agent/studio/design/artifacts.py",
+        "src/kala_agent/studio/design/compile_ocp.py",
+        "src/kala_agent/studio/design/intent.py",
+        "src/kala_agent/studio/design/providers/base.py",
+        "src/kala_agent/studio/design/providers/freecad.py",
+        "src/kala_agent/studio/design/service.py",
         "src/kala_agent/studio/internal_api.py",
+        "src/kala_agent/studio/providers/__init__.py",
+        "src/kala_agent/studio/providers/base.py",
+        "src/kala_agent/studio/providers/claude_cli.py",
+        "src/kala_agent/studio/providers/cli_runtime.py",
+        "src/kala_agent/studio/providers/codex.py",
+        "src/kala_agent/studio/providers/codex_cli.py",
         "src/kala_agent/studio/providers/dispatch.py",
-        "src/kala_agent/studio/providers/local.py",
+        "src/kala_agent/studio/providers/openai_compat.py",
+        "src/kala_agent/studio/providers/opencode_cli.py",
         "src/kala_agent/studio/schemas.py",
         "src/kala_agent/studio/server.py",
-        "src/kala_agent/studio/session_journal.py",
-        "src/kala_agent/studio/worker.py",
-        "studio/.gitignore",
+        "src/kala_agent/studio/settings.py",
+        "src/kala_agent/tools/protocol.py",
         "studio/README.md",
         "studio/electron-builder.json",
+        "studio/electron/backend-log.cjs",
+        "studio/electron/icon-256.png",
+        "studio/electron/icon.ico",
+        "studio/electron/icon.png",
+        "studio/electron/icon.svg",
         "studio/electron/main.cjs",
         "studio/electron/main.d.cts",
-        "studio/package-lock.json",
         "studio/package.json",
         "studio/scripts/desktop-pack.cjs",
         "studio/scripts/desktop-pack.d.cts",
-        "studio/scripts/desktop.cjs",
         "studio/scripts/native-backend.cjs",
         "studio/scripts/native-backend.d.cts",
         "studio/scripts/native-readiness.cjs",
         "studio/scripts/native-readiness.d.cts",
-        "studio/src/App.tsx",
         "studio/src/api/client.ts",
         "studio/src/api/validators.ts",
-        "studio/src/components/bottombar/",
-        "studio/src/components/chat/CadTargetSelector.tsx",
+        "studio/src/components/bottombar/BottomBar.tsx",
         "studio/src/components/chat/ChatPanel.tsx",
         "studio/src/components/chat/DesignAgentCard.tsx",
+        "studio/src/components/chat/ModelPicker.tsx",
+        "studio/src/components/chat/ProviderPicker.tsx",
         "studio/src/components/chat/designCard.ts",
-        "studio/src/components/drafting/",
+        "studio/src/components/drafting/AuxView.tsx",
+        "studio/src/components/drafting/DraftingSheet.tsx",
         "studio/src/components/export/ExportPanel.tsx",
         "studio/src/components/inspector/Inspector.tsx",
-        "studio/src/components/inspector/VernierSlider.tsx",
-        "studio/src/components/journal/",
-        "studio/src/components/options/",
+        "studio/src/components/journal/JournalPanel.tsx",
         "studio/src/components/panels/ProviderPanel.tsx",
-        "studio/src/components/panels/SurfaceMaterialControl.tsx",
-        "studio/src/components/shell/AppShell.tsx",
-        "studio/src/components/shell/BootGate.tsx",
-        "studio/src/components/shell/Header.tsx",
-        "studio/src/components/shell/RightRail.tsx",
-        "studio/src/components/shell/workspaceView.ts",
-        "studio/src/components/sidebar/Sidebar.tsx",
-        "studio/src/components/toolbar/Toolbar.tsx",
-        "studio/src/main.tsx",
-        "studio/src/state/designController.ts",
-        "studio/src/state/designs.ts",
+        "studio/src/modelCatalog.ts",
+        "studio/src/providerPolicy.ts",
+        "studio/src/saveBlob.ts",
         "studio/src/state/journal.ts",
-        "studio/src/state/journalPoller.ts",
-        "studio/src/state/previewController.ts",
-        "studio/src/state/sectionCut.ts",
         "studio/src/state/store.ts",
-        "studio/src/styles/base.css",
-        "studio/src/styles/bottombar.css",
         "studio/src/styles/chat.css",
         "studio/src/styles/drafting.css",
-        "studio/src/styles/journal.css",
         "studio/src/styles/layout.css",
+        "studio/src/styles/models.css",
         "studio/src/styles/studio.css",
-        "studio/src/styles/tokens.css",
         "studio/src/types/studio.ts",
-        "studio/src/viewer/HlrDrawing.tsx",
         "studio/src/viewer/SceneCanvas.tsx",
         "studio/src/viewer/designSource.ts",
-        "studio/src/viewer/draftingGeometry.ts",
-        "studio/src/viewer/hlr.ts",
-        "studio/src/viewer/measure.ts",
-        "studio/src/viewer/raycast.ts",
+        "studio/src/viewer/viewportKeys.ts",
         "studio/test/AgentWorkspace.dom.test.tsx",
-        "studio/test/AppJournalPollerGate.dom.test.tsx",
-        "studio/test/AppShellMeshStability.dom.test.tsx",
         "studio/test/AuxView.dom.test.tsx",
-        "studio/test/BottomBar.dom.test.tsx",
-        "studio/test/BottomBarDesignReadout.dom.test.tsx",
-        "studio/test/CadTargetSelector.dom.test.tsx",
         "studio/test/ChatAgentCard.dom.test.tsx",
         "studio/test/ChatPanel.dom.test.tsx",
         "studio/test/DesignAgentCard.dom.test.tsx",
         "studio/test/DraftingSheet.dom.test.tsx",
-        "studio/test/ExportPanel.dom.test.tsx",
-        "studio/test/HlrDrawing.dom.test.tsx",
-        "studio/test/ManualConnect.dom.test.tsx",
-        "studio/test/MeasureTool.dom.test.tsx",
-        "studio/test/OptionsDrawer.dom.test.tsx",
-        "studio/test/SurfaceMaterial.dom.test.tsx",
-        "studio/test/VernierSlider.dom.test.tsx",
+        "studio/test/ModelPicker.dom.test.tsx",
+        "studio/test/ProviderPanel.dom.test.tsx",
+        "studio/test/ProviderPicker.dom.test.tsx",
+        "studio/test/SceneCanvas.dom.test.tsx",
+        "studio/test/apiClient.test.ts",
+        "studio/test/backendLog.test.ts",
         "studio/test/chatJournal.dom.test.tsx",
         "studio/test/designApi.test.ts",
-        "studio/test/designController.test.ts",
         "studio/test/designExport.dom.test.tsx",
-        "studio/test/designFixtures.ts",
-        "studio/test/designStore.test.ts",
-        "studio/test/designSystem.test.ts",
-        "studio/test/draftingGeometry.test.ts",
-        "studio/test/electronMain.test.ts",
-        "studio/test/hlr.test.ts",
+        "studio/test/designSource.test.ts",
         "studio/test/journalLedger.dom.test.tsx",
-        "studio/test/journalPoller.test.ts",
-        "studio/test/layoutCss.test.ts",
-        "studio/test/measure.test.ts",
+        "studio/test/modelCatalog.test.ts",
         "studio/test/nativeBackendPackaging.test.ts",
-        "studio/test/raycast.test.ts",
-        "studio/test/sectionCut.test.ts",
-        "studio/test/store.test.ts",
-        "studio/test/useDesignController.dom.test.tsx",
-        "studio/vite.config.ts",
-        "tests/conftest.py",
-        "tests/fixtures/",
-        "tests/unit/studio_design/",
-        "tests/unit/studio_worker/",
-        "tests/unit/test_api_error_statuses.py",
+        "studio/test/previewStatus.dom.test.tsx",
+        "studio/test/providerFixtures.ts",
+        "studio/test/providerPolicy.test.ts",
+        "studio/test/viewportKeys.test.ts",
+        "tests/unit/conftest.py",
+        "tests/unit/studio_design/test_compile_ocp.py",
+        "tests/unit/studio_design/test_design_api.py",
+        "tests/unit/studio_design/test_design_artifacts.py",
+        "tests/unit/studio_design/test_intent.py",
+        "tests/unit/studio_design/test_solid_count.py",
+        "tests/unit/studio_design/test_templates.py",
+        "tests/unit/studio_worker/test_worker_http.py",
+        "tests/unit/test_construction.py",
         "tests/unit/test_data_dir_isolation.py",
-        "tests/unit/test_portable_imports.py",
-        "tests/unit/test_solidedge_boundaries.py",
+        "tests/unit/test_executor_branches.py",
+        "tests/unit/test_protocol_branches.py",
+        "tests/unit/test_studio_cli_process_tree.py",
+        "tests/unit/test_studio_cli_providers.py",
+        "tests/unit/test_studio_data_dir_precedence.py",
+        "tests/unit/test_studio_probe_latency.py",
+        "tests/unit/test_studio_providers.py",
         "tests/unit/test_studio_server.py"
       ]
     },
     "python_sources": {
-      "file_count": 95,
+      "file_count": 99,
       "files": [
         {
           "path": "src/kala_agent/__init__.py",
@@ -710,11 +769,11 @@
         },
         {
           "path": "src/kala_agent/contracts/__init__.py",
-          "sha256": "f6c0d1e6583d1d2e92149789e8bbf26b0015b8f142774968e27a26bdcd264053"
+          "sha256": "cf6548aabaa5647910e022648980617de32b9d3150b7284ae13b7b735993a722"
         },
         {
           "path": "src/kala_agent/contracts/construction.py",
-          "sha256": "b742475ebe0fc5a9632366e05d511f2a3f3de87d7517e526fa4b832be7936eea"
+          "sha256": "2d2210c5754b82c0fe1de9586ffc6734cdb718cd84a3f0714e6ad84d59dd9c75"
         },
         {
           "path": "src/kala_agent/contracts/models.py",
@@ -858,15 +917,19 @@
         },
         {
           "path": "src/kala_agent/studio/cli.py",
-          "sha256": "809d88e181c8ab478d458288ddf48ad07a67e4cc037d0bcae1f9fcf29e9f9b1f"
+          "sha256": "c7183da2096acc0465a10b500b7a7a8a914468b2bc9a3d5f7864c3cb0fbcdb1c"
         },
         {
           "path": "src/kala_agent/studio/design/__init__.py",
           "sha256": "7ba484ba95f40773a7562b7e988f2490c075ade109be5d73277aa398db53435f"
         },
         {
+          "path": "src/kala_agent/studio/design/artifacts.py",
+          "sha256": "f57c9f5e427ae370470cbf21340eea37b4aa3535d11be2d9ce6459aefd352208"
+        },
+        {
           "path": "src/kala_agent/studio/design/compile_ocp.py",
-          "sha256": "3401af76ccb5c8c2b9f9c4701bbdf78fdb0b6724742351b3b496d31444967652"
+          "sha256": "ab99a91bb2e7b0a70e92c9587cf866b3f49aa53e74a5dd3e3645a213da3049cd"
         },
         {
           "path": "src/kala_agent/studio/design/drawing.py",
@@ -878,7 +941,7 @@
         },
         {
           "path": "src/kala_agent/studio/design/intent.py",
-          "sha256": "a5a71e01bd3ece97c1ad0fc6f775b7c1909bef83bc7be258335b4ebe75d685d6"
+          "sha256": "07e58585fb5b774dd8f382372fbbe30fe3ae4e7940b52bd987e9a8a92a1f186c"
         },
         {
           "path": "src/kala_agent/studio/design/measure.py",
@@ -894,11 +957,11 @@
         },
         {
           "path": "src/kala_agent/studio/design/providers/base.py",
-          "sha256": "38a0ac46a9f5482f2821c7730bc38a21d2346f3305cf11963578075374345320"
+          "sha256": "cc8adab26ab4286f369d47b037fd47934bc733b8c66e2a3a05d4e785c45d23dc"
         },
         {
           "path": "src/kala_agent/studio/design/providers/freecad.py",
-          "sha256": "36872c8ca80d86e058831ba5d59853a6f2d599bb4bcb5d8b95f97308476345e4"
+          "sha256": "f987058dc0a9aa15bf2db9e6dc00d08233255b201c77fbb546dac444f8d6369f"
         },
         {
           "path": "src/kala_agent/studio/design/providers/opencascade.py",
@@ -910,7 +973,7 @@
         },
         {
           "path": "src/kala_agent/studio/design/service.py",
-          "sha256": "c707ac7e097f9a1b12d6d4bfea40c256f1b551afd13d72c91a68c010b6e8e8ed"
+          "sha256": "66d831ab9c1ab203d85a836b9d796b6e51f4c6c175b21eb03c9c14d2adaa59ee"
         },
         {
           "path": "src/kala_agent/studio/design/templates.py",
@@ -954,7 +1017,7 @@
         },
         {
           "path": "src/kala_agent/studio/internal_api.py",
-          "sha256": "0f59c91bca4d618db051e4ffc3dafe406926f7c004f5255678952e1bc69834b9"
+          "sha256": "7af6bb32b76e9513ad86d9d52419d4f226cbb2775c8184026fae14c2178484ce"
         },
         {
           "path": "src/kala_agent/studio/middleware.py",
@@ -962,19 +1025,27 @@
         },
         {
           "path": "src/kala_agent/studio/providers/__init__.py",
-          "sha256": "dad1bd7e12a56a9eb69a46f10549f8a9c0eec851a72b49b7e4826fceecd542d6"
+          "sha256": "04e9d6d1e283fbaf7c19277ee1a6b73187db00b0fd55dc12ba03a705bf538f88"
         },
         {
           "path": "src/kala_agent/studio/providers/base.py",
-          "sha256": "cf3fb1089f5c730c306fb27b8ff7faa846c68293ba17dea6fba9f97bd93aab7f"
+          "sha256": "62008d64c2e547ff6d875297440b99e99541bf8a93384ae04271dd00057a835d"
         },
         {
-          "path": "src/kala_agent/studio/providers/codex.py",
-          "sha256": "cddae1531ad0977c7609a3004d7025a697dc27ff053ab797f759c662cbc234d1"
+          "path": "src/kala_agent/studio/providers/claude_cli.py",
+          "sha256": "28fe1e1e3a3ff7f1b7bb1950ecba18ca19a8456087469d7a293a58b106eb9c2c"
+        },
+        {
+          "path": "src/kala_agent/studio/providers/cli_runtime.py",
+          "sha256": "26d1ebb6a0a1e5308d329ee2ece40c9b306012c331c4991c8a20019ca671c617"
+        },
+        {
+          "path": "src/kala_agent/studio/providers/codex_cli.py",
+          "sha256": "868f8b93e6aadb6f01c0682bfb1159cecdf4a95e2663c10a9afc85b0a1ddbabd"
         },
         {
           "path": "src/kala_agent/studio/providers/dispatch.py",
-          "sha256": "b2b82e612b6e1f80801172fa2e992929f1b7879d6665a8c0bda5382d93f07a8f"
+          "sha256": "5fbf4aa7bdb5afbe92b0d88969619190229e9ebe7fa3e94cae077bb7a55bf9da"
         },
         {
           "path": "src/kala_agent/studio/providers/local.py",
@@ -982,15 +1053,19 @@
         },
         {
           "path": "src/kala_agent/studio/providers/openai_compat.py",
-          "sha256": "57fc2cf65044b830daeaffcdc4f3a88e3d03398ec3ddeec33ea2f439b16555da"
+          "sha256": "37caa21b0b990398e2807433cb7976feb0d68c7c5d849c734d2aaf2c6a4208c4"
+        },
+        {
+          "path": "src/kala_agent/studio/providers/opencode_cli.py",
+          "sha256": "3fdd5d24d41e8566b44bd324e392f74d4e5099eb241fa527f61105bb290795ad"
         },
         {
           "path": "src/kala_agent/studio/schemas.py",
-          "sha256": "817f6c2b00bb7a80cea82d9731cb22ab6cd1a19770934aa2bbc07c6487360b5e"
+          "sha256": "356bf6c778b864b9ad71be5efbff0bdc900fde9f2b8be1c2b81a1ea9a4c8960a"
         },
         {
           "path": "src/kala_agent/studio/server.py",
-          "sha256": "837fc8ebae84222ff4690cbd9a9891c18aa4c0a8ba78901fd91dde773d32c8bd"
+          "sha256": "bb491e1f4257f6d6f04058a9204a6801fc33140595f79bba9d3d25f93c4ec343"
         },
         {
           "path": "src/kala_agent/studio/session_journal.py",
@@ -998,7 +1073,7 @@
         },
         {
           "path": "src/kala_agent/studio/settings.py",
-          "sha256": "eca19cf0520267c35836ac40e7e65a1a284c8468daa19b435421f3ea63b2fc27"
+          "sha256": "b226662c2077a1f41a770b0861cba31f0792a9abc48caa85b2606050b123d2b6"
         },
         {
           "path": "src/kala_agent/studio/static.py",
@@ -1018,7 +1093,7 @@
         },
         {
           "path": "src/kala_agent/tools/protocol.py",
-          "sha256": "56921b314bbe077c8f1176aae1cd2d23e5618e82fc729cfd6afd501e8efccae3"
+          "sha256": "3cb9519ce280303c4181320f12cd1bc44d3624a86016a694fc6119512c11a628"
         },
         {
           "path": "src/kala_agent/tools/registry.py",
@@ -1034,7 +1109,7 @@
         }
       ],
       "root": "src/kala_agent",
-      "tree_digest": "754bc70c23dfae525770279c1e70b09fb1f9fd23ee4ee11017b9016962c23f91"
+      "tree_digest": "2deb2169baa71dbfc7c0da8515b31ebea7f66a1f349984b30a3936734283cb40"
     }
   },
   "status": "compatibility-fixture preparation only; no Rust product code and no packaging cutover is authorized by this corpus"

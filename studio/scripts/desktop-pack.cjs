@@ -188,13 +188,17 @@ function decidePackaging({ argv, report }) {
         'review artifact and must not be distributed as a release.',
     };
   }
-  const proxied = report && report.native && Number.isInteger(report.native.proxiedRouteMethodCount)
-    ? report.native.proxiedRouteMethodCount
-    : 0;
-  const nativeDesignWarning = proxied > 0
-    ? `${proxied} route-method(s) are delegated through the geometry-backend seam; the default ` +
-      'build answers them from the native kala-studio backend (the Python worker is opt-in). The ' +
-      'packaged AppImage smoke with --require-geometry/--require-freecad is the release evidence.'
+  const geometrySeam = report && report.native
+    && Number.isInteger(report.native.geometrySeamRouteMethodCount)
+    ? report.native.geometrySeamRouteMethodCount
+    : (report && report.native && Number.isInteger(report.native.proxiedRouteMethodCount)
+      ? report.native.proxiedRouteMethodCount
+      : 0);
+  const nativeDesignWarning = geometrySeam > 0
+    ? `${geometrySeam} route-method(s) go through the geometry-backend seam; the default ` +
+      'build answers them from the native kala-studio backend (the supervised Python worker is a ' +
+      'development opt-in). The packaged AppImage smoke with --require-geometry/--require-freecad ' +
+      'is the release evidence.'
     : null;
   return {
     dirMode: invocation.unpackedOnly,

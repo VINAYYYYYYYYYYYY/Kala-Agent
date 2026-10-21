@@ -29,7 +29,7 @@
 // render mode, theme, or unmounting releases GPU resources.
 
 import { useEffect, useRef } from 'react';
-import type { ReactElement } from 'react';
+import type { KeyboardEvent, ReactElement } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type {
@@ -46,6 +46,8 @@ import { PRIMITIVE_SECTION_CUT, sectionCutCorners, type SectionCut } from '../st
 import { formatMeasureDistance, measureDistanceMm } from './measure';
 import type { MeasurePoint, MeasureState } from './measure';
 import { pointerToNdc, raycastFacePoint } from './raycast';
+import { VIEWPORT_KEY_HELP, viewportCommand, VIEWPORT_MAX_POLAR_RAD, VIEWPORT_MIN_POLAR_RAD } from './viewportKeys';
+import type { ViewportCommand } from './viewportKeys';
 import type { MaterialKind, BackgroundKind } from '../state/store';
 
 export interface SceneCanvasProps {
@@ -104,6 +106,8 @@ interface SceneState {
   applySection(show: boolean): void;
   applySectionCut(cut: SectionCut): void;
   applyMeasure(state: MeasureState): void;
+  /** Apply one keyboard command (orbit, zoom, reset) to the live camera. */
+  applyCommand(command: ViewportCommand): void;
   resetView(): void;
   renderNow(): void;
   handleResize(): void;
@@ -228,13 +232,35 @@ export function SceneCanvas(props: SceneCanvasProps): ReactElement {
     state.resetView();
   }, [props.viewResetToken]);
 
+  // The keyboard contract of the viewport. The keys are handled here, on the
+  // focused container, and are applied to the same camera the pointer drives.
+  // A key the viewport does not own is left to the browser.
+  function onKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
+    const command = viewportCommand(event.key);
+    if (!command) return;
+    // The viewport owns the arrow keys while it is focused: the page must
+    // not scroll behind it.
+    event.preventDefault();
+    const state = sceneStateRef.current;
+    if (!state) return;
+    state.applyCommand(command);
+  }
+
+  const viewportName = props.renderMode === 'pencil2d' ? '2D pencil' : '3D clay';
+  const viewportSubject = props.designMesh === true ? 'design' : 'primitive';
+
   return (
     <div
       className="viewer-canvas"
       ref={containerRef}
-      role="img"
+      // The viewport is an interactive widget with its own key handling, not
+      // a static picture: `application` says so, and the label names every
+      // key it owns.
+      role="application"
+      tabIndex={0}
+      onKeyDown={onKeyDown}
       data-design-mesh={props.designMesh === true ? 'true' : 'false'}
-      aria-label={`${props.renderMode === 'pencil2d' ? '2D pencil' : '3D clay'} viewport of the current ${props.designMesh === true ? 'design' : 'primitive'}`}
+      aria-label={`${viewportName} viewport of the current ${viewportSubject}. ${VIEWPORT_KEY_HELP}`}
     >
       <div className="viewer-canvas-overlay" ref={overlayHostRef} aria-hidden="true" />
       <div className="viewer-canvas-source" aria-live="polite">
@@ -772,6 +798,38 @@ function createScene(
     renderNow();
   }
 
+  // --- Keyboard camera ----------------------------------------------------
+  //
+  // The pointer orbits through OrbitControls; the keyboard acts on the same
+  // camera directly, in its own spherical coordinates, so both routes agree.
+
+  function applyCommand(command: ViewportCommand): void {
+    if (command.kind === 'reset') {
+      resetView();
+      return;
+    }
+    const offset = camera.position.clone().sub(controls.target);
+    if (offset.lengthSq() === 0) return;
+    const spherical = new THREE.Spherical().setFromVector3(offset);
+    if (command.kind === 'orbit') {
+      spherical.theta += command.azimuth;
+      spherical.phi = THREE.MathUtils.clamp(
+        spherical.phi + command.polar,
+        VIEWPORT_MIN_POLAR_RAD,
+        VIEWPORT_MAX_POLAR_RAD,
+      );
+    } else {
+      spherical.radius = THREE.MathUtils.clamp(
+        spherical.radius * command.factor,
+        controls.minDistance,
+        controls.maxDistance,
+      );
+    }
+    camera.position.copy(controls.target).add(new THREE.Vector3().setFromSpherical(spherical));
+    controls.update();
+    renderNow();
+  }
+
   // --- Dimensions ---------------------------------------------------------
 
   function rebuildDimensions(): void {
@@ -1146,6 +1204,7 @@ function createScene(
     applySection,
     applySectionCut,
     applyMeasure,
+    applyCommand,
     resetView,
     renderNow,
     handleResize,

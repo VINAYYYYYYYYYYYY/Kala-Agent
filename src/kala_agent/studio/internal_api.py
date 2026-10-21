@@ -112,6 +112,7 @@ from kala_agent.studio.server import (
     _json_error,
     build_lifespan,
     cad_providers,
+    design_artifact,
     design_drawing,
     design_route,
     design_section,
@@ -470,6 +471,16 @@ router.add_api_route(
         "x-kala-provider": BUILDER_PROVIDER,
         "x-kala-provider-mode": BUILDER_PROVIDER_MODE,
     },
+)
+router.add_api_route(
+    "/design/{design_id}/artifact/{kind}",
+    design_artifact,
+    methods=["GET"],
+    summary="Download one stored artifact of a design",
+    description=(
+        "Serves the exact stored bytes of one artifact kind, digest-verified "
+        "against the journal before a byte is sent."
+    ),
 )
 router.add_api_route(
     "/import",

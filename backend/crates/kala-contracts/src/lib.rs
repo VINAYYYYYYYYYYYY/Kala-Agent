@@ -51,8 +51,8 @@ mod wire;
 pub use construction::{
     ANALYSIS_OPS, ASSEMBLY_OPS, AnalysisReading, AnalysisScript, AnalysisStep, AssemblyStep,
     COMPONENT_OPS, ComponentScript, ComponentStep, ConstructionError, ConstructionScript, EDIT_OPS,
-    EditStep, MAX_COMPONENTS, MAX_DIMENSION_MM, MAX_STEPS, RevisionAction, load_analysis,
-    load_analysis_json_bytes, load_analysis_json_str, load_construction,
+    EditStep, MAX_COMPONENTS, MAX_DIMENSION_MM, MAX_STEPS, MAX_TOTAL_STEPS, RevisionAction,
+    load_analysis, load_analysis_json_bytes, load_analysis_json_str, load_construction,
     load_construction_json_bytes, load_construction_json_str, load_reading,
     load_reading_json_bytes, load_reading_json_str,
 };

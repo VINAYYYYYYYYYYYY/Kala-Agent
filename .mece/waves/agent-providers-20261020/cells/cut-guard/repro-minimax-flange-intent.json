@@ -1,0 +1,243 @@
+{
+ "material": "steel",
+ "label": "100 mm diameter, 12 mm thick steel flange with a 30 mm centre bore and six 8 mm through holes on an 80 mm pitch circle d",
+ "script": {
+  "summary": "100 mm diameter, 12 mm thick steel flange with a 30 mm centre bore and six 8 mm through holes on an 80 mm pitch circle diameter",
+  "components": [
+   {
+    "name": "flange_right",
+    "steps": [
+     {
+      "op": "sketch",
+      "plane": "XY",
+      "profile": "circle",
+      "diameter": 100.0,
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "extrude",
+      "plane": "XY",
+      "length": 12.0,
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "sketch",
+      "plane": "XY",
+      "profile": "circle",
+      "diameter": 30.0,
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "pocket",
+      "plane": "XY",
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "sketch",
+      "plane": "XY",
+      "profile": "rectangle",
+      "width": 100.0,
+      "height": 100.0,
+      "x": 0.0,
+      "y": -50.0,
+      "reversed": false
+     },
+     {
+      "op": "pocket",
+      "plane": "XY",
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "sketch",
+      "plane": "XY",
+      "profile": "circle",
+      "diameter": 8.0,
+      "x": 40.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "pocket",
+      "plane": "XY",
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "sketch",
+      "plane": "XY",
+      "profile": "circle",
+      "diameter": 8.0,
+      "x": 20.0,
+      "y": 34.64101615137755,
+      "reversed": false
+     },
+     {
+      "op": "pocket",
+      "plane": "XY",
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "sketch",
+      "plane": "XY",
+      "profile": "circle",
+      "diameter": 8.0,
+      "x": 20.0,
+      "y": -34.64101615137755,
+      "reversed": false
+     },
+     {
+      "op": "pocket",
+      "plane": "XY",
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     }
+    ]
+   },
+   {
+    "name": "flange_left",
+    "steps": [
+     {
+      "op": "sketch",
+      "plane": "XY",
+      "profile": "circle",
+      "diameter": 100.0,
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "extrude",
+      "plane": "XY",
+      "length": 12.0,
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "sketch",
+      "plane": "XY",
+      "profile": "circle",
+      "diameter": 30.0,
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "pocket",
+      "plane": "XY",
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "sketch",
+      "plane": "XY",
+      "profile": "rectangle",
+      "width": 100.0,
+      "height": 100.0,
+      "x": -100.0,
+      "y": -50.0,
+      "reversed": false
+     },
+     {
+      "op": "pocket",
+      "plane": "XY",
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "sketch",
+      "plane": "XY",
+      "profile": "circle",
+      "diameter": 8.0,
+      "x": -40.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "pocket",
+      "plane": "XY",
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "sketch",
+      "plane": "XY",
+      "profile": "circle",
+      "diameter": 8.0,
+      "x": -20.0,
+      "y": 34.64101615137755,
+      "reversed": false
+     },
+     {
+      "op": "pocket",
+      "plane": "XY",
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     },
+     {
+      "op": "sketch",
+      "plane": "XY",
+      "profile": "circle",
+      "diameter": 8.0,
+      "x": -20.0,
+      "y": -34.64101615137755,
+      "reversed": false
+     },
+     {
+      "op": "pocket",
+      "plane": "XY",
+      "x": 0.0,
+      "y": 0.0,
+      "reversed": false
+     }
+    ]
+   }
+  ],
+  "assembly": [
+   {
+    "op": "place",
+    "component": "flange_right",
+    "components": [],
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0
+   },
+   {
+    "op": "place",
+    "component": "flange_left",
+    "components": [],
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0
+   },
+   {
+    "op": "fuse",
+    "components": [
+     "flange_right",
+     "flange_left"
+    ],
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0
+   }
+  ]
+ }
+}

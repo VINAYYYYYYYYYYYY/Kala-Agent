@@ -12,7 +12,10 @@ ship credentials:
 - The response body is bounded to :data:`STUDIO_RESPONSE_MAX_BYTES`; a
   larger body raises :class:`TooLargeResponseError` before the studio
   accepts the payload.
-- The timeout is bounded and never configurable at request time.
+- The timeout is bounded and never configurable at request time: a plain
+  chat uses :data:`STUDIO_REQUEST_TIMEOUT_SECONDS` (30 s) and a design turn
+  uses :data:`STUDIO_DESIGN_REQUEST_TIMEOUT_SECONDS` (180 s). The
+  dispatch layer selects the budget; the HTTP body cannot.
 
 A caller that has not set ``allow_remote=True`` cannot reach this code:
 the dispatch layer refuses the request with a sanitised message before
@@ -42,7 +45,14 @@ from kala_agent.studio.providers.base import (
 OPENAI_DEFAULT_ENDPOINT: Final[str] = "https://api.openai.com/v1/chat/completions"
 OPENROUTER_DEFAULT_ENDPOINT: Final[str] = "https://openrouter.ai/api/v1/chat/completions"
 STUDIO_REQUEST_TIMEOUT_SECONDS: Final[float] = 30.0
+#: The budget of one remote design turn: the first call and the one repair
+#: call. It matches the 180 s budget the CLI providers already give their
+#: model, because a free model that authors a non-template script needs it.
+STUDIO_DESIGN_REQUEST_TIMEOUT_SECONDS: Final[float] = 180.0
 MAX_HTTP_RESPONSE_BYTES: Final[int] = 1_000_000
+#: The display bound of one chat reply. The design JSON is extracted from the
+#: full reply; only the displayed prose keeps this bound, exactly as before.
+MAX_RESPONSE_TEXT_LENGTH: Final[int] = 4096
 MAX_KEY_LENGTH: Final[int] = 256
 
 
@@ -217,8 +227,6 @@ def _read_response(data: bytes) -> tuple[str, str | None]:
     model_value = payload.get("model")
     if not isinstance(model_value, str) or not model_value:
         model_value = None
-    if len(text) > 4096:
-        text = text[:4096]
     return text, model_value
 
 
@@ -229,12 +237,19 @@ def openai_compat_chat(
     prompt: str,
     allow_remote: bool,
     environ: Mapping[str, str],
+    timeout: float = STUDIO_REQUEST_TIMEOUT_SECONDS,
 ) -> ChatOutcome:
     """Send ``prompt`` to the fixed endpoint for ``provider`` and parse the reply.
 
     ``allow_remote`` must be ``True`` for the request to leave the process;
     the dispatch layer enforces this invariant upstream so the studio never
     sends a chat on the operator's behalf without explicit consent.
+
+    ``timeout`` is the whole-request budget. The dispatch layer passes
+    :data:`STUDIO_DESIGN_REQUEST_TIMEOUT_SECONDS` for a design turn (both the
+    first call and the one repair call) and keeps the 30 s
+    :data:`STUDIO_REQUEST_TIMEOUT_SECONDS` for a plain chat. It is a direct
+    argument, never read from the request body.
     """
     if not allow_remote:
         raise ProviderConfigurationError("remote calls require explicit allow_remote=true")
@@ -254,11 +269,12 @@ def openai_compat_chat(
         endpoint,
         payload,
         headers,
-        timeout=STUDIO_REQUEST_TIMEOUT_SECONDS,
+        timeout=timeout,
     )
     text, observed_model = _read_response(data)
     return ChatOutcome(
-        text=text,
+        text=text[:MAX_RESPONSE_TEXT_LENGTH],
+        reply=text,
         provider=provider,
         model=observed_model or model,
         offline=False,
@@ -267,8 +283,10 @@ def openai_compat_chat(
 
 __all__ = (
     "MAX_HTTP_RESPONSE_BYTES",
+    "MAX_RESPONSE_TEXT_LENGTH",
     "OPENAI_DEFAULT_ENDPOINT",
     "OPENROUTER_DEFAULT_ENDPOINT",
+    "STUDIO_DESIGN_REQUEST_TIMEOUT_SECONDS",
     "STUDIO_REQUEST_TIMEOUT_SECONDS",
     "fixed_endpoints",
     "openai_compat_chat",

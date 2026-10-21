@@ -410,6 +410,17 @@
   background: var(--construction);
 }
 
+/* The live elapsed clock of the turn in flight. It reads exactly like the
+   post-reply elapsed chip, so the two never disagree. */
+.chat-panel .chat-panel-elapsed-live {
+  margin-left: auto;
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .chat-panel .chat-panel-error {
   margin: 0;
   padding: var(--space-sm) var(--space-sm);
@@ -435,8 +446,15 @@
 
 .chat-panel .chat-panel-route {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-sm);
+  min-width: 0;
+}
+
+/* The model picker sits on its own full-width row: a provider's model ids
+   are long ("minimax/minimax-m3.1-flash:free") and a list of them needs the
+   whole width of the composer to stay readable. */
+.chat-panel .chat-panel-field-model {
   min-width: 0;
 }
 
@@ -946,6 +964,36 @@
 
 .chat-panel .chat-panel-design-digest-copy[data-copy-failed='yes'] {
   border-color: var(--redline);
+  color: var(--redline-ink);
+}
+
+/* Download one stored artifact next to its digest chip. */
+.chat-panel .chat-panel-design-digest-download {
+  padding: 0 var(--space-xs);
+  border: 0.5px solid var(--prussian);
+  background: var(--card);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--prussian);
+  cursor: pointer;
+}
+
+.chat-panel .chat-panel-design-digest-download:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.chat-panel .chat-panel-design-digest-download:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.chat-panel .chat-panel-design-error {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
   color: var(--redline-ink);
 }
 

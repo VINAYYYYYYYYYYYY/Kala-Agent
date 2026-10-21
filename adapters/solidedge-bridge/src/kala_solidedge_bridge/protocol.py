@@ -467,9 +467,10 @@ class BuildRequest(_BridgeModel):
     """One bounded, deterministic build request.
 
     ``procedure`` is capped at ``MAX_OPERATIONS`` independently of the core
-    construction IR, which caps each component at 12 steps. The bridge never
-    receives artifact paths; ``density_kg_m3`` is optional and, when present,
-    makes mass fields meaningful in :class:`PartResult`.
+    construction IR, which allows up to 500 steps in one component and 500 in
+    total, and at ``MAX_PARTS`` parts. The bridge never receives artifact
+    paths; ``density_kg_m3`` is optional and, when present, makes mass fields
+    meaningful in :class:`PartResult`.
     """
 
     protocol_version: ProtocolVersion = 1

@@ -31,6 +31,10 @@ export interface ReadinessReport {
     routeMethods: string[];
     rustNativeRouteMethodCount: number;
     rustNativeRouteMethods: string[];
+    /** The geometry-backend seam, answered natively by default. */
+    geometrySeamRouteMethodCount: number;
+    geometrySeamRouteMethods: string[];
+    /** Deprecated compatibility alias of the seam fields. */
     proxiedRouteMethodCount: number;
     proxiedRouteMethods: string[];
   };
@@ -65,6 +69,9 @@ export interface StudioSourceAnalysis {
   nativeRouteMethods: string[];
   rustNativeRouteMethods: string[];
   rustNativeRouteMethodCount: number;
+  geometrySeamRouteMethods: string[];
+  geometrySeamRouteMethodCount: number;
+  /** Deprecated compatibility alias of the seam fields. */
   proxiedRouteMethods: string[];
   proxiedRouteMethodCount: number;
   missingRouteMethods: string[];
@@ -83,6 +90,8 @@ export function parseRustRoutes(source: string): string[];
 export function parseRustRouteSurface(source: string): {
   routeMethods: string[];
   rustNativeRouteMethods: string[];
+  geometrySeamRouteMethods: string[];
+  /** Deprecated compatibility alias of the seam fields. */
   proxiedRouteMethods: string[];
 };
 export function analyzeStudioSources(options: {

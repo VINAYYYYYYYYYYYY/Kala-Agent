@@ -187,6 +187,18 @@ pub trait GeometryBackend: Send + Sync {
         Box::pin(async { Err(BackendError::Unsupported("section".to_owned())) })
     }
 
+    /// `GET /internal/v1/design/{design_id}/artifact/{kind}`.
+    ///
+    /// The front door validates both path segments before it calls, so the
+    /// backend only has to answer with the stored bytes.
+    fn artifact<'a>(
+        &'a self,
+        _design_id: &'a str,
+        _kind: &'a str,
+    ) -> BackendFuture<'a, Result<WorkerResponse, BackendError>> {
+        Box::pin(async { Err(BackendError::Unsupported("artifact".to_owned())) })
+    }
+
     /// `POST /internal/v1/import` — the view-only STEP import.
     fn import_step<'a>(
         &'a self,
@@ -495,6 +507,23 @@ impl GeometryBackend for PythonWorkerBackend {
                 "GET",
                 &format!("{WORKER_INTERNAL_PREFIX}/design/{design_id}/section"),
                 query,
+                None,
+                None,
+            )
+            .await
+        })
+    }
+
+    fn artifact<'a>(
+        &'a self,
+        design_id: &'a str,
+        kind: &'a str,
+    ) -> BackendFuture<'a, Result<WorkerResponse, BackendError>> {
+        Box::pin(async move {
+            self.request(
+                "GET",
+                &format!("{WORKER_INTERNAL_PREFIX}/design/{design_id}/artifact/{kind}"),
+                None,
                 None,
                 None,
             )

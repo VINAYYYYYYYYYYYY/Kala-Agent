@@ -317,6 +317,27 @@
   white-space: nowrap;
 }
 
+/* The server's verdict on the primitive preview: a request in flight, or a
+   refusal with the backend's real message. */
+.drafting-sheet .drafting-preview-note {
+  margin: 0;
+  padding: 2px var(--space-sm);
+  border: 0.5px solid var(--hairline);
+  background: var(--card);
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.drafting-sheet .drafting-preview-note.is-error {
+  border-color: var(--redline);
+  color: var(--error);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .drafting-sheet .drafting-tool-section {
   letter-spacing: -0.02em;
 }

@@ -9,7 +9,7 @@
 // a density is never inferred from a material name, because an inferred
 // density is a fabricated number on a drafting sheet.
 
-import type { CheckValue, DesignResult } from '../../types/studio';
+import type { CheckValue, DesignArtifactKind, DesignResult } from '../../types/studio';
 import type { ServerState } from '../../state/store';
 
 /** One row of the measured table. */
@@ -34,6 +34,30 @@ export interface DigestChipData {
   digest: string;
   /** The first eight characters, the value printed on the chip. */
   short: string;
+  /**
+   * The stored-artifact kind the download route accepts, or null when this
+   * digest names no downloadable kind (an unknown native format). The chip
+   * only offers a download when the backend can actually serve the bytes.
+   */
+  downloadKind: DesignArtifactKind | null;
+}
+
+/** The artifact kinds the download route serves. */
+export const DOWNLOADABLE_ARTIFACT_KINDS: ReadonlyArray<DesignArtifactKind> = [
+  'script',
+  'step',
+  'fcstd',
+  'stl',
+];
+
+/** Whether a native format name is a stored-artifact kind. */
+export function downloadableKind(kind: string | null | undefined): DesignArtifactKind | null {
+  const normalized = kind?.trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized === 'stp' || normalized === 'step') return 'step';
+  return (DOWNLOADABLE_ARTIFACT_KINDS as ReadonlyArray<string>).includes(normalized)
+    ? (normalized as DesignArtifactKind)
+    : null;
 }
 
 /**
@@ -185,11 +209,23 @@ export function digestChips(design: DesignResult): DigestChipData[] {
   const chips: DigestChipData[] = [];
   const script = design.artifacts.script_sha256;
   if (typeof script === 'string' && script.length > 0) {
-    chips.push({ kind: 'script', label: 'script', digest: script, short: script.slice(0, 8) });
+    chips.push({
+      kind: 'script',
+      label: 'script',
+      digest: script,
+      short: script.slice(0, 8),
+      downloadKind: 'script',
+    });
   }
   const step = design.artifacts.step_sha256;
   if (typeof step === 'string' && step.length > 0) {
-    chips.push({ kind: 'step', label: 'step', digest: step, short: step.slice(0, 8) });
+    chips.push({
+      kind: 'step',
+      label: 'step',
+      digest: step,
+      short: step.slice(0, 8),
+      downloadKind: 'step',
+    });
   }
   const native = design.artifacts.native_sha256;
   if (typeof native === 'string' && native.length > 0) {
@@ -198,6 +234,7 @@ export function digestChips(design: DesignResult): DigestChipData[] {
       label: nativeKindLabel(design.artifacts.native_kind),
       digest: native,
       short: native.slice(0, 8),
+      downloadKind: downloadableKind(design.artifacts.native_kind),
     });
   }
   return chips;

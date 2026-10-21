@@ -8,15 +8,27 @@ import math
 import sqlite3
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
+from inspect import signature
 from pathlib import Path
 from typing import Any, cast
 
 import pytest
 from fastapi.testclient import TestClient
 
-from kala_agent.studio.providers.base import ChatOutcome
-from kala_agent.studio.providers.dispatch import StudioChatTurn
+from kala_agent.studio.design.intent import DESIGN_INTENT_INSTRUCTION
+from kala_agent.studio.providers.base import ChatOutcome, ProviderTimeoutError
+from kala_agent.studio.providers.dispatch import (
+    MAX_REPAIR_PREVIOUS_CHARS,
+    StudioChatTurn,
+    _extract_design_json_block,
+    _repair_prompt,
+)
 from kala_agent.studio.providers.dispatch import chat as dispatch_chat
+from kala_agent.studio.providers.openai_compat import (
+    STUDIO_DESIGN_REQUEST_TIMEOUT_SECONDS,
+    STUDIO_REQUEST_TIMEOUT_SECONDS,
+    openai_compat_chat,
+)
 from kala_agent.studio.server import create_studio_app
 
 LOOPBACK_BASE_URL = "http://127.0.0.1"
@@ -451,6 +463,77 @@ def test_design_id_is_validated_and_unknown_ids_are_404(client: TestClient) -> N
     assert client.get(f"{base}/{unknown}/section").status_code == 404
 
 
+# ---------------------------------------------------------- artifact download
+
+
+def test_artifact_download_serves_the_exact_stored_bytes(client: TestClient) -> None:
+    design = _make_design(client)
+    design_id = str(design["design_id"])
+    base = f"/api/studio/design/{design_id}/artifact"
+
+    script = client.get(f"{base}/script")
+    assert script.status_code == 200, script.text
+    assert script.headers["content-type"] == "application/json"
+    assert script.headers["x-studio-design-id"] == design_id
+    assert script.headers["x-studio-artifact-kind"] == "script"
+    assert script.headers["x-studio-digest"] == design["artifacts"]["script_sha256"]
+    assert hashlib.sha256(script.content).hexdigest() == design["artifacts"]["script_sha256"]
+    assert script.headers["content-disposition"].startswith("attachment; filename=")
+    assert script.headers["content-disposition"].endswith(".json\"")
+    # The served script is the canonical construction script, not a re-export.
+    assert json.loads(script.content)["components"]
+
+    step = client.get(f"{base}/step")
+    assert step.status_code == 200, step.text
+    assert step.headers["content-type"] == "application/step"
+    assert step.content.startswith(b"ISO-10303-21")
+    assert step.headers["x-studio-digest"] == design["artifacts"]["step_sha256"]
+    assert hashlib.sha256(step.content).hexdigest() == design["artifacts"]["step_sha256"]
+    assert step.headers["content-disposition"].endswith(".step\"")
+
+
+def test_artifact_download_refuses_a_kind_the_design_did_not_store(client: TestClient) -> None:
+    design = _make_design(client)
+    base = f"/api/studio/design/{design['design_id']}/artifact"
+    # The OpenCascade provider stores no native document and no STL.
+    for kind in ("fcstd", "stl"):
+        response = client.get(f"{base}/{kind}")
+        assert response.status_code == 404, response.text
+        body = response.json()
+        assert body["code"] == "artifact_not_found"
+        assert body["message"] == "no artifact of that kind is stored for this design"
+        assert body["details"] == [f"design_id={design['design_id']}; kind={kind}"]
+    unknown = client.get(f"{base}/bogus")
+    assert unknown.status_code == 422
+    assert unknown.json()["details"] == ["the artifact kind must be one of script, step, fcstd, stl"]
+
+
+def test_artifact_download_validates_the_design_id_and_the_bearer(client: TestClient) -> None:
+    base = "/api/studio/design"
+    invalid = client.get(f"{base}/not-a-digest/artifact/step")
+    assert invalid.status_code == 422
+    assert invalid.json()["details"] == ["the design id is not a sha256 digest"]
+    denied = client.get(
+        f"{base}/{'0' * 64}/artifact/step",
+        headers={"Authorization": "Bearer wrong-token"},
+    )
+    assert denied.status_code == 401
+
+
+def test_artifact_download_verifies_the_journalled_digest(client: TestClient, tmp_path: Path) -> None:
+    design = _make_design(client)
+    digest = str(design["artifacts"]["script_sha256"])
+    object_path = tmp_path / "artifacts" / "objects" / digest[:2] / digest
+    assert object_path.is_file()
+    object_path.write_bytes(b'{"tampered":true}')
+    response = client.get(f"/api/studio/design/{design['design_id']}/artifact/script")
+    assert response.status_code == 500
+    assert response.json()["code"] == "artifact_digest_mismatch"
+    assert response.json()["message"] == (
+        "the stored artifact does not match its journalled digest"
+    )
+
+
 # ------------------------------------------------------------ idempotency
 
 
@@ -662,11 +745,100 @@ def _valid_reply() -> str:
     return "Compiling the bracket.\n\n```json\n" + json.dumps(_lbracket_intent()) + "\n```"
 
 
+def _long_design_reply(pairs: int = 100) -> str:
+    """Return prose plus a design JSON longer than the 4 096 display bound."""
+    steps: list[dict[str, object]] = [
+        {"op": "sketch", "plane": "XY", "profile": "rectangle", "width": 200, "height": 200},
+        {"op": "extrude", "length": 5},
+    ]
+    for index in range(pairs):
+        steps.append(
+            {
+                "op": "sketch",
+                "plane": "XY",
+                "profile": "circle",
+                "diameter": 3,
+                "x": 20 + 4 * index,
+                "y": 20,
+            }
+        )
+        steps.append({"op": "pocket"})
+    payload = {
+        "script": {
+            "summary": "200 x 200 x 5 mm plate with through holes",
+            "components": [{"name": "plate", "steps": steps}],
+        }
+    }
+    return "Here is the plate.\n\n```json\n" + json.dumps(payload) + "\n```"
+
+
+def test_a_reply_longer_than_the_display_bound_is_not_truncated_before_parsing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    reply = _long_design_reply()
+    assert len(reply) > 6_000
+    assert len(reply[:4096]) < len(reply)
+
+    def fake_chat(
+        provider: str,
+        *,
+        model: str,
+        prompt: str,
+        allow_remote: bool,
+        environ: object,
+        timeout: float | None = None,
+    ) -> ChatOutcome:
+        del prompt, allow_remote, environ, timeout
+        # Exactly what the HTTP provider does: the display keeps the 4 096
+        # bound and the full reply is kept for design extraction.
+        return ChatOutcome(
+            text=reply[:4096],
+            reply=reply,
+            provider=provider,
+            model=model,
+            offline=False,
+        )
+
+    monkeypatch.setattr("kala_agent.studio.providers.dispatch.openai_compat_chat", fake_chat)
+    outcome = dispatch_chat(
+        provider="openai",
+        model="gpt-4o-mini",
+        prompt=STITCH_PROMPT,
+        allow_remote=True,
+        environ={"OPENAI_API_KEY": "sk-test-1234567890abcdef"},
+    )
+    assert isinstance(outcome, StudioChatTurn)
+    assert outcome.design_intent is not None
+    script = outcome.design_intent.script
+    assert script is not None
+    assert len(script.components[0].steps) == 202
+    assert len(outcome.text) <= 4096
+    assert outcome.text.startswith("Here is the plate.")
+    assert "```json" not in outcome.text
+
+
+def test_the_provider_reader_keeps_the_full_reply() -> None:
+    from kala_agent.studio.providers import openai_compat
+
+    content = "x" * 5_000 + '```json\n{"a":1}\n```'
+    data = json.dumps({"choices": [{"message": {"content": content}}]}).encode("utf-8")
+
+    text, _model = openai_compat._read_response(data)
+
+    assert text == content
+
+
 def test_remote_design_hook_parses_schema_json(monkeypatch: pytest.MonkeyPatch) -> None:
     prompts: list[str] = []
 
     def fake_chat(
-        provider: str, *, model: str, prompt: str, allow_remote: bool, environ: object
+        provider: str,
+        *,
+        model: str,
+        prompt: str,
+        allow_remote: bool,
+        environ: object,
+        timeout: float | None = None,
     ) -> ChatOutcome:
         prompts.append(prompt)
         return ChatOutcome(text=_valid_reply(), provider=provider, model=model, offline=False)
@@ -692,14 +864,20 @@ def test_remote_design_hook_allows_one_repair_round_trip(
 ) -> None:
     responses = iter(
         [
-            "I cannot do that.",
+            "```json\n{not json}\n```",
             _valid_reply(),
         ]
     )
     prompts: list[str] = []
 
     def fake_chat(
-        provider: str, *, model: str, prompt: str, allow_remote: bool, environ: object
+        provider: str,
+        *,
+        model: str,
+        prompt: str,
+        allow_remote: bool,
+        environ: object,
+        timeout: float | None = None,
     ) -> ChatOutcome:
         prompts.append(prompt)
         return ChatOutcome(text=next(responses), provider=provider, model=model, offline=False)
@@ -716,6 +894,128 @@ def test_remote_design_hook_allows_one_repair_round_trip(
     assert outcome.design_intent is not None
     assert len(prompts) == 2
     assert "could not be validated" in prompts[1]
+    assert "not valid JSON" in prompts[1]
+    assert "Schema for" in prompts[1]
+
+
+def test_the_validation_repair_prompt_carries_the_instruction_the_schema_and_the_previous_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The repair call must see the same world the first call saw.
+
+    Every model call is stateless. Without the instruction, the full schema
+    and its own previous JSON the repair re-authors the design blind: it
+    invents a different shape and loses the values it had.
+    """
+    prompts: list[str] = []
+
+    def fake_chat(
+        provider: str,
+        *,
+        model: str,
+        prompt: str,
+        allow_remote: bool,
+        environ: object,
+        timeout: float | None = None,
+    ) -> ChatOutcome:
+        prompts.append(prompt)
+        return ChatOutcome(
+            text='```json\n{"template": {"template": "l_bracket", "width": -3}}\n```',
+            provider=provider,
+            model=model,
+            offline=False,
+        )
+
+    monkeypatch.setattr("kala_agent.studio.providers.dispatch.openai_compat_chat", fake_chat)
+    outcome = dispatch_chat(
+        provider="openai",
+        model="gpt-4o-mini",
+        prompt=STITCH_PROMPT,
+        allow_remote=True,
+        environ={"OPENAI_API_KEY": "sk-test-1234567890abcdef"},
+    )
+    assert isinstance(outcome, StudioChatTurn)
+    assert len(prompts) == 2
+    repair = prompts[1]
+    assert repair.startswith(DESIGN_INTENT_INSTRUCTION), repair
+    assert "When no template matches, author a ConstructionScript" in repair
+    assert "Worked examples" in repair
+    assert "DesignIntent JSON Schema:" in repair
+    assert "The JSON block you sent:" in repair
+    assert '{"template": {"template": "l_bracket", "width": -3}' in repair
+    assert "could not be validated" in repair
+    assert "Keep every value the user stated" in repair
+    assert "If a required value is missing, reply in prose" in repair
+    assert STITCH_PROMPT in repair
+    # The order of the prompt is the order of the facts the model needs.
+    assert repair.index("DesignIntent JSON Schema:") < repair.index("The JSON block you sent:")
+    assert repair.index("The JSON block you sent:") < repair.index("could not be validated")
+
+
+def test_the_validation_repair_prompt_bounds_the_previous_json() -> None:
+    huge = (
+        "```json\n"
+        + '{"script": {"summary": "'
+        + "x" * (MAX_REPAIR_PREVIOUS_CHARS + 5_000)
+        + '"}}\n```'
+    )
+    prompt = _repair_prompt("a plate 80 x 40 x 8 mm", "script: Field required", huge)
+    assert "The JSON block you sent:" in prompt
+    carried = prompt.split("The JSON block you sent:\n", 1)[1].split("\n\n", 1)[0]
+    assert len(carried) <= MAX_REPAIR_PREVIOUS_CHARS
+
+
+def test_the_previous_json_block_is_extracted_from_the_reply() -> None:
+    assert _extract_design_json_block('prose\n```json\n{"script": {}}\n```') == '{"script": {}}'
+    assert _extract_design_json_block('prose {"script": {}} more') == '{"script": {}}'
+    assert _extract_design_json_block('```json\n{"a": {"b": 1}}\n```') == '{"a": {"b": 1}}'
+    assert _extract_design_json_block("no json here") is None
+
+
+def test_the_validation_repair_text_names_both_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The honest text names what went wrong the first time too."""
+    replies = iter(
+        [
+            '```json\n{"template": 3}\n```',
+            '```json\n{"script": {"components": []}}\n```',
+        ]
+    )
+
+    def fake_chat(
+        provider: str,
+        *,
+        model: str,
+        prompt: str,
+        allow_remote: bool,
+        environ: object,
+        timeout: float | None = None,
+    ) -> ChatOutcome:
+        return ChatOutcome(
+            text=next(replies),
+            provider=provider,
+            model=model,
+            offline=False,
+        )
+
+    monkeypatch.setattr("kala_agent.studio.providers.dispatch.openai_compat_chat", fake_chat)
+    outcome = dispatch_chat(
+        provider="openai",
+        model="gpt-4o-mini",
+        prompt=STITCH_PROMPT,
+        allow_remote=True,
+        environ={"OPENAI_API_KEY": "sk-test-1234567890abcdef"},
+    )
+    assert isinstance(outcome, StudioChatTurn)
+    assert outcome.design_intent is None
+    assert "No part was built" in outcome.text
+    assert "the first reply was not a valid design (template:" in outcome.text
+    assert (
+        "and the reply after one repair attempt was not a valid design either (script."
+        in outcome.text
+    )
+    assert outcome.design_error
 
 
 def test_remote_design_hook_fails_honestly_after_one_repair(
@@ -724,11 +1024,22 @@ def test_remote_design_hook_fails_honestly_after_one_repair(
     calls = 0
 
     def fake_chat(
-        provider: str, *, model: str, prompt: str, allow_remote: bool, environ: object
+        provider: str,
+        *,
+        model: str,
+        prompt: str,
+        allow_remote: bool,
+        environ: object,
+        timeout: float | None = None,
     ) -> ChatOutcome:
         nonlocal calls
         calls += 1
-        return ChatOutcome(text="No JSON here.", provider=provider, model=model, offline=False)
+        return ChatOutcome(
+            text='```json\n{"template": 3}\n```',
+            provider=provider,
+            model=model,
+            offline=False,
+        )
 
     monkeypatch.setattr("kala_agent.studio.providers.dispatch.openai_compat_chat", fake_chat)
     outcome = dispatch_chat(
@@ -741,17 +1052,173 @@ def test_remote_design_hook_fails_honestly_after_one_repair(
     assert isinstance(outcome, StudioChatTurn)
     assert outcome.design_intent is None
     assert calls == 2
-    assert "No validated design was produced" in outcome.text
+    assert "No part was built" in outcome.text
+    assert "after one repair attempt" in outcome.text
     assert outcome.design_error
+
+
+def test_remote_missing_values_is_a_question_without_a_repair(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    prompts: list[str] = []
+
+    def fake_chat(
+        provider: str,
+        *,
+        model: str,
+        prompt: str,
+        allow_remote: bool,
+        environ: object,
+        timeout: float | None = None,
+    ) -> ChatOutcome:
+        prompts.append(prompt)
+        return ChatOutcome(
+            text="What is the plate thickness and the hole diameter?",
+            provider=provider,
+            model=model,
+            offline=False,
+        )
+
+    monkeypatch.setattr("kala_agent.studio.providers.dispatch.openai_compat_chat", fake_chat)
+    outcome = dispatch_chat(
+        provider="openai",
+        model="gpt-4o-mini",
+        prompt=STITCH_PROMPT,
+        allow_remote=True,
+        environ={"OPENAI_API_KEY": "sk-test-1234567890abcdef"},
+    )
+    assert isinstance(outcome, StudioChatTurn)
+    assert outcome.design_intent is None
+    assert len(prompts) == 1
+    assert "What is the plate thickness" in outcome.text
+    assert "No part was built" in outcome.text
+    assert "repair" not in outcome.text
+
+
+def test_remote_repair_that_asks_for_values_is_a_question(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    responses = iter(
+        [
+            '{"template": 3}',
+            "What wall thickness should the bracket use?",
+        ]
+    )
+    prompts: list[str] = []
+
+    def fake_chat(
+        provider: str,
+        *,
+        model: str,
+        prompt: str,
+        allow_remote: bool,
+        environ: object,
+        timeout: float | None = None,
+    ) -> ChatOutcome:
+        prompts.append(prompt)
+        return ChatOutcome(text=next(responses), provider=provider, model=model, offline=False)
+
+    monkeypatch.setattr("kala_agent.studio.providers.dispatch.openai_compat_chat", fake_chat)
+    outcome = dispatch_chat(
+        provider="openai",
+        model="gpt-4o-mini",
+        prompt=STITCH_PROMPT,
+        allow_remote=True,
+        environ={"OPENAI_API_KEY": "sk-test-1234567890abcdef"},
+    )
+    assert isinstance(outcome, StudioChatTurn)
+    assert outcome.design_intent is None
+    assert outcome.design_error is None
+    assert len(prompts) == 2
+    assert "What wall thickness" in outcome.text
+    assert "No part was built" in outcome.text
+    assert "asks for values" in outcome.text
+    assert "not a valid design" not in outcome.text
+
+
+def test_remote_script_is_authored_from_a_non_template_prompt_with_a_cad_provider(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    plate = {
+        "script": {
+            "summary": "80 x 40 x 8 mm plate with four 6 mm through holes",
+            "components": [
+                {
+                    "name": "plate",
+                    "steps": [
+                        {
+                            "op": "sketch",
+                            "plane": "XY",
+                            "profile": "rectangle",
+                            "width": 80,
+                            "height": 40,
+                        },
+                        {"op": "extrude", "length": 8},
+                        {
+                            "op": "sketch",
+                            "plane": "XY",
+                            "profile": "circle",
+                            "diameter": 6,
+                            "x": 8,
+                            "y": 8,
+                        },
+                        {"op": "pocket"},
+                    ],
+                }
+            ],
+        }
+    }
+    prompts: list[str] = []
+
+    def fake_chat(
+        provider: str,
+        *,
+        model: str,
+        prompt: str,
+        allow_remote: bool,
+        environ: object,
+        timeout: float | None = None,
+    ) -> ChatOutcome:
+        prompts.append(prompt)
+        return ChatOutcome(
+            text=json.dumps(plate),
+            provider=provider,
+            model=model,
+            offline=False,
+        )
+
+    monkeypatch.setattr("kala_agent.studio.providers.dispatch.openai_compat_chat", fake_chat)
+    outcome = dispatch_chat(
+        provider="openai",
+        model="gpt-4o-mini",
+        prompt="aluminium mounting plate 80 x 40 x 8 mm with four 6 mm through holes",
+        allow_remote=True,
+        cad_provider="opencascade",
+        environ={"OPENAI_API_KEY": "sk-test-1234567890abcdef"},
+    )
+    assert isinstance(outcome, StudioChatTurn)
+    assert outcome.design_intent is not None
+    assert outcome.design_intent.script is not None
+    assert outcome.design_family is None
+    assert len(prompts) == 1
+    assert "When no template matches, author a ConstructionScript" in prompts[0]
 
 
 def test_remote_non_design_prompt_is_left_alone(monkeypatch: pytest.MonkeyPatch) -> None:
     prompts: list[str] = []
+    timeouts: list[float | None] = []
 
     def fake_chat(
-        provider: str, *, model: str, prompt: str, allow_remote: bool, environ: object
+        provider: str,
+        *,
+        model: str,
+        prompt: str,
+        allow_remote: bool,
+        environ: object,
+        timeout: float | None = None,
     ) -> ChatOutcome:
         prompts.append(prompt)
+        timeouts.append(timeout)
         return ChatOutcome(text="plain reply", provider=provider, model=model, offline=False)
 
     monkeypatch.setattr("kala_agent.studio.providers.dispatch.openai_compat_chat", fake_chat)
@@ -764,4 +1231,411 @@ def test_remote_non_design_prompt_is_left_alone(monkeypatch: pytest.MonkeyPatch)
     )
     assert isinstance(outcome, StudioChatTurn)
     assert prompts == ["What is a STEP file?"]
+    assert timeouts == [None], "the plain path must leave the 30 s provider default"
     assert outcome.design_intent is None
+
+
+def test_design_turn_uses_the_longer_remote_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    replies = iter(["```json\n{not json}\n```", _valid_reply()])
+    timeouts: list[float | None] = []
+
+    def fake_chat(
+        provider: str,
+        *,
+        model: str,
+        prompt: str,
+        allow_remote: bool,
+        environ: object,
+        timeout: float | None = None,
+    ) -> ChatOutcome:
+        timeouts.append(timeout)
+        return ChatOutcome(text=next(replies), provider=provider, model=model, offline=False)
+
+    monkeypatch.setattr("kala_agent.studio.providers.dispatch.openai_compat_chat", fake_chat)
+    outcome = dispatch_chat(
+        provider="openai",
+        model="gpt-4o-mini",
+        prompt=STITCH_PROMPT,
+        allow_remote=True,
+        environ={"OPENAI_API_KEY": "sk-test-1234567890abcdef"},
+    )
+    assert isinstance(outcome, StudioChatTurn)
+    assert outcome.design_intent is not None
+    assert timeouts == [
+        STUDIO_DESIGN_REQUEST_TIMEOUT_SECONDS,
+        STUDIO_DESIGN_REQUEST_TIMEOUT_SECONDS,
+    ], "the first design call and its repair call must both carry 180 s"
+    assert STUDIO_DESIGN_REQUEST_TIMEOUT_SECONDS == 180.0
+    assert (
+        signature(openai_compat_chat).parameters["timeout"].default
+        == STUDIO_REQUEST_TIMEOUT_SECONDS
+    )
+    assert STUDIO_REQUEST_TIMEOUT_SECONDS == 30.0
+
+
+def test_a_timed_out_design_turn_is_journalled_once(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    prompt = "round steel flange 100 mm OD, 12 mm thick, 30 mm bore, six 8 mm holes on an 80 mm PCD"
+
+    def timeout_chat(*_args: object, **_kwargs: object) -> ChatOutcome:
+        raise ProviderTimeoutError("the provider request exceeded its bounded timeout")
+
+    monkeypatch.setattr("kala_agent.studio.providers.dispatch.openai_compat_chat", timeout_chat)
+    response = client.post(
+        "/api/studio/chat",
+        json={
+            "provider": "openrouter",
+            "model": "minimax/minimax-m3.1-flash:free",
+            "prompt": prompt,
+            "allow_remote": True,
+            "cad_provider": "opencascade",
+        },
+    )
+    assert response.status_code == 504
+    assert response.json() == {
+        "code": "provider_timeout",
+        "message": "the chat provider exceeded its bounded timeout",
+        "details": ["the provider request exceeded its bounded timeout"],
+    }
+    turns = [event for event in _events(client) if event["event_type"] == "chat.turn"]
+    assert len(turns) == 1, "a failed design turn is journalled exactly once"
+    payload = turns[0]["payload"]
+    assert payload["provider"] == "openrouter"
+    assert payload["offline"] is False
+    assert payload["design_requested"] is True
+    assert payload["design_id"] is None
+    assert payload["cad_provider"] == "opencascade"
+    assert payload["missing"] == []
+    assert payload["failure"] == "provider_timeout"
+    assert payload["prompt_chars"] == len(prompt)
+    assert len(payload["prompt_sha256"]) == 64
+    assert "prompt" not in payload
+
+
+def test_a_broken_journal_does_not_mask_the_provider_error(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def timeout_chat(*_args: object, **_kwargs: object) -> ChatOutcome:
+        raise ProviderTimeoutError("the provider request exceeded its bounded timeout")
+
+    def broken_append(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("the journal is broken")
+
+    monkeypatch.setattr("kala_agent.studio.providers.dispatch.openai_compat_chat", timeout_chat)
+    monkeypatch.setattr(
+        "kala_agent.studio.session_journal.StudioSessionJournal.append", broken_append
+    )
+    response = client.post(
+        "/api/studio/chat",
+        json={
+            "provider": "openai",
+            "model": "gpt-4o-mini",
+            "prompt": "round steel flange 100 mm OD, 12 mm thick, 30 mm bore",
+            "allow_remote": True,
+            "cad_provider": "opencascade",
+        },
+    )
+    assert response.status_code == 504
+    assert response.json()["code"] == "provider_timeout"
+    assert response.json()["details"] == ["the provider request exceeded its bounded timeout"]
+    assert [event for event in _events(client) if event["event_type"] == "chat.turn"] == []
+
+
+# ------------------------------------------------------- the build-feedback repair
+
+PLATE_PROMPT = "aluminium mounting plate 80 x 40 x 8 mm with four 6 mm through holes"
+
+
+def _plate_script() -> dict[str, object]:
+    """A plate with four through holes: every cut removes material."""
+    return {
+        "script": {
+            "summary": "80 x 40 x 8 mm plate with four 6 mm through holes",
+            "components": [
+                {
+                    "name": "plate",
+                    "steps": [
+                        {
+                            "op": "sketch",
+                            "plane": "XY",
+                            "profile": "rectangle",
+                            "width": 80,
+                            "height": 40,
+                        },
+                        {"op": "extrude", "length": 8},
+                        {
+                            "op": "sketch",
+                            "plane": "XY",
+                            "profile": "circle",
+                            "diameter": 6,
+                            "x": 8,
+                            "y": 8,
+                        },
+                        {"op": "pocket"},
+                    ],
+                }
+            ],
+        }
+    }
+
+
+def _ineffective_cut_script() -> dict[str, object]:
+    """A plate with one hole sketched entirely outside the plate.
+
+    The build succeeds, but the cut removed no material, so the design is not
+    verified.
+    """
+    return {
+        "script": {
+            "summary": "80 x 40 x 8 mm plate with one 6 mm hole outside the plate",
+            "components": [
+                {
+                    "name": "plate",
+                    "steps": [
+                        {
+                            "op": "sketch",
+                            "plane": "XY",
+                            "profile": "rectangle",
+                            "width": 80,
+                            "height": 40,
+                        },
+                        {"op": "extrude", "length": 8},
+                        {
+                            "op": "sketch",
+                            "plane": "XY",
+                            "profile": "circle",
+                            "diameter": 6,
+                            "x": 200,
+                            "y": 200,
+                        },
+                        {"op": "pocket"},
+                    ],
+                }
+            ],
+        }
+    }
+
+
+def _chat_reply(script: dict[str, object]) -> str:
+    return "Compiling the plate.\n\n```json\n" + json.dumps(script) + "\n```"
+
+
+def test_an_unverified_build_is_repaired_with_the_build_feedback(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    prompts: list[str] = []
+    replies = iter(
+        [
+            _chat_reply(_ineffective_cut_script()),
+            _chat_reply(_plate_script()),
+        ]
+    )
+
+    def fake_chat(
+        provider: str,
+        *,
+        model: str,
+        prompt: str,
+        allow_remote: bool,
+        environ: object,
+        timeout: float | None = None,
+    ) -> ChatOutcome:
+        prompts.append(prompt)
+        return ChatOutcome(text=next(replies), provider=provider, model=model, offline=False)
+
+    monkeypatch.setattr("kala_agent.studio.providers.dispatch.openai_compat_chat", fake_chat)
+    response = client.post(
+        "/api/studio/chat",
+        json={
+            "provider": "openrouter",
+            "model": "minimax/minimax-m3.1-flash:free",
+            "prompt": PLATE_PROMPT,
+            "allow_remote": True,
+            "cad_provider": "opencascade",
+        },
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    # The second attempt is the turn's design, and it verifies.
+    assert body["design"]["verified"] is True, body
+    text = body["text"]
+    assert "The first attempt was rejected" in text, text
+    assert "cuts_effective" in text, text
+    assert "removed no material" in text, text
+    assert len(prompts) == 2, "the first call and the one build repair"
+    assert "the build was rejected" in prompts[1], prompts[1]
+    assert "cuts_effective" in prompts[1], prompts[1]
+    assert "removed no material" in prompts[1], prompts[1]
+    assert PLATE_PROMPT in prompts[1], prompts[1]
+    # Every model call is stateless: the repair call must still see the
+    # supported subset, the plane rule and the worked examples.
+    assert "When no template matches, author a ConstructionScript" in prompts[1], prompts[1]
+    assert "Never invent a dimension the user did not state" in prompts[1], prompts[1]
+    assert "Worked examples" in prompts[1], prompts[1]
+
+
+def test_a_spent_validation_repair_buys_no_build_repair(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    prompts: list[str] = []
+    replies = iter(
+        [
+            "```json\n{not json}\n```",
+            _chat_reply(_ineffective_cut_script()),
+        ]
+    )
+
+    def fake_chat(
+        provider: str,
+        *,
+        model: str,
+        prompt: str,
+        allow_remote: bool,
+        environ: object,
+        timeout: float | None = None,
+    ) -> ChatOutcome:
+        prompts.append(prompt)
+        return ChatOutcome(text=next(replies), provider=provider, model=model, offline=False)
+
+    monkeypatch.setattr("kala_agent.studio.providers.dispatch.openai_compat_chat", fake_chat)
+    response = client.post(
+        "/api/studio/chat",
+        json={
+            "provider": "openrouter",
+            "model": "minimax/minimax-m3.1-flash:free",
+            "prompt": PLATE_PROMPT,
+            "allow_remote": True,
+            "cad_provider": "opencascade",
+        },
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["design"]["verified"] is False, body
+    text = body["text"]
+    assert "B-Rep NOT verified" in text, text
+    assert "The first attempt was rejected" not in text, (
+        "a turn that spent its repair on the validation never repairs the build"
+    )
+    assert len(prompts) == 2, "the whole turn never spends more than one repair call"
+
+
+def test_a_failed_repair_call_keeps_the_first_build(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A repair CALL that fails must not throw the first build away.
+
+    The first design was built and journalled already: a provider that times
+    out on the repair call must not turn the whole turn into an error
+    envelope. The turn keeps the first design and says why the repair did not
+    happen.
+    """
+    prompts: list[str] = []
+    replies = iter([_chat_reply(_ineffective_cut_script())])
+
+    def fake_chat(
+        provider: str,
+        *,
+        model: str,
+        prompt: str,
+        allow_remote: bool,
+        environ: object,
+        timeout: float | None = None,
+    ) -> ChatOutcome:
+        prompts.append(prompt)
+        if len(prompts) == 1:
+            return ChatOutcome(text=next(replies), provider=provider, model=model, offline=False)
+        raise ProviderTimeoutError("the provider request exceeded its bounded timeout")
+
+    monkeypatch.setattr("kala_agent.studio.providers.dispatch.openai_compat_chat", fake_chat)
+    response = client.post(
+        "/api/studio/chat",
+        json={
+            "provider": "openrouter",
+            "model": "minimax/minimax-m3.1-flash:free",
+            "prompt": PLATE_PROMPT,
+            "allow_remote": True,
+            "cad_provider": "opencascade",
+        },
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["design"] is not None, "the first build must not be thrown away"
+    assert body["design"]["verified"] is False, body
+    text = body["text"]
+    assert "The first attempt was rejected" in text, text
+    assert "cuts_effective" in text, text
+    assert "removed no material" in text, text
+    assert "the repair attempt failed: provider_timeout" in text, text
+    assert "B-Rep NOT verified" in text, text
+    assert "B-Rep verified" not in text, text
+    assert len(prompts) == 2, "the first call and the one build repair"
+    # The turn is journalled exactly once, and it points at the first design.
+    turns = [event for event in _events(client) if event["event_type"] == "chat.turn"]
+    assert len(turns) == 1, "the turn is journalled exactly once"
+    assert turns[0]["payload"]["design_id"] == body["design"]["design_id"]
+
+
+def test_a_failed_repair_call_after_a_refusal_says_no_part_was_built(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A refused script and a repair call that times out never built a part.
+
+    The turn must say so in the house wording instead of claiming a design it
+    does not have.
+    """
+    prompts: list[str] = []
+    helix = {
+        "script": {
+            "summary": "a shaft with a helix",
+            "components": [
+                {
+                    "name": "shaft",
+                    "steps": [
+                        {"op": "sketch", "plane": "XY", "profile": "circle", "diameter": 10},
+                        {"op": "extrude", "length": 20},
+                        {"op": "helix", "diameter": 10, "pitch": 2, "length": 10},
+                    ],
+                }
+            ],
+        }
+    }
+
+    def fake_chat(
+        provider: str,
+        *,
+        model: str,
+        prompt: str,
+        allow_remote: bool,
+        environ: object,
+        timeout: float | None = None,
+    ) -> ChatOutcome:
+        prompts.append(prompt)
+        if len(prompts) == 1:
+            return ChatOutcome(
+                text=_chat_reply(helix), provider=provider, model=model, offline=False
+            )
+        raise ProviderTimeoutError("the provider request exceeded its bounded timeout")
+
+    monkeypatch.setattr("kala_agent.studio.providers.dispatch.openai_compat_chat", fake_chat)
+    response = client.post(
+        "/api/studio/chat",
+        json={
+            "provider": "openrouter",
+            "model": "minimax/minimax-m3.1-flash:free",
+            "prompt": PLATE_PROMPT,
+            "allow_remote": True,
+            "cad_provider": "opencascade",
+        },
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["design"] is None, body
+    text = body["text"]
+    assert "The first attempt was rejected" in text, text
+    assert "the builder refused the script" in text, text
+    assert "the repair attempt failed: provider_timeout" in text, text
+    assert "No part was built" in text, text
+    assert len(prompts) == 2, "the first call and the one build repair"

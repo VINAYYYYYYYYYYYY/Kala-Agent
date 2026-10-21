@@ -340,7 +340,13 @@ describe('design Ortho 3-View', () => {
     expect(container.querySelector('.aux-design-ortho-right')).toBeTruthy();
     expect(container.querySelectorAll('path.aux-ortho-visible').length).toBeGreaterThan(0);
     expect(container.textContent).toContain('3RD ANGLE · OCP HLR');
-    expect(container.textContent).toContain('SOURCE: OCP HLR · VIEW: IMPORT');
+    // The provenance says what is true: the drawing is an OpenCascade
+    // hidden-line view OF THE IMPORTED MODEL, and the view is the
+    // OpenCascade import of the FreeCAD STEP.
+    expect(container.textContent).toContain(
+      'SOURCE: OCP HLR OF THE IMPORTED MODEL · VIEW: OCC IMPORT OF FREECAD STEP',
+    );
+    expect(container.textContent).not.toContain('OPC BUILD');
   });
 
   it('shows a loading state and an error state', () => {

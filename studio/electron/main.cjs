@@ -46,6 +46,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 const net = require('node:net');
 
+const {
+  RotatingLog,
+  formatStartupFailure,
+  reportStartupFailure,
+  scrubSecrets,
+} = require('./backend-log.cjs');
+
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const PRELOAD_PATH = path.join(__dirname, 'preload.cjs');
 const TRUSTED_HOST = '127.0.0.1';
@@ -68,6 +75,45 @@ function pickFreePort() {
 
 function generateToken() {
   return crypto.randomBytes(24).toString('base64url');
+}
+
+/**
+ * Where the backend log lives.
+ *
+ * Electron's `app.getPath('logs')` is the documented place for a desktop
+ * application's own logs; the user data directory is the fallback when
+ * Electron cannot resolve one. The Studio is the only writer of the file and
+ * the backend is never told where it is.
+ */
+function resolveLogsDirectory(appLike = app) {
+  try {
+    const logs = appLike && typeof appLike.getPath === 'function' ? appLike.getPath('logs') : null;
+    if (logs) return path.resolve(logs);
+  } catch {
+    // fall through to the user data directory
+  }
+  try {
+    const userData = appLike && typeof appLike.getPath === 'function' ? appLike.getPath('userData') : null;
+    if (userData) return path.join(path.resolve(userData), 'logs');
+  } catch {
+    // fall through to the repository-local fallback
+  }
+  return path.join(REPO_ROOT, 'studio', 'logs');
+}
+
+/**
+ * Create the bounded, rotating backend log.
+ *
+ * The bearer token is registered as a secret so that a backend which echoes
+ * its own environment cannot write the token into the log or the error
+ * dialog.
+ */
+function createBackendLogger({ token, directory, ...options } = {}) {
+  return new RotatingLog({
+    dir: directory || resolveLogsDirectory(),
+    secrets: token ? [token] : [],
+    ...options,
+  });
 }
 
 // Build the argv and environment for the backend. The backend CLI takes
@@ -282,13 +328,14 @@ function resolveBackendCommand(options = {}) {
 }
 
 class BackendProcess {
-  constructor({ command, args, cwd, env, port, token }) {
+  constructor({ command, args, cwd, env, port, token, logger = null }) {
     this.command = command;
     this.args = args;
     this.cwd = cwd;
     this.env = env;
     this.port = port;
     this.token = token;
+    this.logger = logger;
     this.child = null;
     this.exited = false;
     // `ready` flips true once the readiness probe succeeds. Only a child
@@ -323,8 +370,11 @@ class BackendProcess {
       this.error = cause;
       this.exited = true;
     });
-    this.child.stdout.on('data', () => undefined);
-    this.child.stderr.on('data', () => undefined);
+    // The child's output is the only thing the backend says about itself.
+    // It goes to the bounded log and nowhere else; it is never echoed to a
+    // console the user might share.
+    this.child.stdout.on('data', (chunk) => { this.writeLog(chunk); });
+    this.child.stderr.on('data', (chunk) => { this.writeLog(chunk); });
     this.child.on('exit', (code, signal) => {
       this.exited = true;
       this.exitCode = code;
@@ -337,6 +387,15 @@ class BackendProcess {
         }
       }
     });
+  }
+
+  writeLog(chunk) {
+    if (!this.logger || typeof this.logger.write !== 'function') return;
+    try {
+      this.logger.write(chunk.toString('utf8'));
+    } catch {
+      // A log that cannot be written must never take the app down.
+    }
   }
 
   async waitForHealth(timeoutMs) {
@@ -442,8 +501,17 @@ async function main() {
   const port = await pickFreePort();
   const token = generateToken();
   const resolved = resolveBackendCommand();
+  // The Studio is the only writer of the backend log. It is created before
+  // anything can fail so that every failure below has a log to point at.
+  const logger = createBackendLogger({ token });
   if (!resolved.exists) {
-    console.error(`[kala-studio] ${resolved.instructions}`);
+    logger.write(`[kala-studio] the backend binary is missing at ${resolved.command}\n`);
+    reportStartupFailure({
+      dialog,
+      logger,
+      title: 'Kala Studio could not start',
+      reason: `${resolved.instructions}\n\nThe backend program was not found, so the workspace could not open.`,
+    });
     app.exit(1);
     return;
   }
@@ -462,14 +530,22 @@ async function main() {
     port,
     token,
   });
-  const backend = new BackendProcess(invocation);
+  const backend = new BackendProcess({ ...invocation, logger });
   backend.start();
 
   try {
     await backend.waitForHealth(15_000);
   } catch (cause) {
     backend.shutdown();
-    console.error('[kala-studio] failed to start backend:', cause);
+    logger.write(`[kala-studio] failed to start backend: ${cause && cause.message ? cause.message : cause}\n`);
+    reportStartupFailure({
+      dialog,
+      logger,
+      title: 'Kala Studio could not start',
+      reason:
+        'The Kala Studio backend did not become ready, so the workspace could not open.\n\n' +
+        `${cause && cause.message ? cause.message : String(cause)}`,
+    });
     app.exit(1);
     return;
   }
@@ -512,18 +588,19 @@ async function main() {
   // a dead window behind. `shutdownOnce` reaps the (already dead) child
   // and clears the force-kill timer.
   backend.onUnexpectedExit = ({ code, signal }) => {
-    console.error(
-      `[kala-studio] backend exited unexpectedly after startup (code=${code ?? 'null'} signal=${signal ?? 'null'}); closing.`,
+    logger.write(
+      `[kala-studio] the backend exited unexpectedly after startup ` +
+      `(code=${code ?? 'null'} signal=${signal ?? 'null'}); closing.\n`,
     );
     shutdownOnce();
-    try {
-      dialog.showErrorBox(
-        'Kala Studio backend stopped',
-        'The Kala Studio backend process exited unexpectedly, so the workspace can no longer work. The application will now close.',
-      );
-    } catch {
-      // Headless environments may not offer a dialog; still close.
-    }
+    reportStartupFailure({
+      dialog,
+      logger,
+      title: 'Kala Studio backend stopped',
+      reason:
+        'The Kala Studio backend process exited unexpectedly, so the workspace can no longer work. ' +
+        'The application will now close.',
+    });
     app.quit();
   };
 
@@ -564,6 +641,12 @@ module.exports = {
   validateIpcSender,
   pickFreePort,
   generateToken,
+  resolveLogsDirectory,
+  createBackendLogger,
+  formatStartupFailure,
+  reportStartupFailure,
+  scrubSecrets,
+  RotatingLog,
   BackendProcess,
   attachSecurityPolicy,
   registerIpc,

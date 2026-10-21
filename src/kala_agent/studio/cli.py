@@ -148,16 +148,9 @@ def _resolve_data_dir(arguments: argparse.Namespace) -> Path:
     raw = arguments.data_dir
     if raw:
         return Path(raw).expanduser().resolve(strict=False)
-    from kala_agent.config import Settings
-    from kala_agent.studio.boundary import resolve_studio_data_dir
+    from kala_agent.studio.settings import resolve_studio_data_dir_from_env
 
-    try:
-        settings = Settings.from_env()
-        return resolve_studio_data_dir(settings.data_dir)
-    except Exception:
-        import tempfile
-
-        return Path(tempfile.gettempdir()) / "kala-studio"
+    return resolve_studio_data_dir_from_env(os.environ)
 
 
 def _resolve_worker_data_dir(arguments: argparse.Namespace) -> Path:

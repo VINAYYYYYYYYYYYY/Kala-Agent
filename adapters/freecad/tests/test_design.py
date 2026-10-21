@@ -412,3 +412,90 @@ def test_freecad_pads_a_fully_constrained_plate(
     }
     step = next(artifact for artifact in outcome.artifacts if artifact.uri.endswith(".step"))
     assert Path(step.uri.removeprefix("file://")).read_bytes().startswith(b"ISO-10303-21;")
+
+
+class _PocketPad(_Pad):
+    def __init__(self, name: str, volume: float) -> None:
+        super().__init__(name)
+        self.Shape.Volume = volume
+
+
+class _PocketBody(_Body):
+    def __init__(self, cut_volume: float) -> None:
+        super().__init__()
+        self.cut_volume = cut_volume
+
+    def newObject(self, type_id: str, name: str) -> object:
+        del type_id
+        if name == "Sketch":
+            return _Sketch(name)
+        return _PocketPad(name, self.cut_volume)
+
+
+def _pocket_session(cut_volume: float) -> design._Session:
+    document = _Document("Kala")
+    session = design._Session(
+        FreeCADModules(
+            freecad=_FreeCAD(document),
+            part=_Part(),
+            objects_fem=_Fem(),
+            ccx_tools=None,
+            version="fake",
+            import_root="/opt/freecad/lib",
+            import_order=FREECAD_IMPORT_ORDER,
+            solver_bridge_detail="",
+        ),
+        _Sketcher(),
+        document,
+        "",
+    )
+    session.body = _PocketBody(cut_volume)
+    session.profile = _Sketch("Sketch")
+    session.feature = _Pad("Pad")  # the fake shape's volume is 25600 mm3
+    session._component = "plate"
+    session._sketch_plane = "XZ"
+    return session
+
+
+def test_a_pocket_that_removed_no_material_warns_with_the_component_and_plane() -> None:
+    session = _pocket_session(25600.0)
+    session.pocket({"step_index": 3})
+    assert session.warnings == [
+        "component 'plate': pocket at step index 3 on XZ removed no material"
+    ]
+
+
+def test_a_pocket_without_a_step_index_keeps_the_plane_wording() -> None:
+    session = _pocket_session(25600.0)
+    session.pocket({})
+    assert session.warnings == ["component 'plate': pocket on XZ removed no material"]
+
+
+def test_a_pocket_that_removed_material_does_not_warn() -> None:
+    session = _pocket_session(25500.0)
+    session.pocket({})
+    assert session.warnings == []
+
+
+def test_the_warning_display_is_bounded_and_the_cut_count_stays_exact() -> None:
+    session = _pocket_session(25600.0)
+    for index in range(20):
+        session._warn(
+            f"component 'plate': pocket at step index {index} on XZ removed no material"
+        )
+
+    display = session.display_warnings()
+    assert len(display) == 15
+    assert session.ineffective_cuts == 20
+    assert display[-1] == "… and 6 more pockets removed no material"
+
+
+def test_a_single_suppressed_cut_uses_the_singular_summary() -> None:
+    session = _pocket_session(25600.0)
+    for index in range(15):
+        session._warn(
+            f"component 'plate': pocket at step index {index} on XZ removed no material"
+        )
+
+    assert session.ineffective_cuts == 15
+    assert session.display_warnings()[-1] == "… and 1 more pocket removed no material"

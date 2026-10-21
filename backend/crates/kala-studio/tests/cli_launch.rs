@@ -212,6 +212,85 @@ async fn mints_and_uses_the_token_file_when_the_environment_is_absent() {
     terminate(&mut child).await;
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_data_dir_flag_wins_over_every_environment_row() {
+    // `--data-dir` is used as-is; KALA_STUDIO_DATA_DIR, KALA_AGENT_DATA_DIR,
+    // XDG_DATA_HOME and HOME all point somewhere else and must be ignored.
+    let work = tempfile::tempdir().unwrap();
+    let flag_dir = work.path().join("flag-data");
+    let studio_env = work.path().join("studio-env-data");
+    let agent_env = work.path().join("agent-env-data");
+    let xdg = work.path().join("xdg-data");
+    let home = work.path().join("home");
+    for directory in [&home, &xdg, &agent_env] {
+        std::fs::create_dir_all(directory).unwrap();
+    }
+    let port = free_port();
+    let mut child = Command::new(binary())
+        .arg("--port")
+        .arg(port.to_string())
+        .arg("--data-dir")
+        .arg(&flag_dir)
+        .env_clear()
+        .env("PATH", "")
+        .env("HOME", &home)
+        .env("XDG_DATA_HOME", &xdg)
+        .env("KALA_AGENT_DATA_DIR", &agent_env)
+        .env("KALA_STUDIO_DATA_DIR", &studio_env)
+        .env("KALA_STUDIO_TOKEN", TOKEN)
+        .env("KALA_STUDIO_GEOMETRY_WORKER", ABSENT_WORKER)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("spawn kala-studio");
+    let banner = read_banner(&mut child).await;
+    assert_eq!(
+        banner["data_dir"].as_str(),
+        Some(flag_dir.display().to_string().as_str())
+    );
+    wait_ready(port).await;
+    // The real home and the ignored environment directories are untouched.
+    assert!(!home.join(".local").exists());
+    assert!(!studio_env.exists());
+    assert!(!xdg.join("kala-agent").exists());
+    assert!(!agent_env.join("studio").exists());
+    assert!(flag_dir.is_dir());
+    terminate(&mut child).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn kala_studio_data_dir_is_the_studio_directory_itself() {
+    // The native service honours KALA_STUDIO_DATA_DIR (B2): the value *is*
+    // the studio directory, so no `studio` child is appended, and a temporary
+    // HOME still is never read or written.
+    let work = tempfile::tempdir().unwrap();
+    let studio_env = work.path().join("studio-env-data");
+    let home = work.path().join("home");
+    std::fs::create_dir_all(&home).unwrap();
+    let port = free_port();
+    let mut child = Command::new(binary())
+        .arg("--port")
+        .arg(port.to_string())
+        .env_clear()
+        .env("PATH", "")
+        .env("HOME", &home)
+        .env("KALA_STUDIO_DATA_DIR", &studio_env)
+        .env("KALA_STUDIO_GEOMETRY_WORKER", ABSENT_WORKER)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("spawn kala-studio");
+    let banner = read_banner(&mut child).await;
+    assert_eq!(
+        banner["data_dir"].as_str(),
+        Some(studio_env.display().to_string().as_str())
+    );
+    wait_ready(port).await;
+    assert!(studio_env.join("studio-token").is_file());
+    assert!(!home.join(".local").exists());
+    terminate(&mut child).await;
+}
+
 #[test]
 fn refuses_non_loopback_hosts_and_bad_ports_with_exit_2() {
     for (args, needle) in [

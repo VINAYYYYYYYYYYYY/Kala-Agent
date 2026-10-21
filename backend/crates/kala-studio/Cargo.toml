@@ -76,6 +76,12 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal
 [target.'cfg(windows)'.dependencies]
 schannel = "0.1"
 
+# A safe (no `unsafe` in this crate) wrapper for `kill(-pgid, SIGKILL)`. The
+# crate forbids unsafe code, and a CLI turn must kill its whole process
+# group, not only the direct child.
+[target.'cfg(unix)'.dependencies]
+rustix = { workspace = true, features = ["process"] }
+
 [dev-dependencies]
 kala-geometry = { path = "../kala-geometry" }
 rustls = { version = "0.23", default-features = false, features = ["std", "ring", "tls12"] }

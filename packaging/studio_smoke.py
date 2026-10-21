@@ -306,11 +306,42 @@ def _build_env(data_dir: Path, token: str) -> dict[str, str]:
     env = dict(os.environ)
     env["KALA_STUDIO_TOKEN"] = token
     env["KALA_STUDIO_DATA_DIR"] = str(data_dir)
+    # A temporary HOME: the smoke must never read or write the operator's
+    # ``~/.local/share/kala-agent`` journal, artifacts or token.
+    home = data_dir.parent / "home"
+    home.mkdir(parents=True, exist_ok=True)
+    env["HOME"] = str(home)
+    # No subscription CLI takes part in a packaging smoke: the probe answers
+    # "not found" without starting the operator's own claude/codex/opencode,
+    # so the smoke is deterministic on every host.
+    for name in (
+        "KALA_STUDIO_CLAUDE_CLI_PATH",
+        "KALA_STUDIO_CODEX_CLI_PATH",
+        "KALA_STUDIO_OPENCODE_CLI_PATH",
+    ):
+        env[name] = str(data_dir / "no-such-cli")
     # The smoke run must never reach a provider endpoint. Clear the API
     # credentials the studio would otherwise treat as configured.
     env.pop("OPENAI_API_KEY", None)
     env.pop("OPENROUTER_API_KEY", None)
     return env
+
+
+def _check_banner_data_dir(captured: list[str], data_dir: Path) -> None:
+    """Require the launch banner to name the temporary data directory.
+
+    The banner prints the resolved data directory, so this proves the
+    explicit ``--data-dir`` won over the environment and the home path.
+    """
+    expected = f'"data_dir": "{data_dir}"'
+    _require(
+        any(expected in line for line in captured),
+        f"the launch banner did not name the smoke data directory {data_dir}",
+    )
+    _require(
+        not any(".local/share/kala-agent" in line for line in captured),
+        "the launch banner named the user's real data directory",
+    )
 
 
 def run(
@@ -335,7 +366,16 @@ def run(
             creation_flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
 
         process = subprocess.Popen(
-            [str(backend), "--host", host, "--port", str(port)],
+            [
+                str(backend),
+                "--host",
+                host,
+                "--port",
+                str(port),
+                # Explicit and temporary: never the real user directory.
+                "--data-dir",
+                str(data_dir),
+            ],
             cwd=str(workdir),
             env=env,
             stdout=subprocess.PIPE,
@@ -349,6 +389,7 @@ def run(
             deadline = time.monotonic() + timeout
             health = _wait_for_health(host, port, deadline=deadline, process=process)
             print(f"[smoke] health ok: {json.dumps(health, sort_keys=True)}")
+            _check_banner_data_dir(captured, data_dir)
             _check_ui(host, port)
             print("[smoke] UI root and assets ok.")
             _check_preview(host, port, token)

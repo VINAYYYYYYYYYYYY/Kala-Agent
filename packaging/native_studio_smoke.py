@@ -218,8 +218,21 @@ def _pick_free_port(host: str) -> int:
 
 
 def _minimum_environment(data_dir: Path, token: str) -> dict[str, str]:
+    """The isolated environment of one native smoke launch.
+
+    ``HOME`` is a temporary directory inside the smoke root, not the
+    operator's home, and the data directory is passed explicitly with
+    ``--data-dir``. Together they prove the packaged binary can be exercised
+    without reading or writing ``~/.local/share/kala-agent``.
+    """
+    home = data_dir.parent / "home"
+    home.mkdir(parents=True, exist_ok=True)
     environment = {
         "KALA_STUDIO_TOKEN": token,
+        "HOME": str(home),
+        # The service honours this variable (B2), but the explicit
+        # `--data-dir` wins over every environment row: keep both pointing
+        # at the same temporary directory.
         "KALA_STUDIO_DATA_DIR": str(data_dir),
         # Prove the native runtime does not need Python on PATH.
         "PATH": "",
@@ -230,8 +243,6 @@ def _minimum_environment(data_dir: Path, token: str) -> dict[str, str]:
     for key in ("SystemRoot", "SYSTEMROOT", "ComSpec", "WINDIR"):
         if key in os.environ:
             environment[key] = os.environ[key]
-    if "HOME" in os.environ:
-        environment["HOME"] = os.environ["HOME"]
     return environment
 
 
@@ -289,6 +300,23 @@ def _wait_for_health(
         last_error = f"HTTP {response.status}"
         time.sleep(READY_POLL_SECONDS)
     raise SmokeFailure(f"native backend did not become healthy within the deadline ({last_error})")
+
+
+def _check_banner_data_dir(captured: list[str], data_dir: Path) -> None:
+    """Require the launch banner to name the temporary data directory.
+
+    The banner prints the resolved data directory, so this proves the
+    explicit ``--data-dir`` won over the environment and the home path.
+    """
+    expected = f'"data_dir": "{data_dir}"'
+    _require(
+        any(expected in line for line in captured),
+        f"the launch banner did not name the smoke data directory {data_dir}",
+    )
+    _require(
+        not any(".local/share/kala-agent" in line for line in captured),
+        "the launch banner named the user's real data directory",
+    )
 
 
 def _check_ui(host: str, port: int) -> None:
@@ -418,7 +446,16 @@ def run(
         environment = _minimum_environment(data_dir, token)
 
         process = subprocess.Popen(
-            [str(packaged / _binary_name()), "--host", host, "--port", str(port)],
+            [
+                str(packaged / _binary_name()),
+                "--host",
+                host,
+                "--port",
+                str(port),
+                # Explicit and temporary: never the real user directory.
+                "--data-dir",
+                str(data_dir),
+            ],
             cwd=str(workdir),
             env=environment,
             stdout=subprocess.PIPE,
@@ -434,6 +471,7 @@ def run(
                 host, port, deadline=time.monotonic() + timeout, process=process
             )
             print(f"[native-smoke] health ok: {json.dumps(health, sort_keys=True)}")
+            _check_banner_data_dir(captured, data_dir)
             _check_ui(host, port)
             print("[native-smoke] packaged UI root and assets ok.")
             _check_api(host, port, token, step_available=bool(health.get("step_available")))

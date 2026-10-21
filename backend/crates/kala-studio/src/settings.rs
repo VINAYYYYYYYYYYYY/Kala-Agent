@@ -69,6 +69,11 @@ pub enum CredentialSource {
     None,
     Environment,
     Stored,
+    /// The operator's own subscription CLI login.
+    ///
+    /// The CLI holds the credential in its own store; Kala never sees it,
+    /// never stores it and never forwards it.
+    Subscription,
 }
 
 impl CredentialSource {
@@ -78,6 +83,7 @@ impl CredentialSource {
             Self::None => "none",
             Self::Environment => "environment",
             Self::Stored => "stored",
+            Self::Subscription => "subscription",
         }
     }
 }
@@ -535,11 +541,25 @@ pub fn stored_key_configured(stored: &StoredKeys, provider: &str) -> bool {
         .is_some_and(|value| !value.code_points().is_empty())
 }
 
+/// The subscription providers whose credential is the operator's own CLI
+/// login.
+///
+/// The rows come after the API-key rows so the stored-key indices of the
+/// settings route do not move.
+pub const SUBSCRIPTION_CREDENTIAL_PROVIDERS: &[&str] =
+    &["codex", "claude_code", "codex_cli", "opencode_cli"];
+
 /// Return non-secret credential status rows in provider order.
+///
+/// The API-key rows report where the key comes from. The subscription rows
+/// report the CLI's own probe: the row is `configured` when the CLI is
+/// installed and signed in, and its source is `subscription` because the
+/// credential lives in the CLI's own store, never in Kala's.
 #[must_use]
 pub fn describe_provider_credentials(
     base: &BTreeMap<String, String>,
     stored: &StoredKeys,
+    subscription_probes: &[crate::providers::CliProbe],
 ) -> Vec<CredentialStatus> {
     let mut rows = Vec::with_capacity(SUPPORTED_CREDENTIAL_PROVIDERS.len());
     for provider in SUPPORTED_CREDENTIAL_PROVIDERS {
@@ -566,6 +586,18 @@ pub fn describe_provider_credentials(
             env_var,
             configured,
             source,
+        });
+    }
+    for provider in SUBSCRIPTION_CREDENTIAL_PROVIDERS {
+        let probe = subscription_probes.iter().find(|probe| {
+            probe.id == *provider
+                || (*provider == "codex" && probe.id == crate::providers::codex_cli::PROVIDER_ID)
+        });
+        rows.push(CredentialStatus {
+            provider,
+            env_var: "",
+            configured: probe.is_some_and(crate::providers::CliProbe::usable),
+            source: CredentialSource::Subscription,
         });
     }
     rows

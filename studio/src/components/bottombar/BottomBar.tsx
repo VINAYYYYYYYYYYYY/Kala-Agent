@@ -94,7 +94,15 @@ export function BottomBar(props: BottomBarProps): ReactElement {
   const area = designReadout?.area
     ?? (hasGeometry ? `${estimate.surfaceAreaCm2.toFixed(1)} cm²` : '—');
   const source = designReadout?.source
-    ?? (preview.server ? 'server' : preview.local ? 'local est.' : '—');
+    ?? (preview.inFlight
+      ? 'verifying…'
+      : preview.lastError
+        ? 'server refused'
+        : preview.server
+          ? 'server'
+          : preview.local
+            ? 'local est.'
+            : '—');
 
   const freecad = server.integrations.find(
     (entry) => entry.id.toLowerCase() === 'freecad' || entry.name.toLowerCase().includes('freecad'),
@@ -173,9 +181,14 @@ export function BottomBar(props: BottomBarProps): ReactElement {
           data-source={source}
           data-source-kind={designReadout ? 'provider' : preview.server ? 'server' : preview.local ? 'local' : 'none'}
           data-provider={designReadout?.provider ?? 'none'}
+          data-preview-state={preview.inFlight ? 'verifying' : preview.lastError ? 'refused' : 'idle'}
           title={designReadout
             ? `These values are ${designReadout.measuredBy}; the viewport shows the OpenCascade import of the provider STEP.`
-            : 'Envelope follows the server mesh when one exists; volume and area are closed-form nominal values.'}
+            : preview.lastError
+              ? `The server refused the preview: ${preview.lastError}`
+              : preview.inFlight
+                ? 'The server is verifying the mesh.'
+                : 'Envelope follows the server mesh when one exists; volume and area are closed-form nominal values.'}
         >
           {source}
         </span>

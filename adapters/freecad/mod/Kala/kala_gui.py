@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 import time
 from pathlib import Path
 
@@ -12,16 +11,16 @@ import FreeCADGui as Gui
 from PySide import QtCore, QtWidgets
 
 
-def _prepare_path() -> None:
-    repo = Path(__file__).resolve().parents[4]
-    roots = [repo / "adapters" / "freecad" / "src", repo / "src"]
-    venv = repo / ".venv" / "lib"
-    if venv.is_dir():
-        roots.extend(path for path in venv.glob("python*/site-packages") if path.is_dir())
-    for root in roots:
-        text = root.as_posix()
-        if root.is_dir() and text not in sys.path:
-            sys.path.insert(0, text)
+def _prepare_path() -> dict[str, object]:
+    """Put the adapter and its dependencies on FreeCAD's import path.
+
+    The resolver lives in `kala_paths` so that the console session
+    (`Init.py`) and this graphical module always agree on where the adapter
+    and its ABI-matched dependencies are.
+    """
+    import kala_paths
+
+    return kala_paths.prepare()
 
 
 def _dock_area() -> QtCore.Qt.DockWidgetArea:
@@ -114,15 +113,23 @@ class KalaDock(QtWidgets.QDockWidget):
         self._prompt.setFixedHeight(116)
         _editor_margin(self._prompt)
         _prepare_path()
-        from kala_agent_freecad.cad.models import api_key, decide_key
+        self._adapter_error = ""
+        try:
+            from kala_agent_freecad.cad.models import api_key, decide_key
+        except Exception as error:
+            # The add-on is installed without its payload, or the payload does
+            # not match this FreeCAD's Python. Say so instead of failing with
+            # a traceback the user cannot act on.
+            api_key = decide_key = None
+            self._adapter_error = str(error)
 
         self._key: QtWidgets.QLineEdit | None = None
         self._decide: QtWidgets.QLineEdit | None = None
-        if not api_key():
+        if api_key is not None and not api_key():
             self._key = QtWidgets.QLineEdit(body)
             self._key.setPlaceholderText("OpenRouter key for the reasoning model")
             self._key.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
-        if not decide_key():
+        if decide_key is not None and not decide_key():
             self._decide = QtWidgets.QLineEdit(body)
             self._decide.setPlaceholderText("OpenRouter key for the decision model")
             self._decide.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
@@ -151,6 +158,11 @@ class KalaDock(QtWidgets.QDockWidget):
         self._status = QtWidgets.QLabel("Write a request. The part is built in this window.", body)
         self._status.setObjectName("KalaStatus")
         self._status.setWordWrap(True)
+        if self._adapter_error:
+            self._status.setText(
+                "The Kala adapter could not be loaded, so no design can be built "
+                f"in this window yet.\n{self._adapter_error}"
+            )
         explanation_label = QtWidgets.QLabel("What was built", body)
         explanation_label.setObjectName("KalaSection")
         self._explanation = QtWidgets.QPlainTextEdit(body)

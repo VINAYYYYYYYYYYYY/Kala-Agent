@@ -407,7 +407,7 @@ def test_profiles_and_solids_follow_the_compose_rules() -> None:
         )
     )
     holes = [call for call in pocket if call.tool == "partdesign.pocket"]
-    assert holes[0].arguments == {}
+    assert holes[0].arguments == {"step_index": 3}
 
 
 def test_two_components_compile_to_two_bodies_and_one_fuse() -> None:

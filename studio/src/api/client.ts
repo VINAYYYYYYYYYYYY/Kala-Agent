@@ -12,6 +12,8 @@
 import {
   ChatRequest,
   ChatResponse,
+  DesignArtifactDownload,
+  DesignArtifactKind,
   DesignExportFormat,
   DesignExportArtifact,
   DesignRequest,
@@ -29,6 +31,7 @@ import {
   JournalVerify,
   PreviewRequest,
   PreviewResponse,
+  ProviderModelCatalog,
   ProvidersResponse,
   SectionPlane,
   SectionResponse,
@@ -44,12 +47,13 @@ import {
   parseDrawingResponse,
   parseJournalPage,
   parseJournalVerify,
+  parseProviderModelCatalog,
   parseSectionResponse,
   requireCadProviderId,
   requireDesignExportFormat,
   StudioValidationError,
 } from './validators';
-import { dispatch } from '../state/store';
+import { dispatch, getState } from '../state/store';
 
 const REDIRECT_MODE: RequestRedirect = 'error';
 
@@ -113,6 +117,48 @@ export const DESIGN_COMPILE_TIMEOUT_MS = 60_000;
 export const DESIGN_READ_TIMEOUT_MS = 20_000;
 export const DESIGN_EXPORT_TIMEOUT_MS = 60_000;
 export const JOURNAL_READ_TIMEOUT_MS = 10_000;
+/**
+ * The model catalog is a small JSON document, but a cold provider can be
+ * slow. The budget is generous enough for a cold OpenRouter list and short
+ * enough that a wedged backend cannot pin the picker.
+ */
+export const MODEL_CATALOG_TIMEOUT_MS = 20_000;
+
+/**
+ * The chat turn's own client deadline.
+ *
+ * It is NOT a limit on how long a turn may take. The backend publishes its
+ * own worst-case turn budget in `/health` (`design_turn_budget_seconds`,
+ * computed from the real model and CAD-build deadlines); the client adds a
+ * five-minute margin. When an older backend reports no budget, the documented
+ * 70-minute fallback applies.
+ *
+ * It exists only to unstick a wedged backend: without it a half-dead
+ * backend pins the UI on "Awaiting response…" forever, and the operator has
+ * no reason to know they should press Cancel.
+ */
+export const CHAT_TURN_DEADLINE_MARGIN_MS = 5 * 60_000;
+export const FALLBACK_CHAT_TURN_TIMEOUT_MS = 70 * 60_000;
+/** Compatibility alias: the fallback deadline of an older backend. */
+export const CHAT_TURN_TIMEOUT_MS = FALLBACK_CHAT_TURN_TIMEOUT_MS;
+
+/**
+ * The client deadline for one chat turn, from the backend's reported budget.
+ *
+ * `budgetSeconds` is `/health`'s `design_turn_budget_seconds`; a missing,
+ * non-finite or non-positive value falls back to
+ * [`FALLBACK_CHAT_TURN_TIMEOUT_MS`].
+ */
+export function chatTurnTimeoutMs(budgetSeconds: number | null | undefined): number {
+  if (
+    typeof budgetSeconds !== 'number' ||
+    !Number.isFinite(budgetSeconds) ||
+    budgetSeconds <= 0
+  ) {
+    return FALLBACK_CHAT_TURN_TIMEOUT_MS;
+  }
+  return budgetSeconds * 1_000 + CHAT_TURN_DEADLINE_MARGIN_MS;
+}
 
 /** The backend's own page limit for `/journal`. */
 export const JOURNAL_LIMIT_MAX = 500;
@@ -278,8 +324,17 @@ export async function getHealth(
     signal,
   )) as HealthResponse;
   const designAvailable = readDesignAvailable(raw);
-  dispatch({ type: 'server/capabilities', designAvailable });
+  const designTurnBudgetSeconds = readDesignTurnBudgetSeconds(raw);
+  dispatch({ type: 'server/capabilities', designAvailable, designTurnBudgetSeconds });
   return raw;
+}
+
+function readDesignTurnBudgetSeconds(raw: unknown): number | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const value = (raw as { design_turn_budget_seconds?: unknown })
+    .design_turn_budget_seconds;
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return null;
+  return value;
 }
 
 function readDesignAvailable(raw: unknown): boolean | null {
@@ -324,6 +379,40 @@ export function getSettings(connection: StudioConnection, signal: AbortSignal | 
   return sendRequest<StudioSettingsResponse>(connection, 'GET', '/api/studio/settings', null, signal);
 }
 
+/**
+ * The model catalog of one provider (`GET /api/studio/providers/{id}/models`).
+ *
+ * Listing the models of a remote provider is remote egress like a chat turn,
+ * so the call carries the operator's consent stamp in `allow_remote`. The
+ * UI NEVER sets the flag itself: it passes the stamp the operator ticked,
+ * and the backend refuses the request (403) when the flag is absent. A
+ * refusal therefore arrives as a `StudioAuthError` and the picker shows the
+ * consent-required state.
+ *
+ * The response is validated before it is returned, so a malformed catalog is
+ * refused rather than rendered as a half-populated list.
+ */
+export async function getProviderModels(
+  connection: StudioConnection,
+  providerId: string,
+  allowRemote: boolean,
+  signal: AbortSignal | null = null,
+): Promise<ProviderModelCatalog> {
+  const provider = encodeURIComponent(providerId);
+  const path = `/api/studio/providers/${provider}/models?allow_remote=${allowRemote ? 'true' : 'false'}`;
+  const bounded = boundedSignal(signal, MODEL_CATALOG_TIMEOUT_MS);
+  try {
+    const raw = await sendRequest<unknown>(connection, 'GET', path, null, bounded.signal, {
+      authenticated: true,
+    });
+    return parseProviderModelCatalog(raw, `providers/${providerId}/models`);
+  } catch (cause) {
+    throw translateFailure(cause, path, bounded);
+  } finally {
+    bounded.dispose();
+  }
+}
+
 export function postSettings(
   connection: StudioConnection,
   payload: UpdateProviderKeyRequest,
@@ -347,12 +436,26 @@ async function sendChat(
   payload: ChatRequest,
   signal: AbortSignal | null,
 ): Promise<ChatResponse> {
-  const raw = await sendRequest<unknown>(connection, 'POST', '/api/studio/chat', payload, signal);
-  const response = parseChatResponse(raw);
-  if (response.design) {
-    dispatch({ type: 'design/received', design: response.design });
+  const path = '/api/studio/chat';
+  // The turn's own budget comes from the backend's reported worst case (see
+  // `chatTurnTimeoutMs`): an expired budget is reported as a timeout, never
+  // as a user cancellation.
+  const bounded = boundedSignal(
+    signal,
+    chatTurnTimeoutMs(getState().server.designTurnBudgetSeconds),
+  );
+  try {
+    const raw = await sendRequest<unknown>(connection, 'POST', path, payload, bounded.signal);
+    const response = parseChatResponse(raw);
+    if (response.design) {
+      dispatch({ type: 'design/received', design: response.design });
+    }
+    return response;
+  } catch (cause) {
+    throw translateFailure(cause, path, bounded);
+  } finally {
+    bounded.dispose();
   }
-  return response;
 }
 
 export function postPreview(connection: StudioConnection, payload: PreviewRequest, signal: AbortSignal | null = null): Promise<PreviewResponse> {
@@ -603,11 +706,113 @@ export async function exportDesign(
   }
 }
 
-// The export and handoff endpoints answer with the artefact bytes
-// directly: a single authenticated POST whose response body IS the file,
-// named by its `content-disposition: attachment` header (and annotated by
-// `x-studio-handoff` for a handoff). We decode and save that one response;
-// there is no second "download artifact" GET.
+/**
+ * Download one stored artifact of a design.
+ *
+ * The response body IS the stored file; the backend verified its SHA-256
+ * against the journalled digest before sending, and reports that digest in
+ * `x-studio-digest`. The filename comes from `content-disposition` and is
+ * sanitized like the export receipt.
+ */
+export async function getDesignArtifact(
+  connection: StudioConnection,
+  designId: string,
+  kind: DesignArtifactKind,
+  signal: AbortSignal | null = null,
+): Promise<DesignArtifactDownload> {
+  requireDesignId(designId, 'design_id');
+  const artifactKind = requireDesignArtifactKind(kind, 'kind');
+  const path = `/api/studio/design/${designId}/artifact/${artifactKind}`;
+  const bounded = boundedSignal(signal, DESIGN_EXPORT_TIMEOUT_MS);
+  try {
+    const url = new URL(path, connection.baseUrl).toString();
+    const init: RequestInit = {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json, application/step, model/stl, application/octet-stream',
+        Authorization: `Bearer ${connection.token}`,
+      },
+      redirect: REDIRECT_MODE,
+      cache: 'no-store',
+      credentials: 'omit',
+      referrerPolicy: 'no-referrer',
+      signal: bounded.signal,
+    };
+    let response: Response;
+    try {
+      response = await fetch(url, init);
+    } catch (cause) {
+      if (cause instanceof DOMException && cause.name === 'AbortError') {
+        throw new StudioAbortError();
+      }
+      throw new StudioNetworkError(`network request to ${path} failed`, cause);
+    }
+    if (!response.ok) {
+      const parsed = await readJsonError(response);
+      if (response.status === 401 || response.status === 403) {
+        throw new StudioAuthError(response.status, parsed);
+      }
+      throw new StudioApiError(response.status, parsed);
+    }
+    let blob: Blob;
+    try {
+      blob = await response.blob();
+    } catch (cause) {
+      throw new StudioNetworkError(`failed to read response bytes from ${path}`, cause);
+    }
+    const reported = response.headers.get('x-studio-artifact-kind');
+    return {
+      blob,
+      filename: sanitizeDispositionFilename(
+        response.headers.get('content-disposition'),
+        `kala-studio-${designId.slice(0, 8)}.${artifactExtension(artifactKind)}`,
+      ),
+      bytes: blob.size,
+      kind: reported && isArtifactKind(reported) ? reported : artifactKind,
+      designId,
+      digest: response.headers.get('x-studio-digest'),
+    };
+  } catch (cause) {
+    throw translateFailure(cause, path, bounded);
+  } finally {
+    bounded.dispose();
+  }
+}
+
+/** The artifact kinds the download route serves, in the backend's order. */
+export const DESIGN_ARTIFACT_KINDS: ReadonlyArray<DesignArtifactKind> = [
+  'script',
+  'step',
+  'fcstd',
+  'stl',
+];
+
+function isArtifactKind(value: string): value is DesignArtifactKind {
+  return (DESIGN_ARTIFACT_KINDS as ReadonlyArray<string>).includes(value);
+}
+
+function requireDesignArtifactKind(value: string, field: string): DesignArtifactKind {
+  if (!isArtifactKind(value)) {
+    throw new StudioValidationError(
+      field,
+      `expected one of ${DESIGN_ARTIFACT_KINDS.join(', ')}`,
+    );
+  }
+  return value;
+}
+
+/** The default filename extension of one artifact kind. */
+export function artifactExtension(kind: DesignArtifactKind): string {
+  if (kind === 'script') return 'json';
+  if (kind === 'step') return 'step';
+  if (kind === 'stl') return 'stl';
+  return 'FCStd';
+}
+
+// The export and handoff endpoints answer with the artefact bytes directly: a
+// single authenticated POST whose response body IS the file, named by its
+// `content-disposition: attachment` header (and annotated by
+// `x-studio-handoff` for a handoff).
 function extensionFor(format: ExportFormat): string {
   return format === 'stl' ? 'stl' : 'step';
 }

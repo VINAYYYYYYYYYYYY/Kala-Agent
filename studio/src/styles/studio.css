@@ -13,6 +13,14 @@
   inset: 0;
 }
 
+/* The viewport is a keyboard control, so it must show where the focus is.
+   The ring is drawn inside the canvas: the sheet's frame would clip an
+   outside outline. */
+.viewer-canvas:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
 .viewer-canvas canvas {
   display: block;
   width: 100%;
@@ -604,6 +612,27 @@
   color: var(--error);
 }
 
+/* The server's verdict on the primitive preview, shown next to the source
+   badge so a refused preview is never hidden behind "Local preview". */
+.inspector-preview-state {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  color: var(--construction);
+}
+
+.inspector-preview-error {
+  margin: 0;
+  padding: var(--space-sm) var(--space-sm);
+  border: 0.5px solid var(--redline);
+  border-left-width: 2px;
+  background: color-mix(in srgb, var(--redline) 5%, var(--card));
+  font-family: var(--font-mono);
+  font-size: var(--text-label-md);
+  color: var(--error);
+  overflow-wrap: anywhere;
+}
+
 /* Vernier caliper slider ------------------------------------------------ */
 
 .vernier {
@@ -996,6 +1025,28 @@
   color: var(--ink);
 }
 
+.export-panel-design-download {
+  padding: 0 3px;
+  border: 0.5px solid var(--prussian);
+  background: var(--card);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.05em;
+  text-transform: lowercase;
+  color: var(--prussian);
+  cursor: pointer;
+}
+
+.export-panel-design-download:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.export-panel-design-download:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
 /* The format picker and the export button share one row so the Options
  * card keeps its height budget. */
 .export-panel-design-actions {
@@ -1215,6 +1266,15 @@
   font-family: var(--font-mono);
   font-size: var(--text-label-sm);
   color: var(--error);
+}
+
+/* The note under a key form whose key comes from the environment: such a
+   key is not stored by Studio and cannot be removed here. */
+.provider-key-source-note {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  color: var(--construction);
 }
 
 /* Options drawer -------------------------------------------------------- */

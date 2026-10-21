@@ -47,9 +47,9 @@
   "kind": "http_core",
   "nondeterministic_fields": [
     {
-      "field": "GET /health data_dir",
+      "field": "GET /health data_dir, body_length and content-length",
       "service": "core",
-      "treatment": "normalized to <DATA_DIR>"
+      "treatment": "data_dir normalized to <DATA_DIR>; body_length and the body digest are taken over the normalised bytes; content-length is declared in normalised_headers and checked against the body the service sent"
     },
     {
       "field": "journal event occurred_at and dependent event digests",
@@ -65,10 +65,10 @@
       "value": "<DATA_DIR>"
     },
     {
-      "field": "GET /health body digest",
-      "reason": "the raw response embeds the temporary data directory path",
+      "field": "GET /health body digest, body length and content-length header",
+      "reason": "the raw response embeds the temporary data directory path, so its length follows the TMPDIR the generator was given",
       "service": "core",
-      "value": "digest of the normalised response bytes"
+      "value": "digest and length of the normalised response bytes; the header is declared in normalised_headers"
     },
     {
       "field": "STEP body bytes, header timestamp and translator counter",
@@ -107,14 +107,14 @@
             "version": "1.0.0"
           },
           "body_deterministic": false,
-          "body_length": 408,
+          "body_length": 374,
+          "body_length_role": "length of the normalised response bytes; the raw response embeds the run-specific data directory path",
           "body_sha256": "d0a1189a9a92a52b80d8e457c2e7bb4f12727fc156cc70d5d8132b7a2a70f355",
           "body_sha256_note": "informational at generation time; reproduce the stable fields instead",
           "body_sha256_role": "digest of the normalised response bytes; the raw response embeds the run-specific data directory path",
           "body_text": "{\"status\":\"ok\",\"service\":\"kala-agent\",\"version\":\"1.0.0\",\"provider\":\"local\",\"model\":\"local\",\"offline\":true,\"egress_configured\":false,\"provider_endpoint_declared\":false,\"data_dir\":\"<DATA_DIR>\",\"schema_version\":2,\"domains\":[\"building\",\"mechanical\",\"wing\"],\"disclaimer\":\"Bounded surrogate reference arithmetic only; not CAD, CAE, a code check, or an engineering certification.\"}",
           "headers": {
             "cache-control": "no-store",
-            "content-length": "408",
             "content-security-policy": "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
             "content-type": "application/json",
             "cross-origin-opener-policy": "same-origin",
@@ -128,6 +128,10 @@
             "x-powered-by",
             "set-cookie"
           ],
+          "normalised_headers": [
+            "content-length"
+          ],
+          "normalised_headers_role": "the live header must describe the body the service sent; the raw value embeds the run-specific data directory path",
           "normalizations": [
             "$.data_dir"
           ],

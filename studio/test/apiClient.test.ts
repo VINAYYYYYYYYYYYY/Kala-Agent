@@ -4,10 +4,14 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  CHAT_TURN_TIMEOUT_MS,
+  FALLBACK_CHAT_TURN_TIMEOUT_MS,
   StudioAbortError,
   StudioApiError,
   StudioAuthError,
   StudioNetworkError,
+  StudioTimeoutError,
+  chatTurnTimeoutMs,
   getHealth,
   getIntegrations,
   getProviders,
@@ -18,6 +22,7 @@ import {
   postPreview,
   postSettings,
 } from '../src/api/client';
+import { dispatch, getState, resetStore } from '../src/state/store';
 import type {
   ChatRequest,
   ExportRequest,
@@ -43,6 +48,7 @@ let responder: (init: RequestInit) => Response | Promise<Response> = () =>
 
 beforeEach(() => {
   captured = [];
+  resetStore();
   vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString();
     captured.push({ url, init: init ?? {} });
@@ -67,8 +73,45 @@ describe('GET requests', () => {
     expect(headers['Authorization']).toBeUndefined();
   });
 
-  it('refuses to follow redirects', async () => {
-    responder = () => new Response('redirected', { status: 302, headers: { Location: 'http://evil.example/' } });
+  it('stores the backend design-turn budget and falls back when it is absent', async () => {
+    responder = () =>
+      new Response(
+        JSON.stringify({
+          status: 'ok',
+          service: 'kala-studio',
+          version: '0.1.0',
+          offline: true,
+          design_turn_budget_seconds: 3_960,
+          step_available: false,
+          integrations: [],
+          providers: [],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    await getHealth(connection);
+    expect(getState().server.designTurnBudgetSeconds).toBe(3_960);
+
+    responder = () =>
+      new Response(
+        JSON.stringify({
+          status: 'ok',
+          service: 'kala-studio',
+          version: '0.1.0',
+          offline: true,
+          step_available: false,
+          integrations: [],
+          providers: [],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    await getHealth(connection);
+    expect(getState().server.designTurnBudgetSeconds).toBeNull();
+    expect(chatTurnTimeoutMs(getState().server.designTurnBudgetSeconds)).toBe(
+      FALLBACK_CHAT_TURN_TIMEOUT_MS,
+    );
+  });
+
+  it('refuses to follow redirects', async () => {    responder = () => new Response('redirected', { status: 302, headers: { Location: 'http://evil.example/' } });
     await expect(getHealth(connection)).rejects.toBeInstanceOf(StudioApiError);
     const call = captured[0]!;
     expect(call.init.redirect).toBe('error');
@@ -138,6 +181,122 @@ describe('chat and settings requests', () => {
     const call = captured[0]!;
     expect(call.url).toBe('http://127.0.0.1:8765/api/studio/chat');
     expect(call.init.body).toBe(JSON.stringify(payload));
+  });
+
+  it('derives the chat deadline from the backend budget plus five minutes', () => {
+    // The documented fallback when an older backend reports no budget.
+    expect(FALLBACK_CHAT_TURN_TIMEOUT_MS).toBe(70 * 60_000);
+    expect(chatTurnTimeoutMs(null)).toBe(70 * 60_000);
+    expect(chatTurnTimeoutMs(undefined)).toBe(70 * 60_000);
+    expect(chatTurnTimeoutMs(0)).toBe(70 * 60_000);
+    expect(chatTurnTimeoutMs(Number.NaN)).toBe(70 * 60_000);
+    // The real backend budget: 2 * (180 + 1800) = 3 960 s, plus the margin.
+    expect(chatTurnTimeoutMs(3_960)).toBe(3_960_000 + 5 * 60_000);
+    expect(CHAT_TURN_TIMEOUT_MS).toBe(FALLBACK_CHAT_TURN_TIMEOUT_MS);
+  });
+
+  it('uses the backend-reported budget as the chat deadline', async () => {
+    vi.useFakeTimers();
+    try {
+      dispatch({ type: 'server/capabilities', designAvailable: true, designTurnBudgetSeconds: 1 });
+      // A backend that never answers: the fetch ends only when the signal
+      // aborts.
+      vi.unstubAllGlobals();
+      vi.stubGlobal('fetch', (_input: RequestInfo | URL, init?: RequestInit) => {
+        return new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            reject(new DOMException('aborted', 'AbortError'));
+          });
+        });
+      });
+
+      let failure: unknown = null;
+      void postChat(connection, {
+        provider: 'local',
+        model: null,
+        prompt: 'hi',
+        allow_remote: false,
+      }).then(
+        () => undefined,
+        (cause: unknown) => {
+          failure = cause;
+        },
+      );
+
+      // The reported budget (1 s) plus the margin has not expired yet; the
+      // old 30-minute/70-minute constants would still be pending too.
+      await vi.advanceTimersByTimeAsync(1_000 + 5 * 60_000 - 10);
+      expect(failure).toBeNull();
+      await vi.advanceTimersByTimeAsync(20);
+      expect(failure).toBeInstanceOf(StudioTimeoutError);
+      expect((failure as StudioTimeoutError).path).toBe('/api/studio/chat');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('abandons a wedged chat turn at the fallback deadline', async () => {
+    vi.useFakeTimers();
+    try {
+      resetStore();
+      expect(getState().server.designTurnBudgetSeconds).toBeNull();
+      // A backend that never answers: the fetch only ends when the signal
+      // aborts.
+      vi.unstubAllGlobals();
+      vi.stubGlobal('fetch', (_input: RequestInfo | URL, init?: RequestInit) => {
+        return new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            reject(new DOMException('aborted', 'AbortError'));
+          });
+        });
+      });
+
+      const pending = postChat(connection, {
+        provider: 'local',
+        model: null,
+        prompt: 'hi',
+        allow_remote: false,
+      }).catch((cause: unknown) => cause);
+
+      await vi.advanceTimersByTimeAsync(FALLBACK_CHAT_TURN_TIMEOUT_MS + 10);
+
+      const failure = await pending;
+      expect(failure).toBeInstanceOf(StudioTimeoutError);
+      expect((failure as StudioTimeoutError).path).toBe('/api/studio/chat');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps an operator cancellation a cancellation and not a timeout', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.unstubAllGlobals();
+      vi.stubGlobal('fetch', (_input: RequestInfo | URL, init?: RequestInit) => {
+        return new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            reject(new DOMException('aborted', 'AbortError'));
+          });
+        });
+      });
+
+      const controller = new AbortController();
+      const pending = postChat(connection, {
+        provider: 'local',
+        model: null,
+        prompt: 'hi',
+        allow_remote: false,
+      }, controller.signal).catch((cause: unknown) => cause);
+
+      controller.abort();
+      await vi.advanceTimersByTimeAsync(10);
+
+      const failure = await pending;
+      expect(failure).toBeInstanceOf(StudioAbortError);
+      expect(failure).not.toBeInstanceOf(StudioTimeoutError);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('getSettings fetches /api/studio/settings without Authorization header', async () => {

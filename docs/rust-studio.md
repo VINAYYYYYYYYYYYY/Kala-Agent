@@ -64,19 +64,23 @@ The **Python reference server** (`python -m kala_agent.studio`) still exists
 and still serves the same public Studio API without the Rust front door in
 front. The differential harnesses compare the two.
 
-## The route surface: 16 native, 0 proxied
+## The route surface: 18 native, 0 proxied
 
-The Python public server exposes **15** Studio route-methods. The front door
-exposes **16**: the same 15 plus the ADR-0011 view-only `POST /import`, which
-the Python public server does not mount. **All 16 are answered by Rust
-in-process.** The Python geometry worker is started only when
-`KALA_STUDIO_GEOMETRY_WORKER` names one, and it is a development fallback.
+The Python public server exposes **16** Studio route-methods. The front door
+exposes **18**: the same 16 plus the ADR-0011 view-only `POST /import` and
+the provider model catalog `GET /providers/{id}/models`, which the Python
+public server does not mount. **All 18 are answered by Rust in-process** —
+7 of them directly, and 11 through the **geometry-backend seam**, which the
+default build also answers natively. The Python geometry worker is started
+only when `KALA_STUDIO_GEOMETRY_WORKER` names one, and it is a development
+fallback.
 
 | Route | Owner |
 |---|---|
 | `GET /api/studio/health` | Rust |
 | `GET /api/studio/integrations` | Rust |
 | `GET /api/studio/providers` | Rust |
+| `GET /api/studio/providers/{id}/models` | Rust (the provider model catalog) |
 | `GET /api/studio/settings` | Rust |
 | `POST /api/studio/settings` | Rust |
 | `POST /api/studio/chat` | Rust |
@@ -86,24 +90,28 @@ in-process.** The Python geometry worker is started only when
 | `POST /api/studio/design` | Rust (the native geometry backend) |
 | `GET /api/studio/design/{id}/drawing` | Rust (the native geometry backend) |
 | `GET /api/studio/design/{id}/section` | Rust (the native geometry backend) |
+| `GET /api/studio/design/{id}/artifact/{kind}` | Rust (the native geometry backend) |
 | `GET /api/studio/journal` | Rust (the native journal) |
 | `GET /api/studio/journal/verify` | Rust (the native journal) |
 | `GET /api/studio/providers/cad` | Rust (the provider connections) |
 | `POST /api/studio/import` | Rust (the native view-only STEP import) |
 
 `npm run check:native-readiness` parses the actual Python and Rust sources;
-it does not trust a hardcoded list. The built stage's report
+it does not trust a hardcoded list. It reports **READY** — **16** Python
+route-methods covered, **7** answered directly and **11** through the
+**geometry-backend seam**, which the default build answers natively (the
+Python worker is opt-in). The built stage's report
 (`studio/release/native-readiness.json`) classifies the artifact `release`
-with `releaseEligible: true` and notes that the route-methods that go
-through the geometry-backend seam are answered by the **default** native
-build (the Python worker is opt-in).
+with `releaseEligible: true`. That file is a snapshot of the sources at
+build time; the final 2026-10-21 build regenerated it with the current
+split (11 route-methods through the geometry-backend seam).
 
 The `GeometryBackend` trait is the seam. The production implementation is
 `NativeGeometryBackend`; it answers with the same bytes the Python worker
 answered with, and the front door forwards the request body and the original
 content type unchanged. `worker_differential.py --backend worker` runs the
-same 292-case matrix against the supervised Python worker: **0 mismatches**
-as well.
+same **295-case** matrix against the supervised Python worker: **0
+mismatches** as well.
 
 ## The geometry worker is now a development fallback
 
@@ -127,7 +135,8 @@ as well.
   (250 ms → 5 s). `/health` publishes
   `geometry_worker {state, version, design_available}`.
 - **Degradation.** While the worker is down, the native routes keep working
-  and the proxied routes answer `503 geometry_worker_unavailable`. **No
+  and the geometry-backend seam routes answer
+  `503 geometry_worker_unavailable`. **No
   mesh, STEP file or measurement is fabricated** in that state.
 - **Isolation.** The worker binds `127.0.0.1:0`, refuses any `Origin`
   header, requires the exact `Host`, and requires the per-launch bearer.
@@ -188,7 +197,7 @@ re-run on this host on 2026-10-20 **with the native backend**:
 
 | Harness | Result |
 |---|---:|
-| `crates/kala-studio/tests/worker_differential.py` | **292 cases, 0 mismatches, 0 known gaps** |
+| `crates/kala-studio/tests/worker_differential.py` | **295 cases, 0 mismatches, 0 known gaps** |
 | `crates/kala-studio/tests/python_differential.py` | **268 cases, 0 mismatches** |
 | `crates/kala-studio/tests/replay_binary_corpus.py` | **56 cases, 0 mismatches** |
 | `crates/kala-studio/tests/python_provider_dto_oracle.py` | **20 cases, 0 failures** |
@@ -198,12 +207,19 @@ proxied the geometry. The native backend brought the corpus' own declared
 normalisation with it, and the harness now reports `exact: 48`, `fields: 4`
 (the corpus' declared volatile paths), `step structural: 2`, `skipped: 2`
 (the 16 384-byte library body-limit configuration, covered by
-`corpus_fixture`) and **0 mismatches**, with the corpus digest unchanged at
-`53dcb9da105589b5a92d37b16d63c7fe2d5e60b7630549102127e019c95dff28`. The
-analysis is in
+`corpus_fixture`) and **0 mismatches**. That replay ran against corpus
+digest `c0003bae333f27a079adcf3e86f2618741a6606334a17ffe3fafe727fcd6c330`
+(regenerated when the artifact-download route landed). The corpus was then
+regenerated once more on 2026-10-21 (corpus-hermetic: a normalised body's
+length is now recorded from the normalised bytes, so `--check` no longer
+depends on the TMPDIR path length) to
+`39e0c0a90f9d03704945c79cdb9e777e77549ef208ac2177d3f7bb003dade3fa`, the
+value `backend/crates/kala-studio/tests/corpus_fixture.rs` pins now.
+`studio_http.json`, which the replay reads, is byte-identical across that
+regeneration, so the replay result stands. The analysis is in
 [rust-migration-status.md §5.7](rust-migration-status.md).
 
-The 292 cases include three ADR-0011 chat cases — FreeCAD, OpenCascade and
+The 295 cases include three ADR-0011 chat cases — FreeCAD, OpenCascade and
 Solid Edge — compared on reply text, design, provider, version, every
 measured value, the checks and the view. Status, body bytes and the stable
 and security headers are compared exactly. Only these are normalised:
@@ -362,8 +378,7 @@ lacks the bundled FreeCAD adapter, and publication is always forced to
 | Field | Value |
 |---|---|
 | Path | `studio/release/kala-studio-0.1.0-x86_64.AppImage` |
-| Size | **163 642 516 bytes** (156.1 MiB) |
-| SHA-256 | `b069b7d4b73f8ae01b166744b61f090455ef989ce348f360826ccfd69aaba31e` |
+| Size and SHA-256 | see [packaging/linux/README.md](../packaging/linux/README.md#the-built-artefact-size-and-sha-256) — the digest changes with every rebuild, so it is recorded there only |
 | Classification | `release`, `releaseEligible: true` in `studio/release/native-readiness.json` |
 | Signature | **none** — the AppImage is **unsigned** and **not published** |
 
@@ -452,15 +467,15 @@ rustc/cargo 1.99.1, Node 26.8.2, npm 11.19.1.
 | `cd backend/crates/kala-cad && cargo test --locked --release` | **118 passed** (75 after the core, +43 from the HLR drawing and the section) |
 | `cd backend/crates/kala-studio-journal && cargo test --locked --release` | **60 passed** |
 | `cd backend/crates/kala-cad-providers && cargo test --locked --release` | **40 passed** |
-| `cd backend && ../.venv/bin/python crates/kala-studio/tests/worker_differential.py` | **292 cases, 0 mismatches, 0 known gaps** |
+| `cd backend && ../.venv/bin/python crates/kala-studio/tests/worker_differential.py` | **295 cases, 0 mismatches, 0 known gaps** |
 | `cd backend && ../.venv/bin/python crates/kala-studio/tests/python_differential.py` | **268 cases, 0 mismatches** |
 | `cd backend && ../.venv/bin/python crates/kala-studio/tests/python_provider_dto_oracle.py` | **20 cases, 0 failures** |
-| `cd backend && ../.venv/bin/python crates/kala-studio/tests/replay_binary_corpus.py` | **56 cases, 0 mismatches**; corpus digest `53dcb9da…` |
+| `cd backend && ../.venv/bin/python crates/kala-studio/tests/replay_binary_corpus.py` | **56 cases, 0 mismatches**; corpus digest `c0003bae…` |
 | `cd studio && npm run typecheck` | **exit 0** |
 | `cd studio && npm test` | **43 files, 628 tests passed** |
 | `cd studio && npm run build` | **exit 0** (the pre-existing `three` >500 kB warning) |
 | `env -i … node packaging/linux/smoke-appimage.mjs --require-geometry --require-freecad` | **PASS** (both tables above) |
-| `sha256sum studio/release/kala-studio-0.1.0-x86_64.AppImage` | `b069b7d4b73f8ae01b166744b61f090455ef989ce348f360826ccfd69aaba31e`, 163 642 516 bytes |
+| `sha256sum studio/release/kala-studio-0.1.0-x86_64.AppImage` | see [packaging/linux/README.md](../packaging/linux/README.md#the-built-artefact-size-and-sha-256) — the digest moves with every rebuild |
 
 ### Carried over from the previous docs pass (not re-run here)
 

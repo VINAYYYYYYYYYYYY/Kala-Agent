@@ -10,6 +10,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 
+const mocks = vi.hoisted(() => ({
+  getDesignArtifact: vi.fn(),
+}));
+
+vi.mock('../src/api/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/api/client')>();
+  return { ...actual, getDesignArtifact: mocks.getDesignArtifact };
+});
+
 import { ChatPanel } from '../src/components/chat/ChatPanel';
 import { DesignAgentCard } from '../src/components/chat/DesignAgentCard';
 import { dispatch, getState, resetStore } from '../src/state/store';
@@ -412,5 +421,95 @@ describe('a backend without design support', () => {
     expect(container.querySelector('textarea.chat-panel-prompt')).toBeTruthy();
     expect(container.querySelectorAll('.chat-panel-starter').length).toBeGreaterThan(0);
     expect(container.querySelector('.chat-panel-context-table')).toBeTruthy();
+  });
+});
+
+describe('artifact downloads next to the digest chips', () => {
+  const connection = {
+    baseUrl: 'http://127.0.0.1:8765',
+    token: 'unit-test-token-aaaaaaaaaaaaaaaaaaaaaaaa',
+    mode: 'desktop' as const,
+  };
+
+  beforeEach(() => {
+    dispatch({ type: 'connection/ready', connection });
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    mocks.getDesignArtifact.mockReset();
+  });
+
+  it('offers a download button for each downloadable chip only', () => {
+    dispatch({ type: 'design/received', design: bracketDesignResult });
+    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+
+    const kinds = [...container.querySelectorAll('[data-artifact]')].map((node) =>
+      node.getAttribute('data-artifact'),
+    );
+    expect(kinds).toEqual(['script', 'step', 'fcstd']);
+    expect(
+      container.querySelector('button[aria-label="Download FCStd"]')?.textContent,
+    ).toBe('download');
+  });
+
+  it('downloads the stored native file and journals the real receipt', async () => {
+    const digest = bracketDesignResult.artifacts.native_sha256!;
+    mocks.getDesignArtifact.mockResolvedValue({
+      blob: new Blob([new Uint8Array(3)]),
+      filename: 'l-bracket-60-x-45-x-40-e0f9fb92.FCStd',
+      bytes: 3,
+      kind: 'fcstd',
+      designId: BRACKET_DESIGN_ID,
+      digest,
+    });
+    dispatch({ type: 'design/received', design: bracketDesignResult });
+    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+
+    fireEvent.click(container.querySelector('[data-artifact="fcstd"]')!);
+
+    await waitFor(() =>
+      expect(mocks.getDesignArtifact).toHaveBeenCalledWith(
+        connection,
+        BRACKET_DESIGN_ID,
+        'fcstd',
+      ),
+    );
+    await waitFor(() =>
+      expect(
+        getState().journal.some((entry) =>
+          entry.message.includes('Saved l-bracket-60-x-45-x-40-e0f9fb92.FCStd'),
+        ),
+      ).toBe(true),
+    );
+    const receipt = getState().journal.find((entry) =>
+      entry.message.includes('Saved l-bracket-60-x-45-x-40-e0f9fb92.FCStd'),
+    );
+    expect(receipt?.digest).toContain(`sha256 ${digest.slice(0, 8)}`);
+  });
+
+  it('reports a refused download without pretending it saved', async () => {
+    mocks.getDesignArtifact.mockRejectedValue(
+      Object.assign(new Error('no artifact of that kind is stored for this design'), {
+        name: 'StudioApiError',
+        code: 'artifact_not_found',
+        status: 404,
+        details: [],
+      }),
+    );
+    dispatch({ type: 'design/received', design: bracketDesignResult });
+    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+
+    fireEvent.click(container.querySelector('[data-artifact="step"]')!);
+
+    const error = await waitFor(() => {
+      const node = container.querySelector('.chat-panel-design-error');
+      expect(node).toBeTruthy();
+      return node!;
+    });
+    expect(error.textContent).toContain('no artifact of that kind is stored');
+    expect(getState().journal.some((entry) => entry.message.includes('Saved'))).toBe(false);
   });
 });

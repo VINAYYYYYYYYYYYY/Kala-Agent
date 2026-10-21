@@ -382,6 +382,19 @@
   border-color: var(--stamp);
 }
 
+/* The server's verdict on the primitive preview: a request in flight, and a
+   refusal. The refusal reads as an error, not as a source. */
+.bottom-bar-source[data-preview-state='verifying'] {
+  color: var(--prussian);
+  border-color: var(--prussian);
+}
+
+.bottom-bar-source[data-preview-state='refused'] {
+  color: var(--error);
+  border-color: var(--redline);
+  text-transform: none;
+}
+
 .bottom-bar-cluster.bottom-bar-right {
   justify-content: flex-end;
 }

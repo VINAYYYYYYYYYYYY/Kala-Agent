@@ -44,8 +44,18 @@ def test_settings_default_resolves_under_the_isolated_home(isolated_home: Path) 
 
 
 def test_studio_app_default_resolves_under_the_isolated_home(isolated_home: Path) -> None:
-    """``data_dir=None`` must fall back to the temp HOME, not the real one."""
-    app = create_studio_app(api_token=TOKEN, max_body_bytes=4096, static_root=None, environ={})
+    """``data_dir=None`` must resolve from the environment view it is given.
+
+    The resolver reads exactly the mapping it receives (never the process
+    environment), so the HOME row is proven by naming the temporary HOME in
+    that mapping. Nothing can reach the developer's real home.
+    """
+    app = create_studio_app(
+        api_token=TOKEN,
+        max_body_bytes=4096,
+        static_root=None,
+        environ={"HOME": str(isolated_home)},
+    )
     expected = (isolated_home / ".local" / "share" / "kala-agent" / "studio").resolve(strict=False)
     assert app.state.studio_data_dir == expected
     assert expected.is_dir()

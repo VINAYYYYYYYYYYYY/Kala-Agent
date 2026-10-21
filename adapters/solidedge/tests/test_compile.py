@@ -326,9 +326,10 @@ def test_the_wire_cap_is_the_protocol_cap() -> None:
     assert BuildRequest.model_validate_json(request.model_dump_json()) == request
 
 
-def test_a_maximum_core_ir_script_fits_the_wire_request() -> None:
-    # Eight components, each at the core IR's twelve-step cap: a pad and then
-    # four additive features, which is the widest legal core script.
+def test_the_largest_wire_legal_script_fits_the_wire_request() -> None:
+    # Eight parts (the wire cap) with twelve steps each: a pad and then five
+    # additive features, which is the widest script the old core IR allowed and
+    # still fits the 600-operation wire cap.
     steps: list[Mapping[str, object]] = [
         {"op": "sketch", "profile": "rectangle", "width": 10, "height": 10},
         {"op": "extrude", "length": 1},
@@ -345,6 +346,33 @@ def test_a_maximum_core_ir_script_fits_the_wire_request() -> None:
     assert len(request.procedure) <= MAX_OPERATIONS
     assert request.procedure[-1].op == "assembly.export_step"
     assert sum(1 for op in request.procedure if op.op == "part.export_step") == 8
+
+
+def test_a_whole_budget_script_lowers_under_the_wire_operation_cap() -> None:
+    # Eight parts (the wire cap) and 500 steps in total (the core cap). The
+    # compiler lowers one wire operation per consumed step, four extra
+    # operations per part, and one placement plus three assembly operations,
+    # so the worst case stays under the 600-operation cap.
+    pairs = 31  # 62 steps per part, eight parts: 496 component steps
+    steps: list[Mapping[str, object]] = [
+        {"op": "sketch", "profile": "rectangle", "width": 10, "height": 10},
+        {"op": "extrude", "length": 1},
+    ]
+    while len(steps) < 2 * pairs:
+        steps.append({"op": "sketch", "profile": "circle", "diameter": 2, "x": 1, "y": 1})
+        steps.append({"op": "extrude", "length": 1})
+    components = [{"name": f"part{i}", "steps": steps} for i in range(8)]
+
+    operations = compile_operations(script(components))
+
+    assert len(operations) == 8 * (4 + 2 * pairs) + 8 + 3
+    assert len(operations) <= MAX_OPERATIONS
+
+
+def test_more_parts_than_the_wire_cap_is_refused() -> None:
+    components = [rectangle_component(f"part{i}") for i in range(9)]
+    with pytest.raises(CompileError, match="9 components; the wire cap is 8 parts"):
+        build_request(script(components), request_id="parts-1")
 
 
 def test_a_pocket_with_a_length_is_a_finite_cut() -> None:

@@ -483,15 +483,15 @@
     },
     {
       "expected": {
-        "digest": "c9f00f21536f04faa43be37efbfab45b5daa80e42f36e653bdcdef4cf6b46c60",
+        "digest": "6ce0428a64cfe05d4cc9a46a4bcc5d6a9a2c1bffecad75c51e8a192f716cdafc",
         "ok": true,
-        "output_length": 32770,
-        "output_sha256": "c9f00f21536f04faa43be37efbfab45b5daa80e42f36e653bdcdef4cf6b46c60"
+        "output_length": 524290,
+        "output_sha256": "6ce0428a64cfe05d4cc9a46a4bcc5d6a9a2c1bffecad75c51e8a192f716cdafc"
       },
       "id": "string.length_at_limit",
       "input": {
         "char": "a",
-        "count": 32768,
+        "count": 524288,
         "kind": "repeat_string"
       },
       "operation": "dumps"
@@ -505,7 +505,7 @@
       "id": "string.length_over_limit",
       "input": {
         "char": "a",
-        "count": 32769,
+        "count": 524289,
         "kind": "repeat_string"
       },
       "operation": "dumps"
@@ -936,9 +936,11 @@
     },
     {
       "expected": {
-        "error_type": "JsonEnvelopeError",
-        "message": "JSON string exceeds the bounded length",
-        "ok": false
+        "canonical_length": 32771,
+        "canonical_sha256": "d787ca83bf5dfc63a0c7f0f70deef091eb790c2d7b24685ec932c237a36822f2",
+        "digest": "d787ca83bf5dfc63a0c7f0f70deef091eb790c2d7b24685ec932c237a36822f2",
+        "ok": true,
+        "value_type": "str"
       },
       "id": "loads.string_over_length_limit",
       "input": {
@@ -986,7 +988,7 @@
     "MAX_JSON_BYTES": 1048576,
     "MAX_JSON_DEPTH": 48,
     "MAX_KEY_LENGTH": 256,
-    "MAX_STRING_LENGTH": 32768
+    "MAX_STRING_LENGTH": 524288
   },
   "oracle_module": "kala_agent.tools.protocol"
 }

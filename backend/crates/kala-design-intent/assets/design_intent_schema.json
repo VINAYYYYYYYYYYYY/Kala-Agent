@@ -62,7 +62,7 @@
           "items": {
             "$ref": "#/$defs/ComponentStep"
           },
-          "maxItems": 12,
+          "maxItems": 500,
           "minItems": 1,
           "title": "Steps",
           "type": "array"
@@ -211,7 +211,7 @@
           "items": {
             "$ref": "#/$defs/ComponentScript"
           },
-          "maxItems": 8,
+          "maxItems": 64,
           "minItems": 1,
           "title": "Components",
           "type": "array"

@@ -868,7 +868,7 @@ def test_request_envelope_rejects_oversized_arguments() -> None:
         _request(
             arguments=cast(
                 "dict[str, Any]",
-                {f"k{index}": "x" * 4_000 for index in range(80)},
+                {f"k{index}": "x" * 4_000 for index in range(140)},
             )
         )
 

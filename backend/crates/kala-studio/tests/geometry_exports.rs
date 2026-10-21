@@ -15,6 +15,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use kala_studio::geometry::{StepCapability, StepError, StepExporter};
+#[cfg(feature = "native-step")]
 use kala_studio::integrations::build_registry;
 use kala_studio::native_backend::NativePrimitivesBackend;
 use kala_studio::schemas::PrimitiveKind;

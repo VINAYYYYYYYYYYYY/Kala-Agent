@@ -11,11 +11,16 @@ import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 
 const mocks = vi.hoisted(() => ({
   exportDesign: vi.fn(),
+  getDesignArtifact: vi.fn(),
 }));
 
 vi.mock('../src/api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/api/client')>();
-  return { ...actual, exportDesign: mocks.exportDesign };
+  return {
+    ...actual,
+    exportDesign: mocks.exportDesign,
+    getDesignArtifact: mocks.getDesignArtifact,
+  };
 });
 
 import { StudioApiError } from '../src/api/client';
@@ -209,5 +214,80 @@ describe('ExportPanel — no design', () => {
     expect(note.textContent).toContain('design_available: false');
     expect(note.textContent).toContain('Python geometry backend');
     expect(view.container.querySelector('.export-panel-design')).toBeNull();
+  });
+});
+
+describe('ExportPanel — artifact downloads next to the digest chips', () => {
+  it('downloads the stored FCStd and shows a receipt with the real digest', async () => {
+    const digest = bracketDesignResult.artifacts.native_sha256!;
+    mocks.getDesignArtifact.mockResolvedValue({
+      blob: new Blob([new Uint8Array(2048)]),
+      filename: 'l-bracket-60-x-45-x-40-e0f9fb92.FCStd',
+      bytes: 2048,
+      kind: 'fcstd',
+      designId: BRACKET_DESIGN_ID,
+      digest,
+    });
+    seedDesign();
+    const view = render(<ExportPanel />);
+
+    const button = view.container.querySelector<HTMLButtonElement>(
+      '.export-panel-design-download[data-artifact="native"]',
+    )!;
+    expect(button.getAttribute('aria-label')).toBe('Download FCStd');
+    fireEvent.click(button);
+
+    await waitFor(() =>
+      expect(mocks.getDesignArtifact).toHaveBeenCalledWith(
+        connection,
+        BRACKET_DESIGN_ID,
+        'fcstd',
+      ),
+    );
+    const receipt = await waitFor(() => {
+      const node = view.container.querySelector('.export-panel-receipt');
+      expect(node).toBeTruthy();
+      return node!;
+    });
+    expect(receipt.textContent).toContain('l-bracket-60-x-45-x-40-e0f9fb92.FCStd');
+    expect(receipt.textContent).toContain('2,048');
+    expect(receipt.querySelector('.export-panel-receipt-digest')?.textContent).toBe(digest);
+    // The receipt is a real journal row, not a silent success.
+    expect(
+      getState().journal.some((entry) =>
+        entry.message.includes('Saved l-bracket-60-x-45-x-40-e0f9fb92.FCStd'),
+      ),
+    ).toBe(true);
+  });
+
+  it('offers one download per stored artifact kind', () => {
+    seedDesign();
+    const view = render(<ExportPanel />);
+    const kinds = [
+      ...view.container.querySelectorAll('.export-panel-design-download'),
+    ].map((node) => node.getAttribute('data-artifact'));
+    expect(kinds).toEqual(['script', 'step', 'native']);
+  });
+
+  it('reports a refused artifact download with its code', async () => {
+    mocks.getDesignArtifact.mockRejectedValue(
+      new StudioApiError(404, {
+        code: 'artifact_not_found',
+        message: 'no artifact of that kind is stored for this design',
+        details: [],
+      }),
+    );
+    seedDesign();
+    const view = render(<ExportPanel />);
+    fireEvent.click(
+      view.container.querySelector('.export-panel-design-download[data-artifact="step"]')!,
+    );
+
+    await waitFor(() => {
+      expect(view.container.querySelector('.export-panel-error')?.textContent).toContain(
+        'artifact_not_found',
+      );
+    });
+    expect(view.container.querySelector('.export-panel-receipt')).toBeNull();
   });
 });

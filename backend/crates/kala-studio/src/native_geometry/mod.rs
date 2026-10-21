@@ -38,6 +38,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use kala_design_intent::{DesignIntent, DesignIntentInputError};
+use kala_process::CancelToken;
 use serde_json::{Map, Value};
 
 use crate::errors::{
@@ -76,6 +77,37 @@ const PROVIDER_ENUM_DETAIL: &str =
 pub struct NativeGeometryBackend {
     design_service: Arc<NativeDesignService>,
     primitives: NativePrimitivesBackend,
+}
+
+/// Cancels a design turn's token when the request future is dropped.
+///
+/// A client disconnect drops the hyper request future. The blocking design
+/// task cannot be dropped with it, so this guard is the bridge: dropping it
+/// sets the token, and the service stops at its next phase boundary while an
+/// out-of-process FreeCAD build has its process group killed. A turn that
+/// finished normally disarms the guard, so a completed design never records a
+/// cancellation.
+struct CancelOnDrop {
+    token: CancelToken,
+    armed: bool,
+}
+
+impl CancelOnDrop {
+    fn new(token: CancelToken) -> Self {
+        Self { token, armed: true }
+    }
+
+    fn disarm(&mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for CancelOnDrop {
+    fn drop(&mut self) {
+        if self.armed {
+            self.token.cancel();
+        }
+    }
 }
 
 impl NativeGeometryBackend {
@@ -180,9 +212,17 @@ impl GeometryBackend for NativeGeometryBackend {
                 Err(error) => return Ok(validation_response(error)),
             };
             let design_service = Arc::clone(&self.design_service);
-            let outcome =
-                tokio::task::spawn_blocking(move || design_service.design(&intent, &provider))
-                    .await;
+            // A client disconnect drops this future. The blocking design
+            // task cannot be dropped with it, so the guard cancels the
+            // turn's token: the service stops at its next phase boundary and
+            // an out-of-process FreeCAD build has its process group killed.
+            let cancel = CancelToken::new();
+            let mut guard = CancelOnDrop::new(cancel.clone());
+            let outcome = tokio::task::spawn_blocking(move || {
+                design_service.design_cancellable(&intent, &provider, &cancel)
+            })
+            .await;
+            guard.disarm();
             match outcome {
                 Ok(Ok(result)) => Ok(json_response(200, &documents::design_document(&result))),
                 Ok(Err(error)) => Ok(design_failure(&error, None)),
@@ -241,6 +281,27 @@ impl GeometryBackend for NativeGeometryBackend {
                     &documents::section_document(design_id.as_str(), &section),
                 )),
                 Ok(Err(error)) => Ok(design_failure(&error, Some(design_id))),
+                Err(_) => Ok(internal_failure()),
+            }
+        })
+    }
+
+    fn artifact<'a>(
+        &'a self,
+        design_id: &'a str,
+        kind: &'a str,
+    ) -> BackendFuture<'a, Result<WorkerResponse, BackendError>> {
+        Box::pin(async move {
+            let design_service = Arc::clone(&self.design_service);
+            let requested = design_id.to_owned();
+            let requested_kind = kind.to_owned();
+            let outcome = tokio::task::spawn_blocking(move || {
+                design_service.artifact(&requested, &requested_kind)
+            })
+            .await;
+            match outcome {
+                Ok(Ok(download)) => Ok(artifact_response(&download)),
+                Ok(Err(error)) => Ok(artifact_failure(&error, design_id, kind)),
                 Err(_) => Ok(internal_failure()),
             }
         })
@@ -1048,6 +1109,59 @@ fn request_parse_failure(error: RequestParseError) -> WorkerResponse {
     validation_response(FlatError::new(status, code, message, details))
 }
 
+/// The response of one stored artifact download.
+fn artifact_response(download: &service::ArtifactDownload) -> WorkerResponse {
+    let filename = download.filename.replace(['\\', '"', '\r', '\n'], "_");
+    WorkerResponse {
+        status: 200,
+        headers: vec![
+            ("content-type".to_owned(), download.content_type.clone()),
+            (
+                "content-disposition".to_owned(),
+                format!("attachment; filename=\"{filename}\""),
+            ),
+            ("content-length".to_owned(), download.data.len().to_string()),
+            ("x-studio-design-id".to_owned(), download.design_id.clone()),
+            ("x-studio-digest".to_owned(), download.sha256.clone()),
+            ("x-studio-artifact-kind".to_owned(), download.kind.clone()),
+        ],
+        body: download.data.clone(),
+    }
+}
+
+/// The refusal of one artifact download.
+fn artifact_failure(error: &DesignError, design_id: &str, kind: &str) -> WorkerResponse {
+    let bounded_id = crate::errors::truncate_chars(design_id, 64);
+    let bounded_kind = crate::errors::truncate_chars(kind, 16);
+    match error {
+        DesignError::Invalid(reason) => sorted_error(
+            422,
+            "invalid_request",
+            VALIDATION_MESSAGE,
+            vec![crate::errors::truncate_chars(reason, 256)],
+        ),
+        DesignError::TooLarge(reason) => sorted_error(
+            413,
+            "artifact_too_large",
+            "the stored artifact exceeds the download limit",
+            vec![crate::errors::truncate_chars(reason, 256)],
+        ),
+        DesignError::Integrity(reason) => sorted_error(
+            500,
+            "artifact_digest_mismatch",
+            "the stored artifact does not match its journalled digest",
+            vec![crate::errors::truncate_chars(reason, 256)],
+        ),
+        DesignError::NotFound(_) => sorted_error(
+            404,
+            "artifact_not_found",
+            "no artifact of that kind is stored for this design",
+            vec![format!("design_id={bounded_id}; kind={bounded_kind}")],
+        ),
+        other => design_failure(other, Some(design_id.to_owned())),
+    }
+}
+
 /// The refusal of a design turn that could not be completed.
 fn design_failure(error: &DesignError, design_id: Option<String>) -> WorkerResponse {
     match error {
@@ -1132,6 +1246,24 @@ fn design_failure(error: &DesignError, design_id: Option<String>) -> WorkerRespo
             eprintln!("unhandled studio failure: {reason}");
             internal_failure()
         }
+        DesignError::TooLarge(reason) => sorted_error(
+            413,
+            "artifact_too_large",
+            "the stored artifact exceeds the download limit",
+            vec![crate::errors::truncate_chars(reason, 256)],
+        ),
+        DesignError::Integrity(reason) => sorted_error(
+            500,
+            "artifact_digest_mismatch",
+            "the stored artifact does not match its journalled digest",
+            vec![crate::errors::truncate_chars(reason, 256)],
+        ),
+        DesignError::Cancelled(reason) => sorted_error(
+            499,
+            "design_cancelled",
+            "the client closed the request, so the design turn was stopped",
+            vec![crate::errors::truncate_chars(reason, 256)],
+        ),
         DesignError::Journal(_) => journal_failure(),
     }
 }

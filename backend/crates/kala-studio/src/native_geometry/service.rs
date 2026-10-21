@@ -35,18 +35,19 @@ use kala_cad_providers::{
 use kala_contracts::{ConstructionScript, WireValue};
 use kala_design_intent::{DesignIntent, TemplateCall, TemplateResult};
 use kala_json::{CanonicalValue, JsonText};
+use kala_process::CancelToken;
 use kala_studio_journal::{AppendOptions, JournalVerification, SessionEvent, StudioSessionJournal};
 use sha2::{Digest, Sha256};
 
+use crate::artifacts::{
+    ARTIFACT_KINDS, MAX_ARTIFACT_DOWNLOAD_BYTES, content_type as artifact_content_type,
+    filename as artifact_filename,
+};
 use crate::native_geometry::providers::{PROVIDER_OPENCASCADE, ProviderRegistry};
 use crate::native_geometry::wire::{canonical_script_json, script_dump};
 
 /// The bounded number of compiled designs the service keeps in memory.
 pub const DEFAULT_CACHE_SIZE: usize = 32;
-/// The largest number of warnings one design reports.
-pub const MAX_WARNINGS: usize = 16;
-/// The largest length of one warning.
-pub const MAX_WARNING_LENGTH: usize = 256;
 /// The envelope tolerance in millimetres.
 pub const ENVELOPE_TOLERANCE_MM: f64 = 0.01;
 /// The exact single-solid tolerance.
@@ -55,6 +56,8 @@ pub const SINGLE_SOLID_TOLERANCE: f64 = 0.0;
 pub const SOLID_COUNT_TOLERANCE: f64 = 0.0;
 /// The exact B-Rep validity tolerance.
 pub const BREP_VALID_TOLERANCE: f64 = 0.0;
+/// The exact cut-effectiveness tolerance: a count, not a measurement.
+pub const CUTS_EFFECTIVE_TOLERANCE: f64 = 0.0;
 
 /// The event type of a provider build request.
 pub const PROVIDER_BUILD_REQUESTED: &str = "provider.build.requested";
@@ -78,6 +81,15 @@ pub const DESIGN_MEASURED: &str = "design.measured";
 pub const DESIGN_CHECKED: &str = "design.checked";
 /// The event type of a completed export.
 pub const EXPORT_COMPLETED: &str = "export.completed";
+/// The event type of a cancelled design turn.
+///
+/// A turn whose client disconnected records exactly this one event instead of
+/// the remaining `provider.build.*`, `artifact.stored` and `design.*` events,
+/// so the journal never claims a build that the backend stopped.
+pub const DESIGN_CANCELLED: &str = "design.cancelled";
+/// The reason a cancelled turn records when the token, not the provider,
+/// supplies it.
+pub const CLIENT_DISCONNECT_REASON: &str = "the client disconnected, so the design turn stopped";
 
 /// One declared-versus-measured check value.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -212,6 +224,23 @@ pub struct ExportOutcome {
     pub data: Vec<u8>,
 }
 
+/// One stored artifact served by the download route.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ArtifactDownload {
+    /// The design the artifact belongs to.
+    pub design_id: String,
+    /// The artifact kind (`script`, `step`, `fcstd`, `stl`).
+    pub kind: String,
+    /// The digest the journal recorded for the bytes.
+    pub sha256: String,
+    /// The `content-type` the response carries.
+    pub content_type: String,
+    /// The `content-disposition` filename, `<label-slug>-<digest8>.<ext>`.
+    pub filename: String,
+    /// The exact stored bytes, verified against `sha256`.
+    pub data: Vec<u8>,
+}
+
 /// Why a design turn could not be completed.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DesignError {
@@ -241,6 +270,12 @@ pub enum DesignError {
     },
     /// The journal could not record the turn.
     Journal(String),
+    /// A stored artifact exceeds the download ceiling.
+    TooLarge(String),
+    /// A stored artifact does not match its journalled digest.
+    Integrity(String),
+    /// The client that asked for the turn disconnected; the work stopped.
+    Cancelled(String),
 }
 
 impl std::fmt::Display for DesignError {
@@ -251,7 +286,10 @@ impl std::fmt::Display for DesignError {
             | Self::Unavailable(message)
             | Self::Invalid(message)
             | Self::Internal(message)
-            | Self::Journal(message) => formatter.write_str(message),
+            | Self::Journal(message)
+            | Self::TooLarge(message)
+            | Self::Integrity(message)
+            | Self::Cancelled(message) => formatter.write_str(message),
             Self::StepImport { detail, .. } => formatter.write_str(detail),
             Self::ProviderUnavailable(error) => formatter.write_str(error.message()),
         }
@@ -274,6 +312,12 @@ struct ResolvedIntent {
 struct StoredDesign {
     intent: CanonicalValue,
     build: Option<CanonicalValue>,
+}
+
+/// The label and the recorded digest of one downloadable artifact.
+struct ArtifactRecord {
+    label: String,
+    digest: Option<String>,
 }
 
 /// The bounded LRU of compiled designs.
@@ -401,11 +445,34 @@ impl NativeDesignService {
         intent: &DesignIntent,
         provider: &str,
     ) -> Result<DesignOutcome, DesignError> {
+        self.design_cancellable(intent, provider, &CancelToken::new())
+    }
+
+    /// Build, measure, import and journal one design, stopping when `cancel`
+    /// is set.
+    ///
+    /// The token is checked between every phase (validate → build → import →
+    /// measure → journal), and the out-of-process FreeCAD provider kills its
+    /// process group when it is set. Once cancelled, no later `design.*`,
+    /// `provider.build.*` or `artifact.stored` event is written: the turn
+    /// records one [`DESIGN_CANCELLED`] event and stops. An in-process
+    /// OpenCascade compile cannot be interrupted in the middle; the token is
+    /// honoured at the next phase boundary.
+    ///
+    /// # Errors
+    ///
+    /// Returns the honest refusal, including [`DesignError::Cancelled`].
+    pub fn design_cancellable(
+        &self,
+        intent: &DesignIntent,
+        provider: &str,
+        cancel: &CancelToken,
+    ) -> Result<DesignOutcome, DesignError> {
         self.validate_provider(provider)?;
         let _guard = self.geometry.lock().map_err(|_| {
             DesignError::Journal("the design geometry lock was poisoned".to_owned())
         })?;
-        self.design_locked(intent, provider)
+        self.design_locked(intent, provider, cancel)
     }
 
     fn validate_provider(&self, provider: &str) -> Result<(), DesignError> {
@@ -437,12 +504,18 @@ impl NativeDesignService {
         &self,
         intent: &DesignIntent,
         provider_name: &str,
+        cancel: &CancelToken,
     ) -> Result<DesignOutcome, DesignError> {
         let resolved = self.resolve_intent(intent)?;
         let script_bytes =
             canonical_script_json(&resolved.script).map_err(DesignError::Rejected)?;
         let script_sha256 = sha256_hex(script_bytes.as_bytes());
         let design_id = design_id_for(&script_bytes, provider_name);
+        // Phase boundary: validation → intent. A client that is already gone
+        // never writes a design.intent; the turn records only its cancellation.
+        if let Some(error) = self.stop_if_cancelled(&design_id, cancel) {
+            return Err(error);
+        }
         let measured_by = self
             .providers
             .lock()
@@ -472,6 +545,9 @@ impl NativeDesignService {
         )?;
 
         if cached {
+            if let Some(error) = self.stop_if_cancelled(&design_id, cancel) {
+                return Err(error);
+            }
             let mut outcome = self.load_locked(&design_id, stored)?;
             outcome.cached = true;
             outcome.journal_head = Some(intent_event.event_digest);
@@ -508,6 +584,10 @@ impl NativeDesignService {
             ));
         }
 
+        // Phase boundary: probe → build request.
+        if let Some(error) = self.stop_if_cancelled(&design_id, cancel) {
+            return Err(error);
+        }
         self.append(
             PROVIDER_BUILD_REQUESTED,
             canonical_object(vec![
@@ -525,8 +605,11 @@ impl NativeDesignService {
             &design_id,
         )?;
 
-        let build = match providers.build(provider_name, &resolved.script) {
+        let build = match providers.build_cancellable(provider_name, &resolved.script, cancel) {
             Ok(build) => build,
+            Err(CadProviderError::Cancelled(reason)) => {
+                return Err(self.cancel(&design_id, &reason));
+            }
             Err(CadProviderError::Unavailable(error)) => {
                 self.provider_failed(
                     &design_id,
@@ -544,9 +627,21 @@ impl NativeDesignService {
                 return Err(DesignError::Rejected(reason));
             }
         };
+        drop(providers);
 
+        // Phase boundary: build → import. A cancelled out-of-process build
+        // returns Cancelled above; an in-process one is stopped here.
+        if let Some(error) = self.stop_if_cancelled(&design_id, cancel) {
+            return Err(error);
+        }
         self.validate_build(&design_id, provider_name, &build)?;
         let imported = self.import_view(&design_id, provider_name, &build)?;
+
+        // Phase boundary: import → measure/journal. Everything below is the
+        // post-build record; a cancelled turn writes none of it.
+        if let Some(error) = self.stop_if_cancelled(&design_id, cancel) {
+            return Err(error);
+        }
 
         let step_sha256 = sha256_hex(build.step_bytes());
         let native_kind = build.native_kind().map(str::to_owned);
@@ -557,6 +652,8 @@ impl NativeDesignService {
             build.solid_count(),
             expected_solid_count(&resolved.script),
             resolved.envelope.as_ref(),
+            expected_pocket_count(&resolved.script),
+            build.warnings(),
         );
         let verified = !checks.is_empty() && checks.iter().all(|check| check.passed);
 
@@ -615,6 +712,9 @@ impl NativeDesignService {
                 "the stored script artifact digest did not match the script digest".to_owned(),
             ));
         }
+        if let Some(error) = self.stop_if_cancelled(&design_id, cancel) {
+            return Err(error);
+        }
         self.append(
             ARTIFACT_STORED,
             canonical_object(vec![
@@ -632,6 +732,9 @@ impl NativeDesignService {
             return Err(DesignError::Rejected(
                 "the stored STEP artifact digest did not match the provider export".to_owned(),
             ));
+        }
+        if let Some(error) = self.stop_if_cancelled(&design_id, cancel) {
+            return Err(error);
         }
         self.append(
             ARTIFACT_STORED,
@@ -660,6 +763,9 @@ impl NativeDesignService {
                         .to_owned(),
                 ));
             }
+            if let Some(error) = self.stop_if_cancelled(&design_id, cancel) {
+                return Err(error);
+            }
             self.append(
                 ARTIFACT_STORED,
                 canonical_object(vec![
@@ -680,6 +786,9 @@ impl NativeDesignService {
             )?;
         }
 
+        if let Some(error) = self.stop_if_cancelled(&design_id, cancel) {
+            return Err(error);
+        }
         self.append(
             VIEW_IMPORTED,
             canonical_object(vec![
@@ -710,6 +819,9 @@ impl NativeDesignService {
         )?;
 
         if provider_name == PROVIDER_OPENCASCADE {
+            if let Some(error) = self.stop_if_cancelled(&design_id, cancel) {
+                return Err(error);
+            }
             self.append(
                 DESIGN_COMPILED,
                 canonical_object(vec![
@@ -739,6 +851,9 @@ impl NativeDesignService {
             )?;
         }
 
+        if let Some(error) = self.stop_if_cancelled(&design_id, cancel) {
+            return Err(error);
+        }
         self.append(
             DESIGN_MEASURED,
             canonical_object(vec![
@@ -986,6 +1101,8 @@ impl NativeDesignService {
             solid_count,
             expected_solid_count(&resolved.script),
             resolved.envelope.as_ref(),
+            expected_pocket_count(&resolved.script),
+            &string_tuple(object_get(&build, "warnings")),
         );
         let verified = !checks.is_empty() && checks.iter().all(|check| check.passed);
         let provider_version = object_get(&build, "provider_version")
@@ -1101,6 +1218,83 @@ impl NativeDesignService {
             design_id: design_id.to_owned(),
             format: extension,
             filename,
+            sha256: digest,
+            data,
+        })
+    }
+
+    /// Read one stored artifact of one design for download.
+    ///
+    /// The bytes are the exact bytes the provider returned (never a
+    /// re-export), and their SHA-256 must equal the digest the journal
+    /// recorded before a single byte is served. A kind the design did not
+    /// store is a 404, an artifact above the download ceiling is a 413, and a
+    /// digest mismatch is a refusal rather than a download.
+    ///
+    /// # Errors
+    ///
+    /// Returns the honest refusal: an invalid id or kind, no design under the
+    /// id, no artifact of that kind, a missing store object, a size refusal or
+    /// a digest mismatch.
+    pub fn artifact(&self, design_id: &str, kind: &str) -> Result<ArtifactDownload, DesignError> {
+        validate_design_id(design_id)?;
+        let kind = kind.trim().to_ascii_lowercase();
+        if !ARTIFACT_KINDS.contains(&kind.as_str()) {
+            return Err(DesignError::Invalid(format!(
+                "the artifact kind must be one of {}",
+                ARTIFACT_KINDS.join(", ")
+            )));
+        }
+        let record = self.find_artifact_record(design_id, &kind).ok_or_else(|| {
+            DesignError::NotFound(format!("design_id={}", truncate_chars(design_id, 64)))
+        })?;
+        let Some(digest) = record.digest else {
+            return Err(DesignError::NotFound(format!(
+                "no {kind} artifact is stored for design_id={}",
+                truncate_chars(design_id, 64)
+            )));
+        };
+        let data = match self.journal.get_artifact(&digest) {
+            Ok(data) => data,
+            // The content-addressed store verifies the digest on read. Its
+            // public error kind is coarse (a digest mismatch and a size
+            // refusal are both `Value`), so the two integrity cases are told
+            // apart by the store's own stable messages.
+            Err(error) if is_digest_mismatch(&error) => {
+                return Err(DesignError::Integrity(format!(
+                    "the stored {kind} artifact does not match its journalled digest"
+                )));
+            }
+            Err(error) if is_artifact_too_large(&error) => {
+                return Err(DesignError::TooLarge(format!(
+                    "the stored {kind} artifact exceeds the download limit"
+                )));
+            }
+            Err(_) => {
+                return Err(DesignError::NotFound(format!(
+                    "the stored {kind} artifact is missing for design_id={}",
+                    truncate_chars(design_id, 64)
+                )));
+            }
+        };
+        if data.len() > MAX_ARTIFACT_DOWNLOAD_BYTES {
+            return Err(DesignError::TooLarge(format!(
+                "the stored {kind} artifact is {} bytes; the download limit is {} bytes",
+                data.len(),
+                MAX_ARTIFACT_DOWNLOAD_BYTES
+            )));
+        }
+        let actual = sha256_hex(&data);
+        if actual != digest {
+            return Err(DesignError::Integrity(format!(
+                "the stored {kind} artifact does not match its journalled digest"
+            )));
+        }
+        Ok(ArtifactDownload {
+            design_id: design_id.to_owned(),
+            kind: kind.clone(),
+            filename: artifact_filename(&record.label, &digest, &kind),
+            content_type: artifact_content_type(&kind).to_owned(),
             sha256: digest,
             data,
         })
@@ -1579,6 +1773,35 @@ impl NativeDesignService {
         ])
     }
 
+    /// Stop the turn when the client cancelled it.
+    ///
+    /// The check runs at every phase boundary, so a cancel is honoured even
+    /// when the provider itself cannot be interrupted (the in-process
+    /// OpenCascade build).
+    fn stop_if_cancelled(&self, design_id: &str, cancel: &CancelToken) -> Option<DesignError> {
+        if !cancel.is_cancelled() {
+            return None;
+        }
+        Some(self.cancel(design_id, CLIENT_DISCONNECT_REASON))
+    }
+
+    /// Record one `design.cancelled` event and return the refusal.
+    ///
+    /// The payload carries the design id and a bounded reason only: no
+    /// prompt, no credential, no provider output.
+    fn cancel(&self, design_id: &str, reason: &str) -> DesignError {
+        let reason = truncate_chars(reason, 512);
+        let _ = self.append(
+            DESIGN_CANCELLED,
+            canonical_object(vec![
+                ("design_id", canonical_text(design_id)),
+                ("reason", canonical_text(&reason)),
+            ]),
+            design_id,
+        );
+        DesignError::Cancelled(reason)
+    }
+
     fn reject(&self, design_id: &str, reason: &str) -> Result<(), DesignError> {
         self.append(
             DESIGN_REJECTED,
@@ -1634,6 +1857,71 @@ impl NativeDesignService {
 
     fn has_artifact(&self, digest: &str) -> bool {
         self.journal.has_artifact(digest).unwrap_or(false)
+    }
+
+    /// The label and the recorded digest of one artifact kind of one design.
+    ///
+    /// The completed build record is authoritative for `script`, `step` and
+    /// the provider's native kind; an `artifact.stored` record supplies the
+    /// kinds only an export writes (`stl`), and is the fallback for the rest.
+    /// The scan is the same bounded page walk as [`Self::find_journal_design`],
+    /// so an evicted cache entry still downloads.
+    fn find_artifact_record(&self, design_id: &str, kind: &str) -> Option<ArtifactRecord> {
+        let mut label: Option<String> = None;
+        let mut build_digest: Option<String> = None;
+        let mut stored_digest: Option<String> = None;
+        let mut seen = false;
+        let mut after = 0_i64;
+        let page_size = self.journal.max_page_size();
+        loop {
+            let events = self.journal.page(after, page_size).ok()?;
+            if events.is_empty() {
+                break;
+            }
+            for event in &events {
+                let Some(payload) = event.payload.as_ref() else {
+                    continue;
+                };
+                let matches = object_get(payload, "design_id")
+                    .and_then(|value| value.as_text())
+                    .is_some_and(|text| text.to_string_lossy() == design_id);
+                if !matches {
+                    continue;
+                }
+                seen = true;
+                if event.event_type == DESIGN_INTENT {
+                    label = object_get(payload, "label")
+                        .and_then(|value| value.as_text())
+                        .map(|text| text.to_string_lossy());
+                } else if event.event_type == PROVIDER_BUILD_COMPLETED {
+                    let field_name = match kind {
+                        "script" => Some("script_sha256"),
+                        "step" => Some("step_sha256"),
+                        _ => None,
+                    };
+                    if let Some(field_name) = field_name {
+                        build_digest = text_field(payload, field_name);
+                    } else {
+                        let native_kind = text_field(payload, "native_kind");
+                        if native_kind.as_deref() == Some(kind) {
+                            build_digest = text_field(payload, "native_sha256");
+                        }
+                    }
+                } else if event.event_type == ARTIFACT_STORED
+                    && text_field(payload, "kind").as_deref() == Some(kind)
+                {
+                    stored_digest = text_field(payload, "sha256");
+                }
+            }
+            after = events[events.len() - 1].sequence;
+        }
+        if !seen {
+            return None;
+        }
+        Some(ArtifactRecord {
+            label: label.unwrap_or_default(),
+            digest: build_digest.or(stored_digest),
+        })
     }
 
     fn find_journal_design(&self, design_id: &str) -> Option<StoredDesign> {
@@ -1775,7 +2063,24 @@ pub fn script_fused(script: &ConstructionScript) -> bool {
     script.assembly().iter().any(|step| step.op() == "fuse")
 }
 
+/// The number of pocket steps in the script.
+#[must_use]
+pub fn expected_pocket_count(script: &ConstructionScript) -> usize {
+    script
+        .components()
+        .iter()
+        .flat_map(|component| component.steps())
+        .filter(|step| step.op() == "pocket")
+        .count()
+}
+
 /// The honesty checks built from the provider's own facts.
+///
+/// A build whose warnings report a cut that `removed no material` appends one
+/// failed `cuts_effective` row: expected is the number of pocket steps in the
+/// script, measured is the number that did remove material. The row is
+/// appended only for that failure, so every passing design keeps its exact
+/// check list.
 #[must_use]
 pub fn build_provider_checks(
     measured: &MeasuredProperties,
@@ -1783,6 +2088,8 @@ pub fn build_provider_checks(
     solid_count: Option<i64>,
     expected_solids: i64,
     expected_envelope: Option<&Bounds>,
+    expected_pockets: usize,
+    warnings: &[String],
 ) -> Vec<CheckRow> {
     let mut checks = vec![CheckRow {
         id: "brep_valid".to_owned(),
@@ -1843,6 +2150,24 @@ pub fn build_provider_checks(
                 passed,
             });
         }
+    }
+    // A provider that reports a cut which removed nothing is never verified,
+    // even when its B-Rep and envelope are valid. The row is added only for
+    // that failure, so every passing design keeps its exact check list. The
+    // count comes from the bounded display, whose summary line carries the
+    // exact number of suppressed cut warnings: it stays exact for 500 cuts.
+    let ineffective = kala_cad_providers::ineffective_cut_count(warnings);
+    if ineffective > 0 {
+        let removed = expected_pockets.saturating_sub(ineffective);
+        checks.push(CheckRow {
+            id: "cuts_effective".to_owned(),
+            label: "Cuts removed material".to_owned(),
+            expected: CheckValue::Float(expected_pockets as f64),
+            measured: Some(CheckValue::Float(removed as f64)),
+            tolerance: CUTS_EFFECTIVE_TOLERANCE,
+            unit: "cut".to_owned(),
+            passed: false,
+        });
     }
     checks
 }
@@ -2000,27 +2325,51 @@ fn string_tuple(value: Option<&CanonicalValue>) -> Vec<String> {
         .collect()
 }
 
-/// The bounded, de-duplicated warnings of one design.
+/// The bounded, de-duplicated display of one design's warnings.
+///
+/// Duplicates are dropped first, then the shared bounding rule keeps at most
+/// 16 lines and writes the number of any suppressed warnings on the last
+/// lines, so the ineffective-cut count stays exact.
 fn bounded_warnings(warnings: &[String]) -> Vec<String> {
     let mut seen: Vec<String> = Vec::new();
-    let mut bounded: Vec<String> = Vec::new();
+    let mut unique: Vec<String> = Vec::new();
     for warning in warnings {
         let text = warning.trim();
         if text.is_empty() || seen.iter().any(|item| item == text) {
             continue;
         }
         seen.push(text.to_owned());
-        bounded.push(truncate_chars(text, MAX_WARNING_LENGTH));
-        if bounded.len() >= MAX_WARNINGS {
-            break;
-        }
+        unique.push(text.to_owned());
     }
-    bounded
+    kala_cad_providers::bound_warnings(unique)
 }
 
 /// Truncate to a number of Unicode scalar values, like Python `str[:n]`.
 pub fn truncate_chars(value: &str, limit: usize) -> String {
     value.chars().take(limit).collect()
+}
+
+/// One text field of a canonical payload object.
+fn text_field(value: &CanonicalValue, name: &str) -> Option<String> {
+    object_get(value, name)
+        .and_then(|value| value.as_text())
+        .map(|text| text.to_string_lossy())
+}
+
+/// Whether a journal read failed because the stored bytes no longer hash to
+/// their digest.
+fn is_digest_mismatch(error: &kala_studio_journal::StudioJournalError) -> bool {
+    error
+        .to_string()
+        .contains("artifact digest verification failed")
+}
+
+/// Whether a journal read failed because the stored object is above the
+/// artifact store's size limit.
+fn is_artifact_too_large(error: &kala_studio_journal::StudioJournalError) -> bool {
+    error
+        .to_string()
+        .contains("stored artifact exceeds the configured size limit")
 }
 
 /// One field of a canonical object.
@@ -2097,5 +2446,90 @@ fn check_value_payload(value: &CheckValue) -> CanonicalValue {
         CheckValue::Pair(low, high) => {
             CanonicalValue::Array(vec![canonical_float(*low), canonical_float(*high)])
         }
+    }
+}
+
+#[cfg(test)]
+mod cut_guard_tests {
+    use super::*;
+
+    fn measured() -> MeasuredProperties {
+        MeasuredProperties::new(None, None, None, None, None).expect("empty measurements")
+    }
+
+    fn plate_script() -> ConstructionScript {
+        kala_contracts::load_construction_json_str(
+            r#"{"summary":"plate","components":[{"name":"plate","steps":[
+                {"op":"sketch","plane":"XY","profile":"rectangle","width":80,"height":40},
+                {"op":"extrude","length":8},
+                {"op":"sketch","plane":"XY","profile":"circle","diameter":6,"x":8,"y":8},
+                {"op":"pocket"},
+                {"op":"sketch","plane":"XY","profile":"circle","diameter":6,"x":72,"y":8},
+                {"op":"pocket"}]}]}"#,
+        )
+        .expect("a valid plate script")
+    }
+
+    #[test]
+    fn a_passing_build_keeps_its_exact_check_list() {
+        let checks = build_provider_checks(
+            &measured(),
+            Some(true),
+            Some(1),
+            1,
+            None,
+            expected_pocket_count(&plate_script()),
+            &[],
+        );
+        assert_eq!(
+            checks
+                .iter()
+                .map(|check| check.id.as_str())
+                .collect::<Vec<_>>(),
+            ["brep_valid", "single_solid"]
+        );
+    }
+
+    #[test]
+    fn an_ineffective_cut_adds_one_failed_row() {
+        let script = plate_script();
+        let warnings = [
+            "component 'plate': pocket at step index 1 on XY removed no material".to_owned(),
+            "component 'plate': pocket at step index 3 on XY removed no material".to_owned(),
+        ];
+        let checks = build_provider_checks(
+            &measured(),
+            Some(true),
+            Some(1),
+            1,
+            None,
+            expected_pocket_count(&script),
+            &warnings,
+        );
+        assert_eq!(expected_pocket_count(&script), 2);
+        let row = checks.last().expect("a cuts row");
+        assert_eq!(row.id, "cuts_effective");
+        assert_eq!(row.label, "Cuts removed material");
+        assert_eq!(row.expected, CheckValue::Float(2.0));
+        assert_eq!(row.measured, Some(CheckValue::Float(0.0)));
+        assert_eq!(row.tolerance, CUTS_EFFECTIVE_TOLERANCE);
+        assert_eq!(row.unit, "cut");
+        assert!(!row.passed);
+        assert_eq!(row.status(), "failed");
+        assert!(!checks.iter().all(|check| check.passed));
+    }
+
+    #[test]
+    fn unrelated_warnings_do_not_add_the_cut_row() {
+        let checks = build_provider_checks(
+            &measured(),
+            Some(true),
+            Some(1),
+            1,
+            None,
+            expected_pocket_count(&plate_script()),
+            &["FreeCAD could not reopen the exported FCStd: RuntimeError".to_owned()],
+        );
+        assert!(!checks.iter().any(|check| check.id == "cuts_effective"));
     }
 }

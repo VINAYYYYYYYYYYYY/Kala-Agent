@@ -17,8 +17,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
-import { activateDesign, dispatch, useUiState } from '../../state/store';
-import type { DesignCheck, DesignResult } from '../../types/studio';
+import { activateDesign, appendJournal, dispatch, useUiState } from '../../state/store';
+import { getDesignArtifact, StudioApiError } from '../../api/client';
+import type { DesignArtifactKind, DesignCheck, DesignResult } from '../../types/studio';
 import {
   checkSummary,
   digestChips,
@@ -27,6 +28,7 @@ import {
   measuredByLabel,
   measuredRows,
 } from './designCard';
+import { saveBlob } from '../../saveBlob';
 
 export interface DesignAgentCardProps {
   /** The design the turn produced. The card reads it from the store. */
@@ -40,13 +42,56 @@ export function DesignAgentCard(props: DesignAgentCardProps): ReactElement {
   // The store owns the design: the chat turn only remembers which design
   // it produced, so a card can never show a stale copy of a measurement.
   const design = useUiState((s) => s.designs.designs.get(props.designId) ?? null);
+  const connection = useUiState((s) => s.connection);
   const [copied, setCopied] = useState<string | null>(null);
   const [copyFailed, setCopyFailed] = useState<boolean>(false);
+  const [downloading, setDownloading] = useState<DesignArtifactKind | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => {
     if (timerRef.current) clearTimeout(timerRef.current);
   }, []);
+
+  /**
+   * Download one stored artifact next to its digest chip. The bytes are the
+   * backend's exact stored file, named by its `content-disposition`; the
+   * receipt in the journal shows the digest the backend verified.
+   */
+  const onDownload = useCallback(
+    async (kind: DesignArtifactKind, digest: string) => {
+      if (connection.kind !== 'ready' || downloading !== null) return;
+      setDownloading(kind);
+      setDownloadError(null);
+      try {
+        appendJournal({
+          kind: 'export',
+          message: `GET /api/studio/design/${props.designId.slice(0, 8)}/artifact/${kind}`,
+        });
+        const artifact = await getDesignArtifact(connection.connection, props.designId, kind);
+        saveBlob(artifact.blob, artifact.filename);
+        appendJournal({
+          kind: 'export',
+          message: `Saved ${artifact.filename}`,
+          digest: artifact.digest
+            ? `${artifact.bytes.toLocaleString()} bytes · sha256 ${digest.slice(0, 8)}`
+            : `${artifact.bytes.toLocaleString()} bytes · sha256 —`,
+        });
+      } catch (cause) {
+        const message =
+          cause instanceof StudioApiError
+            ? `${cause.code}: ${cause.message}`
+            : cause instanceof Error
+              ? cause.message
+              : 'unknown error';
+        setDownloadError(message);
+        appendJournal({ kind: 'export', message: `Artifact download failed · ${message}` });
+      } finally {
+        setDownloading(null);
+      }
+    },
+    [connection, downloading, props.designId],
+  );
 
   const onCopy = useCallback(async (digest: string) => {
     const written = await writeClipboard(digest);
@@ -155,9 +200,30 @@ export function DesignAgentCard(props: DesignAgentCardProps): ReactElement {
               >
                 {copied === chip.digest ? 'copied' : 'copy'}
               </button>
+              {chip.downloadKind ? (
+                <button
+                  type="button"
+                  className="chat-panel-design-digest-download"
+                  data-artifact={chip.downloadKind}
+                  aria-label={`Download ${chip.label}`}
+                  title={`Download the stored ${chip.label} artefact`}
+                  disabled={downloading !== null}
+                  onClick={() => {
+                    void onDownload(chip.downloadKind!, chip.digest);
+                  }}
+                >
+                  {downloading === chip.downloadKind ? '…' : 'download'}
+                </button>
+              ) : null}
             </span>
           ))}
         </div>
+      ) : null}
+
+      {downloadError ? (
+        <p className="chat-panel-design-error" role="alert">
+          {downloadError}
+        </p>
       ) : null}
 
       {warnings.length > 0 ? (

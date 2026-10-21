@@ -8,6 +8,7 @@ import { act, cleanup, createEvent, fireEvent, render, waitFor } from '@testing-
 
 const mocks = vi.hoisted(() => ({
   postChat: vi.fn(),
+  getProviderModels: vi.fn(),
 }));
 
 vi.mock('../src/api/client', async (importOriginal) => {
@@ -15,6 +16,7 @@ vi.mock('../src/api/client', async (importOriginal) => {
   return {
     ...actual,
     postChat: mocks.postChat,
+    getProviderModels: mocks.getProviderModels,
   };
 });
 
@@ -27,16 +29,24 @@ import {
   resetStore,
 } from '../src/state/store';
 import type { JournalEntry } from '../src/types/studio';
+import { pickProvider } from './providerFixtures';
 
 const BASE_URL = 'http://127.0.0.1:8765';
 
 beforeEach(() => {
   resetStore();
+  mocks.getProviderModels.mockResolvedValue({
+    provider: 'local',
+    source: 'static',
+    fetched_at: null,
+    models: [],
+  });
 });
 
 afterEach(() => {
   cleanup();
   mocks.postChat.mockReset();
+  mocks.getProviderModels.mockReset();
   resetStore();
 });
 
@@ -110,8 +120,7 @@ describe('composer keyboard handling', () => {
     });
 
     const view = render(<ChatPanel />);
-    const provider = view.container.querySelector<HTMLSelectElement>('#chat-provider-select')!;
-    fireEvent.change(provider, { target: { value: 'local' } });
+    pickProvider(view.container, 'local');
 
     const textarea = view.container.querySelector<HTMLTextAreaElement>('textarea.chat-panel-prompt')!;
     fireEvent.change(textarea, { target: { value: 'Size the active bracket.' } });
@@ -137,8 +146,7 @@ describe('composer keyboard handling', () => {
   it('does not send Enter when the provider is not configured', async () => {
     seedProviders();
     const view = render(<ChatPanel />);
-    const provider = view.container.querySelector<HTMLSelectElement>('#chat-provider-select')!;
-    fireEvent.change(provider, { target: { value: 'local' } });
+    pickProvider(view.container, 'local');
 
     const textarea = view.container.querySelector<HTMLTextAreaElement>('textarea.chat-panel-prompt')!;
     // Empty prompt: Enter must not fire a request even though the provider is ready.

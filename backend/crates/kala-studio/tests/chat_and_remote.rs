@@ -451,8 +451,11 @@ async fn provider_response_dto_validation_matches_the_source() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn codex_stays_fail_closed_and_openrouter_uses_the_fixed_endpoint() {
+async fn codex_needs_consent_and_openrouter_uses_the_fixed_endpoint() {
     let (server, transport, _work) = remote_server().await;
+    // The Codex CLI route is a subscription route now. The test environment
+    // publishes no PATH, so no CLI is installed and the route reports the
+    // provider as unavailable instead of sending anything.
     let response = chat(
         server.addr,
         serde_json::json!({"provider":"codex","prompt":"hello","allow_remote":true}),

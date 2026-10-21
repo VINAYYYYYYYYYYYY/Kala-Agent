@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   exportDesign,
   getCadProviders,
+  getDesignArtifact,
   getDesignDrawing,
   getDesignSection,
   getJournal,
@@ -563,6 +564,52 @@ describe('design client methods', () => {
     expect(artifact.digest).toBe('a'.repeat(64));
     expect(artifact.designId).toBe(BRACKET_DESIGN_ID);
     expect(artifact.filename).toBe(`kala-studio-${BRACKET_DESIGN_ID.slice(0, 8)}.step`);
+  });
+
+  it('downloads a stored artifact with the bearer and its digest', async () => {
+    responder = () =>
+      new Response(new Uint8Array([0x50, 0x4b, 0x03, 0x04]), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'content-disposition': 'attachment; filename="corpus-bracket-7a50e9c4.FCStd"',
+          'x-studio-design-id': BRACKET_DESIGN_ID,
+          'x-studio-digest': 'b'.repeat(64),
+          'x-studio-artifact-kind': 'fcstd',
+        },
+      });
+    const artifact = await getDesignArtifact(connection, BRACKET_DESIGN_ID, 'fcstd');
+    expect(captured[0]!.url).toBe(
+      `http://127.0.0.1:8765/api/studio/design/${BRACKET_DESIGN_ID}/artifact/fcstd`,
+    );
+    const headers = captured[0]!.init.headers as Record<string, string>;
+    expect(headers['Authorization']).toBe(`Bearer ${connection.token}`);
+    expect(artifact.kind).toBe('fcstd');
+    expect(artifact.bytes).toBe(4);
+    expect(artifact.digest).toBe('b'.repeat(64));
+    expect(artifact.filename).toBe('corpus-bracket-7a50e9c4.FCStd');
+  });
+
+  it('refuses an unknown artifact kind before it can become a path segment', async () => {
+    await expect(
+      getDesignArtifact(connection, BRACKET_DESIGN_ID, '../../etc/passwd' as never),
+    ).rejects.toBeInstanceOf(StudioValidationError);
+    expect(captured).toHaveLength(0);
+  });
+
+  it('surfaces a refused artifact download with its code', async () => {
+    responder = () =>
+      jsonResponse(
+        {
+          code: 'artifact_not_found',
+          message: 'no artifact of that kind is stored for this design',
+          details: [`design_id=${BRACKET_DESIGN_ID}; kind=fcstd`],
+        },
+        404,
+      );
+    await expect(
+      getDesignArtifact(connection, BRACKET_DESIGN_ID, 'fcstd'),
+    ).rejects.toMatchObject({ code: 'artifact_not_found', status: 404 });
   });
 
   it('surfaces a server refusal with its code', async () => {

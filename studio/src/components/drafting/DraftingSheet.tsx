@@ -27,6 +27,7 @@ import {
   selectActiveDesign,
   selectDesigns,
   selectDrawing,
+  selectPreview,
   selectSection,
   selectSectionCut,
   useUiState,
@@ -108,6 +109,7 @@ export function DraftingSheet(props: DraftingSheetProps): ReactElement {
   const activeDesign = useUiState(selectActiveDesign);
   const designState = useUiState(selectDesigns);
   const designAvailable = useUiState((s) => s.server.designAvailable);
+  const preview = useUiState(selectPreview);
   const designId = activeDesign?.design_id ?? null;
   const drawingKey = designId ? drawingCacheKey(designId, []) : null;
   const drawingResource = useUiState((state) =>
@@ -133,6 +135,15 @@ export function DraftingSheet(props: DraftingSheetProps): ReactElement {
   const cutNote = sectionCutNote(cut, cutBounds);
   const unitsLabel = `METRIC (${props.units.toUpperCase()})`;
   const visibleDesignIds = designState.order.filter((id) => !closedDesignTabs.has(id));
+
+  // What the server said about the primitive preview: a refusal with its
+  // real message, a request in flight, or nothing to say.
+  const previewState: { error: string | null } | null =
+    preview.lastError !== null
+      ? { error: preview.lastError }
+      : preview.inFlight
+        ? { error: null }
+        : null;
 
   // The sheet's redline is the measured section itself, so the section at
   // the shared cut is requested alongside the drawing. The AuxView and the
@@ -493,6 +504,20 @@ export function DraftingSheet(props: DraftingSheetProps): ReactElement {
         {measure.active ? (
           <p className="drafting-measure-note" role="status">
             {measureStatusLabel(measure)}
+          </p>
+        ) : null}
+        {/* The server's own verdict on the primitive preview. A refused
+            server preview is shown with its real message: the viewport keeps
+            the local mesh, so without this the operator would never know the
+            server rejected it. */}
+        {previewState ? (
+          <p
+            className={`drafting-preview-note${previewState.error ? ' is-error' : ''}`}
+            role={previewState.error ? 'alert' : 'status'}
+          >
+            {previewState.error
+              ? `Server preview refused: ${previewState.error}`
+              : 'Verifying the mesh on the server…'}
           </p>
         ) : null}
       </div>

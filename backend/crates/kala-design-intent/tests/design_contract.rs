@@ -216,16 +216,16 @@ fn stepped_shaft_refuses_empty_oversized_and_too_long() {
         stepped_shaft(&[]).unwrap_err().message(),
         "a stepped shaft requires at least one segment"
     );
-    let nine = vec![
+    let sixty_five = vec![
         TemplateShaftSegment {
             diameter_mm: 10.0,
             length_mm: 10.0,
         };
-        9
+        65
     ];
     assert_eq!(
-        stepped_shaft(&nine).unwrap_err().message(),
-        "a stepped shaft supports at most 8 segments"
+        stepped_shaft(&sixty_five).unwrap_err().message(),
+        "a stepped shaft supports at most 64 segments"
     );
     let long = vec![
         TemplateShaftSegment {
@@ -327,6 +327,18 @@ fn templates_are_deterministic() {
 }
 
 #[test]
+fn template_scripts_still_validate_as_design_intents() {
+    // The L-bracket's upright pocket omits its plane and inherits the XZ
+    // sketch plane; the new pocket-plane rule must not reject it.
+    let script = adr_bracket()
+        .canonical_script_json()
+        .expect("template JSON");
+    let payload = format!(r#"{{"script":{script}}}"#);
+    let intent = DesignIntent::from_json_str(&payload).expect("the template intent is valid");
+    assert_eq!(intent.script().unwrap().components().len(), 2);
+}
+
+#[test]
 fn bounds_validate_finite_and_ordered_corners() {
     assert_eq!(
         Bounds::new([0.0, 0.0, f64::NAN], [1.0, 1.0, 1.0])
@@ -368,7 +380,7 @@ fn general_number_format_matches_python() {
 #[test]
 fn schema_is_a_valid_bounded_schema() {
     let text = design_intent_schema_text();
-    assert_eq!(text.len(), 11_291);
+    assert_eq!(text.len(), 11_293);
     let schema = design_intent_json_schema();
     let kala_json::CanonicalValue::Object(fields) = &schema else {
         panic!("schema is not an object");
@@ -433,6 +445,53 @@ fn script_intent_round_trips() {
     );
     assert_eq!(intent.material().unwrap().as_str(), Some("steel"));
     assert!(intent.tolerances().is_empty());
+}
+
+#[test]
+fn the_flange_repro_is_refused_before_the_cut() {
+    // The live 2026-10-20 repro: an XY revolve, then each bolt hole sketched
+    // on XZ with a pocket that says `plane: XY`. The OCP compiler cut the
+    // pending sketch plane and removed nothing; the intent is refused first.
+    let payload = r#"{"script":{"summary":"flange","components":[{"name":"half_a","steps":[
+        {"op":"sketch","plane":"XY","profile":"rectangle","width":35,"height":12,"x":15},
+        {"op":"revolve","plane":"XY","angle":180},
+        {"op":"sketch","plane":"XZ","profile":"circle","diameter":8,"x":40},
+        {"op":"pocket","plane":"XY"}]}]}}"#;
+    assert_eq!(
+        DesignIntent::from_json_str(payload)
+            .unwrap_err()
+            .to_string(),
+        "script: component 'half_a': pocket at step index 3 on XZ over a XY solid"
+    );
+}
+
+#[test]
+fn a_pocket_sketch_on_another_plane_than_the_solid_is_refused() {
+    let payload = r#"{"script":{"summary":"cross plane","components":[{"name":"plate","steps":[
+        {"op":"sketch","plane":"XY","profile":"rectangle","width":20,"height":20},
+        {"op":"extrude","length":10},
+        {"op":"sketch","plane":"XZ","profile":"circle","diameter":2,"x":5,"y":5},
+        {"op":"pocket","plane":"XZ"}]}]}}"#;
+    assert_eq!(
+        DesignIntent::from_json_str(payload)
+            .unwrap_err()
+            .to_string(),
+        "script: component 'plate': pocket at step index 3 on XZ over a XY solid"
+    );
+}
+
+#[test]
+fn a_pocket_plane_field_is_ignored_like_the_compiler_ignores_it() {
+    // The shipped L-bracket template's canonical wire form states `XY` on
+    // its XZ upright pocket. The compiler cuts on the pending sketch plane,
+    // so requiring the pocket's own field to match would reject the template.
+    let payload = r#"{"script":{"summary":"ignored field","components":[{"name":"plate","steps":[
+        {"op":"sketch","plane":"XZ","profile":"rectangle","width":20,"height":20},
+        {"op":"extrude","length":10},
+        {"op":"sketch","plane":"XZ","profile":"circle","diameter":2,"x":5,"y":5},
+        {"op":"pocket","plane":"XY"}]}]}}"#;
+    let intent = DesignIntent::from_json_str(payload).expect("the compiler cuts on XZ");
+    assert_eq!(intent.script().unwrap().components().len(), 1);
 }
 
 #[test]
@@ -594,12 +653,13 @@ fn reply_parsing_accepts_fenced_and_bare_objects() {
     assert!(matches!(intent.template(), Some(TemplateCall::Lbracket(_))));
     parse_design_intent_text(bracket_payload()).expect("bare");
     parse_design_intent_text(&format!("```JSON\n{}\n```", bracket_payload())).expect("upper fence");
-    assert_eq!(
-        parse_design_intent_text(&format!("``` json\n{}\n```", bracket_payload()))
-            .unwrap_err()
-            .to_string(),
-        "the model reply did not contain a fenced json block"
-    );
+    parse_design_intent_text(&format!("``` json\n{}\n```", bracket_payload()))
+        .expect("spaced fence tag");
+    parse_design_intent_text(&format!(
+        "Here is the bracket: {} The kernel will measure it.",
+        bracket_payload()
+    ))
+    .expect("bare object wrapped in prose");
 }
 
 #[test]
@@ -622,23 +682,88 @@ fn reply_parsing_refuses_empty_unfenced_and_malformed() {
             .to_string(),
         "the design JSON is not valid JSON: Expecting property name enclosed in double quotes"
     );
+    // A balanced object inside a fence is extracted even when prose follows
+    // it; the validation error names the unknown field instead of the wrapper.
     assert_eq!(
         parse_design_intent_text("```json\n{\"a\":1} trailing\n```")
             .unwrap_err()
             .to_string(),
-        "the model reply did not contain a fenced json block"
+        "a: Extra inputs are not permitted"
     );
     assert_eq!(
         parse_design_intent_text("{\"a\":1} trailing")
             .unwrap_err()
             .to_string(),
-        "the design JSON is not valid JSON: Extra data"
+        "a: Extra inputs are not permitted"
     );
     assert!(
         parse_design_intent_text("```json\n{\"template\":{\"template\":\"flange\"}}\n```")
             .unwrap_err()
             .to_string()
             .contains("does not match any of the expected tags")
+    );
+}
+
+#[test]
+fn reply_parsing_refuses_conflicting_blocks_but_accepts_identical_ones() {
+    let payload = bracket_payload();
+    let identical = format!("```json\n{payload}\n```\n\n```json\n{payload}\n```");
+    parse_design_intent_text(&identical).expect("identical blocks agree");
+    let conflicting = format!("```json\n{payload}\n```\n\n```json\n{}\n```", box_script());
+    assert_eq!(
+        parse_design_intent_text(&conflicting)
+            .unwrap_err()
+            .to_string(),
+        "the model reply contained more than one conflicting JSON block"
+    );
+}
+
+#[test]
+fn the_instruction_examples_validate_and_stay_compact() {
+    let instruction = kala_design_intent::DESIGN_INTENT_INSTRUCTION;
+    assert!(instruction.len() < 6_000, "the prompt must stay compact");
+    let mut examples = 0;
+    let mut rest = instruction;
+    while let Some(opening) = rest.find("```json\n") {
+        let body = &rest[opening + "```json\n".len()..];
+        let closing = body.find("\n```").expect("a closed example fence");
+        parse_design_intent_text(&body[..closing]).expect("every example validates");
+        examples += 1;
+        rest = &body[closing + "\n```".len()..];
+    }
+    assert_eq!(examples, 3, "the instruction carries three worked examples");
+    assert!(instruction.contains("When no template matches, author a ConstructionScript"));
+    assert!(instruction.contains("If a value needed to build the part is missing"));
+    assert!(instruction.contains("Never invent a dimension"));
+    assert!(instruction.contains("a rectangle's x/y is its lower-left corner"));
+    assert!(instruction.contains("a circle's x/y is its centre"));
+    assert!(instruction.contains(
+        "Every pocket must cut into material that its own component already has at that step"
+    ));
+}
+
+/// The budget the instruction states is the contract's own budget.
+///
+/// The model is told the whole-design budget and the component cap; if
+/// `MAX_TOTAL_STEPS` or `MAX_COMPONENTS` moves, this test fails until the
+/// prompt follows.
+#[test]
+fn the_instruction_states_the_whole_design_budget() {
+    let instruction = kala_design_intent::DESIGN_INTENT_INSTRUCTION;
+    assert!(
+        instruction.contains(&format!(
+            "A design may use up to {} steps in total across up to {} components",
+            kala_contracts::MAX_TOTAL_STEPS,
+            kala_contracts::MAX_COMPONENTS
+        )),
+        "the instruction's budget must equal MAX_TOTAL_STEPS and MAX_COMPONENTS"
+    );
+    assert!(instruction.contains("and one component may use all of them"));
+    assert!(instruction.contains("Each solid body is one component"));
+    assert!(instruction.contains("do not split a body into components just to save steps"));
+    assert!(
+        !instruction.contains("A component has at most"),
+        "the old per-component step limit must not be stated any more"
     );
 }
 

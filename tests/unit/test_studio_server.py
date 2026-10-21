@@ -48,7 +48,12 @@ def data_dir() -> Path:
 
 
 @pytest.fixture
-def client(data_dir: Path) -> Iterator[TestClient]:
+def client(data_dir: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
+    # The provider routes probe the three subscription CLIs. An empty PATH
+    # keeps the suite from ever starting a real ``claude``/``codex``/
+    # ``opencode`` on the developer's machine: no program resolves, so the
+    # probe answers "not found" without spawning anything.
+    monkeypatch.setenv("PATH", "")
     app = create_studio_app(
         data_dir=data_dir,
         api_token=LAUNCH_TOKEN,
@@ -81,6 +86,38 @@ def test_health_reflects_step_capability(client: TestClient) -> None:
     response = client.get("/api/studio/health")
     body = response.json()
     assert body["step_available"] is probe_step_capability().available
+
+
+def test_health_publishes_the_real_design_turn_budget(client: TestClient) -> None:
+    """The published budget is the backend's own worst case, not a guess."""
+    from kala_agent.studio.design.providers.freecad import (
+        DEFAULT_TIMEOUT_SECONDS as FREECAD_BUILD_SECONDS,
+    )
+    from kala_agent.studio.providers.dispatch import (
+        DESIGN_BUILD_TIMEOUT_SECONDS,
+        DESIGN_TURN_BUILD_ATTEMPTS,
+        design_turn_budget_seconds,
+    )
+    from kala_agent.studio.providers.openai_compat import (
+        STUDIO_DESIGN_REQUEST_TIMEOUT_SECONDS,
+    )
+
+    # The restated build deadline is the FreeCAD provider's own default, and
+    # the budget is two (model call + build) attempts.
+    assert DESIGN_BUILD_TIMEOUT_SECONDS == int(FREECAD_BUILD_SECONDS) == 1_800
+    assert DESIGN_TURN_BUILD_ATTEMPTS == 2
+    assert design_turn_budget_seconds() == 3_960
+    assert design_turn_budget_seconds() == int(
+        DESIGN_TURN_BUILD_ATTEMPTS
+        * (STUDIO_DESIGN_REQUEST_TIMEOUT_SECONDS + FREECAD_BUILD_SECONDS)
+    )
+
+    response = client.get("/api/studio/health")
+    assert response.status_code == 200
+    assert response.json()["design_turn_budget_seconds"] == 3_960
+    # Field order is the DTO order: the Rust front door emits the same bytes.
+    keys = list(response.json())
+    assert keys.index("design_turn_budget_seconds") == keys.index("offline") + 1
 
 
 # --- registry ---
@@ -121,12 +158,29 @@ def test_integrations_never_advertise_native_connection(client: TestClient) -> N
         assert row["notes"], "every row must document its platform/licence"
 
 
-def test_providers_lists_four_rows(client: TestClient) -> None:
+def test_providers_lists_every_route(client: TestClient) -> None:
     response = client.get("/api/studio/providers")
     assert response.status_code == 200
     providers = response.json()["providers"]
     ids = {row["id"] for row in providers}
-    assert ids == {"local", "openai", "openrouter", "codex"}
+    assert ids == {
+        "local",
+        "openai",
+        "openrouter",
+        "codex",
+        "claude_code",
+        "codex_cli",
+        "opencode_cli",
+    }
+    for row in providers:
+        assert "available" in row
+        assert "reason" in row
+        assert "source" in row
+    subscription = next(row for row in providers if row["id"] == "claude_code")
+    assert subscription["source"] == "subscription (CLI)"
+    assert subscription["configured"] is False
+    assert subscription["available"] is False
+    assert "Claude Code CLI" in subscription["reason"]
 
 
 # --- preview ---
@@ -464,11 +518,22 @@ def test_settings_default_reports_unconfigured_without_secrets(
     body = response.json()
     assert body["offline"] is True
     creds = {row["provider"]: row for row in body["credentials"]}
-    assert set(creds.keys()) == {"openai", "openrouter"}
+    assert set(creds.keys()) == {
+        "openai",
+        "openrouter",
+        "codex",
+        "claude_code",
+        "codex_cli",
+        "opencode_cli",
+    }
     assert creds["openai"]["configured"] is False
     assert creds["openai"]["source"] == "none"
     assert creds["openrouter"]["configured"] is False
     assert creds["openrouter"]["source"] == "none"
+    for provider in ("codex", "claude_code", "codex_cli", "opencode_cli"):
+        assert creds[provider]["source"] == "subscription"
+        assert creds[provider]["env_var"] == ""
+        assert creds[provider]["configured"] is False
 
 
 def test_settings_save_and_clear_api_key_updates_providers_without_echoing_secret(

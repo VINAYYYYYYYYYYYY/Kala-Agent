@@ -146,7 +146,7 @@ def _component(
             )
         )
     pending: ComponentStep | None = None
-    for step in component.steps:
+    for index, step in enumerate(component.steps):
         if step.op == "sketch":
             if pending is not None:
                 raise FreeCADInputError("a sketch must be followed by extrude, revolve, or pocket")
@@ -162,7 +162,7 @@ def _component(
         if pending is None:
             raise FreeCADInputError(f"{step.op} needs a sketch")
         calls.extend(_profile(pending))
-        calls.append(_solid(step, pending))
+        calls.append(_solid(step, pending, index))
         calls.append(_call("partdesign.check"))
         pending = None
     if pending is not None:
@@ -209,11 +209,13 @@ def _profile(sketch: ComponentStep) -> list[dict[str, object]]:
     return calls
 
 
-def _solid(step: ComponentStep, sketch: ComponentStep) -> dict[str, object]:
+def _solid(
+    step: ComponentStep, sketch: ComponentStep, step_index: int | None = None
+) -> dict[str, object]:
     if step.op == "pocket":
         if step.length is None:
-            return _call("partdesign.pocket")
-        return _call("partdesign.pocket", length=step.length)
+            return _call("partdesign.pocket", step_index=step_index)
+        return _call("partdesign.pocket", length=step.length, step_index=step_index)
     # A circle is not revolved. Compose lowers it to a pad of the given length.
     if step.op == "revolve" and sketch.profile != "circle":
         angle = 360.0 if step.angle is None else step.angle

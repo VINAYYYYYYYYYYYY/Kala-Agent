@@ -1,0 +1,13 @@
+# Cell audit-ui (READ-ONLY): what necessary things are missing in the Studio UI
+
+Read `../../WAVE.md` first (the rules, the in-flight exclusions, the no-fake-data invariant). You may read anything and run `npm run typecheck`, `npm test` and `npm run build` in `studio/`, and you may launch the native backend from a temp data dir to exercise flows. **Do not edit any source file.** Write only `AUDIT.md` in this folder.
+
+## Walk every user flow end to end, in code and tests, and running where you can
+Boot and connect (desktop and manual) · chat with each of the 7 providers (local, openai, openrouter, claude_code, codex_cli, opencode_cli, plus any other in `/providers`) · the provider picker and the model picker (catalog loading, errors, free badges, search, the remembered choice, the CLI "default" model) · `allow_remote` consent · the CAD target selector (freecad, opencascade opt-in, solidedge unavailable) · a long design turn (up to 2 model calls × 180 s): is there an elapsed timer, a working Cancel, and a clear timeout message? · the design result card: measured values, checks table (incl. the new failed `cuts_effective` row), warnings (incl. per-pocket `removed no material`), "The first attempt was rejected: …" text, "B-Rep NOT verified", the "No part was built: …" text, provider_timeout and other error envelopes · viewer (imported view, section, drawing/HLR, the label `SOURCE: OCP HLR`, which should honestly say an OpenCascade hidden-line view of the imported model) · export and download: can the user actually GET the provider's native file (FreeCAD `.FCStd`) and the STEP the provider produced, not only a re-export? · journal panel (failed turns with `failure` codes, verify) · settings (add, replace and remove API keys, key status, the OpenRouter model list, CLI provider availability and reasons) · empty, loading and error states everywhere · accessibility (keyboard, focus ring, aria labels, reduced motion) · both themes.
+Cross-check every Tier 1 and Tier 2 row of `.mece/waves/vellum-ui-20261019/CONSOLIDATED-GAPS.md` against today's code and give each a status.
+
+## AUDIT.md format
+A table, one row per finding: `id | area | finding | evidence (file:line, test, or observed behaviour) | user impact | severity (MUST / SHOULD / NICE) | suggested fix (files to touch) | needs user decision? | backend support needed? (route or field, or "none")`.
+- MUST means a user hits it in normal use, or it is broken, misleading or blocks a task. Be strict: no padding, no restyling wishes, and nothing that would need fake data.
+- End with a summary: counts per severity, plus the MUST list in priority order.
+Reply with that summary.

@@ -27,11 +27,12 @@ and the core API share no state, no token file, and no data directory.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import math
 import os
 import secrets
-from collections.abc import AsyncIterator, Callable, Mapping
+from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
@@ -41,7 +42,6 @@ from starlette.middleware import Middleware
 
 from kala_agent.studio.boundary import (
     TOKEN_REQUIRED_MESSAGE,
-    resolve_studio_data_dir,
     resolve_studio_token,
 )
 from kala_agent.studio.design.providers.base import (
@@ -49,9 +49,12 @@ from kala_agent.studio.design.providers.base import (
     CadProviderUnavailableError,
     MeasuredBounds,
 )
+from kala_agent.studio.design.artifacts import ARTIFACT_KINDS
 from kala_agent.studio.design.service import (
     DESIGN_ID_PATTERN_LENGTH,
     MAX_SECTION_OFFSET_MM,
+    ArtifactDigestMismatchError,
+    ArtifactTooLargeError,
     DesignError,
     DesignNotFoundError,
     DesignOutcome,
@@ -96,11 +99,19 @@ from kala_agent.studio.providers.base import (
     ProviderTimeoutError,
     ProviderUnavailableError,
 )
+from kala_agent.studio.providers.cli_runtime import CliProbe
 from kala_agent.studio.providers.dispatch import (
+    PROVIDER_IDS,
     StudioChatTurn,
+    build_feedback,
+    build_repair_turn,
     chat,
+    design_turn_budget_seconds,
     list_provider_records,
+    probe_subscription_clis_cached,
+    provider_call,
 )
+from kala_agent.studio.providers.local import detect_design_family
 from kala_agent.studio.schemas import (
     MAX_DRAWING_VIEWS,
     MAX_JOURNAL_LIMIT,
@@ -140,6 +151,7 @@ from kala_agent.studio.schemas import (
     UpdateProviderKeyRequest,
     error_response,
 )
+from kala_agent.studio.session_journal import JournalEventType
 from kala_agent.studio.settings import (
     describe_provider_credentials,
     effective_environ,
@@ -243,25 +255,43 @@ def health(request: Request = None) -> HealthResponse:  # type: ignore[assignmen
     """Return liveness facts about the studio without leaking secrets."""
     env = _effective_request_environ(request)
     step_available = probe_step_capability().available
+    # `offline` is an evidence-backed answer, not an API-key check: a
+    # signed-in subscription CLI makes a remote turn possible even with no
+    # stored key, so the CLI verdicts take part in the decision. The cached
+    # probe never holds this liveness route open for a CLI.
+    clis = probe_subscription_clis_cached(env)
     return HealthResponse(
         status="ok",
         version=STUDIO_VERSION,
-        offline=not _any_remote_provider_configured(env),
+        offline=not _any_remote_route_available(env, clis),
+        design_turn_budget_seconds=design_turn_budget_seconds(),
         step_available=step_available,
         design_available=design_available(),
         integrations=tuple(row.id for row in build_registry()),
-        providers=tuple(row.id for row in list_provider_records(env)),
+        providers=PROVIDER_IDS,
     )
 
 
-def _any_remote_provider_configured(environ: Mapping[str, str] | None = None) -> bool:
+def _any_remote_route_available(
+    environ: Mapping[str, str] | None = None,
+    clis: Sequence[CliProbe] = (),
+) -> bool:
+    """Return whether a remote turn is *known* to be possible right now.
+
+    A remote route is available when an OpenAI-compatible credential is
+    configured **or** a subscription CLI is installed and signed in. The
+    ``offline`` field of ``/health`` and ``/settings`` is the negation of
+    this answer; it is therefore never "offline" while a usable CLI is on
+    the host. A probe that has not produced a verdict yet does not count,
+    so the field can stay conservative for at most the route probe budget.
+    """
     # Only providers the build can actually reach count: the codex route is
     # fail-closed in this build, so a codex CLI on PATH does not make the
-    # studio "online".
+    # studio "online" unless the CLI itself reports a signed-in session.
     source = environ if environ is not None else os.environ
     openai = bool(source.get("OPENAI_API_KEY", "").strip())
     openrouter = bool(source.get("OPENROUTER_API_KEY", "").strip())
-    return openai or openrouter
+    return openai or openrouter or any(probe.usable() for probe in clis)
 
 
 @router.get(
@@ -282,7 +312,8 @@ def integrations() -> IntegrationsResponse:
 )
 def providers(request: Request = None) -> ProvidersResponse:  # type: ignore[assignment]
     env = _effective_request_environ(request)
-    return ProvidersResponse(providers=list_provider_records(env))
+    clis = probe_subscription_clis_cached(env)
+    return ProvidersResponse(providers=list_provider_records(env, clis))
 
 
 @router.get(
@@ -327,10 +358,11 @@ def cad_providers(request: Request) -> CadProvidersResponse | Response:
 def get_settings(request: Request) -> StudioSettingsResponse:
     base_env, data_dir = _request_context(request)
     env = effective_environ(base_env, data_dir)
+    clis = probe_subscription_clis_cached(env)
     return StudioSettingsResponse(
-        credentials=describe_provider_credentials(base_env, data_dir),
-        providers=list_provider_records(env),
-        offline=not _any_remote_provider_configured(env),
+        credentials=describe_provider_credentials(base_env, data_dir, clis),
+        providers=list_provider_records(env, clis),
+        offline=not _any_remote_route_available(env, clis),
     )
 
 
@@ -355,10 +387,11 @@ def update_settings(
     except ValueError as error:
         return _invalid_request_response(error)
     env = effective_environ(base_env, data_dir)
+    clis = probe_subscription_clis_cached(env)
     return StudioSettingsResponse(
-        credentials=describe_provider_credentials(base_env, data_dir),
-        providers=list_provider_records(env),
-        offline=not _any_remote_provider_configured(env),
+        credentials=describe_provider_credentials(base_env, data_dir, clis),
+        providers=list_provider_records(env, clis),
+        offline=not _any_remote_route_available(env, clis),
     )
 
 
@@ -503,18 +536,27 @@ def chat_route(payload: ChatRequest, request: Request) -> ChatResponse | Respons
             prompt=payload.prompt,
             allow_remote=payload.allow_remote,
             environ=env,
+            cad_provider=(payload.cad_provider.value if payload.cad_provider is not None else None),
         )
     except ProviderUnavailableError as error:
+        _journal_failed_design_turn(request, payload, "provider_unavailable")
         return _provider_unavailable_response(error)
     except ProviderConfigurationError as error:
+        _journal_failed_design_turn(
+            request, payload, getattr(error, "code", "provider_not_configured")
+        )
         return _provider_configuration_response(error)
     except ProviderTimeoutError as error:
+        _journal_failed_design_turn(request, payload, "provider_timeout")
         return _provider_timeout_response(error)
     except ProviderNetworkError as error:
+        _journal_failed_design_turn(request, payload, "provider_network_error")
         return _provider_network_response(error)
     except ProviderProtocolError as error:
+        _journal_failed_design_turn(request, payload, "provider_protocol_error")
         return _provider_protocol_response(error)
     except ProviderSubprocessError as error:
+        _journal_failed_design_turn(request, payload, "provider_subprocess_error")
         return _provider_subprocess_response(error)
 
     service = _design_service(request)
@@ -533,23 +575,17 @@ def chat_route(payload: ChatRequest, request: Request) -> ChatResponse | Respons
         elif not design_available():
             text = _join_text(text, DESIGN_UNAVAILABLE_MESSAGE)
         else:
-            try:
-                design_outcome = service.design(turn.design_intent, provider=selected_provider)
-            except CadProviderUnavailableError as error:
-                text = _join_text(
-                    text,
-                    _provider_unavailable_chat_message(error),
-                )
-            except DesignRejectedError as error:
-                text = _join_text(text, f"The design was rejected: {error.reason}.")
-            except DesignUnavailableError:
-                text = _join_text(text, DESIGN_UNAVAILABLE_MESSAGE)
-            except DesignError as error:
-                text = _join_text(text, f"The design could not be built: {error}.")
-            else:
-                design = _design_result(design_outcome, service=service)
-                design_id = design_outcome.design_id
-                text = _join_text(text, _measured_summary(design_outcome))
+            text, design, design_id = _build_and_maybe_repair(
+                service=service,
+                turn=turn,
+                selected_provider=selected_provider,
+                provider=payload.provider.value,
+                model=payload.model or outcome.model or "",
+                prompt=payload.prompt,
+                allow_remote=payload.allow_remote,
+                environ=env,
+                text=text,
+            )
     try:
         service.record_chat_turn(
             provider=payload.provider.value,
@@ -579,6 +615,181 @@ def _design_service(request: Request) -> DesignService:
     if not isinstance(service, DesignService):
         raise RuntimeError("the studio design service is not attached to the app")
     return service
+
+
+def _build_and_maybe_repair(
+    *,
+    service: DesignService,
+    turn: StudioChatTurn,
+    selected_provider: str,
+    provider: str,
+    model: str,
+    prompt: str,
+    allow_remote: bool,
+    environ: Mapping[str, str],
+    text: str,
+) -> tuple[str, DesignResult | None, str | None]:
+    """Build the design and, when the build says the part is wrong, repair it.
+
+    The turn spends at most ONE repair call. The validation repair comes
+    first: a reply that is not a valid DesignIntent is repaired with the exact
+    validation error. When that repair was not needed, the build may spend it
+    instead: a design that built unverified, or a builder that refused the
+    script, is repaired with the concrete build feedback. The worst case is
+    therefore two model calls.
+
+    A design that builds and verifies needs no repair at all. A repair that
+    does not build leaves the best honest state in place: the latest built
+    design with ``verified`` false visible, or the "No part was built" text
+    when nothing built at all.
+
+    A repair CALL that fails is not a turn failure: the first design was built
+    and journalled already, so the turn keeps it, says that the repair attempt
+    failed, and answers 200.
+    """
+    outcome: DesignOutcome | None = None
+    refusal: str | None = None
+    try:
+        outcome = service.design(turn.design_intent, provider=selected_provider)
+    except CadProviderUnavailableError as error:
+        # The provider cannot build on this host: never the model's fault.
+        return _join_text(text, _provider_unavailable_chat_message(error)), None, None
+    except DesignRejectedError as error:
+        refusal = error.reason
+        text = _join_text(text, f"The design was rejected: {error.reason}.")
+    except DesignUnavailableError:
+        return _join_text(text, DESIGN_UNAVAILABLE_MESSAGE), None, None
+    except DesignError as error:
+        refusal = str(error)
+        text = _join_text(text, f"The design could not be built: {error}.")
+
+    design: DesignResult | None = None
+    design_id: str | None = None
+    if outcome is not None:
+        design = _design_result(outcome, service=service)
+        design_id = outcome.design_id
+        text = _join_text(text, _measured_summary(outcome))
+
+    if turn.design_repair_spent:
+        return text, design, design_id
+
+    feedback = build_feedback(
+        turn.design_intent,
+        verified=outcome.verified if outcome is not None else False,
+        script=outcome.script if outcome is not None else None,
+        checks=outcome.checks if outcome is not None else (),
+        warnings=outcome.warnings if outcome is not None else (),
+        refusal=refusal,
+    )
+    if feedback is None:
+        return text, design, design_id
+
+    rejection = f"The first attempt was rejected: {feedback.reason()}."
+    repaired = build_repair_turn(
+        provider,
+        model=model,
+        prompt=prompt,
+        feedback=feedback.text(),
+        allow_remote=allow_remote,
+        environ=environ,
+        call=provider_call(
+            provider,
+            model=model,
+            allow_remote=allow_remote,
+            environ=environ,
+        ),
+    )
+    if repaired.design_intent is None:
+        reason = (
+            repaired.design_repair_failure or "the repair attempt did not produce a buildable part."
+        )
+        return (
+            _keep_first_build(text, rejection, built=outcome is not None, reason=reason),
+            design,
+            design_id,
+        )
+    try:
+        second = service.design(repaired.design_intent, provider=selected_provider)
+    except CadProviderUnavailableError as error:
+        return (
+            _join_text(text, rejection, _provider_unavailable_chat_message(error)),
+            design,
+            design_id,
+        )
+    except DesignRejectedError as error:
+        reason = f"the repair attempt was refused: {error.reason}."
+        return (
+            _keep_first_build(text, rejection, built=outcome is not None, reason=reason),
+            design,
+            design_id,
+        )
+    except DesignUnavailableError:
+        return _join_text(text, rejection, DESIGN_UNAVAILABLE_MESSAGE), design, design_id
+    except DesignError as error:
+        reason = f"the repair attempt could not be built: {error}."
+        return (
+            _keep_first_build(text, rejection, built=outcome is not None, reason=reason),
+            design,
+            design_id,
+        )
+    return (
+        _join_text(rejection, repaired.text, _measured_summary(second)),
+        _design_result(second, service=service),
+        second.design_id,
+    )
+
+
+def _keep_first_build(text: str, rejection: str, *, built: bool, reason: str) -> str:
+    """Keep the honest state of the first attempt when the repair did not build.
+
+    A part that did build stays the turn's design, with its own "NOT verified"
+    verdict. When nothing built at all, the turn says so in the house wording.
+    """
+    if built:
+        return _join_text(rejection, text, reason)
+    return _join_text(rejection, f"No part was built: {reason}")
+
+
+def _journal_failed_design_turn(request: Request, payload: ChatRequest, code: str) -> None:
+    """Journal one failed remote design turn without masking its error.
+
+    A provider failure (timeout, network, protocol, configuration) inside a
+    remote design turn still leaves one ``chat.turn`` event: the same payload
+    shape as a completed turn, ``design_requested`` true, ``design_id`` null,
+    plus ``failure`` naming the error envelope's code. It carries no prompt
+    text, key or endpoint. A broken journal is logged and never replaces the
+    provider error the route is about to answer.
+    """
+    if payload.provider.value not in ("openai", "openrouter"):
+        return
+    if payload.cad_provider is None and detect_design_family(payload.prompt) is None:
+        return
+    try:
+        service = getattr(request.app.state, "design_service", None)
+        if not isinstance(service, DesignService):
+            return
+        service.journal.append(
+            JournalEventType.CHAT_TURN,
+            {
+                "provider": payload.provider.value,
+                "model": payload.model,
+                "offline": False,
+                "prompt_sha256": hashlib.sha256(payload.prompt.encode("utf-8")).hexdigest(),
+                "prompt_chars": len(payload.prompt),
+                "design_id": None,
+                "design_requested": True,
+                "cad_provider": (
+                    payload.cad_provider.value if payload.cad_provider is not None else None
+                ),
+                "missing": [],
+                "failure": code,
+            },
+        )
+    except Exception as error:  # pragma: no cover - the provider error must win
+        LOGGER.error(
+            "the failed studio chat turn could not be journalled: %s",
+            type(error).__name__,
+        )
 
 
 def _require_bearer(request: Request) -> Response | None:
@@ -700,6 +911,56 @@ def design_section(
     except ValueError as error:
         return _invalid_request_response(error)
     return _section_response(design_id, section)
+
+
+@router.get(
+    "/design/{design_id}/artifact/{kind}",
+    summary="Download one stored artifact of a design",
+    tags=["studio"],
+)
+def design_artifact(design_id: str, kind: str, request: Request) -> Response:
+    """Serve the exact stored bytes of one artifact, digest-verified.
+
+    The route carries the launch bearer like the other stored-design reads.
+    ``kind`` is the allow-list of kinds a design can store (``script``,
+    ``step``, ``fcstd``, ``stl``); a design that did not store the requested
+    kind answers 404. The bytes are hashed and compared with the journalled
+    digest before they are sent, so a corrupted store object is a refusal, not
+    a download.
+    """
+    denied = _require_bearer(request)
+    if denied is not None:
+        return denied
+    if not _valid_design_id(design_id):
+        return _invalid_request_response(ValueError("the design id is not a sha256 digest"))
+    if kind not in ARTIFACT_KINDS:
+        return _invalid_request_response(
+            ValueError("the artifact kind must be one of " + ", ".join(ARTIFACT_KINDS))
+        )
+    service = _design_service(request)
+    try:
+        artifact = service.artifact(design_id, kind)
+    except DesignNotFoundError:
+        return _artifact_not_found_response(design_id, kind)
+    except ArtifactTooLargeError as error:
+        return _artifact_too_large_response(str(error))
+    except ArtifactDigestMismatchError as error:
+        return _artifact_digest_mismatch_response(str(error))
+    except DesignUnavailableError:
+        return _design_unavailable_response()
+    except ValueError as error:
+        return _invalid_request_response(error)
+    headers = {
+        "content-disposition": f'attachment; filename="{artifact.filename}"',
+        "x-studio-design-id": artifact.design_id,
+        "x-studio-digest": artifact.sha256,
+        "x-studio-artifact-kind": artifact.kind,
+    }
+    return Response(
+        content=artifact.data,
+        media_type=artifact.content_type,
+        headers=headers,
+    )
 
 
 @router.get(
@@ -1014,6 +1275,33 @@ def _design_not_found_response(design_id: str) -> Response:
     return _json_error(404, body)
 
 
+def _artifact_not_found_response(design_id: str, kind: str) -> Response:
+    body = error_response(
+        "artifact_not_found",
+        "no artifact of that kind is stored for this design",
+        (f"design_id={design_id[:64]}; kind={kind[:16]}",),
+    ).model_dump(mode="json")
+    return _json_error(404, body)
+
+
+def _artifact_too_large_response(reason: str) -> Response:
+    body = error_response(
+        "artifact_too_large",
+        "the stored artifact exceeds the download limit",
+        (reason[:256],),
+    ).model_dump(mode="json")
+    return _json_error(413, body)
+
+
+def _artifact_digest_mismatch_response(reason: str) -> Response:
+    body = error_response(
+        "artifact_digest_mismatch",
+        "the stored artifact does not match its journalled digest",
+        (reason[:256],),
+    ).model_dump(mode="json")
+    return _json_error(500, body)
+
+
 def _journal_error_response() -> Response:
     body = error_response(
         "journal_unavailable",
@@ -1214,20 +1502,9 @@ def create_studio_app(
     """
     source = environ if environ is not None else os.environ
     if data_dir is None:
-        explicit = source.get("KALA_STUDIO_DATA_DIR")
-        if isinstance(explicit, str) and explicit.strip():
-            data_dir = Path(explicit.strip()).expanduser().resolve(strict=False)
-        else:
-            from kala_agent.config import Settings
+        from kala_agent.studio.settings import resolve_studio_data_dir_from_env
 
-            try:
-                settings = Settings.from_env(source)
-            except Exception:
-                import tempfile
-
-                data_dir = Path(tempfile.gettempdir()) / "kala-studio"
-            else:
-                data_dir = resolve_studio_data_dir(settings.data_dir)
+        data_dir = resolve_studio_data_dir_from_env(source)
     data_dir.mkdir(parents=True, exist_ok=True)
     token = resolve_studio_token(data_dir, environ=source) if api_token is None else api_token
     limit = validate_max_body_bytes(max_body_bytes)

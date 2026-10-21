@@ -23,6 +23,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod artifacts;
 pub mod boundary;
 pub mod chat_design;
 pub mod cli;

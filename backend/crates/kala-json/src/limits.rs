@@ -32,7 +32,11 @@ impl Limits {
     /// Python's `MAX_JSON_BYTES`.
     pub const DEFAULT_MAX_JSON_BYTES: usize = 1_048_576;
     /// Python's `MAX_STRING_LENGTH`.
-    pub const DEFAULT_MAX_STRING_LENGTH: usize = 32_768;
+    ///
+    /// The tool protocol passes a design's compiled FreeCAD call list as one
+    /// JSON string; a 500-step design is up to 278 514 characters, so this
+    /// bound is 512 KiB, exactly like the Python constant.
+    pub const DEFAULT_MAX_STRING_LENGTH: usize = 524_288;
     /// Python's `MAX_COLLECTION_ITEMS`.
     pub const DEFAULT_MAX_COLLECTION_ITEMS: usize = 2_048;
     /// Python's `MAX_KEY_LENGTH`.

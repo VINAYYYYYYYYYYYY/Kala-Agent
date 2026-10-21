@@ -20,6 +20,7 @@ import path from 'node:path';
 
 import { JournalPanel } from '../src/components/journal/JournalPanel';
 import { dispatch, getState, resetStore } from '../src/state/store';
+import { summarisePayload } from '../src/state/journal';
 import type { JournalEntry, JournalPage } from '../src/types/studio';
 import {
   bracketJournalPage,
@@ -428,8 +429,93 @@ describe('message summaries', () => {
   });
 });
 
-describe('ledger cell layout', () => {
-  const journalCss = fs.readFileSync(
+describe('a failed chat turn', () => {
+  /** One `chat.turn` event whose payload carries the failure code. */
+  const failedTurnPage: JournalPage = {
+    events: [
+      {
+        sequence: 1,
+        event_type: 'chat.turn',
+        aggregate_id: 'studio',
+        payload: {
+          provider: 'codex_cli',
+          cad_provider: 'freecad',
+          design_requested: true,
+          failure: 'provider_timeout',
+        },
+        digest: 'aa'.repeat(32),
+        occurred_at: '2026-10-21T10:00:00.000000Z',
+        previous_event_digest: '00'.repeat(32),
+        event_digest: 'bb'.repeat(32),
+      },
+    ],
+    next_after: 1,
+    has_more: false,
+    limit: 200,
+  };
+
+  it('shows the failure code instead of reading as a normal design request', () => {
+    act(() => {
+      dispatch({ type: 'journal/server-page', page: failedTurnPage });
+    });
+
+    const summary = summarisePayload('chat.turn', failedTurnPage.events[0]!.payload);
+    expect(summary).toContain('failed: provider_timeout');
+    // It must not read like a turn that was merely requested.
+    expect(summary).not.toContain('design requested');
+
+    const view = render(
+      <JournalPanel entries={[]} connectionStatus={readyConnection} />,
+    );
+    const row = view.container.querySelector('tr.journal-entry')!;
+    const message = row.querySelector('.journal-entry-message-text')!;
+    expect(message.textContent).toContain('failed: provider_timeout');
+    expect(message.textContent).not.toContain('design requested');
+  });
+
+  it('keeps the plain wording for a turn that did not fail', () => {
+    const summary = summarisePayload('chat.turn', {
+      provider: 'local',
+      cad_provider: 'freecad',
+      design_requested: true,
+      offline: true,
+    });
+    expect(summary).toBe('local · CAD freecad · offline · design requested');
+  });
+});
+
+describe('a failing journal poll', () => {
+  it('shows the real error and clears it when a poll succeeds again', () => {
+    act(() => {
+      dispatch({
+        type: 'journal/server-error',
+        message: 'request to /api/studio/journal timed out',
+      });
+    });
+
+    const view = render(
+      <JournalPanel entries={[]} connectionStatus={readyConnection} />,
+    );
+    const note = view.container.querySelector('.journal-panel-poll-error');
+    expect(note?.textContent).toContain('request to /api/studio/journal timed out');
+    expect(note?.textContent).toContain('the ledger below may be stale');
+
+    // A successful page clears the note: the poll recovered.
+    act(() => {
+      dispatch({ type: 'journal/server-page', page: bracketJournalPage });
+    });
+    expect(view.container.querySelector('.journal-panel-poll-error')).toBeNull();
+  });
+
+  it('says nothing when no poll has failed', () => {
+    const view = render(
+      <JournalPanel entries={[]} connectionStatus={readyConnection} />,
+    );
+    expect(view.container.querySelector('.journal-panel-poll-error')).toBeNull();
+  });
+});
+
+describe('ledger cell layout', () => {  const journalCss = fs.readFileSync(
     path.resolve(__dirname, '../src/styles/journal.css'),
     'utf8',
   );

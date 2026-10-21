@@ -141,6 +141,16 @@ def _loads_case(
 
 
 def build() -> dict[str, object]:
+    # The protocol's own bounds: a case "at the limit" must move with the
+    # constant, or the corpus stops describing the shipped protocol.
+    from kala_agent.tools.protocol import (
+        MAX_COLLECTION_ITEMS,
+        MAX_JSON_BYTES,
+        MAX_JSON_DEPTH,
+        MAX_KEY_LENGTH,
+        MAX_STRING_LENGTH,
+    )
+
     cases: list[dict[str, object]] = [
         _dumps_case("float.negative_zero", {"kind": "json_text", "text": "-0.0"}),
         _dumps_case("float.positive_zero", {"kind": "json_text", "text": "0.0"}),
@@ -234,11 +244,11 @@ def build() -> dict[str, object]:
         ),
         _dumps_case(
             "string.length_at_limit",
-            {"kind": "repeat_string", "char": "a", "count": 32_768},
+            {"kind": "repeat_string", "char": "a", "count": MAX_STRING_LENGTH},
         ),
         _dumps_case(
             "string.length_over_limit",
-            {"kind": "repeat_string", "char": "a", "count": 32_769},
+            {"kind": "repeat_string", "char": "a", "count": MAX_STRING_LENGTH + 1},
         ),
         _dumps_case(
             "object.key_at_limit",
@@ -326,11 +336,11 @@ def build() -> dict[str, object]:
         "oracle_module": "kala_agent.tools.protocol",
         "functions": ("canonical_json_dumps", "strict_json_loads", "canonical_json_digest"),
         "limits": {
-            "MAX_JSON_BYTES": 1_048_576,
-            "MAX_STRING_LENGTH": 32_768,
-            "MAX_COLLECTION_ITEMS": 2_048,
-            "MAX_KEY_LENGTH": 256,
-            "MAX_JSON_DEPTH": 48,
+            "MAX_JSON_BYTES": MAX_JSON_BYTES,
+            "MAX_STRING_LENGTH": MAX_STRING_LENGTH,
+            "MAX_COLLECTION_ITEMS": MAX_COLLECTION_ITEMS,
+            "MAX_KEY_LENGTH": MAX_KEY_LENGTH,
+            "MAX_JSON_DEPTH": MAX_JSON_DEPTH,
         },
         "encoding_rules": {
             "ensure_ascii": True,

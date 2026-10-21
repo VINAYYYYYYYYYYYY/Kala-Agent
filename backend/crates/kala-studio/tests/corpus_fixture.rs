@@ -1,4 +1,4 @@
-//! Replay the frozen 56-case Studio HTTP corpus against the native service.
+//! Replay the frozen 59-case Studio HTTP corpus against the native service.
 //!
 //! Every deterministic native-supported case is compared byte-for-byte for
 //! the body and value-for-value for stable/security headers. The two STEP
@@ -8,8 +8,8 @@
 //! OpenCascade's writer embeds a timestamp and its own entity numbering, so
 //! byte equality is explicitly not the fixture contract for those two cases.
 //!
-//! The eight cases whose route the front door proxies to the supervised
-//! geometry worker (ADR-0010) are replayed as well. This build attaches no
+//! The eleven cases whose route the front door answers through the
+//! geometry-backend seam (ADR-0010) are replayed as well. This build attaches no
 //! worker, so they answer the truthful refusal the offline build produces;
 //! their contract against the live worker is the live worker differential's
 //! (`worker_differential.py`) and the corpus replay harness's
@@ -43,13 +43,13 @@ use common::{RequestSpec, TOKEN, TestServer, empty_environ};
 /// The corpus is regenerated whenever a product source changes, so this
 /// constant moves with the corpus and a stale corpus fails the test instead
 /// of passing silently.
-const CORPUS_SHA256: &str = "53dcb9da105589b5a92d37b16d63c7fe2d5e60b7630549102127e019c95dff28";
+const CORPUS_SHA256: &str = "39e0c0a90f9d03704945c79cdb9e777e77549ef208ac2177d3f7bb003dade3fa";
 
 /// The number of Studio cases in the regenerated corpus.
-const CORPUS_CASES: usize = 56;
+const CORPUS_CASES: usize = 59;
 
 /// The number of Studio routes the manifest declares.
-const STUDIO_ROUTES: usize = 15;
+const STUDIO_ROUTES: usize = 16;
 
 /// The cases whose health document the Rust front door extends.
 const HEALTH_BODY_CASES: &[&str] = &[
@@ -102,6 +102,17 @@ fn worker_route(path: &str) -> Option<&'static str> {
         if let Some(design_id) = rest.strip_suffix("/section") {
             if !design_id.is_empty() && !design_id.contains('/') {
                 return Some("section");
+            }
+        }
+        if let Some((design_id, kind)) = rest.split_once("/artifact/") {
+            // The front door validates the kind allow-list itself, so an
+            // unknown kind is answered exactly like the Python route and is
+            // not a seam route.
+            if !design_id.is_empty()
+                && !design_id.contains('/')
+                && ["script", "step", "fcstd", "stl"].contains(&kind)
+            {
+                return Some("artifact");
             }
         }
     }
@@ -206,7 +217,7 @@ fn the_manifest_describes_the_checked_in_corpus() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn replay_all_56_studio_cases() {
+async fn replay_all_studio_cases() {
     // The STEP exporter is linked by the `native-primitives` feature, which
     // the `native-step` alias turns on as well. The exporter is what decides
     // whether the two STEP downloads are real files or the truthful
@@ -363,18 +374,18 @@ async fn replay_all_56_studio_cases() {
     }
     server.stop().await;
     if native_step {
-        assert_eq!(exact, 46, "exact native-supported fixture cases");
+        assert_eq!(exact, 47, "exact native-supported fixture cases");
         assert_eq!(structural, 2, "structural STEP fixture cases");
         assert_eq!(dependency, 0, "no dependency cases in the native build");
-        assert_eq!(proxied, 8, "the worker-proxied fixture cases");
+        assert_eq!(proxied, 10, "the geometry-backend seam fixture cases");
     } else {
-        assert_eq!(exact, 42, "exact cases in the unavailable-step build");
+        assert_eq!(exact, 43, "exact cases in the unavailable-step build");
         assert_eq!(
             structural, 0,
             "no structural STEP cases without the feature"
         );
         assert_eq!(dependency, 6, "truthful STEP dependency cases");
-        assert_eq!(proxied, 8, "the worker-proxied fixture cases");
+        assert_eq!(proxied, 10, "the geometry-backend seam fixture cases");
     }
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
@@ -555,6 +566,34 @@ fn check_step_structural(
     }
 }
 
+/// The provider ids the native product added after the corpus was frozen.
+///
+/// The frozen corpus is a record of the Python reference, which does not ship
+/// the subscription-CLI subprocess integration. The native product does: it
+/// publishes the three subscription rows, the credential rows that name the
+/// subscription source, the availability verdict of every row, and the
+/// historical `codex` alias row with the notes of a real route. Those parts
+/// are removed from both sides before the comparison, so every other field of
+/// every other row is still compared byte for byte. The corpus has to be
+/// regenerated from a Python reference that publishes the same rows before
+/// this normalisation can go away.
+const SUBSCRIPTION_PROVIDER_IDS: &[&str] = &["codex", "claude_code", "codex_cli", "opencode_cli"];
+
+/// The cases whose provider list the native product extends.
+const SUBSCRIPTION_LIST_CASES: &[&str] = &[
+    "studio.providers",
+    "studio.providers.configured",
+    "studio.settings.read",
+    "studio.settings.store_key",
+    "studio.settings.read_stored",
+    "studio.settings.clear_key",
+];
+
+/// The Codex CLI route is a subscription route in the native product, so the
+/// corpus's fail-closed refusal no longer describes it. The envelope's code
+/// and message are still compared; only the provider's own detail differs.
+const SUBSCRIPTION_CHAT_CASE: &str = "studio.chat.codex_unavailable";
+
 /// The ADR-0010 additions the frozen corpus predates.
 ///
 /// * `health` gained `design_available` (ADR-0009) and the Rust front door
@@ -580,12 +619,51 @@ fn normalize_body(id: &str, body: &str) -> Option<String> {
         }
         rebuilt.insert(key.clone(), entry.clone());
     }
+    // The subscription providers the native product added after the corpus
+    // was frozen.
+    if let Some(providers) = rebuilt.get_mut("providers").and_then(Value::as_array_mut) {
+        if providers.iter().all(Value::is_string) {
+            // The health document lists provider ids.
+            providers.retain(|row| {
+                row.as_str()
+                    .is_none_or(|id| !SUBSCRIPTION_PROVIDER_IDS.contains(&id))
+            });
+        } else {
+            let mut kept: Vec<Value> = Vec::with_capacity(providers.len());
+            for row in providers.iter() {
+                let Some(entry) = row.as_object() else {
+                    kept.push(row.clone());
+                    continue;
+                };
+                let provider_id = entry.get("id").and_then(Value::as_str).unwrap_or("");
+                if SUBSCRIPTION_PROVIDER_IDS.contains(&provider_id) {
+                    continue;
+                }
+                let mut clean = entry.clone();
+                clean.remove("available");
+                clean.remove("reason");
+                clean.remove("source");
+                kept.push(Value::Object(clean));
+            }
+            *providers = kept;
+        }
+    }
+    if let Some(credentials) = rebuilt.get_mut("credentials").and_then(Value::as_array_mut) {
+        credentials.retain(|row| row.get("source").and_then(Value::as_str) != Some("subscription"));
+    }
+    if id == SUBSCRIPTION_CHAT_CASE {
+        if let Some(details) = rebuilt.get_mut("details") {
+            *details = Value::Array(Vec::new());
+        }
+    }
     serde_json::to_string(&Value::Object(rebuilt)).ok()
 }
 
 /// Whether the case's body carries the ADR-0010 additions.
 fn adr_extended(id: &str) -> bool {
-    HEALTH_BODY_CASES.contains(&id) || id.starts_with("studio.chat.")
+    HEALTH_BODY_CASES.contains(&id)
+        || id.starts_with("studio.chat.")
+        || SUBSCRIPTION_LIST_CASES.contains(&id)
 }
 
 fn count_occurrences(haystack: &[u8], needle: &[u8]) -> usize {

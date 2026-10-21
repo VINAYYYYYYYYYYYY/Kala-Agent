@@ -471,8 +471,9 @@ def test_a_no_op_pocket_is_reported_not_claimed_as_removal() -> None:
     result = compile_script(script)
     measured = measure_shape(result.assembly_shape)
 
-    assert result.warnings
-    assert "removed no material" in result.warnings[0]
+    assert result.warnings == (
+        "component 'plate': pocket at step index 3 on XY removed no material",
+    )
     _assert_volume(measured.volume_mm3, 4000.0)
 
 
@@ -608,7 +609,7 @@ def test_a_duplicate_placement_is_refused() -> None:
 def test_the_compile_budget_is_enforced(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    moments = iter((0.0, 6.0, 6.0, 6.0))
+    moments = iter((0.0, 61.0, 61.0, 61.0))
     monkeypatch.setattr(time, "monotonic", lambda: next(moments))
 
     with pytest.raises(ConstructionError, match="compile budget"):

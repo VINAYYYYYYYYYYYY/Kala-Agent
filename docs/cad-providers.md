@@ -5,8 +5,9 @@
 > delivers, and what is *not* proven yet.
 >
 > This document is about **CAD** providers (the engines that build the
-> model). The **language-model** providers (`local`, `openai`, `openrouter`,
-> `codex`) are a different thing and are documented in
+> model). The **language-model** providers (`local`, `openai`,
+> `openrouter`, `codex`, `claude_code`, `codex_cli`, `opencode_cli`) are
+> a different thing and are documented in
 > [studio-providers.md](studio-providers.md).
 
 ## The one-paragraph version
@@ -65,9 +66,12 @@ This is the rule the whole model turns on:
   `null` with the check status `not_reported`. It is never filled in from
   another engine, and `not_reported` is neither a pass nor a failure.
 * The viewer label is a separate statement from the measurer label. The
-  viewport says `view: OpenCascade import (view-only)` for every provider,
-  and `view: OpenCascade (opt-in) build` only when the selected provider
-  *is* `opencascade`.
+  viewport, the HLR sheet and the AuxView footer say that the picture is
+  the **OpenCascade import** of the provider's STEP — `view: OpenCascade
+  import (view-only) of the FreeCAD STEP`, `VIEW: OCC IMPORT OF FREECAD
+  STEP` — **for every provider**, the opt-in OpenCascade build included.
+  The label never claims that the OpenCascade kernel built the geometry on
+  screen.
 
 ## `opencascade` — the opt-in builder
 
@@ -135,11 +139,35 @@ the **installed app carries the adapter with it**:
   extension is ever loaded.
 * An **unsupported** Python is reported honestly, never as a crash:
   `FreeCADCmd runs Python 3.10.14 (cp310); the bundled adapter dependencies
-  support cp310, cp311, cp312, cp313 only. Install a FreeCAD build with a
+  support cp311, cp312, cp313, cp314 only. Install a FreeCAD build with a
   supported Python.` (The exact wording names the detected version and the
   supported set.)
-* The `mod/Kala` addon is **staged, not installed**: the user copies it into
-  FreeCAD's user `Mod` directory by hand.
+* The `mod/Kala` addon is **staged, not installed**: the app never writes
+  into FreeCAD's directories. There is exactly **one supported install
+  method** — copy the staged add-on and its payload into FreeCAD's user
+  `Mod` directory:
+
+  ```bash
+  ./kala-studio-0.1.0-x86_64.AppImage --appimage-extract
+  ADAPTER=./squashfs-root/resources/backend/adapters/freecad
+  ABI=$(FreeCADCmd -c 'import sys; print("cp%d%d" % sys.version_info[:2])')
+  MOD="${XDG_DATA_HOME:-$HOME/.local/share}/FreeCAD"
+  [ -d "$MOD/v1-1" ] && MOD="$MOD/v1-1"
+  mkdir -p "$MOD/Mod/Kala"
+  cp -r "$ADAPTER/mod/Kala/." "$MOD/Mod/Kala/"
+  cp -r "$ADAPTER/src" "$MOD/Mod/Kala/src"
+  cp -r "$ADAPTER/site-packages-$ABI" "$MOD/Mod/Kala/site-packages-$ABI"
+  ```
+
+  Only the wheel set that matches the user's FreeCAD is copied (about
+  9 MiB); the other three ABIs stay inside the AppImage. The add-on finds
+  its payload next to itself, one level above itself (the developer
+  symlink) or through `KALA_FREECAD_SYS_PATH`; it never reads a repository
+  checkout and never uses a virtualenv. When the payload is missing, the
+  design box says so in its status line instead of failing with a
+  traceback. The same procedure is in
+  [studio-install.md](studio-install.md#installing-the-freecad-add-on-the-one-supported-method)
+  and in [packaging/linux/README.md](../packaging/linux/README.md).
 
 This is proven from the **extracted AppImage** under a literal `env -i`: the
 provider is available, the L-bracket is `35571.416047 mm³` with
@@ -155,7 +183,7 @@ directory and runs:
 
 ```
 <FreeCADCmd> <driver.py>          # no shell, cwd = temp dir, scrubbed env,
-                                  # timeout = 120 s, stdout = DEVNULL,
+                                  # timeout = 1800 s, stdout = DEVNULL,
                                   # stderr = a file
 ```
 
@@ -173,6 +201,22 @@ starts, so FreeCAD never inherits the worker token or a chat API key.
 
 A refusal or a crash is a typed `CadProviderBuildError` naming the adapter
 error and the failing op. **A build is never faked.**
+
+### A cancelled build is killed, not asked to stop
+
+The FreeCAD build is **out of process**, so it can be stopped. When the
+client closes the request, the studio cancels the design turn's token; the
+provider passes that token into the supervisor, which polls it and
+terminates the **provider's own process group**. The whole `FreeCADCmd`
+tree is gone, and the provider reports a *cancellation*
+(`the FreeCAD build was cancelled; the FreeCADCmd process group was
+stopped`) rather than a build refusal.
+
+This is the difference between a cancel that stops the work and a cancel
+that only stops the answer: the out-of-process build dies, and the
+in-process OpenCascade build is the one that can only be stopped at its
+next phase boundary (see
+[studio.md](studio.md#cancelling-a-turn)).
 
 ### The corpus: 28 / 28
 
@@ -228,6 +272,111 @@ place-only script expects `solid_count = 2` and the check row is
 volume, area and bounding box; the provider reopens the FCStd for the exact
 min/max and the solid count. **Kala never fills those two in.**
 
+## Cuts: the plane rule, the check and the per-pocket warnings
+
+A cut is the operation most likely to go wrong, so the studio says
+exactly what happened instead of reporting a part that is not the part
+that was asked for.
+
+### The same-plane pocket rule
+
+A pocket cuts into material that **its own component already has at that
+step**, and the pocket's sketch plane must be the plane of the sketch that
+produced the current solid. The rule is enforced where the intent is
+validated, so a script that breaks it is refused **before** any build is
+attempted:
+
+```
+component 'half_a': pocket at step index 3 on XZ over a XY solid
+```
+
+Over HTTP that is a `422 invalid_request` whose detail carries the same
+text.
+
+### The cut that removes nothing
+
+When a pocket finds no material, the provider **measures** it and reports
+it — it never claims a removal that did not happen. The check compares the
+volume of the feature before and after the cut (FreeCAD) or of the solid
+before and after the cut (OpenCascade), and the warning names the
+component, the step index and the plane:
+
+```
+component 'plate': pocket at step index 3 on XY removed no material
+```
+
+Every ineffective pocket produces **its own** warning: the step index is
+part of the message, so two dead cuts in the same component are two
+warnings and not one.
+
+### The check
+
+A build whose warnings report a cut that removed no material gets **one**
+extra check row:
+
+| field | value |
+|---|---|
+| `id` | `cuts_effective` |
+| `label` | `Cuts removed material` |
+| `expected` | the number of `pocket` steps in the script |
+| `measured` | `expected − (the ineffective cuts)`, never below 0 |
+| `tolerance` | `0.0` |
+| `unit` | `cut` |
+| `passed` | `false` |
+
+The row is appended **only** for that failure, so a passing design keeps
+its exact check list. A design with a dead cut is `verified: false` and
+the repair round of the turn is spent on it.
+
+The warnings shown on screen are bounded to 16 entries (the first 14
+verbatim, then at most two summary lines such as
+`… and 486 more pockets removed no material`), but the **exact** number
+of ineffective cuts is preserved, so `cuts_effective` stays exact even for
+a 500-pocket design.
+
+### A live example
+
+The same 80 × 40 × 8 plate, built by both providers:
+
+| script | volume mm³ | `verified` | warnings | `cuts_effective` |
+|---|---|---|---|---|
+| one Ø6 hole sketched entirely outside the plate | 25600.0 | **false** | one `removed no material` warning | expected 1, measured 0, failed |
+| the normal plate with 4 × Ø6 through holes | 24695.221316 | **true** | none | **absent** |
+
+The warning is a failure of the *intent*, and the studio reports it as
+one. The design itself is never discarded silently: the turn spends its
+one repair round on it and says what was wrong.
+
+## The limits
+
+| limit | value | consequence |
+|---|---|---|
+| components per script | **64** | a script with 65 components is refused |
+| steps per component | **500** | a component with 501 steps is refused |
+| **steps in the whole script** | **500** (every component's steps plus the assembly steps) | a script with 501 steps is refused: `a script may use at most 500 steps in total; this one uses 501` |
+| **Solid Edge parts** | **8** | a script that compiles to more than 8 parts is refused before it reaches the bridge: `the script has 9 components; the wire cap is 8 parts` |
+| Solid Edge bridge operations | 600 | a second line of defence; a contract-valid script cannot reach it (the maximum is 543 operations) |
+| FreeCAD build deadline | **1 800 s** (up to 3 600 s) | a bigger build is killed and reported as a timeout |
+| OpenCascade compile budget | 60 s | the 500-step script compiles in 16.9 s |
+| adapter call list | 8 000 calls | 500 steps lower to at most 4 501 FreeCAD calls |
+
+**The cost of a big FreeCAD build is superlinear.** Measured on FreeCAD
+1.1.4 with the real `FreeCADCmd`:
+
+| design | steps | pockets | wall time |
+|---|---:|---:|---|
+| a 200 × 200 × 5 plate with a 10 × 10 grid of Ø3 holes | 202 | 100 | **58.8 s** in the provider, **59.8 s** through the Studio |
+| the same plate with 3 holes off the plate | 202 | 100 | ≈ 57 s |
+| a 2 000 × 2 000 × 5 plate with 249 Ø6 holes | 500 | 249 | **1 009.5 s (16.8 min)** idle, **1 250 s (20.8 min)** under load |
+
+So a **500-step FreeCAD build takes roughly 17–21 minutes**, and the
+1 800 s deadline covers it with margin only when the host is idle. The
+OpenCascade path is much quicker: the same 100-hole plate builds through the
+Studio in **3.2 s** (2.5 s of compile time). The cost is the per-pocket
+recompute with the volume check; a
+future change could report the per-pocket volume without forcing a full
+recompute.
+
 ## `solidedge` on Windows: the bridge, live proof pending
 
 * `probe()` refuses a non-Windows host immediately with a reason. On Linux
@@ -272,7 +421,7 @@ a refusal.
 | no `cad_provider` | the provider-choice prompt; nothing is built |
 
 The live differential now includes the **real FreeCAD chat turn** through the
-Rust front door and compares it with the live Python server: **292 cases, 0
+Rust front door and compares it with the live Python server: **295 cases, 0
 mismatches, 0 known gaps** (the other harnesses report 268, 56 and 20 cases,
 0 mismatches). On this host that turn returns design
 `a9d04f8ff14e…` with `provider: "freecad"`, `provider_version: "1.1.4"`,
@@ -350,6 +499,32 @@ A failed check is **not** an error. `POST /design` answers `200` with
 or a `not_reported` value is visible. A **provider refusal** is a `422
 design_rejected` and stores no artifact.
 
+### `GET /api/studio/design/{design_id}/artifact/{kind}`
+
+The stored files of one design, downloaded:
+
+```
+GET /api/studio/design/{design_id}/artifact/{kind}
+```
+
+`kind` is one of `script`, `step`, `fcstd`, `stl` — and **only the kinds
+that design stored** answer. For a FreeCAD design that is the canonical
+construction `script` (JSON), the provider's `step` (the STEP the provider
+exported) and the provider's own `fcstd` (the FreeCAD document, exported
+and measured by FreeCAD itself). The `stl` kind answers only after the
+design was exported as an STL.
+
+The bytes are the **stored** bytes: the service re-hashes them and refuses
+the download if they do not match the sha256 the journal recorded
+(`500 artifact_digest_mismatch`). A stored object above **64 MiB** is a
+`413 artifact_too_large`; a kind the design did not store is a
+`404 artifact_not_found`; a bad id or an unknown kind is a
+`422 invalid_request`. The route carries its own bearer gate.
+
+The download filename is `<label-slug>-<digest8>.<ext>` — for FreeCAD, the
+`.FCStd` extension. Full detail in
+[studio.md](studio.md#downloading-what-a-design-stored).
+
 ### Errors
 
 | Status | `code` | Cause |
@@ -359,6 +534,7 @@ design_rejected` and stores no artifact.
 | 422 | `invalid_step` / `step_too_complex` | the uploaded STEP is unreadable / still too complex after one coarser retry |
 | 404 | `design_not_found` | no completed provider build under that id |
 | 413 | `payload_too_large` | the STEP import is over `KALA_STEP_IMPORT_MAX_BYTES`; every other route is over 262 144 bytes |
+| 499 | `design_cancelled` | the client closed the request; the turn stopped and nothing after it was journalled |
 | 503 | `provider_unavailable` | the probe says unavailable; the detail carries the reason and the available ids |
 | 503 | `design_unavailable` | the OpenCascade kernel cannot execute, so the view importer cannot run (a portable build links no kernel) |
 
@@ -392,6 +568,12 @@ design.intent → provider.build.requested → provider.build.completed
 A refusal writes `provider.build.failed` + `design.rejected` and stores no
 artifact. A cache hit writes only `design.intent` with `cache_hit: true` and
 reloads the stored STEP; it does not rerun FreeCAD or the OCCT kernel.
+
+A **cancelled** turn writes `design.intent` and `provider.build.requested`
+(they happened) and then exactly one `design.cancelled`, and **nothing
+after it**: no build completion, no `artifact.stored`, no measurement, no
+check. The half-built design is discarded and is never journaled as a
+design.
 
 The journal itself is now **native** (`kala-studio-journal`): the same
 hash-chained SQLite file, the same rows and the same chain digests as the
@@ -438,7 +620,12 @@ The composer's **CAD-target selector** is the only way to choose a provider.
    front door relays that refusal in the backend's own wording and does not
    build with another provider. The bridge milestone that has landed also
    has **no verified native build executor**, so even a reachable Windows
-   bridge reports no build capability.
+   bridge reports no build capability. The bridge also caps a procedure at
+   **8 parts**, which is far below the 64-component script budget: a
+   Solid Edge design can never use the whole budget.
+2. **A 500-step FreeCAD build is slow** — roughly 17–21 minutes, measured.
+   The contract allows it and the 1 800 s deadline covers it, but it is not
+   a pleasant chat turn, and the margin shrinks on a loaded host.
 2. **The providers are native now, and the identity difference is declared.**
    The front door computes the geometry itself (through `kala-cad`) and owns
    the provider connections (through `kala-cad-providers`). The two
@@ -466,6 +653,15 @@ The composer's **CAD-target selector** is the only way to choose a provider.
    bundled, and the provider reports the reason honestly when it is absent.
    The vendored adapter dependencies cover **cp311–cp314**; another Python
    is reported as unavailable with its exact version.
+10. **Only the out-of-process build can be killed mid-flight.** A cancelled
+    FreeCAD build has its whole process group terminated, promptly. The
+    in-process OpenCascade build cannot be interrupted inside a single
+    compile, so a cancel there is honoured at the next phase boundary —
+    the worst case is one **60 s** compile. And the **Python reference**
+    cannot cancel a running synchronous build at all (its route runs in a
+    FastAPI thread pool, and a thread cannot be dropped by the event
+    loop); the cancellation described here is the **native** path, which is
+    the shipped one.
 
 ## Primary sources
 

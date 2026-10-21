@@ -93,6 +93,16 @@ export interface BundledFreeCadVendor {
   verificationSkippedReason?: string | null;
 }
 
+export interface FreeCadAddonVerification {
+  verified: boolean;
+  reason?: string;
+  abi?: string | null;
+  adapter?: string | null;
+  sitePackages?: string | null;
+  problems?: string[];
+  models?: string;
+}
+
 export interface BundledFreeCadAdapter {
   path: string;
   srcPath: string;
@@ -101,6 +111,7 @@ export interface BundledFreeCadAdapter {
   pythonFileCount: number;
   treeSha256: string;
   vendor?: BundledFreeCadVendor;
+  addonVerification?: FreeCadAddonVerification | null;
 }
 
 export interface NativeBuildMetadata {
@@ -242,7 +253,15 @@ export function stageFreeCadAdapter(options: {
   fileCount: number;
   pythonFileCount: number;
   vendor: FreeCadVendorManifest | null;
+  addonVerification: FreeCadAddonVerification;
 };
+export function verifyStagedFreeCadAddOn(options: {
+  modRoot: string;
+  vendor?: FreeCadVendorManifest | null;
+  vendorMode?: 'skip' | 'auto' | 'require';
+  env?: NodeJS.ProcessEnv;
+  timeout?: number;
+}): FreeCadAddonVerification;
 export function validateBundledFreeCadAdapter(paths: NativePaths): {
   root: string;
   fileCount: number;
