@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="420mm" height="297mm" viewBox="0 0 420 297">
+  <title>L-bracket 110 x 80 x 60 mm (edited) — orthographic sheet</title>
+  <rect x="0" y="0" width="420" height="297" fill="#ffffff"/>
+  <g id="frame" fill="none" stroke="#000000">
+    <rect x="10" y="10" width="400" height="277" stroke-width="0.7"/>
+    <rect x="15" y="15" width="390" height="267" stroke-width="0.35"/>
+  </g>
+  <g id="views" fill="none" stroke="#000000" stroke-width="0.35">
+    <g id="view-front">
+      <polyline points="72.825 217.500 166.325 217.500" stroke-width="0.35"/>
+      <polyline points="72.825 217.500 72.825 210.700" stroke-width="0.35"/>
+      <polyline points="166.325 217.500 167.175 217.500" stroke-width="0.35"/>
+      <polyline points="166.325 210.700 167.175 210.700" stroke-width="0.35"/>
+      <polyline points="167.175 217.500 167.175 210.700" stroke-width="0.35"/>
+      <polyline points="72.825 166.500 72.825 210.700" stroke-width="0.35"/>
+      <polyline points="166.325 210.700 166.325 166.500" stroke-width="0.35"/>
+      <polyline points="166.325 166.500 72.825 166.500" stroke-width="0.35"/>
+      <polyline points="72.825 217.500 166.325 217.500" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="72.825 210.700 72.825 217.500" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="167.175 217.500 72.825 217.500" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="167.175 217.500 167.175 210.700" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="167.175 210.700 72.825 210.700" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="72.825 210.700 166.325 210.700" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="72.825 166.500 72.825 210.700" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="166.325 166.500 72.825 166.500" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="166.325 210.700 166.325 166.500" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="72.825 217.500 72.825 210.700" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+    </g>
+    <g id="view-top">
+      <polyline points="166.325 131.000 167.175 131.000" stroke-width="0.35"/>
+      <polyline points="166.325 131.000 72.825 131.000" stroke-width="0.35"/>
+      <polyline points="167.175 131.000 167.175 63.000" stroke-width="0.35"/>
+      <polyline points="167.175 63.000 72.825 63.000" stroke-width="0.35"/>
+      <polyline points="72.825 63.000 72.825 124.200" stroke-width="0.35"/>
+      <polyline points="72.825 124.200 72.825 131.000" stroke-width="0.35"/>
+      <polyline points="166.325 124.200 166.325 131.000" stroke-width="0.35"/>
+      <polyline points="166.325 124.200 72.825 124.200" stroke-width="0.35"/>
+      <polyline points="72.825 131.000 166.325 131.000" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="72.825 124.200 72.825 131.000" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="166.325 131.000 167.175 131.000" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="167.175 131.000 167.175 63.000" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="167.175 63.000 72.825 63.000" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="72.825 63.000 72.825 124.200" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="166.325 124.200 166.325 131.000" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="72.825 124.200 166.325 124.200" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+    </g>
+    <g id="view-right">
+      <polyline points="256.000 217.500 256.000 210.700" stroke-width="0.35"/>
+      <polyline points="256.000 210.700 256.000 166.500" stroke-width="0.35"/>
+      <polyline points="256.000 217.500 324.000 217.500" stroke-width="0.35"/>
+      <polyline points="256.000 210.700 324.000 210.700" stroke-width="0.35"/>
+      <polyline points="324.000 217.500 324.000 210.700" stroke-width="0.35"/>
+      <polyline points="262.800 166.500 256.000 166.500" stroke-width="0.35"/>
+      <polyline points="262.800 210.700 262.800 166.500" stroke-width="0.35"/>
+      <polyline points="256.000 217.500 256.000 210.700" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="262.800 217.500 256.000 217.500" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="256.000 166.500 256.000 210.700" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="324.000 217.500 262.800 217.500" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="262.800 210.700 256.000 210.700" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="324.000 210.700 262.800 210.700" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="262.800 166.500 262.800 210.700" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="262.800 166.500 256.000 166.500" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+      <polyline points="324.000 217.500 324.000 210.700" stroke-width="0.25" stroke-dasharray="3 1.5"/>
+    </g>
+  </g>
+  <g id="view-labels" font-family="monospace" font-size="3" fill="#000000">
+    <text x="45" y="239">FRONT</text>
+    <text x="45" y="135">TOP</text>
+    <text x="236" y="239">RIGHT</text>
+  </g>
+  <g id="title-block" font-family="monospace" fill="#000000">
+    <rect x="225" y="15" width="180" height="45" fill="none" stroke="#000000" stroke-width="0.7"/>
+    <line x1="225" y1="23" x2="405" y2="23" stroke="#000000" stroke-width="0.35"/>
+    <text x="228" y="18.5" font-size="3.2">KALA STUDIO // ORTHOGRAPHIC SHEET</text>
+    <text x="228" y="27" font-size="2.5">PROJECT</text>
+    <text x="255" y="27" font-size="2.5">L-bracket 110 x 80 x 60 mm (edited)</text>
+    <text x="228" y="35" font-size="2.5">REVISION</text>
+    <text x="255" y="35" font-size="2.5">—</text>
+    <text x="228" y="43" font-size="2.5">DESIGN ID</text>
+    <text x="255" y="43" font-size="2.5">baef8247c0afb89533227b2e4f31353ab06527fd5d15a17b742e351592c31230</text>
+    <text x="333" y="27" font-size="2.5">UNITS</text>
+    <text x="365" y="27" font-size="2.5">mm</text>
+    <text x="333" y="35" font-size="2.5">PROJECTION</text>
+    <text x="365" y="35" font-size="2.5">THIRD ANGLE</text>
+    <text x="333" y="43" font-size="2.5">SCALE</text>
+    <text x="365" y="43" font-size="2.5">1:1.18 (FIT)</text>
+    <text x="333" y="51" font-size="2.5">SHEET</text>
+    <text x="365" y="51" font-size="2.5">A3 · 420 × 297 mm</text>
+  </g>
+</svg>

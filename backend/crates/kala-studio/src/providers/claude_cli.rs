@@ -48,7 +48,7 @@ use super::cli_runtime::{
     CLI_TIMEOUT_ENV, CliInvocation, CliSpec, consent_message, failure_excerpt, failure_text,
     program_or_reason, run, timeout_seconds,
 };
-use super::{ChatOutcome, ProviderFailure};
+use super::{ChatOutcome, ChatUsage, ProviderFailure};
 
 /// The provider id of the Claude Code route.
 pub const PROVIDER_ID: &str = "claude_code";
@@ -120,7 +120,7 @@ pub async fn chat(
     if !run.succeeded() {
         return Err(ProviderFailure::Subprocess(failure_message(&run)));
     }
-    let (text, observed) = parse_result(&run.stdout)?;
+    let (text, observed, usage) = parse_result(&run.stdout)?;
     if text.trim().is_empty() {
         return Err(ProviderFailure::Protocol(
             "the Claude Code CLI produced no assistant text".to_owned(),
@@ -132,7 +132,8 @@ pub async fn chat(
             .or_else(|| model.filter(|value| !value.is_empty()).map(str::to_owned))
             .unwrap_or_else(|| DEFAULT_MODEL.to_owned()),
         false,
-    ))
+    )
+    .with_usage(usage))
 }
 
 /// The bounded failure text of a CLI run that did not exit with status zero.
@@ -169,7 +170,12 @@ fn failure_message(run: &super::cli_runtime::CliRun) -> String {
 /// failed reports `is_error`, and its text is the failure the operator sees.
 /// The model that answered is read from `modelUsage`, the per-model cost
 /// breakdown the CLI publishes.
-fn parse_result(stdout: &[u8]) -> Result<(String, Option<String>), ProviderFailure> {
+///
+/// The `usage` block bills one prompt as three input fields (`input_tokens`,
+/// `cache_read_input_tokens`, `cache_creation_input_tokens`); the input count
+/// is their sum. The output count is `output_tokens`. A block the CLI did not
+/// send, or a field it did not report, stays "not reported".
+fn parse_result(stdout: &[u8]) -> Result<(String, Option<String>, ChatUsage), ProviderFailure> {
     let text = String::from_utf8_lossy(stdout);
     let payload: Value = serde_json::from_str(text.trim()).map_err(|_| {
         ProviderFailure::Protocol("the Claude Code CLI output was not valid JSON".to_owned())
@@ -208,7 +214,22 @@ fn parse_result(stdout: &[u8]) -> Result<(String, Option<String>), ProviderFailu
                 .and_then(Value::as_str)
                 .map(str::to_owned)
         });
-    Ok((result.to_owned(), observed))
+    Ok((result.to_owned(), observed, usage_of(&object)))
+}
+
+/// The token counts of one `--output-format json` result.
+fn usage_of(result: &serde_json::Map<String, Value>) -> ChatUsage {
+    let Some(usage) = result.get("usage").and_then(Value::as_object) else {
+        return ChatUsage::NONE;
+    };
+    ChatUsage {
+        input_tokens: super::usage::sum([
+            super::usage::count(usage.get("input_tokens")),
+            super::usage::count(usage.get("cache_read_input_tokens")),
+            super::usage::count(usage.get("cache_creation_input_tokens")),
+        ]),
+        output_tokens: super::usage::count(usage.get("output_tokens")),
+    }
 }
 
 /// The environment variable that configures the wall-clock budget.

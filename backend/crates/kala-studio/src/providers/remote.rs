@@ -20,7 +20,7 @@ use crate::json_input::{JsonInputError, decode_json_bytes};
 use crate::pytext;
 use crate::schemas::has_overwide_integer;
 
-use super::{ChatOutcome, ProviderFailure};
+use super::{ChatOutcome, ChatUsage, ProviderFailure, usage};
 
 pub const OPENAI_DEFAULT_ENDPOINT: &str = "https://api.openai.com/v1/chat/completions";
 pub const OPENROUTER_DEFAULT_ENDPOINT: &str = "https://openrouter.ai/api/v1/chat/completions";
@@ -527,15 +527,16 @@ pub async fn openai_compat_chat(
             "the provider response exceeded the bounded size during read".to_owned(),
         ));
     }
-    let (text, observed_model) = read_response(&response.body)?;
+    let (text, observed_model, usage) = read_response(&response.body)?;
     Ok(ChatOutcome::new(
         text,
         observed_model.unwrap_or_else(|| model.to_owned()),
         false,
-    ))
+    )
+    .with_usage(usage))
 }
 
-fn read_response(data: &[u8]) -> Result<(String, Option<String>), ProviderFailure> {
+fn read_response(data: &[u8]) -> Result<(String, Option<String>, ChatUsage), ProviderFailure> {
     // CPython `json.loads(bytes)` detects UTF-8 BOM, UTF-16 and UTF-32; the
     // source provider parser inherits that accepted domain. A decode failure
     // propagates as `UnicodeDecodeError` in Python and becomes the route's
@@ -622,7 +623,16 @@ fn read_response(data: &[u8]) -> Result<(String, Option<String>), ProviderFailur
             "the provider response contained a lone surrogate".to_owned(),
         ));
     }
-    Ok((content.to_owned(), observed_model))
+    // The OpenAI-compatible usage block is advisory: a missing, malformed or
+    // non-finite block means "not reported", never a failed turn.
+    let usage = match object.get("usage").and_then(Value::as_object) {
+        Some(usage) => ChatUsage {
+            input_tokens: usage::count(usage.get("prompt_tokens")),
+            output_tokens: usage::count(usage.get("completion_tokens")),
+        },
+        None => ChatUsage::NONE,
+    };
+    Ok((content.to_owned(), observed_model, usage))
 }
 
 #[cfg(test)]

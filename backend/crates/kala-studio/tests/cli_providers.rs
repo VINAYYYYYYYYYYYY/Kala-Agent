@@ -225,6 +225,9 @@ async fn codex_cli_turn_uses_the_documented_argv_and_reads_the_jsonl() {
     assert_eq!(outcome.text, "the fake codex answered");
     assert_eq!(outcome.model, "gpt-5-codex");
     assert!(!outcome.offline);
+    // The `turn.completed` usage block is this turn's report: 1 in, 2 out.
+    assert_eq!(outcome.usage.input_tokens, Some(1));
+    assert_eq!(outcome.usage.output_tokens, Some(2));
 
     assert_eq!(
         fake.argv(),
@@ -262,6 +265,9 @@ async fn opencode_cli_turn_uses_the_documented_argv_and_the_sandbox_agent() {
         .unwrap();
     assert_eq!(outcome.text, "the fake opencode answered");
     assert_eq!(outcome.model, "anthropic/claude-sonnet-4-5");
+    // This fixture prints no step-finish event, so no count is reported --
+    // and never estimated.
+    assert!(!outcome.usage.is_reported());
 
     assert_eq!(
         fake.argv(),
@@ -285,6 +291,77 @@ async fn opencode_cli_turn_uses_the_documented_argv_and_the_sandbox_agent() {
         env.contains("\"effect\": \"deny\"") || env.contains("\"effect\":\"deny\""),
         "{env}"
     );
+}
+
+/// Each CLI reports the token counts it actually prints (ADR-0012).
+#[tokio::test]
+async fn each_cli_reports_the_usage_it_actually_prints() {
+    // Claude Code bills one prompt with three input fields; the input count is
+    // their sum.
+    let claude_usage = concat!(
+        r#"{"type":"result","subtype":"success","is_error":false,"result":"ok","#,
+        r#""usage":{"input_tokens":3,"cache_creation_input_tokens":1200,"#,
+        r#""cache_read_input_tokens":5000,"output_tokens":100,"#,
+        r#""server_tool_use":{"web_search_requests":0}},"#,
+        r#""modelUsage":{"claude-sonnet-4-5":{"inputTokens":3}}}"#
+    );
+    let fake = FakeCli::new("claude", &format!("cat <<'JSON'\n{claude_usage}\nJSON"));
+    let mut environ = environment();
+    with_fake(claude_cli::SPEC.path_override_env, &fake, &mut environ);
+    let outcome = claude_cli::chat(None, "hello", &environ).await.unwrap();
+    assert_eq!(outcome.usage.input_tokens, Some(6_203));
+    assert_eq!(outcome.usage.output_tokens, Some(100));
+
+    // A result without a usage block stays "not reported".
+    let fake = FakeCli::new("claude", &format!("cat <<'JSON'\n{CLAUDE_RESULT}\nJSON"));
+    with_fake(claude_cli::SPEC.path_override_env, &fake, &mut environ);
+    let outcome = claude_cli::chat(None, "hello", &environ).await.unwrap();
+    assert!(!outcome.usage.is_reported());
+
+    // Codex's newer `event_msg`/`token_count` shape, with no
+    // `turn.completed` block.
+    let codex_token_count = concat!(
+        r#"{"type":"thread.started","thread_id":"t"}"#,
+        "\n",
+        r#"{"type":"item.completed","item":{"type":"agent_message","text":"counted"}}"#,
+        "\n",
+        r#"{"type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":100,"cached_input_tokens":40,"output_tokens":20,"reasoning_output_tokens":5,"total_tokens":120}}}}"#,
+        "\n",
+    );
+    let fake = FakeCli::new("codex", &format!("cat <<'JSON'\n{codex_token_count}\nJSON"));
+    with_fake(codex_cli::SPEC.path_override_env, &fake, &mut environ);
+    let outcome = codex_cli::chat(Some("gpt-5-codex"), "hello", &environ)
+        .await
+        .unwrap();
+    assert_eq!(outcome.usage.input_tokens, Some(100));
+    assert_eq!(outcome.usage.output_tokens, Some(20));
+
+    // OpenCode reports one `tokens` block per step-finish; the turn's counts
+    // are their sum.
+    let opencode_usage = concat!(
+        r#"{"type":"text","part":{"type":"text","text":"counted"}}"#,
+        "\n",
+        r#"{"type":"step_finish","part":{"type":"step-finish","tokens":{"input":11,"output":7,"reasoning":0,"cache":{"read":0,"write":0}}}}"#,
+        "\n",
+        r#"{"type":"step_finish","part":{"type":"step-finish","tokens":{"input":5,"output":3}}}"#,
+        "\n",
+    );
+    let fake = FakeCli::new("opencode", &format!("cat <<'JSON'\n{opencode_usage}\nJSON"));
+    with_fake(opencode_cli::SPEC.path_override_env, &fake, &mut environ);
+    let outcome = opencode_cli::chat(None, "hello", &environ).await.unwrap();
+    assert_eq!(outcome.usage.input_tokens, Some(16));
+    assert_eq!(outcome.usage.output_tokens, Some(10));
+
+    // A usage block of the wrong shape never fails the turn.
+    let malformed = concat!(
+        r#"{"type":"result","is_error":false,"result":"ok","#,
+        r#""usage":{"input_tokens":"many","output_tokens":-1}}"#
+    );
+    let fake = FakeCli::new("claude", &format!("cat <<'JSON'\n{malformed}\nJSON"));
+    with_fake(claude_cli::SPEC.path_override_env, &fake, &mut environ);
+    let outcome = claude_cli::chat(None, "hello", &environ).await.unwrap();
+    assert_eq!(outcome.text, "ok");
+    assert!(!outcome.usage.is_reported());
 }
 
 #[tokio::test]

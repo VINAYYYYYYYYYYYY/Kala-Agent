@@ -77,7 +77,7 @@ CASES: list[tuple[str, bytes, int, bytes | None]] = [
         "nan_model_falls_back",
         b'{"model":NaN,"choices":[{"message":{"content":"hi"}}]}',
         200,
-        b'{"text":"hi","provider":"openai","model":"gpt-4o-mini","offline":false,"design":null}',
+        b'{"text":"hi","provider":"openai","model":"gpt-4o-mini","offline":false,"design":null,"usage":null}',
     ),
     (
         "nan_unrelated",
@@ -136,7 +136,7 @@ CASES: list[tuple[str, bytes, int, bytes | None]] = [
         "duplicate_model",
         b'{"model":"first","model":"second","choices":[{"message":{"content":"hi"}}]}',
         200,
-        b'{"text":"hi","provider":"openai","model":"second","offline":false,"design":null}',
+        b'{"text":"hi","provider":"openai","model":"second","offline":false,"design":null,"usage":null}',
     ),
 ]
 

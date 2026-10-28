@@ -1,0 +1,71 @@
+{
+  "assembly": [
+    {
+      "component": "upright",
+      "components": [],
+      "op": "place",
+      "x": 0.0,
+      "y": 8.0,
+      "z": 0.0
+    },
+    {
+      "components": [
+        "base",
+        "upright"
+      ],
+      "op": "fuse",
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0
+    }
+  ],
+  "components": [
+    {
+      "name": "base",
+      "steps": [
+        {
+          "height": 80.0,
+          "op": "sketch",
+          "plane": "XY",
+          "profile": "rectangle",
+          "reversed": false,
+          "width": 100.0,
+          "x": -50.0,
+          "y": 0.0
+        },
+        {
+          "length": 8.0,
+          "op": "extrude",
+          "plane": "XY",
+          "reversed": false,
+          "x": 0.0,
+          "y": 0.0
+        }
+      ]
+    },
+    {
+      "name": "upright",
+      "steps": [
+        {
+          "height": 60.0,
+          "op": "sketch",
+          "plane": "XZ",
+          "profile": "rectangle",
+          "reversed": false,
+          "width": 100.0,
+          "x": -50.0,
+          "y": 0.0
+        },
+        {
+          "length": 8.0,
+          "op": "extrude",
+          "plane": "XY",
+          "reversed": false,
+          "x": 0.0,
+          "y": 0.0
+        }
+      ]
+    }
+  ],
+  "summary": "L-bracket 100 x 80 x 60 mm"
+}

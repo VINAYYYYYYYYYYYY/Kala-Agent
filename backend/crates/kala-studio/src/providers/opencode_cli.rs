@@ -47,7 +47,7 @@ use super::cli_runtime::{
     CliInvocation, CliSpec, consent_message, failure_excerpt, failure_text, program_or_reason, run,
     timeout_seconds,
 };
-use super::{ChatOutcome, ProviderFailure};
+use super::{ChatOutcome, ChatUsage, ProviderFailure};
 
 /// The provider id of the OpenCode CLI route.
 pub const PROVIDER_ID: &str = "opencode_cli";
@@ -165,7 +165,7 @@ pub async fn chat(
     if !run.succeeded() {
         return Err(ProviderFailure::Subprocess(failure_message(&run)));
     }
-    let (text, failure) = parse_events(&run.stdout)?;
+    let (text, failure, usage) = parse_events(&run.stdout)?;
     if let Some(failure) = failure {
         return Err(ProviderFailure::Subprocess(failure));
     }
@@ -186,7 +186,8 @@ pub async fn chat(
             .map(str::to_owned)
             .unwrap_or_else(|| DEFAULT_MODEL.to_owned()),
         false,
-    ))
+    )
+    .with_usage(usage))
 }
 
 /// Write the sandboxing configuration into the private working directory.
@@ -218,10 +219,16 @@ fn failure_message(run: &super::cli_runtime::CliRun) -> String {
 ///
 /// The assistant's text is the concatenation of the `text` events' text. An
 /// `error` event is the failure the operator sees.
-fn parse_events(stdout: &[u8]) -> Result<(Option<String>, Option<String>), ProviderFailure> {
+///
+/// The token counts are the `step_finish` events' `part.tokens` block: a turn
+/// with several steps reports one block per step, so the counts are summed.
+fn parse_events(
+    stdout: &[u8],
+) -> Result<(Option<String>, Option<String>, ChatUsage), ProviderFailure> {
     let text = String::from_utf8_lossy(stdout);
     let mut answer = String::new();
     let mut failure: Option<String> = None;
+    let mut usage = ChatUsage::NONE;
     let mut parsed_any = false;
     for line in text.lines() {
         let line = line.trim();
@@ -233,6 +240,11 @@ fn parse_events(stdout: &[u8]) -> Result<(Option<String>, Option<String>), Provi
         };
         parsed_any = true;
         let kind = event.get("type").and_then(Value::as_str).unwrap_or("");
+        if kind == "step_finish" || kind == "step-finish" {
+            if let Some(step) = step_usage(&event) {
+                usage = usage.merge(step);
+            }
+        }
         let candidate = match kind {
             "text" => {
                 if let Some(part) = event.get("part") {
@@ -259,7 +271,22 @@ fn parse_events(stdout: &[u8]) -> Result<(Option<String>, Option<String>), Provi
     } else {
         Some(answer)
     };
-    Ok((answer, failure))
+    Ok((answer, failure, usage))
+}
+
+/// The `tokens.input` / `tokens.output` counts of one step-finish event.
+fn step_usage(event: &serde_json::Map<String, Value>) -> Option<ChatUsage> {
+    let tokens = event
+        .get("part")
+        .and_then(Value::as_object)
+        .and_then(|part| part.get("tokens"))
+        .and_then(Value::as_object)
+        .or_else(|| event.get("tokens").and_then(Value::as_object))?;
+    let usage = ChatUsage {
+        input_tokens: super::usage::count(tokens.get("input")),
+        output_tokens: super::usage::count(tokens.get("output")),
+    };
+    usage.is_reported().then_some(usage)
 }
 
 /// The bounded text of a failure event.

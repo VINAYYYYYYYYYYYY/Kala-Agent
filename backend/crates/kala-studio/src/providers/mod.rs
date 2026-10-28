@@ -7,6 +7,7 @@ pub mod codex_cli;
 pub mod local;
 pub mod opencode_cli;
 pub mod remote;
+pub mod usage;
 
 use std::collections::BTreeMap;
 
@@ -19,6 +20,7 @@ pub use remote::{
     STUDIO_DESIGN_REQUEST_TIMEOUT_SECONDS, STUDIO_REQUEST_TIMEOUT_SECONDS,
     design_turn_budget_seconds,
 };
+pub use usage::ChatUsage;
 
 pub use cli_runtime::{CliProbe, CliSpec};
 
@@ -74,6 +76,8 @@ pub struct ChatOutcome {
     pub reply: String,
     pub model: String,
     pub offline: bool,
+    /// The token counts the provider reported for this call, when it did.
+    pub usage: ChatUsage,
 }
 
 impl ChatOutcome {
@@ -90,7 +94,15 @@ impl ChatOutcome {
             reply: text,
             model,
             offline,
+            usage: ChatUsage::NONE,
         }
+    }
+
+    /// Attach the token counts the provider reported.
+    #[must_use]
+    pub fn with_usage(mut self, usage: ChatUsage) -> Self {
+        self.usage = usage;
+        self
     }
 }
 

@@ -43,7 +43,7 @@ use common::{RequestSpec, TOKEN, TestServer, empty_environ};
 /// The corpus is regenerated whenever a product source changes, so this
 /// constant moves with the corpus and a stale corpus fails the test instead
 /// of passing silently.
-const CORPUS_SHA256: &str = "39e0c0a90f9d03704945c79cdb9e777e77549ef208ac2177d3f7bb003dade3fa";
+const CORPUS_SHA256: &str = "5914b484af8dd705ee3fecea91262ad699ea70050ed7dd509e3da32f1812a999";
 
 /// The number of Studio cases in the regenerated corpus.
 const CORPUS_CASES: usize = 59;

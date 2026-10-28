@@ -183,7 +183,7 @@ async fn remote_success_captures_the_exact_wire_request() {
     assert_eq!(response.status, 200);
     assert_eq!(
         response.body_text(),
-        "{\"text\":\"remote reply\",\"provider\":\"openai\",\"model\":\"served-model\",\"offline\":false,\"design\":null}"
+        "{\"text\":\"remote reply\",\"provider\":\"openai\",\"model\":\"served-model\",\"offline\":false,\"design\":null,\"usage\":null}"
     );
     let requests = transport.requests();
     assert_eq!(requests.len(), 1);

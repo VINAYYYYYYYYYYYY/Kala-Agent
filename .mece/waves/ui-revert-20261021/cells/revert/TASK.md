@@ -1,0 +1,7 @@
+# Execute precise UI rollback
+
+Project `/home/v9i/Projects/Kala-Agent`. The user explicitly asks to revert/delete all suggested UI changes and NOT commit. This authorizes discarding the AS1100 UI work. Do only this mechanical rollback; no refactoring or extra investigations.
+
+Read `.mece/waves/ui-revert-20261021/manifest.json`. Parent audited the list: every tracked_restore/new_delete path is a change from the AS1100 UI redesign, and all are under `studio/src` or `studio/test`. Restore exactly `tracked_restore` from the manifest's recorded HEAD into the worktree (`git restore --source=<recorded-head> --worktree --pathspec-from-file=.mece/waves/ui-revert-20261021/tracked-paths.txt`). Do not change the index. Delete exactly `new_delete` files, individually, and remove newly empty directories under studio/src and studio/test if desired. Do not use git clean, git reset, broad directory deletion, or touch any other file. In particular backend/**, src/kala_agent/**, docs/**, studio/electron/**, studio/scripts/**, packages and real data/settings must be untouched.
+
+Verify `git diff -- studio` and `git ls-files --others --exclude-standard -- studio` are empty, HEAD unchanged, and every preserved_product_sha256 file still matches. Do not run tests or packaging (parent owns those). Write `.mece/waves/ui-revert-20261021/cells/revert/REPORT.md` with counts and actual checks. No commits/staging/delegation/model calls/credentials. Complete promptly after the mechanical verification.

@@ -1,0 +1,1171 @@
+{
+  "events": [
+    {
+      "sequence": 1,
+      "event_type": "design.intent",
+      "aggregate_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+      "payload": {
+        "cache_hit": false,
+        "design_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+        "envelope": {
+          "max": [
+            50.0,
+            80.0,
+            60.0
+          ],
+          "min": [
+            -50.0,
+            0.0,
+            0.0
+          ]
+        },
+        "label": "L-bracket 100 x 80 x 60",
+        "material": null,
+        "provider": "opencascade",
+        "script_sha256": "6b4f284e00f5901f7aceb035b5bfa78651b445ec58bb53c6585755087c69838b",
+        "template": "l_bracket",
+        "tolerances": [
+          "ISO 2768-m (declared)"
+        ]
+      },
+      "digest": "1bb7ba8afb736a2cc788f5e840d1856cfdeebd6d39036bda83c6d209fccf0bc5",
+      "occurred_at": "2026-10-21T15:50:33.976404Z",
+      "previous_event_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "event_digest": "3315f8a84acb743bc95c49502088e865549e1068ecff9f2c8cc718369f22ea02"
+    },
+    {
+      "sequence": 2,
+      "event_type": "provider.build.requested",
+      "aggregate_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+      "payload": {
+        "design_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+        "provider": "opencascade",
+        "provider_version": "7.9.3",
+        "script_sha256": "6b4f284e00f5901f7aceb035b5bfa78651b445ec58bb53c6585755087c69838b"
+      },
+      "digest": "1c1815bc7ca7c2d4629b51322c0a2f7daebd528f1b7c086c2c89561bdbe46e2a",
+      "occurred_at": "2026-10-21T15:50:33.976500Z",
+      "previous_event_digest": "3315f8a84acb743bc95c49502088e865549e1068ecff9f2c8cc718369f22ea02",
+      "event_digest": "eb1336c013bbaf7a79336d2f3ed69aee3be52e99f05b3a41088c0fb6061a4486"
+    },
+    {
+      "sequence": 3,
+      "event_type": "provider.build.completed",
+      "aggregate_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+      "payload": {
+        "design_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+        "measured": {
+          "bounds": {
+            "max": [
+              50.0,
+              80.0,
+              60.0
+            ],
+            "min": [
+              -50.0,
+              0.0,
+              0.0
+            ]
+          },
+          "centroid_mm": [
+            -4.03027779499911e-16,
+            25.818181818181817,
+            15.818181818181817
+          ],
+          "mass_g": null,
+          "surface_area_mm2": 30112.0,
+          "volume_mm3": 105600.0
+        },
+        "measured_by": "OpenCascade (opt-in)",
+        "native_kind": null,
+        "native_sha256": null,
+        "provider": "opencascade",
+        "provider_version": "7.9.3",
+        "script_sha256": "6b4f284e00f5901f7aceb035b5bfa78651b445ec58bb53c6585755087c69838b",
+        "solid_count": 1,
+        "step_sha256": "103a83bab3da5e4a5a6a523afcca8b2e56ff9592e59aecbb13a3d337bfda5097",
+        "valid": true,
+        "warnings": []
+      },
+      "digest": "0c8350bcf1b3c83cd43f2131f8312f42fef8184fb655cd5f9ad5f671c79311f0",
+      "occurred_at": "2026-10-21T15:50:33.998199Z",
+      "previous_event_digest": "eb1336c013bbaf7a79336d2f3ed69aee3be52e99f05b3a41088c0fb6061a4486",
+      "event_digest": "be557a89e3102a42e6e31e9d35720ee343c73dafdbf34856fd654bd8f6eb2030"
+    },
+    {
+      "sequence": 4,
+      "event_type": "artifact.stored",
+      "aggregate_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+      "payload": {
+        "design_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+        "kind": "script",
+        "provider": "opencascade",
+        "sha256": "6b4f284e00f5901f7aceb035b5bfa78651b445ec58bb53c6585755087c69838b",
+        "size_bytes": 650
+      },
+      "digest": "e4233453ecd7850214273a143137c58e1d80211f93573d8534568c306916b60b",
+      "occurred_at": "2026-10-21T15:50:33.998394Z",
+      "previous_event_digest": "be557a89e3102a42e6e31e9d35720ee343c73dafdbf34856fd654bd8f6eb2030",
+      "event_digest": "e92e0298e9b9c6877fb65f5d8861dbfdd4b204538a4e592e55aa26cb9ecfa9dd"
+    },
+    {
+      "sequence": 5,
+      "event_type": "artifact.stored",
+      "aggregate_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+      "payload": {
+        "design_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+        "kind": "step",
+        "provider": "opencascade",
+        "sha256": "103a83bab3da5e4a5a6a523afcca8b2e56ff9592e59aecbb13a3d337bfda5097",
+        "size_bytes": 33978,
+        "source": "provider:opencascade"
+      },
+      "digest": "e218e1e7950d008c1451cae0e3d89ca671052f89bc844bdb5f03ccc26ce663e0",
+      "occurred_at": "2026-10-21T15:50:33.998475Z",
+      "previous_event_digest": "e92e0298e9b9c6877fb65f5d8861dbfdd4b204538a4e592e55aa26cb9ecfa9dd",
+      "event_digest": "c88debd4996e5f0915541efd101dc02a1cf7ca451468164ccaf68ef4197eccc3"
+    },
+    {
+      "sequence": 6,
+      "event_type": "view.imported",
+      "aggregate_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+      "payload": {
+        "bounds": {
+          "max": [
+            50.0,
+            80.0,
+            60.0
+          ],
+          "min": [
+            -50.0,
+            0.0,
+            0.0
+          ]
+        },
+        "design_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+        "provider": "opencascade",
+        "role": "view-only",
+        "solids": 1,
+        "step_sha256": "103a83bab3da5e4a5a6a523afcca8b2e56ff9592e59aecbb13a3d337bfda5097",
+        "triangles": 28,
+        "vertices": 56,
+        "viewer": "opencascade",
+        "warnings": []
+      },
+      "digest": "514ff3a245435aef73d1bfd7cca2580a5334bcf257fc31739ae4ee7ed8c22954",
+      "occurred_at": "2026-10-21T15:50:33.998514Z",
+      "previous_event_digest": "c88debd4996e5f0915541efd101dc02a1cf7ca451468164ccaf68ef4197eccc3",
+      "event_digest": "a0b7eafaa6c02e29e7424f72428c12101f029cd2db27f6e374db43536d2a6952"
+    },
+    {
+      "sequence": 7,
+      "event_type": "design.compiled",
+      "aggregate_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+      "payload": {
+        "components": 2,
+        "design_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+        "envelope": {
+          "max": [
+            50.0,
+            80.0,
+            60.0
+          ],
+          "min": [
+            -50.0,
+            0.0,
+            0.0
+          ]
+        },
+        "fused": true,
+        "label": "L-bracket 100 x 80 x 60",
+        "material": null,
+        "provider": "opencascade",
+        "tolerances": [
+          "ISO 2768-m (declared)"
+        ],
+        "warnings": []
+      },
+      "digest": "b0e616c7afd2a8a0c9daab653e307dd16c6bae3ce6a378698b5fe545c5d96324",
+      "occurred_at": "2026-10-21T15:50:33.998545Z",
+      "previous_event_digest": "a0b7eafaa6c02e29e7424f72428c12101f029cd2db27f6e374db43536d2a6952",
+      "event_digest": "5b126353efe648e3b10a377857ae3e5651c69cfbf5ea40331f44b3069df3980b"
+    },
+    {
+      "sequence": 8,
+      "event_type": "design.measured",
+      "aggregate_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+      "payload": {
+        "bounds": {
+          "max": [
+            50.0,
+            80.0,
+            60.0
+          ],
+          "min": [
+            -50.0,
+            0.0,
+            0.0
+          ]
+        },
+        "centroid_mm": [
+          -4.03027779499911e-16,
+          25.818181818181817,
+          15.818181818181817
+        ],
+        "design_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+        "mass_g": null,
+        "measured_by": "OpenCascade (opt-in)",
+        "provider": "opencascade",
+        "solid_count": 1,
+        "surface_area_mm2": 30112.0,
+        "valid": true,
+        "volume_mm3": 105600.0
+      },
+      "digest": "4e4a69eb17184c586130b330459eb51df8cde2f96857c5d6571a2c63598fa4f1",
+      "occurred_at": "2026-10-21T15:50:33.998584Z",
+      "previous_event_digest": "5b126353efe648e3b10a377857ae3e5651c69cfbf5ea40331f44b3069df3980b",
+      "event_digest": "d8457edde4504d65b30dc9a16d9f2bd8dce12d9bc0f9d2b1452a7eb04f8adb09"
+    },
+    {
+      "sequence": 9,
+      "event_type": "design.checked",
+      "aggregate_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+      "payload": {
+        "checks": [
+          {
+            "expected": true,
+            "id": "brep_valid",
+            "label": "B-Rep valid",
+            "measured": true,
+            "passed": true,
+            "status": "passed",
+            "tolerance": 0.0,
+            "unit": "bool"
+          },
+          {
+            "expected": 1.0,
+            "id": "single_solid",
+            "label": "Single solid",
+            "measured": 1.0,
+            "passed": true,
+            "status": "passed",
+            "tolerance": 0.0,
+            "unit": "solid"
+          },
+          {
+            "expected": [
+              -50.0,
+              50.0
+            ],
+            "id": "envelope_x",
+            "label": "Envelope X",
+            "measured": [
+              -50.0,
+              50.0
+            ],
+            "passed": true,
+            "status": "passed",
+            "tolerance": 0.01,
+            "unit": "mm"
+          },
+          {
+            "expected": [
+              0.0,
+              80.0
+            ],
+            "id": "envelope_y",
+            "label": "Envelope Y",
+            "measured": [
+              0.0,
+              80.0
+            ],
+            "passed": true,
+            "status": "passed",
+            "tolerance": 0.01,
+            "unit": "mm"
+          },
+          {
+            "expected": [
+              0.0,
+              60.0
+            ],
+            "id": "envelope_z",
+            "label": "Envelope Z",
+            "measured": [
+              0.0,
+              60.0
+            ],
+            "passed": true,
+            "status": "passed",
+            "tolerance": 0.01,
+            "unit": "mm"
+          }
+        ],
+        "design_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+        "provider": "opencascade",
+        "verified": true
+      },
+      "digest": "b2e9652a7a378ffbe7bde42db38383cb8a73584d4482daf03112cb8598f609e3",
+      "occurred_at": "2026-10-21T15:50:33.998625Z",
+      "previous_event_digest": "d8457edde4504d65b30dc9a16d9f2bd8dce12d9bc0f9d2b1452a7eb04f8adb09",
+      "event_digest": "a3c86e0452d5bdbdeeac7c41915d29eb68cc202739d18b2e354fdc4ada57c431"
+    },
+    {
+      "sequence": 10,
+      "event_type": "chat.turn",
+      "aggregate_id": "studio",
+      "payload": {
+        "cad_provider": "opencascade",
+        "design_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+        "design_requested": true,
+        "missing": [],
+        "model": "deterministic-paraphrase-v1",
+        "offline": true,
+        "prompt_chars": 49,
+        "prompt_sha256": "9ca2e9fc3480c9c719c0e74bb209c350012a0531fbf9b26b7dc387758f04f7c8",
+        "provider": "local"
+      },
+      "digest": "3846034b3e64ff92d0362e1ccda5ffdf1817650866a1b6fa53efea25aa43b6b2",
+      "occurred_at": "2026-10-21T15:50:33.999185Z",
+      "previous_event_digest": "a3c86e0452d5bdbdeeac7c41915d29eb68cc202739d18b2e354fdc4ada57c431",
+      "event_digest": "34570a8361364feee944612c21314c3b3e5354419127b1731a6c2207e9765d66"
+    },
+    {
+      "sequence": 11,
+      "event_type": "design.intent",
+      "aggregate_id": "48af887d25d0f482558a616a260d351f7ce98448b8a3e7d8f3099a1fa363a830",
+      "payload": {
+        "cache_hit": false,
+        "design_id": "48af887d25d0f482558a616a260d351f7ce98448b8a3e7d8f3099a1fa363a830",
+        "envelope": {
+          "max": [
+            55.0,
+            60.0,
+            80.0
+          ],
+          "min": [
+            -55.0,
+            0.0,
+            0.0
+          ]
+        },
+        "label": "L-bracket 110 x 60 x 80",
+        "material": null,
+        "provider": "opencascade",
+        "script_sha256": "7a32187b24d68aa68115c116bdb50b912f441b7441d08fb673380e8c9a9a4437",
+        "template": "l_bracket",
+        "tolerances": [
+          "ISO 2768-m (declared)"
+        ]
+      },
+      "digest": "e07a02ac56106d34c6ef023de8900c93685b0250cbb1a7a40626802e00547954",
+      "occurred_at": "2026-10-21T15:52:18.420832Z",
+      "previous_event_digest": "34570a8361364feee944612c21314c3b3e5354419127b1731a6c2207e9765d66",
+      "event_digest": "6085043f56f0903e8b4b676218d7a47c36eaa996a89abe1f38c9727584e89de3"
+    },
+    {
+      "sequence": 12,
+      "event_type": "provider.build.requested",
+      "aggregate_id": "48af887d25d0f482558a616a260d351f7ce98448b8a3e7d8f3099a1fa363a830",
+      "payload": {
+        "design_id": "48af887d25d0f482558a616a260d351f7ce98448b8a3e7d8f3099a1fa363a830",
+        "provider": "opencascade",
+        "provider_version": "7.9.3",
+        "script_sha256": "7a32187b24d68aa68115c116bdb50b912f441b7441d08fb673380e8c9a9a4437"
+      },
+      "digest": "7e17ebc4a0242dd95dc2aabde26c78ca745a98c0192a812bccf411e97130a67e",
+      "occurred_at": "2026-10-21T15:52:18.420951Z",
+      "previous_event_digest": "6085043f56f0903e8b4b676218d7a47c36eaa996a89abe1f38c9727584e89de3",
+      "event_digest": "8d167e2422bb27ac302445eb291edcfa32f40fc75db1902ce5dfa7297fc0c577"
+    },
+    {
+      "sequence": 13,
+      "event_type": "provider.build.completed",
+      "aggregate_id": "48af887d25d0f482558a616a260d351f7ce98448b8a3e7d8f3099a1fa363a830",
+      "payload": {
+        "design_id": "48af887d25d0f482558a616a260d351f7ce98448b8a3e7d8f3099a1fa363a830",
+        "measured": {
+          "bounds": {
+            "max": [
+              55.0,
+              60.0,
+              80.0
+            ],
+            "min": [
+              -55.0,
+              0.0,
+              0.0
+            ]
+          },
+          "centroid_mm": [
+            -1.7307857014748655e-16,
+            15.81818181818182,
+            25.818181818181824
+          ],
+          "mass_g": null,
+          "surface_area_mm2": 32912.0,
+          "volume_mm3": 116159.99999999999
+        },
+        "measured_by": "OpenCascade (opt-in)",
+        "native_kind": null,
+        "native_sha256": null,
+        "provider": "opencascade",
+        "provider_version": "7.9.3",
+        "script_sha256": "7a32187b24d68aa68115c116bdb50b912f441b7441d08fb673380e8c9a9a4437",
+        "solid_count": 1,
+        "step_sha256": "106a011ab76dcf4c99cfa090234e57de45d31a542f9e77a1902b06adf1385809",
+        "valid": true,
+        "warnings": []
+      },
+      "digest": "c3d960cb388d191853ea622218f036077b26518bd21177ba057464f58ecab58e",
+      "occurred_at": "2026-10-21T15:52:18.438533Z",
+      "previous_event_digest": "8d167e2422bb27ac302445eb291edcfa32f40fc75db1902ce5dfa7297fc0c577",
+      "event_digest": "30be9af227bda6485b43fbca04caf3532af5bbd7508a1dcd8e0df1e82cef9902"
+    },
+    {
+      "sequence": 14,
+      "event_type": "artifact.stored",
+      "aggregate_id": "48af887d25d0f482558a616a260d351f7ce98448b8a3e7d8f3099a1fa363a830",
+      "payload": {
+        "design_id": "48af887d25d0f482558a616a260d351f7ce98448b8a3e7d8f3099a1fa363a830",
+        "kind": "script",
+        "provider": "opencascade",
+        "sha256": "7a32187b24d68aa68115c116bdb50b912f441b7441d08fb673380e8c9a9a4437",
+        "size_bytes": 650
+      },
+      "digest": "9c280c62223f81bf1e41c3015a12701f72217b49f700b21eb1aee11937d77b1c",
+      "occurred_at": "2026-10-21T15:52:18.438704Z",
+      "previous_event_digest": "30be9af227bda6485b43fbca04caf3532af5bbd7508a1dcd8e0df1e82cef9902",
+      "event_digest": "22b7c7f00745abf6e613e869196e68efdb32438bf4f46a1fd2b2065d250e2aff"
+    },
+    {
+      "sequence": 15,
+      "event_type": "artifact.stored",
+      "aggregate_id": "48af887d25d0f482558a616a260d351f7ce98448b8a3e7d8f3099a1fa363a830",
+      "payload": {
+        "design_id": "48af887d25d0f482558a616a260d351f7ce98448b8a3e7d8f3099a1fa363a830",
+        "kind": "step",
+        "provider": "opencascade",
+        "sha256": "106a011ab76dcf4c99cfa090234e57de45d31a542f9e77a1902b06adf1385809",
+        "size_bytes": 33978,
+        "source": "provider:opencascade"
+      },
+      "digest": "6760a57dfcea823ce282933f374461237f6aac5055b84119256b58f9ab769792",
+      "occurred_at": "2026-10-21T15:52:18.438778Z",
+      "previous_event_digest": "22b7c7f00745abf6e613e869196e68efdb32438bf4f46a1fd2b2065d250e2aff",
+      "event_digest": "ae4c81b1d58ca273aeec83d95d44d4a462cbc0939766bb37555341db7c94e9a5"
+    },
+    {
+      "sequence": 16,
+      "event_type": "view.imported",
+      "aggregate_id": "48af887d25d0f482558a616a260d351f7ce98448b8a3e7d8f3099a1fa363a830",
+      "payload": {
+        "bounds": {
+          "max": [
+            55.0,
+            60.0,
+            80.0
+          ],
+          "min": [
+            -55.0,
+            0.0,
+            0.0
+          ]
+        },
+        "design_id": "48af887d25d0f482558a616a260d351f7ce98448b8a3e7d8f3099a1fa363a830",
+        "provider": "opencascade",
+        "role": "view-only",
+        "solids": 1,
+        "step_sha256": "106a011ab76dcf4c99cfa090234e57de45d31a542f9e77a1902b06adf1385809",
+        "triangles": 28,
+        "vertices": 56,
+        "viewer": "opencascade",
+        "warnings": []
+      },
+      "digest": "579c764e4d65df4499fb64a532f383cb64e9d015e8717307a09b9ce202ea754f",
+      "occurred_at": "2026-10-21T15:52:18.438812Z",
+      "previous_event_digest": "ae4c81b1d58ca273aeec83d95d44d4a462cbc0939766bb37555341db7c94e9a5",
+      "event_digest": "f561e8bdc4aea150b90b5cffb272547702138a105a0b4bf9ab7552b0e90c34cd"
+    },
+    {
+      "sequence": 17,
+      "event_type": "design.compiled",
+      "aggregate_id": "48af887d25d0f482558a616a260d351f7ce98448b8a3e7d8f3099a1fa363a830",
+      "payload": {
+        "components": 2,
+        "design_id": "48af887d25d0f482558a616a260d351f7ce98448b8a3e7d8f3099a1fa363a830",
+        "envelope": {
+          "max": [
+            55.0,
+            60.0,
+            80.0
+          ],
+          "min": [
+            -55.0,
+            0.0,
+            0.0
+          ]
+        },
+        "fused": true,
+        "label": "L-bracket 110 x 60 x 80",
+        "material": null,
+        "provider": "opencascade",
+        "tolerances": [
+          "ISO 2768-m (declared)"
+        ],
+        "warnings": []
+      },
+      "digest": "f0ebf6d2e746e0d28686dbbc128a870059984cdbe0241936468c6434ec475ef8",
+      "occurred_at": "2026-10-21T15:52:18.438844Z",
+      "previous_event_digest": "f561e8bdc4aea150b90b5cffb272547702138a105a0b4bf9ab7552b0e90c34cd",
+      "event_digest": "fef6212cd6cbb2bc134edc9b2aaa4d858df250b4857b8609a38cfe1b2233e6fe"
+    },
+    {
+      "sequence": 18,
+      "event_type": "design.measured",
+      "aggregate_id": "48af887d25d0f482558a616a260d351f7ce98448b8a3e7d8f3099a1fa363a830",
+      "payload": {
+        "bounds": {
+          "max": [
+            55.0,
+            60.0,
+            80.0
+          ],
+          "min": [
+            -55.0,
+            0.0,
+            0.0
+          ]
+        },
+        "centroid_mm": [
+          -1.7307857014748655e-16,
+          15.81818181818182,
+          25.818181818181824
+        ],
+        "design_id": "48af887d25d0f482558a616a260d351f7ce98448b8a3e7d8f3099a1fa363a830",
+        "mass_g": null,
+        "measured_by": "OpenCascade (opt-in)",
+        "provider": "opencascade",
+        "solid_count": 1,
+        "surface_area_mm2": 32912.0,
+        "valid": true,
+        "volume_mm3": 116159.99999999999
+      },
+      "digest": "4e36713227e852fe523dc5b2567ddaa5cc6e8620b9a4009d1e10d2381ad43cd6",
+      "occurred_at": "2026-10-21T15:52:18.438873Z",
+      "previous_event_digest": "fef6212cd6cbb2bc134edc9b2aaa4d858df250b4857b8609a38cfe1b2233e6fe",
+      "event_digest": "f352c7acb524e9421f6296b561d63e06e29a836970817fb2a0296ea75668947c"
+    },
+    {
+      "sequence": 19,
+      "event_type": "design.checked",
+      "aggregate_id": "48af887d25d0f482558a616a260d351f7ce98448b8a3e7d8f3099a1fa363a830",
+      "payload": {
+        "checks": [
+          {
+            "expected": true,
+            "id": "brep_valid",
+            "label": "B-Rep valid",
+            "measured": true,
+            "passed": true,
+            "status": "passed",
+            "tolerance": 0.0,
+            "unit": "bool"
+          },
+          {
+            "expected": 1.0,
+            "id": "single_solid",
+            "label": "Single solid",
+            "measured": 1.0,
+            "passed": true,
+            "status": "passed",
+            "tolerance": 0.0,
+            "unit": "solid"
+          },
+          {
+            "expected": [
+              -55.0,
+              55.0
+            ],
+            "id": "envelope_x",
+            "label": "Envelope X",
+            "measured": [
+              -55.0,
+              55.0
+            ],
+            "passed": true,
+            "status": "passed",
+            "tolerance": 0.01,
+            "unit": "mm"
+          },
+          {
+            "expected": [
+              0.0,
+              60.0
+            ],
+            "id": "envelope_y",
+            "label": "Envelope Y",
+            "measured": [
+              0.0,
+              60.0
+            ],
+            "passed": true,
+            "status": "passed",
+            "tolerance": 0.01,
+            "unit": "mm"
+          },
+          {
+            "expected": [
+              0.0,
+              80.0
+            ],
+            "id": "envelope_z",
+            "label": "Envelope Z",
+            "measured": [
+              0.0,
+              80.0
+            ],
+            "passed": true,
+            "status": "passed",
+            "tolerance": 0.01,
+            "unit": "mm"
+          }
+        ],
+        "design_id": "48af887d25d0f482558a616a260d351f7ce98448b8a3e7d8f3099a1fa363a830",
+        "provider": "opencascade",
+        "verified": true
+      },
+      "digest": "ad9a41bd137544d67ae0c15d0210e8815810851e616962f8d2a00428dbe0dd6d",
+      "occurred_at": "2026-10-21T15:52:18.438917Z",
+      "previous_event_digest": "f352c7acb524e9421f6296b561d63e06e29a836970817fb2a0296ea75668947c",
+      "event_digest": "d686d60c37032a958406b9fdbffc24d31172bfe0e302555fb35c16f2a398a7f2"
+    },
+    {
+      "sequence": 20,
+      "event_type": "chat.turn",
+      "aggregate_id": "studio",
+      "payload": {
+        "base_design_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+        "cad_provider": "opencascade",
+        "design_id": "48af887d25d0f482558a616a260d351f7ce98448b8a3e7d8f3099a1fa363a830",
+        "design_requested": true,
+        "focus_chars": 0,
+        "missing": [],
+        "model": "minimax/minimax-m3.1-flash:free",
+        "offline": false,
+        "prompt_chars": 142,
+        "prompt_sha256": "446d8de4b9c7663ec6f8fac5c30a83229b1303dc43760df7ab8e4a21d68d6631",
+        "provider": "openrouter",
+        "usage": {
+          "input_tokens": 4216,
+          "output_tokens": 3362
+        }
+      },
+      "digest": "8e12f26885924ad74303a64bdc1924607c3324ad6af9bf1c4707e878d34d49bc",
+      "occurred_at": "2026-10-21T15:52:18.439442Z",
+      "previous_event_digest": "d686d60c37032a958406b9fdbffc24d31172bfe0e302555fb35c16f2a398a7f2",
+      "event_digest": "7e8b8e8b18a6f5076b620aec47ad4dbe937e573f57e71da2815188c7417b5883"
+    },
+    {
+      "sequence": 21,
+      "event_type": "design.intent",
+      "aggregate_id": "d9b4707952f2f20f584ed4a35e7b69f3bd3991abd26ccd72f21bfd8b0461fec1",
+      "payload": {
+        "cache_hit": false,
+        "design_id": "d9b4707952f2f20f584ed4a35e7b69f3bd3991abd26ccd72f21bfd8b0461fec1",
+        "envelope": null,
+        "label": "L-bracket 110 x 80 x 60 mm",
+        "material": null,
+        "provider": "opencascade",
+        "script_sha256": "ca77e3f0384f890de9df774cb6e76642a30aae57a9a62d49a24ff91c38217690",
+        "template": null,
+        "tolerances": []
+      },
+      "digest": "ac57368fc4adae24b06e7a6f4f28d3cd7df27c3bd1d03ae7a9c4e34b2737fc56",
+      "occurred_at": "2026-10-21T15:53:50.536465Z",
+      "previous_event_digest": "7e8b8e8b18a6f5076b620aec47ad4dbe937e573f57e71da2815188c7417b5883",
+      "event_digest": "3aa5ced0546ce142af35d2051dfabc13f15d3024a32c4f4d076c01014d65b92d"
+    },
+    {
+      "sequence": 22,
+      "event_type": "provider.build.requested",
+      "aggregate_id": "d9b4707952f2f20f584ed4a35e7b69f3bd3991abd26ccd72f21bfd8b0461fec1",
+      "payload": {
+        "design_id": "d9b4707952f2f20f584ed4a35e7b69f3bd3991abd26ccd72f21bfd8b0461fec1",
+        "provider": "opencascade",
+        "provider_version": "7.9.3",
+        "script_sha256": "ca77e3f0384f890de9df774cb6e76642a30aae57a9a62d49a24ff91c38217690"
+      },
+      "digest": "dd7b1111a794d9382d4cf3f88ca541529bed837ef2e77740d0f1ea72af1ce7b8",
+      "occurred_at": "2026-10-21T15:53:50.536552Z",
+      "previous_event_digest": "3aa5ced0546ce142af35d2051dfabc13f15d3024a32c4f4d076c01014d65b92d",
+      "event_digest": "80290554f6ae405ffe7fc9b3b2169010ccd5a4aac1879550be942350b1e09de2"
+    },
+    {
+      "sequence": 23,
+      "event_type": "provider.build.completed",
+      "aggregate_id": "d9b4707952f2f20f584ed4a35e7b69f3bd3991abd26ccd72f21bfd8b0461fec1",
+      "payload": {
+        "design_id": "d9b4707952f2f20f584ed4a35e7b69f3bd3991abd26ccd72f21bfd8b0461fec1",
+        "measured": {
+          "bounds": {
+            "max": [
+              60.0,
+              80.0,
+              60.0
+            ],
+            "min": [
+              -50.0,
+              0.0,
+              0.0
+            ]
+          },
+          "centroid_mm": [
+            5.0,
+            25.818181818181824,
+            15.818181818181818
+          ],
+          "mass_g": null,
+          "surface_area_mm2": 32912.0,
+          "volume_mm3": 116159.99999999997
+        },
+        "measured_by": "OpenCascade (opt-in)",
+        "native_kind": null,
+        "native_sha256": null,
+        "provider": "opencascade",
+        "provider_version": "7.9.3",
+        "script_sha256": "ca77e3f0384f890de9df774cb6e76642a30aae57a9a62d49a24ff91c38217690",
+        "solid_count": 1,
+        "step_sha256": "c14c644b23ce998685b5fad66091bb36fb9516f83126a7a2667f83a4ce884319",
+        "valid": true,
+        "warnings": []
+      },
+      "digest": "ac9be2f514f151ce49a67bf0a0ddc78eb90f4f5f563eafff8723847c0a28954b",
+      "occurred_at": "2026-10-21T15:53:50.554829Z",
+      "previous_event_digest": "80290554f6ae405ffe7fc9b3b2169010ccd5a4aac1879550be942350b1e09de2",
+      "event_digest": "568e30df69e8d0e45f02a5efd237d185ae44e29257be2daa16d7c8e207d3862a"
+    },
+    {
+      "sequence": 24,
+      "event_type": "artifact.stored",
+      "aggregate_id": "d9b4707952f2f20f584ed4a35e7b69f3bd3991abd26ccd72f21bfd8b0461fec1",
+      "payload": {
+        "design_id": "d9b4707952f2f20f584ed4a35e7b69f3bd3991abd26ccd72f21bfd8b0461fec1",
+        "kind": "script",
+        "provider": "opencascade",
+        "sha256": "ca77e3f0384f890de9df774cb6e76642a30aae57a9a62d49a24ff91c38217690",
+        "size_bytes": 650
+      },
+      "digest": "fbf6ddb7a2e066dd74ea195ff8952d1f9eef77ff683537d6899678e263f0a61d",
+      "occurred_at": "2026-10-21T15:53:50.555044Z",
+      "previous_event_digest": "568e30df69e8d0e45f02a5efd237d185ae44e29257be2daa16d7c8e207d3862a",
+      "event_digest": "2b25e400f7e108e801c9685cb7eb8b918d365fd1dc517f48e8877b108b9a18cb"
+    },
+    {
+      "sequence": 25,
+      "event_type": "artifact.stored",
+      "aggregate_id": "d9b4707952f2f20f584ed4a35e7b69f3bd3991abd26ccd72f21bfd8b0461fec1",
+      "payload": {
+        "design_id": "d9b4707952f2f20f584ed4a35e7b69f3bd3991abd26ccd72f21bfd8b0461fec1",
+        "kind": "step",
+        "provider": "opencascade",
+        "sha256": "c14c644b23ce998685b5fad66091bb36fb9516f83126a7a2667f83a4ce884319",
+        "size_bytes": 33978,
+        "source": "provider:opencascade"
+      },
+      "digest": "b44d7110b50fe75bf5a3a96124427777113b8d304db129ce5635e9d2dafb6e52",
+      "occurred_at": "2026-10-21T15:53:50.555120Z",
+      "previous_event_digest": "2b25e400f7e108e801c9685cb7eb8b918d365fd1dc517f48e8877b108b9a18cb",
+      "event_digest": "749622905182f846f5665c2c3d7b49e4292911dbe2fe8768333dbbf6ab7488bb"
+    },
+    {
+      "sequence": 26,
+      "event_type": "view.imported",
+      "aggregate_id": "d9b4707952f2f20f584ed4a35e7b69f3bd3991abd26ccd72f21bfd8b0461fec1",
+      "payload": {
+        "bounds": {
+          "max": [
+            60.0,
+            80.0,
+            60.0
+          ],
+          "min": [
+            -50.0,
+            0.0,
+            0.0
+          ]
+        },
+        "design_id": "d9b4707952f2f20f584ed4a35e7b69f3bd3991abd26ccd72f21bfd8b0461fec1",
+        "provider": "opencascade",
+        "role": "view-only",
+        "solids": 1,
+        "step_sha256": "c14c644b23ce998685b5fad66091bb36fb9516f83126a7a2667f83a4ce884319",
+        "triangles": 28,
+        "vertices": 56,
+        "viewer": "opencascade",
+        "warnings": []
+      },
+      "digest": "64495aea2c5c90ba2f51e933cb8b3f9d9cfb44dbb126e9d54c5635f9c19e5ed3",
+      "occurred_at": "2026-10-21T15:53:50.555154Z",
+      "previous_event_digest": "749622905182f846f5665c2c3d7b49e4292911dbe2fe8768333dbbf6ab7488bb",
+      "event_digest": "f6ac338221e44149cbf811d9c6cd01afd41e7610bc543f8e2a9a8bb37e4710b2"
+    },
+    {
+      "sequence": 27,
+      "event_type": "design.compiled",
+      "aggregate_id": "d9b4707952f2f20f584ed4a35e7b69f3bd3991abd26ccd72f21bfd8b0461fec1",
+      "payload": {
+        "components": 2,
+        "design_id": "d9b4707952f2f20f584ed4a35e7b69f3bd3991abd26ccd72f21bfd8b0461fec1",
+        "envelope": null,
+        "fused": true,
+        "label": "L-bracket 110 x 80 x 60 mm",
+        "material": null,
+        "provider": "opencascade",
+        "tolerances": [],
+        "warnings": []
+      },
+      "digest": "dab66d93e836690b5a914c3a045333a5fe1bf861c98830e1308b1167274e4470",
+      "occurred_at": "2026-10-21T15:53:50.555185Z",
+      "previous_event_digest": "f6ac338221e44149cbf811d9c6cd01afd41e7610bc543f8e2a9a8bb37e4710b2",
+      "event_digest": "fc9e105f27cfe4386f0ab93795f489eaa5d3532417506950ea9d1bb4f1e620e7"
+    },
+    {
+      "sequence": 28,
+      "event_type": "design.measured",
+      "aggregate_id": "d9b4707952f2f20f584ed4a35e7b69f3bd3991abd26ccd72f21bfd8b0461fec1",
+      "payload": {
+        "bounds": {
+          "max": [
+            60.0,
+            80.0,
+            60.0
+          ],
+          "min": [
+            -50.0,
+            0.0,
+            0.0
+          ]
+        },
+        "centroid_mm": [
+          5.0,
+          25.818181818181824,
+          15.818181818181818
+        ],
+        "design_id": "d9b4707952f2f20f584ed4a35e7b69f3bd3991abd26ccd72f21bfd8b0461fec1",
+        "mass_g": null,
+        "measured_by": "OpenCascade (opt-in)",
+        "provider": "opencascade",
+        "solid_count": 1,
+        "surface_area_mm2": 32912.0,
+        "valid": true,
+        "volume_mm3": 116159.99999999997
+      },
+      "digest": "3d3be5651012fb5b4068a8fa05993c2716fc45fef83c85cf0f71072e10768de3",
+      "occurred_at": "2026-10-21T15:53:50.555213Z",
+      "previous_event_digest": "fc9e105f27cfe4386f0ab93795f489eaa5d3532417506950ea9d1bb4f1e620e7",
+      "event_digest": "53ad68959b0ec3db729a6908d15538195cb0d24be128937409afb247de41c1c8"
+    },
+    {
+      "sequence": 29,
+      "event_type": "design.checked",
+      "aggregate_id": "d9b4707952f2f20f584ed4a35e7b69f3bd3991abd26ccd72f21bfd8b0461fec1",
+      "payload": {
+        "checks": [
+          {
+            "expected": true,
+            "id": "brep_valid",
+            "label": "B-Rep valid",
+            "measured": true,
+            "passed": true,
+            "status": "passed",
+            "tolerance": 0.0,
+            "unit": "bool"
+          },
+          {
+            "expected": 1.0,
+            "id": "single_solid",
+            "label": "Single solid",
+            "measured": 1.0,
+            "passed": true,
+            "status": "passed",
+            "tolerance": 0.0,
+            "unit": "solid"
+          }
+        ],
+        "design_id": "d9b4707952f2f20f584ed4a35e7b69f3bd3991abd26ccd72f21bfd8b0461fec1",
+        "provider": "opencascade",
+        "verified": true
+      },
+      "digest": "56c5fdcb2058916e34a654bf33b23faaaf535ce9f9faa19ef3a62898adf4ae20",
+      "occurred_at": "2026-10-21T15:53:50.555247Z",
+      "previous_event_digest": "53ad68959b0ec3db729a6908d15538195cb0d24be128937409afb247de41c1c8",
+      "event_digest": "3c7d75dc5093e4814431937e7c79a518851f2c3ff984524bbcdc21af732a334c"
+    },
+    {
+      "sequence": 30,
+      "event_type": "chat.turn",
+      "aggregate_id": "studio",
+      "payload": {
+        "base_design_id": "53b435190f52cdfd67e3e65ecfbad81673c18f00a6174832cde0d052eec96c02",
+        "cad_provider": "opencascade",
+        "design_id": "d9b4707952f2f20f584ed4a35e7b69f3bd3991abd26ccd72f21bfd8b0461fec1",
+        "design_requested": true,
+        "focus_chars": 0,
+        "missing": [],
+        "model": "minimax/minimax-m3.1-flash:free",
+        "offline": false,
+        "prompt_chars": 214,
+        "prompt_sha256": "19f82618ec44b32b5ecb91b61b8bbcd0bee8949b11f97754478de4437555f7ad",
+        "provider": "openrouter",
+        "usage": {
+          "input_tokens": 4223,
+          "output_tokens": 1434
+        }
+      },
+      "digest": "0c96769f8e4a83ee65e45dc14085840d0bb2b9f517b9957c23db4d0cb628e074",
+      "occurred_at": "2026-10-21T15:53:50.555709Z",
+      "previous_event_digest": "3c7d75dc5093e4814431937e7c79a518851f2c3ff984524bbcdc21af732a334c",
+      "event_digest": "0b1367e393fc3eddfc566a2261878abbe6a5a6ee4ea9a199cf18151353fb8e4b"
+    },
+    {
+      "sequence": 31,
+      "event_type": "design.intent",
+      "aggregate_id": "baef8247c0afb89533227b2e4f31353ab06527fd5d15a17b742e351592c31230",
+      "payload": {
+        "cache_hit": false,
+        "design_id": "baef8247c0afb89533227b2e4f31353ab06527fd5d15a17b742e351592c31230",
+        "envelope": null,
+        "label": "L-bracket 110 x 80 x 60 mm (edited)",
+        "material": null,
+        "provider": "opencascade",
+        "script_sha256": "16a1f22289788e1097744b8ebe6b14d3caa34a409c4f4f6baa343fd6298918fa",
+        "template": null,
+        "tolerances": []
+      },
+      "digest": "ae869ee20a808f9bf01cc374c5349d50a79c74378ada89177fedd4a41d83f161",
+      "occurred_at": "2026-10-21T15:56:42.354210Z",
+      "previous_event_digest": "0b1367e393fc3eddfc566a2261878abbe6a5a6ee4ea9a199cf18151353fb8e4b",
+      "event_digest": "b73a47309572d23fc4b19703c028aeb305cbd1cb3840e8a24ca5f454bfaba729"
+    },
+    {
+      "sequence": 32,
+      "event_type": "provider.build.requested",
+      "aggregate_id": "baef8247c0afb89533227b2e4f31353ab06527fd5d15a17b742e351592c31230",
+      "payload": {
+        "design_id": "baef8247c0afb89533227b2e4f31353ab06527fd5d15a17b742e351592c31230",
+        "provider": "opencascade",
+        "provider_version": "7.9.3",
+        "script_sha256": "16a1f22289788e1097744b8ebe6b14d3caa34a409c4f4f6baa343fd6298918fa"
+      },
+      "digest": "8b44fb3edf3da3ec493826eb9c46efa529699809ddd56ac19b3bb31d92f84a3f",
+      "occurred_at": "2026-10-21T15:56:42.354282Z",
+      "previous_event_digest": "b73a47309572d23fc4b19703c028aeb305cbd1cb3840e8a24ca5f454bfaba729",
+      "event_digest": "aaa4fbefceb008bbbd2117eb7e194960c70e2071007d89786897f87daad92f1d"
+    },
+    {
+      "sequence": 33,
+      "event_type": "provider.build.completed",
+      "aggregate_id": "baef8247c0afb89533227b2e4f31353ab06527fd5d15a17b742e351592c31230",
+      "payload": {
+        "design_id": "baef8247c0afb89533227b2e4f31353ab06527fd5d15a17b742e351592c31230",
+        "measured": {
+          "bounds": {
+            "max": [
+              61.0,
+              80.0,
+              60.0
+            ],
+            "min": [
+              -50.0,
+              0.0,
+              0.0
+            ]
+          },
+          "centroid_mm": [
+            5.304109589041095,
+            25.895890410958906,
+            15.753424657534255
+          ],
+          "mass_g": null,
+          "surface_area_mm2": 33088.0,
+          "volume_mm3": 116799.99999999997
+        },
+        "measured_by": "OpenCascade (opt-in)",
+        "native_kind": null,
+        "native_sha256": null,
+        "provider": "opencascade",
+        "provider_version": "7.9.3",
+        "script_sha256": "16a1f22289788e1097744b8ebe6b14d3caa34a409c4f4f6baa343fd6298918fa",
+        "solid_count": 1,
+        "step_sha256": "a689ac4b49f18c96a5a5c640716b10f68415ffac2ace28f5a3bac45bed0861d1",
+        "valid": true,
+        "warnings": []
+      },
+      "digest": "633f2ff200d7b532581224cc686dc51c33bc0332d264e0b913eef75862ac3e10",
+      "occurred_at": "2026-10-21T15:56:42.371675Z",
+      "previous_event_digest": "aaa4fbefceb008bbbd2117eb7e194960c70e2071007d89786897f87daad92f1d",
+      "event_digest": "f47b6f3c7e17164e7b7cc753af5d3b281c0d91d824e938443599dd9167fa3e7c"
+    },
+    {
+      "sequence": 34,
+      "event_type": "artifact.stored",
+      "aggregate_id": "baef8247c0afb89533227b2e4f31353ab06527fd5d15a17b742e351592c31230",
+      "payload": {
+        "design_id": "baef8247c0afb89533227b2e4f31353ab06527fd5d15a17b742e351592c31230",
+        "kind": "script",
+        "provider": "opencascade",
+        "sha256": "16a1f22289788e1097744b8ebe6b14d3caa34a409c4f4f6baa343fd6298918fa",
+        "size_bytes": 650
+      },
+      "digest": "d2c2629a5d05c81d4ec0fb9849b15a178e7d1032fbeb38e8247c078858034f96",
+      "occurred_at": "2026-10-21T15:56:42.371855Z",
+      "previous_event_digest": "f47b6f3c7e17164e7b7cc753af5d3b281c0d91d824e938443599dd9167fa3e7c",
+      "event_digest": "a956fe2f6318e4178f297b4082179f178c876fd8857807e3e4aa81a1f427595a"
+    },
+    {
+      "sequence": 35,
+      "event_type": "artifact.stored",
+      "aggregate_id": "baef8247c0afb89533227b2e4f31353ab06527fd5d15a17b742e351592c31230",
+      "payload": {
+        "design_id": "baef8247c0afb89533227b2e4f31353ab06527fd5d15a17b742e351592c31230",
+        "kind": "step",
+        "provider": "opencascade",
+        "sha256": "a689ac4b49f18c96a5a5c640716b10f68415ffac2ace28f5a3bac45bed0861d1",
+        "size_bytes": 36247,
+        "source": "provider:opencascade"
+      },
+      "digest": "5b59159567fd195f29787666b6245995d7f27fb4fa28d9e449fc86181cbabda0",
+      "occurred_at": "2026-10-21T15:56:42.371941Z",
+      "previous_event_digest": "a956fe2f6318e4178f297b4082179f178c876fd8857807e3e4aa81a1f427595a",
+      "event_digest": "937a18a34449d05b09d99ff177cf873051f4dfcbbeb79ecaa6caa34602c54066"
+    },
+    {
+      "sequence": 36,
+      "event_type": "view.imported",
+      "aggregate_id": "baef8247c0afb89533227b2e4f31353ab06527fd5d15a17b742e351592c31230",
+      "payload": {
+        "bounds": {
+          "max": [
+            61.0,
+            80.0,
+            60.0
+          ],
+          "min": [
+            -50.0,
+            0.0,
+            0.0
+          ]
+        },
+        "design_id": "baef8247c0afb89533227b2e4f31353ab06527fd5d15a17b742e351592c31230",
+        "provider": "opencascade",
+        "role": "view-only",
+        "solids": 1,
+        "step_sha256": "a689ac4b49f18c96a5a5c640716b10f68415ffac2ace28f5a3bac45bed0861d1",
+        "triangles": 32,
+        "vertices": 60,
+        "viewer": "opencascade",
+        "warnings": []
+      },
+      "digest": "42f7fd3b439393be9a3fe2b28501964b7a1eb8d93317ef4afe27b5764418ea24",
+      "occurred_at": "2026-10-21T15:56:42.371976Z",
+      "previous_event_digest": "937a18a34449d05b09d99ff177cf873051f4dfcbbeb79ecaa6caa34602c54066",
+      "event_digest": "f4f1f741ce83827192d8ab5e234565d7e5010f0c3289b4831fa7602689cd1f46"
+    },
+    {
+      "sequence": 37,
+      "event_type": "design.compiled",
+      "aggregate_id": "baef8247c0afb89533227b2e4f31353ab06527fd5d15a17b742e351592c31230",
+      "payload": {
+        "components": 2,
+        "design_id": "baef8247c0afb89533227b2e4f31353ab06527fd5d15a17b742e351592c31230",
+        "envelope": null,
+        "fused": true,
+        "label": "L-bracket 110 x 80 x 60 mm (edited)",
+        "material": null,
+        "provider": "opencascade",
+        "tolerances": [],
+        "warnings": []
+      },
+      "digest": "a647709ffbe6600bab99f6e30ea3be79384cd7a3bbb6e94002ce00d35d001030",
+      "occurred_at": "2026-10-21T15:56:42.372007Z",
+      "previous_event_digest": "f4f1f741ce83827192d8ab5e234565d7e5010f0c3289b4831fa7602689cd1f46",
+      "event_digest": "9afb516a31fa7c6fc97da205fddd58ef862d6d9f3cfd9c9c6c24219fac066d04"
+    },
+    {
+      "sequence": 38,
+      "event_type": "design.measured",
+      "aggregate_id": "baef8247c0afb89533227b2e4f31353ab06527fd5d15a17b742e351592c31230",
+      "payload": {
+        "bounds": {
+          "max": [
+            61.0,
+            80.0,
+            60.0
+          ],
+          "min": [
+            -50.0,
+            0.0,
+            0.0
+          ]
+        },
+        "centroid_mm": [
+          5.304109589041095,
+          25.895890410958906,
+          15.753424657534255
+        ],
+        "design_id": "baef8247c0afb89533227b2e4f31353ab06527fd5d15a17b742e351592c31230",
+        "mass_g": null,
+        "measured_by": "OpenCascade (opt-in)",
+        "provider": "opencascade",
+        "solid_count": 1,
+        "surface_area_mm2": 33088.0,
+        "valid": true,
+        "volume_mm3": 116799.99999999997
+      },
+      "digest": "6e5f4da46d61fec6c36943aeb39fc1c59cbc6e71159d3db1aa659f4f8a1ebf57",
+      "occurred_at": "2026-10-21T15:56:42.372036Z",
+      "previous_event_digest": "9afb516a31fa7c6fc97da205fddd58ef862d6d9f3cfd9c9c6c24219fac066d04",
+      "event_digest": "4ea8b3c460922f5039f245f389fffc6a0f4bf12794514ec8a1ae29a494785ee2"
+    },
+    {
+      "sequence": 39,
+      "event_type": "design.checked",
+      "aggregate_id": "baef8247c0afb89533227b2e4f31353ab06527fd5d15a17b742e351592c31230",
+      "payload": {
+        "checks": [
+          {
+            "expected": true,
+            "id": "brep_valid",
+            "label": "B-Rep valid",
+            "measured": true,
+            "passed": true,
+            "status": "passed",
+            "tolerance": 0.0,
+            "unit": "bool"
+          },
+          {
+            "expected": 1.0,
+            "id": "single_solid",
+            "label": "Single solid",
+            "measured": 1.0,
+            "passed": true,
+            "status": "passed",
+            "tolerance": 0.0,
+            "unit": "solid"
+          }
+        ],
+        "design_id": "baef8247c0afb89533227b2e4f31353ab06527fd5d15a17b742e351592c31230",
+        "provider": "opencascade",
+        "verified": true
+      },
+      "digest": "6e82d30b50e77f9ca7a0ad0207b6b76cdaf48594e5daaf4faacd56d193d9008a",
+      "occurred_at": "2026-10-21T15:56:42.372066Z",
+      "previous_event_digest": "4ea8b3c460922f5039f245f389fffc6a0f4bf12794514ec8a1ae29a494785ee2",
+      "event_digest": "1ac04adc3a5fb22aadce00d2e510b9fa034e5c98c13e85b09c06ab1eee189147"
+    }
+  ],
+  "next_after": 39,
+  "has_more": false,
+  "limit": 100
+}

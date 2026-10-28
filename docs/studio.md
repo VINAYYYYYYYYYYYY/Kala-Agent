@@ -214,6 +214,33 @@ and **one** repair round-trip is allowed before the turn fails honestly.
 The studio also refuses to build a design from an *unparseable* prompt: the
 answer asks for the missing values and no design is compiled.
 
+### Editing a stored design
+
+A design turn can revise a stored design instead of drafting a new part
+(ADR-0012). The request carries `base_design_id` — a design id the backend
+already holds — and optionally `focus`, the one feature the request is about
+(at most 1 024 characters). The backend reads the design's stored canonical
+script from the artifact store, puts it into the prompt it builds for the
+model, and the model is asked for the **complete** revised DesignIntent with
+everything the request does not change left alone. The result is a **new**
+design with its own id and its own measurement; the base design is never
+mutated. The prompt limit of 4 096 characters still covers the operator's text
+only, because the script never travels through the request.
+
+The route refuses an edit turn before any model call: `focus` without a base
+design is `400 focus_requires_base_design`, a base design without a CAD target
+is `400 edit_requires_design_turn`, the `local` provider is
+`400 edit_requires_model`, and an id the store does not hold is
+`404 design_not_found`. The same validation repair and build repair the draft
+turns use carry the base design too, so a repair never revises a part it can no
+longer see.
+
+Every chat response carries `usage`: `{input_tokens, output_tokens}` summed
+over the model calls of that turn, or `null` when no provider reported a
+count. The studio never estimates a token. The journal's `chat.turn` event
+records `base_design_id` and `focus_chars` (the length, never the text) and the
+usage when it was reported, under the same hash chain as every other event.
+
 ## Design checks and limits
 
 Everything in this section is enforced by the code, and every number is a
@@ -908,8 +935,9 @@ The studio does not assert terms-of-service or eligibility claims
 beyond what those sources state.
 
 - ADR-0007 (FreeCAD adapter), ADR-0008 (Solid Edge bridge), ADR-0009
-  (Studio design turns), ADR-0010 (Rust control plane / geometry worker)
-  and ADR-0011 (CAD provider model) — [adr/](adr/).
+  (Studio design turns), ADR-0010 (Rust control plane / geometry worker),
+  ADR-0011 (CAD provider model) and ADR-0012 (edit turns and reported token
+  usage) — [adr/](adr/).
 - `docs/construction-semantics.md` — the construction semantics the
   provider corpus is measured against.
 - OpenCascade.js (WASM, not used):

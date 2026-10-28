@@ -44,7 +44,7 @@ use super::cli_runtime::{
     CliInvocation, CliSpec, consent_message, failure_excerpt, failure_text, program_or_reason, run,
     timeout_seconds,
 };
-use super::{ChatOutcome, ProviderFailure};
+use super::{ChatOutcome, ChatUsage, ProviderFailure};
 
 /// The provider id of the Codex CLI route.
 pub const PROVIDER_ID: &str = "codex_cli";
@@ -119,7 +119,7 @@ pub async fn chat(
     if !run.succeeded() {
         return Err(ProviderFailure::Subprocess(failure_message(&run)));
     }
-    let (text, failure) = parse_events(&run.stdout)?;
+    let (text, failure, usage) = parse_events(&run.stdout)?;
     if let Some(failure) = failure {
         return Err(ProviderFailure::Subprocess(failure));
     }
@@ -140,7 +140,8 @@ pub async fn chat(
             .map(str::to_owned)
             .unwrap_or_else(|| DEFAULT_MODEL.to_owned()),
         false,
-    ))
+    )
+    .with_usage(usage))
 }
 
 /// The bounded failure text of a CLI run that did not exit with status zero.
@@ -164,10 +165,21 @@ fn failure_message(run: &super::cli_runtime::CliRun) -> String {
 /// The assistant's final message is the last `item.completed` event whose
 /// item is an `agent_message`. A `turn.failed` or `error` event is the
 /// failure the operator sees.
-fn parse_events(stdout: &[u8]) -> Result<(Option<String>, Option<String>), ProviderFailure> {
+///
+/// The token counts come from the turn's own report: the `turn.completed`
+/// event's `usage` block when the CLI sends one, otherwise the last
+/// `token_count` event (`{"type":"token_count","info":{"total_token_usage":…}}`
+/// or its `event_msg`/`payload` spelling). A `turn.completed` block wins
+/// because it is the turn's own total; two `token_count` events are
+/// cumulative snapshots, so the last one is the whole turn.
+fn parse_events(
+    stdout: &[u8],
+) -> Result<(Option<String>, Option<String>, ChatUsage), ProviderFailure> {
     let text = String::from_utf8_lossy(stdout);
     let mut answer: Option<String> = None;
     let mut failure: Option<String> = None;
+    let mut completed_usage: Option<ChatUsage> = None;
+    let mut counted_usage: Option<ChatUsage> = None;
     let mut parsed_any = false;
     for line in text.lines() {
         let line = line.trim();
@@ -179,6 +191,19 @@ fn parse_events(stdout: &[u8]) -> Result<(Option<String>, Option<String>), Provi
         };
         parsed_any = true;
         let kind = event.get("type").and_then(Value::as_str).unwrap_or("");
+        let is_token_count = kind == "token_count"
+            || (kind == "event_msg"
+                && event
+                    .get("payload")
+                    .and_then(Value::as_object)
+                    .and_then(|payload| payload.get("type"))
+                    .and_then(Value::as_str)
+                    == Some("token_count"));
+        if is_token_count {
+            if let Some(usage) = token_count_usage(&event) {
+                counted_usage = Some(usage);
+            }
+        }
         let candidate = match kind {
             "item.completed" => {
                 let mut message = None;
@@ -191,6 +216,12 @@ fn parse_events(stdout: &[u8]) -> Result<(Option<String>, Option<String>), Provi
                 }
                 if let Some(text) = message {
                     answer = Some(text);
+                }
+                None
+            }
+            "turn.completed" => {
+                if let Some(usage) = reported_usage(event.get("usage")) {
+                    completed_usage = Some(usage);
                 }
                 None
             }
@@ -207,7 +238,46 @@ fn parse_events(stdout: &[u8]) -> Result<(Option<String>, Option<String>), Provi
             "the Codex CLI output carried no JSON event".to_owned(),
         ));
     }
-    Ok((answer, failure))
+    let usage = completed_usage.or(counted_usage).unwrap_or(ChatUsage::NONE);
+    Ok((answer, failure, usage))
+}
+
+/// The input and output counts of one Codex `usage` object.
+///
+/// `cached_input_tokens` is a subset of `input_tokens`, so it is never added;
+/// `reasoning_output_tokens` is a subset of `output_tokens` for the same
+/// reason.
+fn usage_counts(object: &serde_json::Map<String, Value>) -> ChatUsage {
+    ChatUsage {
+        input_tokens: super::usage::count(object.get("input_tokens")),
+        output_tokens: super::usage::count(object.get("output_tokens")),
+    }
+}
+
+/// The usage block of a value, when it reports any count at all.
+fn reported_usage(value: Option<&Value>) -> Option<ChatUsage> {
+    let usage = usage_counts(value?.as_object()?);
+    usage.is_reported().then_some(usage)
+}
+
+/// The counts of one `token_count` event, in either documented shape.
+fn token_count_usage(event: &serde_json::Map<String, Value>) -> Option<ChatUsage> {
+    let info = event.get("info").and_then(Value::as_object).or_else(|| {
+        event
+            .get("payload")
+            .and_then(Value::as_object)
+            .and_then(|payload| payload.get("info"))
+            .and_then(Value::as_object)
+    });
+    let total = info
+        .and_then(|info| info.get("total_token_usage"))
+        .and_then(Value::as_object)
+        .or_else(|| event.get("total_token_usage").and_then(Value::as_object));
+    let nested = total.map(usage_counts).filter(ChatUsage::is_reported);
+    nested.or_else(|| {
+        let direct = usage_counts(event);
+        direct.is_reported().then_some(direct)
+    })
 }
 
 /// The bounded text of a failure event.

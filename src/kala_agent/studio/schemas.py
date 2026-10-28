@@ -400,11 +400,27 @@ class PreviewResponse(_StrictModel):
     warnings: tuple[Annotated[str, Field(min_length=1, max_length=256)], ...]
 
 
+class ChatUsage(_StrictModel):
+    """The token counts one model call reported (ADR-0012).
+
+    A count the provider did not report stays ``None``; the studio never
+    estimates one and never substitutes a zero. ``ChatResponse.usage`` is the
+    sum over every model call of the turn, or ``None`` when no call reported a
+    count.
+    """
+
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+
+
 class ChatResponse(_StrictModel):
     """A short model reply, never a credential or a long traceback.
 
     ``design`` is present only when the turn produced a compiled, measured,
     verified design. Its absence is the honest "no design was built" signal.
+
+    ``usage`` is always present: it carries the token counts the providers of
+    this turn reported, or ``None`` when none did.
     """
 
     text: Annotated[str, Field(min_length=0, max_length=MAX_PROMPT_LENGTH)]
@@ -412,6 +428,7 @@ class ChatResponse(_StrictModel):
     model: Annotated[str | None, Field(default=None, max_length=MAX_MODEL_ID_LENGTH)] = None
     offline: bool
     design: DesignResult | None = None
+    usage: ChatUsage | None = None
 
 
 class HealthResponse(_StrictModel):
@@ -732,6 +749,7 @@ __all__ = (
     "CadProvidersResponse",
     "ChatRequest",
     "ChatResponse",
+    "ChatUsage",
     "CheckValue",
     "CredentialProviderId",
     "CredentialSource",

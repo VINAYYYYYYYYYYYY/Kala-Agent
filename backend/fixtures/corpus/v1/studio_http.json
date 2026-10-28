@@ -2662,18 +2662,19 @@
             "model": "deterministic-paraphrase-v1",
             "offline": true,
             "provider": "local",
-            "text": "Local helper. Reasoning trace id 9dbbedb7. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. Neutral STEP/STL exports are ready to import into FreeCAD; the studio does not drive a native vendor API. A box 10x20x30 mm for FreeCAD. Show the envelope."
+            "text": "Local helper. Reasoning trace id 9dbbedb7. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. Neutral STEP/STL exports are ready to import into FreeCAD; the studio does not drive a native vendor API. A box 10x20x30 mm for FreeCAD. Show the envelope.",
+            "usage": null
           },
           "body_comparison": "exact",
           "body_deterministic": true,
-          "body_length": 823,
+          "body_length": 836,
           "body_length_role": "length of the recorded body text; the recorded digest is the digest of the same text",
-          "body_sha256": "23d347c48ca64217d592f9aa8b37a7da143a6935a3cb714f7de4dc0c182a3715",
+          "body_sha256": "9539a8761f2ee75acf0546b3dc14f78699ff3e4f33ffa9ecaa2b1fd72684f3c4",
           "body_sha256_role": "exact response bytes",
-          "body_text": "{\"text\":\"Local helper. Reasoning trace id 9dbbedb7. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. Neutral STEP/STL exports are ready to import into FreeCAD; the studio does not drive a native vendor API. A box 10x20x30 mm for FreeCAD. Show the envelope.\",\"provider\":\"local\",\"model\":\"deterministic-paraphrase-v1\",\"offline\":true,\"design\":null}",
+          "body_text": "{\"text\":\"Local helper. Reasoning trace id 9dbbedb7. Deterministic offline mechanical-engineering helper; no network egress, no solver runs and no fabricated results. Nominal analytic estimate (box 10x20x30 mm): volume 6000 mm^3 (6 cm^3), surface area 2200 mm^2. OpenCascade (OCP) workbench is active by default for quick geometry/envelope estimates and neutral STEP/STL handoff to external CAD/CAE, and for complete standalone STEP/STL builds inside Kala Studio. One shared workflow for every user, without tiers; FEA, CFD, stress and thermal solver numbers are never fabricated. Neutral STEP/STL exports are ready to import into FreeCAD; the studio does not drive a native vendor API. A box 10x20x30 mm for FreeCAD. Show the envelope.\",\"provider\":\"local\",\"model\":\"deterministic-paraphrase-v1\",\"offline\":true,\"design\":null,\"usage\":null}",
           "headers": {
             "cache-control": "no-store",
-            "content-length": "823",
+            "content-length": "836",
             "content-security-policy": "default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
             "content-type": "application/json",
             "cross-origin-opener-policy": "same-origin",
@@ -2687,7 +2688,7 @@
             "x-powered-by",
             "set-cookie"
           ],
-          "normalized_body_sha256": "1b8b81c78cb448a02b65f70eab8da1423d88aa7ce504eaea48918ca0d37319c7",
+          "normalized_body_sha256": "03228be086ca1471d7e0e9a3e5b0de73df78cfa6111177976462a3350a8d1bd5",
           "status": 200
         },
         "id": "studio.chat.local",

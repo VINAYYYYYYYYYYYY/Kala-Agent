@@ -1,0 +1,90 @@
+[build-appimage] Vite UI
+
+> kala-studio@0.1.0 build
+> tsc -p tsconfig.json --noEmit && vite build
+
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 116 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                                       1.00 kB │ gzip:   0.49 kB
+dist/assets/jetbrains-mono-cyrillic-ext-wght-normal-EocZY2iu.woff2    2.02 kB
+dist/assets/space-grotesk-vietnamese-wght-normal-D0rl6rjA.woff2       6.71 kB
+dist/assets/jetbrains-mono-vietnamese-wght-normal-Bt-aOZkq.woff2      7.50 kB
+dist/assets/jetbrains-mono-greek-wght-normal-Bw9x6K1M.woff2           9.00 kB
+dist/assets/newsreader-vietnamese-wght-normal-Czsa-EzN.woff2         11.93 kB
+dist/assets/newsreader-vietnamese-wght-italic-xAqemagA.woff2         12.08 kB
+dist/assets/jetbrains-mono-cyrillic-wght-normal-D73BlboJ.woff2       12.10 kB
+dist/assets/jetbrains-mono-latin-ext-wght-normal-DBQx-q_a.woff2      15.19 kB
+dist/assets/space-grotesk-latin-ext-wght-normal-D9tNdqV9.woff2       18.94 kB
+dist/assets/space-grotesk-latin-wght-normal-BhU9QXUp.woff2           22.28 kB
+dist/assets/newsreader-latin-ext-wght-normal-C-3rgBeH.woff2          36.24 kB
+dist/assets/newsreader-latin-ext-wght-italic-DFS986qL.woff2          39.68 kB
+dist/assets/jetbrains-mono-latin-wght-normal-B9CIFXIH.woff2          40.40 kB
+dist/assets/newsreader-latin-wght-normal-CCVVNp6i.woff2              58.08 kB
+dist/assets/newsreader-latin-wght-italic-Bxi8ein9.woff2              64.52 kB
+dist/assets/index-Bf-CPRq6.css                                      125.76 kB │ gzip:  18.23 kB
+dist/assets/react-DpjQJ7Lb.js                                       218.83 kB │ gzip:  68.30 kB │ map: 1,043.93 kB
+dist/assets/index-B3MDOBSY.js                                       308.21 kB │ gzip:  89.77 kB │ map: 1,367.79 kB
+dist/assets/three-D-fqKKZ-.js                                       581.59 kB │ gzip: 144.57 kB │ map: 2,957.01 kB
+
+✓ built in 821ms
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[build-appimage] native kala-studio stage (OCCT + FreeCAD adapter + vendored FreeCAD Python deps)
+[native-backend] cargo build --manifest-path /home/v9i/Projects/Kala-Agent/backend/Cargo.toml --package kala-studio --release --locked --target-dir /home/v9i/Projects/Kala-Agent/backend/target
+    Finished `release` profile [optimized] target(s) in 0.16s
+[native-backend] the staged FreeCAD add-on was verified inside FreeCADCmd (15 bytecode caches removed)
+[native-backend] staged /home/v9i/Projects/Kala-Agent/studio/backend-native/kala-studio
+[native-backend] static UI /home/v9i/Projects/Kala-Agent/studio/backend-native/studio_dist
+[native-backend] FreeCAD adapter 695 files
+[native-backend] FreeCAD Python deps vendored for cp311, cp312, cp313, cp314 (20 wheels, 667 files, manylinux2014_x86_64, FreeCAD detected)
+[native-backend] OCCT libs 23 (ldd), rpath $ORIGIN/lib
+[native-backend] sha256 71d970f4096cd0d90f52fa55f18276b0931ab38695c56df79259ac3c09e081d3
+[native-backend] current-feature readiness: native Studio front door covers all 16 current Python route-methods and DTO capabilities (7 answered directly, 11 through the geometry-backend seam, answered natively by default)
+[build-appimage] electron-builder AppImage
+[desktop-pack] native Studio front door covers all 16 current Python route-methods and DTO capabilities (7 answered directly, 11 through the geometry-backend seam, answered natively by default)
+[desktop-pack] readiness report: /home/v9i/Projects/Kala-Agent/studio/release/native-readiness.json
+[desktop-pack] RELEASE: 11 route-method(s) go through the geometry-backend seam; the default build answers them from the native kala-studio backend (the supervised Python worker is a development opt-in). The packaged AppImage smoke with --require-geometry/--require-freecad is the release evidence.
+[desktop-pack] argv: /home/v9i/Projects/Kala-Agent/studio/node_modules/electron-builder/out/cli/cli.js --config electron-builder.json --linux AppImage --x64 --publish never
+  • electron-builder  version=26.15.3 os=7.2.8-9-omarchy
+  • loaded configuration  file=/home/v9i/Projects/Kala-Agent/studio/electron-builder.json
+  • executing @electron/rebuild  electronVersion=44.9.0 arch=x64 buildFromSource=false workspaceRoot=/home/v9i/Projects/Kala-Agent/studio projectDir=./ appDir=./
+  • installing native dependencies  arch=x64
+  • completed installing native dependencies
+  • packaging       platform=linux arch=x64 electron=44.9.0 appOutDir=release/linux-unpacked
+  • downloaded      label=electron progress=100%
+  • downloaded electron zip extracted successfully  output=/home/v9i/Projects/Kala-Agent/studio/release/linux-unpacked
+  • searching for node modules  pm=npm searchDir=/home/v9i/Projects/Kala-Agent/studio
+  • building        target=AppImage arch=x64 file=release/kala-studio-0.1.0-x86_64.AppImage
+  • building embedded block map  file=release/kala-studio-0.1.0-x86_64.AppImage
+[build-appimage] AppImage: /home/v9i/Projects/Kala-Agent/studio/release/kala-studio-0.1.0-x86_64.AppImage
+[build-appimage] size: 164085477 bytes
+[build-appimage] sha256: d51955e42d6dc14dd0135be6841c002efb141e78ae650728e190ac2236266d7c
+[build-appimage] headless smoke (extraction path; no X server)
+[appimage-smoke] AppImage: /home/v9i/Projects/Kala-Agent/studio/release/kala-studio-0.1.0-x86_64.AppImage
+[appimage-smoke] size: 164085477 bytes (156.5 MiB)
+[appimage-smoke] sha256: d51955e42d6dc14dd0135be6841c002efb141e78ae650728e190ac2236266d7c
+[appimage-smoke] RPATH closure ok: 23 libTK resolutions from /tmp/kala-appimage-smoke-drARhL/squashfs-root/resources/backend/lib (empty environment, no LD_LIBRARY_PATH)
+[appimage-smoke] FreeCAD Python deps ok: ABIs cp311, cp312, cp313, cp314 (20 wheels, 667 files; FreeCAD 1.1.4 Revision: 45040 (Git) / Python 3.14.8 (cp314))
+[appimage-smoke] payload ok: metadata schema 3, 23 OCCT libs, FreeCAD adapter + 4 ABI sets, no Python runtime
+[appimage-smoke] python-free backend env: PATH="" cwd=/tmp/kala-appimage-smoke-drARhL/python-free-cwd (no repository/virtualenv path)
+[appimage-smoke] health ok: {"status":"ok","service":"kala-studio","version":"0.1.0","offline":true,"design_turn_budget_seconds":3960,"step_available":true,"design_available":true,"integrations":["solidworks","solid_edge","autocad","fusion360","freecad","openscad","ansys_mechanical","abaqus","comsol","simcenter_nastran","altair_optistruct"],"providers":["local","openai","openrouter","codex","claude_code","codex_cli","opencode_cli"],"geometry_worker":{"state":"ready","version":"7.9.3","design_available":true}}
+[appimage-smoke] packaged UI root ok
+[appimage-smoke] unauthenticated refusal ok
+[appimage-smoke] OpenCascade L-bracket ok: volume 35571.416047113315 mm3, measured_by OpenCascade (opt-in), design_id 1f7de2be6721…
+[appimage-smoke] drawing ok: front(7) top(11) right(8)
+[appimage-smoke] section ok: XZ@4 area 2321.4601836602546 mm2 (exact), outer 1, inner 1
+[appimage-smoke] STEP import ok: 55554 bytes, 1 solid(s), bounds {"min":[-30,0,0],"max":[30,45,40]}
+[appimage-smoke] freecad backend env: PATH="/usr/bin:/bin:/usr/local/bin" cwd=/tmp/kala-appimage-smoke-drARhL/freecad-cwd (no repository/virtualenv path)
+[appimage-smoke] FreeCAD phase health ok (PATH=/usr/bin:/bin:/usr/local/bin)
+[appimage-smoke] FreeCAD provider available: version 1.1.4
+[appimage-smoke] FreeCAD L-bracket ok: volume 35571.416047 mm3, measured_by FreeCAD, design_id ddea67781a58…
+[appimage-smoke] drawing ok: front(7) top(11) right(8)
+[appimage-smoke] section ok: XZ@4 area 2321.4601836602546 mm2 (exact), outer 1, inner 1
+[appimage-smoke] STEP import ok: 21648 bytes, 1 solid(s), bounds {"min":[-30,-8.881784197001e-16,0],"max":[30,45,40]}
+[appimage-smoke] PASS (/home/v9i/Projects/Kala-Agent/studio/release/kala-studio-0.1.0-x86_64.AppImage) with FreeCAD provider

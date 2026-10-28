@@ -53,7 +53,7 @@ use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 
 use crate::geometry_backend::{BackendError, GeometryBackend};
-use crate::providers::{ChatOutcome, ProviderFailure};
+use crate::providers::{ChatOutcome, ChatUsage, ProviderFailure};
 
 /// The instruction the remote provider prompt carries.
 pub const DESIGN_INTENT_INSTRUCTION: &str = r#"You are Kala Studio's design planner. When the user asks you to design, size, or draft a part, answer with a short prose explanation and exactly one fenced ```json block containing a DesignIntent object that validates against the JSON Schema below. All dimensions are millimetres.
@@ -117,6 +117,30 @@ pub struct DesignTurn {
     pub missing: Vec<String>,
     /// The model that answered the turn.
     pub model: Option<String>,
+    /// The token counts every model call of this turn reported, summed.
+    pub usage: ChatUsage,
+}
+
+/// The stored design one edit turn revises (ADR-0012).
+///
+/// The script is the stored canonical script JSON: exactly the bytes the
+/// `script` artifact serves, never a re-encoding the model might mistake for
+/// a different design. The turn's result is a new design and this base is
+/// never mutated.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct BaseDesign {
+    /// The stored canonical script JSON.
+    pub script: String,
+    /// The one feature the request is about, when it named one.
+    pub focus: Option<String>,
+}
+
+impl BaseDesign {
+    /// The base-design block every edit prompt carries.
+    #[must_use]
+    pub fn section(&self) -> String {
+        edit_turn_section(&self.script, self.focus.as_deref())
+    }
 }
 
 /// Why a design turn could not be completed.
@@ -265,6 +289,65 @@ pub fn design_prompt(prompt: &str, schema_text: &str) -> String {
     )
 }
 
+/// The contract string of the base-design block of an edit turn.
+///
+/// **This is a contract string.** The first design call, the validation
+/// repair and the build repair all carry it byte for byte, and the UI and
+/// ADR-0012 quote it. `{design}` is replaced by the stored canonical script
+/// JSON -- the same bytes the `script` artifact serves -- and never by a
+/// re-encoding of it.
+///
+/// ```text
+/// CURRENT DESIGN:
+/// <the stored canonical ConstructionScript JSON>
+///
+/// Return the COMPLETE revised DesignIntent and keep everything the request does not change.
+/// ```
+pub const EDIT_TURN_SECTION: &str = "CURRENT DESIGN:\n{design}\n\nReturn the COMPLETE revised DesignIntent and keep everything the request does not change.";
+
+/// The label of the optional selected-feature line of an edit turn.
+///
+/// It follows the [`EDIT_TURN_SECTION`] block when the request named the
+/// feature it is about, and is absent otherwise.
+pub const SELECTED_FEATURE_LABEL: &str = "SELECTED FEATURE:";
+
+/// The base-design block one edit prompt carries.
+///
+/// The script is embedded verbatim. The selected feature, when given, follows
+/// the block on its own labelled line, exactly as ADR-0012 documents.
+#[must_use]
+pub fn edit_turn_section(script: &str, focus: Option<&str>) -> String {
+    let mut section = EDIT_TURN_SECTION.replace("{design}", script);
+    if let Some(focus) = focus {
+        section.push_str("\n\n");
+        section.push_str(SELECTED_FEATURE_LABEL);
+        section.push('\n');
+        section.push_str(focus);
+    }
+    section
+}
+
+/// The design prompt of one turn, with the base design when there is one.
+///
+/// Without a base design the bytes are exactly [`design_prompt`], so an
+/// ordinary design turn is unchanged. With a base design the unchanged
+/// instruction and schema are followed by the [`EDIT_TURN_SECTION`] block and
+/// then the request.
+#[must_use]
+pub fn design_prompt_with_base(
+    prompt: &str,
+    schema_text: &str,
+    base: Option<&BaseDesign>,
+) -> String {
+    match base {
+        None => design_prompt(prompt, schema_text),
+        Some(base) => format!(
+            "{DESIGN_INTENT_INSTRUCTION}\n\nDesignIntent JSON Schema:\n{schema_text}\n\n{}\n\nUser request:\n{prompt}",
+            base.section()
+        ),
+    }
+}
+
 /// The largest previous JSON block the validation-repair prompt carries.
 ///
 /// Sized from the measured maximum design: a 500-step canonical script is
@@ -287,6 +370,23 @@ pub const MAX_REPAIR_ERROR_CHARS: usize = 512;
 /// blind: it invents a different shape and loses the values it had.
 #[must_use]
 pub fn repair_prompt(prompt: &str, error: &str, schema_text: &str, previous: &str) -> String {
+    repair_prompt_with_base(prompt, error, schema_text, previous, None)
+}
+
+/// The single repair prompt of an edit turn.
+///
+/// The bytes are [`repair_prompt`] plus the same [`EDIT_TURN_SECTION`] block
+/// the first call of the turn carried. The block sits between the full schema
+/// and the model's own previous JSON, so the repair sees the base design, the
+/// design it sent and the exact error in that order.
+#[must_use]
+pub fn repair_prompt_with_base(
+    prompt: &str,
+    error: &str,
+    schema_text: &str,
+    previous: &str,
+    base: Option<&BaseDesign>,
+) -> String {
     let error = bounded_error(error);
     let location = error_location(&error);
     let schema_section = design_schema_excerpt(schema_text, &error)
@@ -299,10 +399,18 @@ pub fn repair_prompt(prompt: &str, error: &str, schema_text: &str, previous: &st
             format!("\n\nSchema for {location}:\n{excerpt}")
         })
         .unwrap_or_default();
+    let base_section = base_section(base);
     let previous_section = previous_design_json_section(previous);
     format!(
-        "{DESIGN_INTENT_INSTRUCTION}\n\nDesignIntent JSON Schema:\n{schema_text}{previous_section}\n\nYour previous reply could not be validated as a DesignIntent: {error}{schema_section}\n\nReturn exactly one fenced ```json block containing a corrected DesignIntent for the same request. Keep every value the user stated and do not invent a value the user did not state. If a required value is missing, reply in prose with the missing values instead.\n\nUser request:\n{prompt}"
+        "{DESIGN_INTENT_INSTRUCTION}\n\nDesignIntent JSON Schema:\n{schema_text}{base_section}{previous_section}\n\nYour previous reply could not be validated as a DesignIntent: {error}{schema_section}\n\nReturn exactly one fenced ```json block containing a corrected DesignIntent for the same request. Keep every value the user stated and do not invent a value the user did not state. If a required value is missing, reply in prose with the missing values instead.\n\nUser request:\n{prompt}"
     )
+}
+
+/// The base-design block of one prompt, with the blank line that separates it
+/// from the section before it.
+fn base_section(base: Option<&BaseDesign>) -> String {
+    base.map(|base| format!("\n\n{}", base.section()))
+        .unwrap_or_default()
 }
 
 /// One validation error, bounded to [`MAX_REPAIR_ERROR_CHARS`].
@@ -572,13 +680,30 @@ impl BuildFeedback {
 /// and to keep every value the user stated.
 #[must_use]
 pub fn build_repair_prompt(prompt: &str, feedback: &str, schema_text: &str) -> String {
+    build_repair_prompt_with_base(prompt, feedback, schema_text, None)
+}
+
+/// The build-repair prompt of an edit turn.
+///
+/// The bytes are [`build_repair_prompt`] plus the same [`EDIT_TURN_SECTION`]
+/// block the first call of the turn carried, between the script schema and
+/// the request. A repair call is stateless, so without the base design the
+/// model would revise a design it can no longer see.
+#[must_use]
+pub fn build_repair_prompt_with_base(
+    prompt: &str,
+    feedback: &str,
+    schema_text: &str,
+    base: Option<&BaseDesign>,
+) -> String {
     let feedback: String = feedback
         .chars()
         .take(MAX_BUILD_REPAIR_FEEDBACK_CHARS)
         .collect();
     let schema: String = build_repair_schema_excerpt(schema_text);
+    let base_section = base_section(base);
     format!(
-        "{DESIGN_INTENT_INSTRUCTION}\n\nYour previous reply was built, but the build was rejected: {feedback}\n\nReturn exactly one fenced ```json block containing a corrected DesignIntent for the same request. Fix the script so that every cut removes material and the part matches the request, and keep every dimension the user stated: do not invent a value the user did not state and do not change a value the user did state. If a required value is missing, reply in prose with the missing values instead.\n\nSchema for script:\n{schema}\n\nUser request:\n{prompt}"
+        "{DESIGN_INTENT_INSTRUCTION}\n\nYour previous reply was built, but the build was rejected: {feedback}\n\nReturn exactly one fenced ```json block containing a corrected DesignIntent for the same request. Fix the script so that every cut removes material and the part matches the request, and keep every dimension the user stated: do not invent a value the user did not state and do not change a value the user did state. If a required value is missing, reply in prose with the missing values instead.\n\nSchema for script:\n{schema}{base_section}\n\nUser request:\n{prompt}"
     )
 }
 
@@ -1269,73 +1394,185 @@ pub async fn compile_design(
     Ok(Err(DesignFailure::from_response(&response)))
 }
 
-/// Append the `chat.turn` event for one turn.
+/// The largest stored script an edit turn will carry into a prompt.
 ///
-/// The payload never carries the prompt text, only its digest and length,
-/// exactly like the source. `failure` is `Some` only for a design turn whose
-/// provider call failed: it carries the error envelope's code and no reply
-/// text. The failure key is absent on a completed turn, so the successful
-/// payload stays byte-identical.
+/// The measured maximum canonical script is 90 497 characters (a 500-step
+/// design with worst-case values), so 200 000 holds every design the compiler
+/// can store whole. A larger artifact is refused rather than cut: a prompt
+/// with half a script would make the model revise a design nobody measured.
+pub const MAX_BASE_DESIGN_CHARS: usize = 200_000;
+
+/// Why the stored base design of an edit turn could not be used.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum BaseDesignError {
+    /// The store does not hold a design with that identifier.
+    NotFound,
+    /// The store answered, but the artifact cannot serve as a base design.
+    Unusable(String),
+    /// The store could not be reached or did not answer.
+    Backend(BackendError),
+}
+
+/// Read the stored canonical script of one design.
+///
+/// The bytes are exactly what the `script` artifact route serves, so the
+/// model revises the script that was measured. The artifact is checked to be
+/// a non-empty JSON object and bounded to [`MAX_BASE_DESIGN_CHARS`]; the
+/// front door never sends a truncated base to a model.
+///
+/// # Errors
+///
+/// Returns [`BaseDesignError`] when the design is unknown, the artifact is not
+/// a usable script, or the store cannot answer.
+pub async fn load_base_design(
+    backend: &dyn GeometryBackend,
+    design_id: &str,
+) -> Result<String, BaseDesignError> {
+    let response = backend
+        .artifact(design_id, "script")
+        .await
+        .map_err(BaseDesignError::Backend)?;
+    if response.status == 404 {
+        return Err(BaseDesignError::NotFound);
+    }
+    if !response.is_success() {
+        return Err(BaseDesignError::Unusable(format!(
+            "the design store answered HTTP {} for the script artifact",
+            response.status
+        )));
+    }
+    let script = String::from_utf8(response.body).map_err(|_| {
+        BaseDesignError::Unusable("the stored script artifact is not valid UTF-8".to_owned())
+    })?;
+    if script.trim().is_empty() {
+        return Err(BaseDesignError::Unusable(
+            "the stored script artifact is empty".to_owned(),
+        ));
+    }
+    if script.chars().count() > MAX_BASE_DESIGN_CHARS {
+        return Err(BaseDesignError::Unusable(format!(
+            "the stored script artifact is longer than {MAX_BASE_DESIGN_CHARS} characters"
+        )));
+    }
+    if !matches!(serde_json::from_str::<Value>(&script), Ok(Value::Object(_))) {
+        return Err(BaseDesignError::Unusable(
+            "the stored script artifact is not a construction-script object".to_owned(),
+        ));
+    }
+    Ok(script)
+}
+
+/// One `chat.turn` journal record.
+///
+/// The record never carries the prompt text, only its digest and length, and
+/// never the selected-feature text, only its length -- exactly like the
+/// source. `failure`, `base_design_id`, `focus_chars` and `usage` are written
+/// only when they say something, so the payload of an ordinary completed turn
+/// stays byte-identical to the source's.
+#[derive(Clone, Debug)]
+pub struct ChatTurnRecord<'a> {
+    /// The provider identifier.
+    pub provider: &'a str,
+    /// The model that answered, when one did.
+    pub model: Option<&'a str>,
+    /// Whether the turn was answered offline.
+    pub offline: bool,
+    /// The user's request text: journalled as a digest and a length only.
+    pub prompt: &'a str,
+    /// The design the turn compiled.
+    pub design_id: Option<&'a str>,
+    /// Whether the turn asked for a design.
+    pub design_requested: bool,
+    /// The CAD provider the operator selected.
+    pub cad_provider: Option<&'a str>,
+    /// The values the operator still has to state.
+    pub missing: &'a [String],
+    /// The envelope code of a failed design turn.
+    pub failure: Option<&'a str>,
+    /// The stored design an edit turn revised (ADR-0012).
+    pub base_design_id: Option<&'a str>,
+    /// The character count of the selected feature, never its text (`0` when
+    /// the turn named no feature).
+    pub focus_chars: Option<usize>,
+    /// The token counts the turn's model calls reported.
+    pub usage: ChatUsage,
+}
+
+/// Append the `chat.turn` event for one turn.
 ///
 /// # Errors
 ///
 /// Returns the backend failure when the worker cannot answer.
-#[allow(clippy::too_many_arguments)]
 pub async fn append_chat_turn(
     backend: &dyn GeometryBackend,
-    provider: &str,
-    model: Option<&str>,
-    offline: bool,
-    prompt: &str,
-    design_id: Option<&str>,
-    design_requested: bool,
-    cad_provider: Option<&str>,
-    missing: &[String],
-    failure: Option<&str>,
+    record: &ChatTurnRecord<'_>,
 ) -> Result<(), BackendError> {
-    let digest = Sha256::digest(prompt.as_bytes());
+    let digest = Sha256::digest(record.prompt.as_bytes());
     let mut payload = Map::new();
-    payload.insert("provider".to_owned(), Value::String(provider.to_owned()));
+    payload.insert(
+        "provider".to_owned(),
+        Value::String(record.provider.to_owned()),
+    );
     payload.insert(
         "model".to_owned(),
-        model
+        record
+            .model
             .map(|value| Value::String(value.to_owned()))
             .unwrap_or(Value::Null),
     );
-    payload.insert("offline".to_owned(), Value::Bool(offline));
+    payload.insert("offline".to_owned(), Value::Bool(record.offline));
     payload.insert(
         "prompt_sha256".to_owned(),
         Value::String(digest.iter().map(|byte| format!("{byte:02x}")).collect()),
     );
     payload.insert(
         "prompt_chars".to_owned(),
-        Value::Number(prompt.chars().count().into()),
+        Value::Number(record.prompt.chars().count().into()),
     );
     payload.insert(
         "design_id".to_owned(),
-        design_id
+        record
+            .design_id
             .map(|value| Value::String(value.to_owned()))
             .unwrap_or(Value::Null),
     );
-    payload.insert("design_requested".to_owned(), Value::Bool(design_requested));
+    payload.insert(
+        "design_requested".to_owned(),
+        Value::Bool(record.design_requested),
+    );
     payload.insert(
         "cad_provider".to_owned(),
-        cad_provider
+        record
+            .cad_provider
             .map(|value| Value::String(value.to_owned()))
             .unwrap_or(Value::Null),
     );
     payload.insert(
         "missing".to_owned(),
         Value::Array(
-            missing
+            record
+                .missing
                 .iter()
                 .take(MAX_JOURNAL_MISSING)
                 .map(|item| Value::String(item.chars().take(MAX_JOURNAL_MISSING_LENGTH).collect()))
                 .collect(),
         ),
     );
-    if let Some(failure) = failure {
+    if let Some(failure) = record.failure {
         payload.insert("failure".to_owned(), Value::String(failure.to_owned()));
+    }
+    if let Some(base_design_id) = record.base_design_id {
+        payload.insert(
+            "base_design_id".to_owned(),
+            Value::String(base_design_id.to_owned()),
+        );
+        payload.insert(
+            "focus_chars".to_owned(),
+            Value::Number(record.focus_chars.unwrap_or(0).into()),
+        );
+    }
+    if record.usage.is_reported() {
+        payload.insert("usage".to_owned(), usage_payload(record.usage));
     }
     let mut request = Map::new();
     request.insert(
@@ -1352,6 +1589,19 @@ pub async fn append_chat_turn(
         .journal_append(&encoded, Some("application/json"))
         .await?;
     Ok(())
+}
+
+/// The journal form of the token counts one turn reported.
+fn usage_payload(usage: ChatUsage) -> Value {
+    let count = |value: Option<u64>| {
+        value
+            .map(|value| Value::Number(value.into()))
+            .unwrap_or(Value::Null)
+    };
+    serde_json::json!({
+        "input_tokens": count(usage.input_tokens),
+        "output_tokens": count(usage.output_tokens),
+    })
 }
 
 /// Run the local design turn.
@@ -1375,6 +1625,7 @@ pub async fn local_design_turn(
         design_requested: true,
         missing: parsed.missing.clone(),
         model: None,
+        usage: ChatUsage::NONE,
     };
     if let Some(intent) = parsed.intent.clone() {
         let _ = finish_design(backend, &intent, cad_provider, &mut turn).await;
@@ -1391,6 +1642,10 @@ pub async fn local_design_turn(
 /// refused the script, is repaired with the concrete build feedback. The worst
 /// case is therefore two model calls.
 ///
+/// Every call of the turn carries the base design when the turn is an edit
+/// turn, and every call's reported token counts are summed into
+/// [`DesignTurn::usage`].
+///
 /// # Errors
 ///
 /// Returns the provider or backend failure that stopped the turn.
@@ -1398,6 +1653,7 @@ pub async fn remote_design_turn<F, Fut>(
     backend: &dyn GeometryBackend,
     prompt: &str,
     cad_provider: Option<&str>,
+    base: Option<&BaseDesign>,
     mut call: F,
 ) -> Result<DesignTurn, DesignTurnError>
 where
@@ -1409,9 +1665,10 @@ where
         .await
         .map_err(DesignTurnError::Backend)?;
     let schema_text = String::from_utf8(schema.body).unwrap_or_default();
-    let first = call(design_prompt(prompt, &schema_text))
+    let first = call(design_prompt_with_base(prompt, &schema_text, base))
         .await
         .map_err(DesignTurnError::Provider)?;
+    let mut usage = first.usage;
     if !has_design_candidate(&first.reply) {
         // A question about the values the model still needs is a legitimate
         // design answer: never spend a repair turn or invent the values.
@@ -1423,6 +1680,7 @@ where
             design_requested: true,
             missing: Vec::new(),
             model: Some(first.model.clone()),
+            usage,
         });
     }
     let mut reply_text = strip_design_json_block(&first.reply);
@@ -1435,14 +1693,16 @@ where
             repair_spent = true;
             // The repair call is stateless: it carries the model's own previous
             // JSON, so it corrects its own answer instead of re-authoring one.
-            let repair = call(repair_prompt(
+            let repair = call(repair_prompt_with_base(
                 prompt,
                 &first_error,
                 &schema_text,
                 &first.reply,
+                base,
             ))
             .await
             .map_err(DesignTurnError::Provider)?;
+            usage = usage.merge(repair.usage);
             reply_text = strip_design_json_block(&repair.reply);
             if !has_design_candidate(&repair.reply) {
                 return Ok(DesignTurn {
@@ -1455,6 +1715,7 @@ where
                     design_requested: true,
                     missing: Vec::new(),
                     model: Some(repair.model.clone()),
+                    usage,
                 });
             }
             match validate_reply(backend, &repair.reply).await {
@@ -1468,6 +1729,7 @@ where
                         design_requested: true,
                         missing: Vec::new(),
                         model: Some(repair.model.clone()),
+                        usage,
                     });
                 }
             }
@@ -1480,6 +1742,7 @@ where
         design_requested: true,
         missing: Vec::new(),
         model: Some(first.model.clone()),
+        usage,
     };
     if let Some(intent) = intent {
         let build = finish_design(backend, &intent, cad_provider, &mut turn).await?;
@@ -1491,6 +1754,7 @@ where
                     schema_text: &schema_text,
                     feedback: &feedback,
                     first: &build,
+                    base,
                 };
                 repair_build(backend, &context, &mut turn, &mut call).await?;
             }
@@ -1511,6 +1775,8 @@ struct BuildRepair<'a> {
     feedback: &'a BuildFeedback,
     /// What the first attempt produced.
     first: &'a BuildOutcome,
+    /// The base design of an edit turn.
+    base: Option<&'a BaseDesign>,
 }
 
 /// Spend the turn's one repair call on the build, not on the validation.
@@ -1540,10 +1806,11 @@ where
         "The first attempt was rejected: {}.",
         context.feedback.reason()
     );
-    let repair = match call(build_repair_prompt(
+    let repair = match call(build_repair_prompt_with_base(
         context.prompt,
         &context.feedback.text(),
         context.schema_text,
+        context.base,
     ))
     .await
     {
@@ -1555,6 +1822,9 @@ where
             return Ok(());
         }
     };
+    // The repair is one more model call of the same turn: its counts add to
+    // the counts the first call reported.
+    turn.usage = turn.usage.merge(repair.usage);
     let prose = strip_design_json_block(&repair.reply);
     let mut second = DesignTurn {
         text: prose.clone(),
@@ -1563,6 +1833,7 @@ where
         design_requested: true,
         missing: Vec::new(),
         model: Some(repair.model.clone()),
+        usage: ChatUsage::NONE,
     };
     if !has_design_candidate(&repair.reply) {
         // The repaired reply asks for values instead of a design: the honest
@@ -2135,6 +2406,185 @@ mod tests {
             "{text}"
         );
         assert!(text.contains("Schema for script"), "{text}");
+    }
+
+    #[test]
+    fn the_edit_section_carries_the_stored_script_and_the_selected_feature() {
+        let script = r#"{"components":[],"summary":"plate"}"#;
+        assert_eq!(
+            edit_turn_section(script, None),
+            "CURRENT DESIGN:\n{\"components\":[],\"summary\":\"plate\"}\n\nReturn the COMPLETE revised DesignIntent and keep everything the request does not change."
+        );
+        let with_focus = edit_turn_section(script, Some("the 6 mm hole at x=8"));
+        assert!(with_focus.starts_with("CURRENT DESIGN:\n{\"components\":[]"));
+        assert!(with_focus.ends_with("SELECTED FEATURE:\nthe 6 mm hole at x=8"));
+        // The default template is never mistaken for a design of its own.
+        assert!(!with_focus.contains("{design}"));
+    }
+
+    #[test]
+    fn the_edit_design_prompt_orders_the_instruction_schema_base_and_request() {
+        let schema = r#"{"type":"object","properties":{"script":{}}}"#;
+        let base = BaseDesign {
+            script: r#"{"components":[],"summary":"plate"}"#.to_owned(),
+            focus: Some("the top hole".to_owned()),
+        };
+        let prompt = design_prompt_with_base("make this hole 10 mm", schema, Some(&base));
+        assert!(prompt.starts_with(DESIGN_INTENT_INSTRUCTION), "{prompt}");
+        let instruction = prompt.find(DESIGN_INTENT_INSTRUCTION).unwrap();
+        let schema_at = prompt.find("DesignIntent JSON Schema:").unwrap();
+        let base_at = prompt.find("CURRENT DESIGN:").unwrap();
+        let feature_at = prompt.find(SELECTED_FEATURE_LABEL).unwrap();
+        let request_at = prompt.find("User request:").unwrap();
+        assert!(instruction < schema_at, "{prompt}");
+        assert!(schema_at < base_at, "{prompt}");
+        assert!(base_at < feature_at, "{prompt}");
+        assert!(feature_at < request_at, "{prompt}");
+        assert!(
+            prompt.ends_with("User request:\nmake this hole 10 mm"),
+            "{prompt}"
+        );
+        // The base script rides verbatim.
+        assert!(prompt.contains(base.script.as_str()), "{prompt}");
+    }
+
+    #[test]
+    fn a_draft_prompt_is_byte_identical_to_the_unchanged_prompt() {
+        let schema = r#"{"type":"object"}"#;
+        assert_eq!(
+            design_prompt_with_base("a plate", schema, None),
+            design_prompt("a plate", schema)
+        );
+        assert_eq!(
+            repair_prompt_with_base("a plate", "script: Field required", schema, "{}", None),
+            repair_prompt("a plate", "script: Field required", schema, "{}")
+        );
+        assert_eq!(
+            build_repair_prompt_with_base("a plate", "the build failed", schema, None),
+            build_repair_prompt("a plate", "the build failed", schema)
+        );
+    }
+
+    #[test]
+    fn both_edit_repairs_carry_the_same_base_section() {
+        let schema =
+            r#"{"type":"object","required":["script"],"properties":{"script":{"type":"object"}}}"#;
+        let base = BaseDesign {
+            script: r#"{"components":[],"summary":"plate"}"#.to_owned(),
+            focus: None,
+        };
+        let section = base.section();
+        let validation = repair_prompt_with_base(
+            "make this hole 10 mm",
+            "script: Field required",
+            schema,
+            "```json\n{\"script\": null}\n```",
+            Some(&base),
+        );
+        let build = build_repair_prompt_with_base(
+            "make this hole 10 mm",
+            "the check 'cuts_effective' failed",
+            schema,
+            Some(&base),
+        );
+        for prompt in [&validation, &build] {
+            let block = prompt.find(&section).expect("the shared base section");
+            let request = prompt.find("User request:").expect("the request");
+            assert!(block < request, "{prompt}");
+        }
+        // The validation repair still carries its own previous JSON and error.
+        let previous = validation.find("The JSON block you sent:").unwrap();
+        let error = validation.find("script: Field required").unwrap();
+        assert!(
+            validation.find(&section).unwrap() < previous,
+            "{validation}"
+        );
+        assert!(previous < error, "{validation}");
+        // The build repair still carries the script schema and the feedback.
+        assert!(build.contains("Schema for script"), "{build}");
+        assert!(build.contains("cuts_effective"), "{build}");
+    }
+
+    struct ArtifactStub {
+        status: u16,
+        body: Vec<u8>,
+    }
+
+    impl GeometryBackend for ArtifactStub {
+        fn artifact<'a>(
+            &'a self,
+            _design_id: &'a str,
+            _kind: &'a str,
+        ) -> crate::geometry_backend::BackendFuture<
+            'a,
+            Result<crate::geometry_backend::WorkerResponse, BackendError>,
+        > {
+            Box::pin(async move {
+                Ok(crate::geometry_backend::WorkerResponse {
+                    status: self.status,
+                    headers: Vec::new(),
+                    body: self.body.clone(),
+                })
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn the_base_design_is_the_stored_script_or_an_honest_refusal() {
+        let script = r#"{"components":[],"summary":"plate"}"#;
+        let stored = ArtifactStub {
+            status: 200,
+            body: script.as_bytes().to_vec(),
+        };
+        assert_eq!(
+            load_base_design(&stored, &"a".repeat(64)).await,
+            Ok(script.to_owned())
+        );
+
+        let missing = ArtifactStub {
+            status: 404,
+            body: b"{}".to_vec(),
+        };
+        assert_eq!(
+            load_base_design(&missing, &"a".repeat(64)).await,
+            Err(BaseDesignError::NotFound)
+        );
+
+        let not_json = ArtifactStub {
+            status: 200,
+            body: b"not a script".to_vec(),
+        };
+        assert!(matches!(
+            load_base_design(&not_json, &"a".repeat(64)).await,
+            Err(BaseDesignError::Unusable(_))
+        ));
+
+        let array = ArtifactStub {
+            status: 200,
+            body: b"[1,2,3]".to_vec(),
+        };
+        assert!(matches!(
+            load_base_design(&array, &"a".repeat(64)).await,
+            Err(BaseDesignError::Unusable(_))
+        ));
+
+        let huge = ArtifactStub {
+            status: 200,
+            body: format!("{{\"summary\":\"{}\"}}", "x".repeat(MAX_BASE_DESIGN_CHARS)).into_bytes(),
+        };
+        assert!(matches!(
+            load_base_design(&huge, &"a".repeat(64)).await,
+            Err(BaseDesignError::Unusable(_))
+        ));
+
+        let not_utf8 = ArtifactStub {
+            status: 200,
+            body: vec![0xff, 0xfe],
+        };
+        assert!(matches!(
+            load_base_design(&not_utf8, &"a".repeat(64)).await,
+            Err(BaseDesignError::Unusable(_))
+        ));
     }
 
     #[test]

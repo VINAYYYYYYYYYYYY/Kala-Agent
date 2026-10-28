@@ -355,6 +355,28 @@ Consent is checked **before** the stored key, before any CLI spawn and
 before any HTTP request, so a refused listing opens no socket. Only the
 literal `allow_remote=true` consents.
 
+## Token usage in a chat reply
+
+Every `POST /api/studio/chat` response carries `usage`: the token counts the
+providers of that turn actually reported, summed over the design call and the
+one repair call when a design turn spent it, or `null` when no call reported a
+count. The studio never estimates, rounds or substitutes a zero, and a
+malformed `usage` block in a provider reply never fails the turn. The mapping
+per provider (ADR-0012):
+
+| Provider | Input count | Output count |
+|---|---|---|
+| `openai`, `openrouter` | `usage.prompt_tokens` | `usage.completion_tokens` |
+| `claude_code` | `usage.input_tokens` + `usage.cache_read_input_tokens` + `usage.cache_creation_input_tokens` | `usage.output_tokens` |
+| `codex`, `codex_cli` | the `turn.completed` event's `usage.input_tokens`, else the last `token_count` event's total | the same event's `output_tokens` |
+| `opencode_cli` | the sum of every `step_finish` event's `part.tokens.input` | the sum of their `part.tokens.output` |
+| `local` | — | — (`null`) |
+
+A field a provider did not send stays `null` in the reply. The UI shows a
+partial sum as `≥` and "— TOK" when no turn of the session reported anything.
+The usage block is never logged with prompt text; the journal records the
+counts alone.
+
 ## Remote-prompt consent
 
 Every call to `POST /api/studio/chat` with `provider` other than

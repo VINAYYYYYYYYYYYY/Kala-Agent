@@ -70,7 +70,7 @@ use crate::providers::{
 use crate::pytext;
 use crate::schemas::{
     ChatRequest, MAX_MODEL_ID_LENGTH, RequestParseError, UpdateProviderKeyRequest, parse_json_body,
-    validate_chat, validate_settings,
+    valid_design_id, validate_chat, validate_settings,
 };
 use crate::settings::{
     CredentialStatus, StoredKeys, WriteKeyError, describe_provider_credentials, effective_environ,
@@ -308,14 +308,6 @@ fn body_limit(kind: Option<RouteKind>, shared: usize, import_limit: usize) -> us
         Some(RouteKind::Import) => import_limit,
         _ => shared,
     }
-}
-
-/// Whether a design identifier is the sha256 digest the source requires.
-fn valid_design_id(value: &str) -> bool {
-    value.len() == 64
-        && value
-            .bytes()
-            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
 struct State {
@@ -1546,6 +1538,45 @@ fn geometry_unavailable(detail: &str) -> OutResponse {
 }
 
 async fn chat_route(state: Arc<State>, request: ChatRequest) -> OutResponse {
+    // ADR-0012: the shape of an edit turn is refused before anything else --
+    // before the store is read and before any model call. A request that can
+    // never be a design turn never reaches the worker.
+    if request.focus.is_some() && request.base_design_id.is_none() {
+        return sorted(FlatError::new(
+            400,
+            "focus_requires_base_design",
+            "a selected feature needs the stored design it belongs to",
+            vec!["focus was sent without base_design_id".to_owned()],
+        ));
+    }
+    if let Some(base_design_id) = request.base_design_id.as_deref() {
+        if request.cad_provider.is_none() {
+            return sorted(FlatError::new(
+                400,
+                "edit_requires_design_turn",
+                "an edit turn needs a CAD target to build the revised design",
+                vec![format!(
+                    "base_design_id={} was sent without cad_provider",
+                    crate::errors::truncate_chars(base_design_id, 64)
+                )],
+            ));
+        }
+        if request.provider == crate::schemas::ProviderId::Local {
+            return sorted(FlatError::new(
+                400,
+                "edit_requires_model",
+                "the local helper cannot edit a stored design",
+                vec![format!(
+                    "base_design_id={} needs a model provider",
+                    crate::errors::truncate_chars(base_design_id, 64)
+                )],
+            ));
+        }
+        if !valid_design_id(base_design_id) {
+            return design_not_found(base_design_id);
+        }
+    }
+
     let (environ, stored) = match state.environ_and_stored() {
         Ok(value) => value,
         Err(error) => {
@@ -1555,6 +1586,38 @@ async fn chat_route(state: Arc<State>, request: ChatRequest) -> OutResponse {
             );
             return internal_error();
         }
+    };
+
+    // The base design of an edit turn: exactly the bytes the `script` artifact
+    // serves, so the model revises the part that was measured, not a
+    // re-encoding of it. A base design is never mutated.
+    let base = match request.base_design_id.as_deref() {
+        Some(design_id) => {
+            let Some(backend) = state.backend.clone() else {
+                return geometry_unavailable("no geometry worker is attached to this studio");
+            };
+            match chat_design::load_base_design(backend.as_ref(), design_id).await {
+                Ok(script) => Some(chat_design::BaseDesign {
+                    script,
+                    focus: request.focus.clone(),
+                }),
+                Err(chat_design::BaseDesignError::NotFound) => {
+                    return design_not_found(design_id);
+                }
+                Err(chat_design::BaseDesignError::Backend(error)) => {
+                    return backend_failure(error);
+                }
+                Err(chat_design::BaseDesignError::Unusable(detail)) => {
+                    return sorted(FlatError::new(
+                        502,
+                        "base_design_unavailable",
+                        "the stored design could not be used as the base of this turn",
+                        vec![detail],
+                    ));
+                }
+            }
+        }
+        None => None,
     };
 
     // The design hook: the worker owns the strict parser, so the front door
@@ -1570,8 +1633,10 @@ async fn chat_route(state: Arc<State>, request: ChatRequest) -> OutResponse {
         .is_some_and(chat_design::ParsedIntent::is_design_request);
     // A remote provider with an explicit CAD target is a design turn even when
     // no template family matches: the model authors a ConstructionScript from
-    // the dimensions in the prompt. The local helper stays template-only.
+    // the dimensions in the prompt. The local helper stays template-only. An
+    // edit turn is always a design turn.
     let is_remote_design_request = parsed_is_design_request
+        || base.is_some()
         || (request.provider != crate::schemas::ProviderId::Local
             && request.cad_provider.is_some());
 
@@ -1613,6 +1678,7 @@ async fn chat_route(state: Arc<State>, request: ChatRequest) -> OutResponse {
                 backend.as_ref(),
                 &request.prompt,
                 request.cad_provider.as_deref(),
+                base.as_ref(),
                 call,
             )
             .await
@@ -1632,15 +1698,20 @@ async fn chat_route(state: Arc<State>, request: ChatRequest) -> OutResponse {
                     let code = failure.envelope_code();
                     if let Err(error) = chat_design::append_chat_turn(
                         backend.as_ref(),
-                        request.provider.as_str(),
-                        request.model.as_deref(),
-                        false,
-                        &request.prompt,
-                        None,
-                        true,
-                        request.cad_provider.as_deref(),
-                        &[],
-                        Some(code),
+                        &chat_design::ChatTurnRecord {
+                            provider: request.provider.as_str(),
+                            model: request.model.as_deref(),
+                            offline: false,
+                            prompt: &request.prompt,
+                            design_id: None,
+                            design_requested: true,
+                            cad_provider: request.cad_provider.as_deref(),
+                            missing: &[],
+                            failure: Some(code),
+                            base_design_id: request.base_design_id.as_deref(),
+                            focus_chars: focus_chars(&request),
+                            usage: crate::providers::ChatUsage::NONE,
+                        },
                     )
                     .await
                     {
@@ -1690,18 +1761,27 @@ async fn chat_route(state: Arc<State>, request: ChatRequest) -> OutResponse {
     // The journal turn. A worker that is down must not take the native chat
     // route down with it, so a refused append is reported locally and the
     // answer is still returned.
+    //
+    // The token counts of the turn are every call's counts: the design call
+    // and the one repair call when a design path spent it.
+    let usage = turn.usage.merge(outcome.usage);
     if let Some(backend) = state.backend.as_ref() {
         if let Err(error) = chat_design::append_chat_turn(
             backend.as_ref(),
-            request.provider.as_str(),
-            Some(outcome.model.as_str()),
-            outcome.offline,
-            &request.prompt,
-            turn.design_id.as_deref(),
-            turn.design_requested,
-            request.cad_provider.as_deref(),
-            &turn.missing,
-            None,
+            &chat_design::ChatTurnRecord {
+                provider: request.provider.as_str(),
+                model: Some(outcome.model.as_str()),
+                offline: outcome.offline,
+                prompt: &request.prompt,
+                design_id: turn.design_id.as_deref(),
+                design_requested: turn.design_requested,
+                cad_provider: request.cad_provider.as_deref(),
+                missing: &turn.missing,
+                failure: None,
+                base_design_id: request.base_design_id.as_deref(),
+                focus_chars: focus_chars(&request),
+                usage,
+            },
         )
         .await
         {
@@ -1709,13 +1789,35 @@ async fn chat_route(state: Arc<State>, request: ChatRequest) -> OutResponse {
         }
     }
 
-    chat_success(&request, &outcome, turn.design.as_ref())
+    chat_success(&request, &outcome, turn.design.as_ref(), usage)
+}
+
+/// The number of characters of the selected feature, when the turn named one.
+///
+/// The journal records the length only: the focus text itself is never
+/// written.
+fn focus_chars(request: &ChatRequest) -> Option<usize> {
+    request.focus.as_ref().map(|focus| focus.chars().count())
+}
+
+/// The refusal of a `base_design_id` the store does not hold.
+fn design_not_found(design_id: &str) -> OutResponse {
+    sorted(FlatError::new(
+        404,
+        "design_not_found",
+        "the stored design does not exist",
+        vec![format!(
+            "design_id={}",
+            crate::errors::truncate_chars(design_id, 64)
+        )],
+    ))
 }
 
 fn chat_success(
     request: &ChatRequest,
     outcome: &ChatOutcome,
     design: Option<&Value>,
+    usage: crate::providers::ChatUsage,
 ) -> OutResponse {
     // `ChatResponse.model` is bounded to 256 characters. The Python route
     // constructs the response model, so a provider that names a longer model
@@ -1743,8 +1845,24 @@ fn chat_success(
         ("model", Json::String(outcome.model.clone())),
         ("offline", Json::Bool(outcome.offline)),
         ("design", design),
+        ("usage", usage_json(usage)),
     ]);
     json_response(StatusCode::OK, &body)
+}
+
+/// The response form of the token counts a turn reported.
+///
+/// The field is always present; `null` means no call of the turn reported a
+/// count, never "the turn used no tokens".
+fn usage_json(usage: crate::providers::ChatUsage) -> Json {
+    if !usage.is_reported() {
+        return Json::Null;
+    }
+    let count = |value: Option<u64>| value.map(Json::UInt).unwrap_or(Json::Null);
+    Json::object(vec![
+        ("input_tokens", count(usage.input_tokens)),
+        ("output_tokens", count(usage.output_tokens)),
+    ])
 }
 
 /// The error envelope for one provider failure.

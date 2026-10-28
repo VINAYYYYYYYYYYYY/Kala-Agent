@@ -24,6 +24,10 @@ pub const MAX_PARAMETER_STRING_VALUE_LENGTH: usize = 128;
 pub const MAX_PROMPT_LENGTH: usize = 4_096;
 pub const MAX_MODEL_ID_LENGTH: usize = 256;
 pub const MAX_CAD_PROVIDER_LENGTH: usize = 64;
+/// The longest selected-feature text an edit turn may carry.
+pub const MAX_FOCUS_LENGTH: usize = 1_024;
+/// The number of hex characters of one stored design identifier.
+pub const DESIGN_ID_LENGTH: usize = 64;
 pub const INTEGRATION_ID_PATTERN: &str = r"^[a-z0-9][a-z0-9._-]{0,63}$";
 pub const MODEL_ID_PATTERN: &str = r"^[A-Za-z0-9._:/-]{1,256}$";
 pub const CAD_PROVIDER_PATTERN: &str = r"^[a-z0-9][a-z0-9._-]{0,63}$";
@@ -196,6 +200,31 @@ pub struct ChatRequest {
     /// automatically, so a turn without a provider asks which one to use
     /// instead of building a design.
     pub cad_provider: Option<String>,
+    /// The stored design this turn revises (ADR-0012).
+    ///
+    /// The route checks the format with [`valid_design_id`] -- the same check
+    /// the `/design/{design_id}/...` routes use -- and refuses an identifier
+    /// the store does not hold. The turn's result is a new design; the base
+    /// design is never mutated.
+    pub base_design_id: Option<String>,
+    /// The one feature of the base design the request is about (ADR-0012).
+    ///
+    /// Trimmed, at most [`MAX_FOCUS_LENGTH`] characters, and free of control
+    /// characters other than newline. It is never journalled.
+    pub focus: Option<String>,
+}
+
+/// Whether a design identifier is the sha256 digest the source requires.
+///
+/// The front door and the `/design/{design_id}/...` routes share this one
+/// check, so an edit turn's `base_design_id` accepts exactly the identifiers
+/// the stored-design routes accept.
+#[must_use]
+pub fn valid_design_id(value: &str) -> bool {
+    value.len() == DESIGN_ID_LENGTH
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
 /// A validated settings update.
@@ -500,6 +529,59 @@ fn optional_string(
             None
         }
     }
+}
+
+/// An optional string field, trimmed, with an empty value meaning "absent".
+fn optional_plain_string(
+    map: &Map<String, Value>,
+    name: &str,
+    errors: &mut Errors,
+) -> Option<String> {
+    match map.get(name) {
+        None | Some(Value::Null) => None,
+        Some(Value::String(raw)) => {
+            let text = strip(raw);
+            if text.is_empty() { None } else { Some(text) }
+        }
+        Some(_) => {
+            errors.push(
+                format!("body.{name}"),
+                "string_type",
+                "Input should be a valid string",
+            );
+            None
+        }
+    }
+}
+
+/// The optional selected-feature text of an edit turn.
+///
+/// The text is trimmed like every other Studio string, bounded to
+/// [`MAX_FOCUS_LENGTH`] characters, and may not carry a control character
+/// other than newline: a focus is a name or a short description, never a
+/// terminal escape or a NUL.
+fn optional_focus(map: &Map<String, Value>, name: &str, errors: &mut Errors) -> Option<String> {
+    let text = optional_plain_string(map, name, errors)?;
+    if text.chars().count() > MAX_FOCUS_LENGTH {
+        errors.push(
+            format!("body.{name}"),
+            "string_too_long",
+            &format!("String should have at most {MAX_FOCUS_LENGTH} characters"),
+        );
+        return None;
+    }
+    if text
+        .chars()
+        .any(|character| character.is_control() && character != '\n')
+    {
+        errors.push(
+            format!("body.{name}"),
+            "value_error",
+            "Value error, the focus must not contain control characters other than newline",
+        );
+        return None;
+    }
+    Some(text)
 }
 
 fn matches_pattern(value: &str, pattern: &str) -> bool {
@@ -846,6 +928,8 @@ pub fn validate_chat(map: &Map<String, Value>) -> Result<ChatRequest, FlatError>
     let prompt = required_string(map, "prompt", 1, MAX_PROMPT_LENGTH, None, &mut errors);
     let allow_remote = bool_field(map, "allow_remote", false, &mut errors);
     let cad_provider = optional_cad_provider(map, "cad_provider", &mut errors);
+    let base_design_id = optional_plain_string(map, "base_design_id", &mut errors);
+    let focus = optional_focus(map, "focus", &mut errors);
     report_extras(
         map,
         &[
@@ -854,6 +938,8 @@ pub fn validate_chat(map: &Map<String, Value>) -> Result<ChatRequest, FlatError>
             "prompt",
             "allow_remote",
             "cad_provider",
+            "base_design_id",
+            "focus",
         ],
         &mut errors,
     );
@@ -864,6 +950,8 @@ pub fn validate_chat(map: &Map<String, Value>) -> Result<ChatRequest, FlatError>
             prompt,
             allow_remote,
             cad_provider,
+            base_design_id,
+            focus,
         }),
         (_, _, Some(details)) => Err(invalid(details)),
         _ => Err(invalid(vec![])),
@@ -967,6 +1055,58 @@ mod tests {
         .unwrap();
         assert_eq!(request.prompt, "x");
         assert!(request.allow_remote);
+    }
+
+    #[test]
+    fn the_edit_turn_fields_are_trimmed_and_bounded() {
+        let design_id = "a".repeat(64);
+        let request = validate_chat(&map(&format!(
+            r#"{{"provider":"openrouter","prompt":"x","base_design_id":" {design_id} ","focus":" the hole\n "}}"#
+        )))
+        .unwrap();
+        assert_eq!(request.base_design_id.as_deref(), Some(design_id.as_str()));
+        assert_eq!(request.focus.as_deref(), Some("the hole"));
+
+        // An empty field is absent, not an error.
+        let request = validate_chat(&map(
+            r#"{"provider":"local","prompt":"x","base_design_id":"  ","focus":""}"#,
+        ))
+        .unwrap();
+        assert!(request.base_design_id.is_none());
+        assert!(request.focus.is_none());
+
+        let error = validate_chat(&map(&format!(
+            r#"{{"provider":"openrouter","prompt":"x","focus":"{}"}}"#,
+            "x".repeat(MAX_FOCUS_LENGTH + 1)
+        )))
+        .unwrap_err();
+        assert_eq!(
+            error.details,
+            vec![
+                "body.focus: string_too_long: String should have at most 1024 characters"
+                    .to_owned()
+            ]
+        );
+
+        let error = validate_chat(&map(
+            r#"{"provider":"openrouter","prompt":"x","focus":"a\tb"}"#,
+        ))
+        .unwrap_err();
+        assert_eq!(
+            error.details,
+            vec![
+                "body.focus: value_error: Value error, the focus must not contain control characters other than newline".to_owned()
+            ]
+        );
+
+        let error = validate_chat(&map(
+            r#"{"provider":"openrouter","prompt":"x","base_design_id":7}"#,
+        ))
+        .unwrap_err();
+        assert_eq!(
+            error.details,
+            vec!["body.base_design_id: string_type: Input should be a valid string".to_owned()]
+        );
     }
 
     #[test]
