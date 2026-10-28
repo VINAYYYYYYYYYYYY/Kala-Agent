@@ -114,6 +114,7 @@ class Worker:
                 "type": "event",
                 "event": {
                     "kind": "failed",
+                    "build_id": build_id,
                     "error": {
                         "code": "unavailable",
                         "message": (

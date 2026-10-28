@@ -16,7 +16,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
 from threading import BoundedSemaphore, RLock
-from typing import Final, cast
+from typing import Any, Final, cast
 from urllib.parse import unquote, urlsplit
 
 from kala_agent.contracts import (
@@ -402,10 +402,18 @@ def _terminate_process_group(process: subprocess.Popen[bytes]) -> bool:
     The worker is started in its own session, so its process group id is its
     pid. Signalling the recorded group id rather than looking the group up with
     ``getpgid`` avoids signalling this process's own group when the worker has
-    already been reaped.
+    already been reaped. A platform without process groups (Windows) kills the
+    one child instead of reporting a group kill that never happened.
     """
+    killpg = getattr(os, "killpg", None)
+    if killpg is None:
+        try:
+            process.kill()
+        except (OSError, ProcessLookupError):
+            return process.poll() is not None
+        return True
     try:
-        os.killpg(process.pid, signal.SIGKILL)
+        killpg(process.pid, getattr(signal, "SIGKILL", signal.SIGTERM))
     except (OSError, ProcessLookupError, PermissionError):
         try:
             process.kill()
@@ -419,8 +427,11 @@ def _has_exited(process: subprocess.Popen[bytes]) -> bool:
 
     An unreaped worker keeps its pid, and therefore its process group id,
     reserved, so the group can still be killed afterwards without any risk of
-    signalling an unrelated process that reused the id.
+    signalling an unrelated process that reused the id. A platform without
+    ``waitid`` (Windows) cannot observe an unreaped exit, so it polls instead.
     """
+    if not hasattr(os, "waitid"):
+        return process.poll() is not None
     try:
         status = os.waitid(os.P_PID, process.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
     except ChildProcessError:
@@ -1454,6 +1465,17 @@ class ToolExecutor:
         limits = _child_limits(self._profile, envelope.deadline_seconds)
         spec: SandboxSpec | None = None
         if sandbox_root is not None:
+            if os.name != "posix":
+                return (
+                    None,
+                    None,
+                    (
+                        ToolRunStatus.FAILED,
+                        ToolErrorCode.ISOLATION_UNAVAILABLE,
+                        "the strict sandbox requires a POSIX host and is unsupported on this "
+                        "platform",
+                    ),
+                )
             self._ensure_directory(sandbox_root)
             spec = self._build_sandbox_spec(sandbox_root, workspace)
         python_executable = self._python_executable
@@ -1465,6 +1487,13 @@ class ToolExecutor:
             import_roots=self._child_import_roots(),
             extra=self._profile.extra_environment,
         )
+        # ``start_new_session`` and ``preexec_fn`` are POSIX-only; on Windows
+        # ``subprocess`` rejects both, which used to turn every dispatch into a
+        # generic isolation failure instead of running the worker.
+        spawn_options: dict[str, Any] = {}
+        if os.name == "posix":
+            spawn_options["start_new_session"] = True
+            spawn_options["preexec_fn"] = lambda: _child_pre_exec(limits, spec)
         try:
             process = subprocess.Popen(
                 command,
@@ -1474,8 +1503,7 @@ class ToolExecutor:
                 cwd=workspace,
                 env=environment,
                 close_fds=True,
-                start_new_session=True,
-                preexec_fn=lambda: _child_pre_exec(limits, spec),
+                **spawn_options,
             )
         except (OSError, ValueError) as error:
             return (

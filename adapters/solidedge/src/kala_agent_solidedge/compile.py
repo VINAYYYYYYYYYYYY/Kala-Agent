@@ -121,8 +121,7 @@ def compile_operations(
         raise CompileError("the construction script did not compile")
     if len(script.components) > MAX_PARTS:
         raise CompileError(
-            f"the script has {len(script.components)} components; the wire cap is "
-            f"{MAX_PARTS} parts"
+            f"the script has {len(script.components)} components; the wire cap is {MAX_PARTS} parts"
         )
     if len(operations) > MAX_OPERATIONS:
         raise CompileError(

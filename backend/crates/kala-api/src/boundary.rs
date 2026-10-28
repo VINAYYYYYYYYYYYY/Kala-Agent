@@ -399,11 +399,16 @@ pub fn read_api_token(data_dir: &Path) -> Option<String> {
 /// permissions.
 ///
 /// The file is opened without following a symlink, so a link planted in the
-/// data directory cannot redirect the write.
+/// data directory cannot redirect the write. On Windows, where a POSIX mode is
+/// not meaningful, the file is then given an explicit inheritance-free DACL
+/// naming the owner, `LocalSystem` and `Administrators`
+/// ([`kala_process::restrict_file_to_current_user`]).
 ///
 /// # Errors
 ///
-/// Returns the underlying I/O error when the file cannot be replaced.
+/// Returns the underlying I/O error when the file cannot be replaced or, on
+/// Windows, when the owner-only ACL cannot be installed: a token left readable
+/// through an inherited entry is a failure, not a warning.
 pub fn store_api_token(data_dir: &Path, token: &str) -> io::Result<()> {
     let path = data_dir.join(API_TOKEN_FILE_NAME);
     let payload = format!("{token}\n");
@@ -417,11 +422,17 @@ pub fn store_api_token(data_dir: &Path, token: &str) -> io::Result<()> {
         // supported Unix; using it needs no unsafe code.
         options.custom_flags(libc::O_NOFOLLOW);
     }
-    let mut file = options.open(path)?;
+    let mut file = options.open(&path)?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         file.set_permissions(fs::Permissions::from_mode(API_TOKEN_FILE_MODE))?;
+    }
+    #[cfg(windows)]
+    {
+        // The file is still empty: restrict it before the token is written,
+        // so no byte of it is ever readable through an inherited entry.
+        kala_process::restrict_file_to_current_user(&path)?;
     }
     file.write_all(payload.as_bytes())?;
     file.flush()?;

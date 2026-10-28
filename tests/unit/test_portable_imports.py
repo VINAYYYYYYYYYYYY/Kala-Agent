@@ -64,7 +64,9 @@ sys.meta_path.insert(0, _RefusingFinder())
 """
 
 
-def _run_isolated(script: str) -> dict[str, object]:
+def _run_isolated(
+    script: str, *, blocked_prefixes: tuple[str, ...] = BLOCKED_PREFIXES
+) -> dict[str, object]:
     """Run ``script`` in a fresh interpreter with the refusing import hook."""
     environment = dict(os.environ)
     existing = environment.get("PYTHONPATH", "")
@@ -73,7 +75,7 @@ def _run_isolated(script: str) -> dict[str, object]:
     )
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
     completed = subprocess.run(
-        [sys.executable, "-c", _PRELUDE.format(blocked=BLOCKED_PREFIXES) + script],
+        [sys.executable, "-c", _PRELUDE.format(blocked=blocked_prefixes) + script],
         capture_output=True,
         text=True,
         env=environment,
@@ -120,14 +122,18 @@ TOKEN = "portable-probe-token-0123456789abcdef"
 with tempfile.TemporaryDirectory() as scratch:
     data_dir = Path(scratch) / "studio"
     app = kala_agent.studio.create_studio_app(data_dir=data_dir, api_token=TOKEN)
-    client = TestClient(app, base_url="http://127.0.0.1")
-    health = client.get("/api/studio/health")
-    refused_host = client.get("/api/studio/health", headers={"host": "attacker.example"})
-    refused_token = client.post(
-        "/api/studio/preview",
-        json={"kind": "box", "parameters": {"length_mm": 10.0}},
-    )
-    data_dir_exists = data_dir.is_dir()
+    # The context manager runs the lifespan shutdown, which closes the studio
+    # journal's SQLite connection. Without it, Windows refuses to delete the
+    # still-open studio-journal.sqlite3 during TemporaryDirectory cleanup
+    # (PermissionError WinError 32).
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        health = client.get("/api/studio/health")
+        refused_host = client.get("/api/studio/health", headers={"host": "attacker.example"})
+        refused_token = client.post(
+            "/api/studio/preview",
+            json={"kind": "box", "parameters": {"length_mm": 10.0}},
+        )
+        data_dir_exists = data_dir.is_dir()
 
 print(json.dumps({
     "health_status": health.status_code,
@@ -177,6 +183,41 @@ print(json.dumps({
     assert result["wildcard_refused"] is False
     assert result["libc_attempts"] == []
     assert not any(name.startswith(BLOCKED_PREFIXES) for name in loaded)
+
+
+def test_tools_package_imports_without_a_c_library() -> None:
+    """Importing the tool plane must not load ``libc`` at import time.
+
+    Every CLI command imports ``kala_agent.tools``. The strict sandbox used to
+    load the C library while the module was imported, which raised on Windows
+    (there is no ``libc.so.6``) before any command could run. The load is now
+    lazy, so the import succeeds and a namespace-sandbox request reports the
+    host as unsupported instead.
+    """
+    result = _run_isolated(
+        """
+import kala_agent.tools
+from kala_agent.tools import sandbox
+
+loaded_eagerly = sandbox._LIBC is not None
+try:
+    sandbox._libc()
+except Exception as error:
+    failure = type(error).__name__
+else:
+    failure = None
+print(json.dumps({
+    "imported": "kala_agent.tools" in sys.modules,
+    "loaded_eagerly": loaded_eagerly,
+    "failure": failure,
+    "libc_attempts": libc_attempts,
+}))
+""",
+        blocked_prefixes=("kala_agent.application", "kala_agent.runtime"),
+    )
+    assert result["imported"] is True
+    assert result["loaded_eagerly"] is False
+    assert result["failure"] == "SandboxSetupError"
 
 
 def test_api_package_import_is_lazy_but_complete() -> None:

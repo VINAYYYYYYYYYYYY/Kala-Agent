@@ -17,8 +17,10 @@ is the production stack, not a stub. They never open a socket; the FastAPI
 
 from __future__ import annotations
 
+import socket
 import tempfile
 from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -39,10 +41,31 @@ AUTH = {"Authorization": f"Bearer {LAUNCH_TOKEN}"}
 
 @pytest.fixture(autouse=True)
 def _forbid_network(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Refuse sockets while letting the test harness build its self-pipe.
+
+    On Windows ``socket.socketpair`` — used by the asyncio self-pipe that the
+    FastAPI ``TestClient`` starts in a portal thread — is emulated with a
+    loopback TCP connect. Refusing that connect aborted every test at setup
+    with "the studio must not open network connections", so loopback connects
+    are passed through to the real implementation while every non-loopback
+    address and every convenience connect helper stays refused.
+    """
+    loopback_hosts = {"127.0.0.1", "::1", "localhost"}
+    real_connect = socket.socket.connect
+
     def blocked(*args: object, **kwargs: object) -> None:
         raise AssertionError("the studio must not open network connections")
 
-    monkeypatch.setattr("socket.socket.connect", blocked)
+    def guarded_connect(
+        self: socket.socket, address: object, *args: object, **kwargs: object
+    ) -> None:
+        host = address[0] if isinstance(address, tuple) else address
+        if host in loopback_hosts:
+            real_connect(self, address, *args, **kwargs)
+            return
+        blocked()
+
+    monkeypatch.setattr("socket.socket.connect", guarded_connect)
     monkeypatch.setattr("socket.socket.connect_ex", blocked)
     monkeypatch.setattr("socket.create_connection", blocked)
     yield
@@ -71,18 +94,28 @@ def client(data_dir: Path) -> Iterator[TestClient]:
         yield test_client
 
 
-def _client_no_auth(data_dir: Path) -> TestClient:
+@contextmanager
+def _client_no_auth(data_dir: Path) -> Iterator[TestClient]:
+    """Yield an unauthenticated client *inside* the app lifespan.
+
+    The lifespan shutdown is what closes the studio journal's SQLite
+    connection. Leaving the client un-entered (the previous shape) leaked the
+    open connection, and Windows then refused to delete
+    ``studio-journal.sqlite3`` while the per-test ``TemporaryDirectory`` was
+    being cleaned up (``PermissionError: WinError 32``).
+    """
     app = create_studio_app(
         data_dir=data_dir,
         api_token=LAUNCH_TOKEN,
         max_body_bytes=4096,
         static_root=None,
     )
-    return TestClient(
+    with TestClient(
         app,
         base_url=LOOPBACK_BASE_URL,
         raise_server_exceptions=False,
-    )
+    ) as test_client:
+        yield test_client
 
 
 # --- host guard ---
@@ -186,36 +219,36 @@ def test_mismatched_port_is_refused(client: TestClient) -> None:
 
 
 def test_post_without_token_is_unauthorized(data_dir: Path) -> None:
-    unauth = _client_no_auth(data_dir)
-    response = unauth.post(
-        "/api/studio/preview",
-        json={
-            "kind": "box",
-            "parameters": {"size_x": 10, "size_y": 10, "size_z": 10},
-        },
-    )
+    with _client_no_auth(data_dir) as unauth:
+        response = unauth.post(
+            "/api/studio/preview",
+            json={
+                "kind": "box",
+                "parameters": {"size_x": 10, "size_y": 10, "size_z": 10},
+            },
+        )
     assert response.status_code == 401
     assert response.json()["code"] == "unauthorized"
 
 
 def test_post_with_wrong_token_is_unauthorized(data_dir: Path) -> None:
-    unauth = _client_no_auth(data_dir)
-    response = unauth.post(
-        "/api/studio/preview",
-        json={
-            "kind": "box",
-            "parameters": {"size_x": 10, "size_y": 10, "size_z": 10},
-        },
-        headers={"Authorization": "Bearer wrong-token-123456789012345678"},
-    )
+    with _client_no_auth(data_dir) as unauth:
+        response = unauth.post(
+            "/api/studio/preview",
+            json={
+                "kind": "box",
+                "parameters": {"size_x": 10, "size_y": 10, "size_z": 10},
+            },
+            headers={"Authorization": "Bearer wrong-token-123456789012345678"},
+        )
     assert response.status_code == 401
 
 
 def test_get_routes_do_not_require_token(data_dir: Path) -> None:
-    unauth = _client_no_auth(data_dir)
-    assert unauth.get("/api/studio/health").status_code == 200
-    assert unauth.get("/api/studio/integrations").status_code == 200
-    assert unauth.get("/api/studio/providers").status_code == 200
+    with _client_no_auth(data_dir) as unauth:
+        assert unauth.get("/api/studio/health").status_code == 200
+        assert unauth.get("/api/studio/integrations").status_code == 200
+        assert unauth.get("/api/studio/providers").status_code == 200
 
 
 # --- body limit ---

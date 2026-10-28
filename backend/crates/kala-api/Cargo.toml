@@ -28,6 +28,10 @@ kala-json = { path = "../kala-json" }
 # the composition root (a revision, its provenance, an evaluation result and an
 # approval request) and the ordered wire document FastAPI writes.
 kala-contracts = { path = "../kala-contracts" }
+# The native boundary crate.  On Windows a POSIX mode is not meaningful, so the
+# launch token file is restricted with the owner-only DACL helper it exposes;
+# the crate's process supervision is not used here.
+kala-process = { path = "../kala-process" }
 # Arbitrary precision integers, which Pydantic accepts for an `int` field.
 num-bigint = "0.4"
 # The number format of the answers, which the JSON serializer of the Python

@@ -2182,3 +2182,24 @@ class _FakeProcess:
 
     def poll(self) -> int | None:
         return self._exitcode
+
+
+def test_terminate_process_group_without_killpg_kills_the_child(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Windows has no ``killpg``; the child is killed directly instead of crashing."""
+    monkeypatch.delattr(os, "killpg", raising=False)
+    process = _FakeProcess(pid=4321)
+
+    assert _terminate_process_group(cast("Any", process)) is True
+    assert process.killed is True
+
+
+def test_has_exited_without_waitid_falls_back_to_poll(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Windows has no ``waitid``; an exited child is still observed."""
+    monkeypatch.delattr(os, "waitid", raising=False)
+
+    assert executor_module._has_exited(cast("Any", _FakeProcess(pid=1, exitcode=0))) is True
+    assert executor_module._has_exited(cast("Any", _FakeProcess(pid=1, exitcode=None))) is False

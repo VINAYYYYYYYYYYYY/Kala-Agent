@@ -126,29 +126,54 @@ def _load_libc() -> ctypes.CDLL:
     raise SandboxSetupError("the C library could not be loaded for namespace isolation")
 
 
-_LIBC: Final[ctypes.CDLL] = _load_libc()
-_LIBC.mount.argtypes = (
-    ctypes.c_char_p,
-    ctypes.c_char_p,
-    ctypes.c_char_p,
-    ctypes.c_ulong,
-    ctypes.c_char_p,
-)
-_LIBC.mount.restype = ctypes.c_int
-_LIBC.unshare.argtypes = (ctypes.c_int,)
-_LIBC.unshare.restype = ctypes.c_int
-_LIBC.chroot.argtypes = (ctypes.c_char_p,)
-_LIBC.chroot.restype = ctypes.c_int
-_LIBC.chdir.argtypes = (ctypes.c_char_p,)
-_LIBC.chdir.restype = ctypes.c_int
-_LIBC.socket.argtypes = (ctypes.c_int, ctypes.c_int, ctypes.c_int)
-_LIBC.socket.restype = ctypes.c_int
-_LIBC.connect.argtypes = (ctypes.c_int, ctypes.c_void_p, ctypes.c_size_t)
-_LIBC.connect.restype = ctypes.c_int
-_LIBC.close.argtypes = (ctypes.c_int,)
-_LIBC.close.restype = ctypes.c_int
-_LIBC.umount2.argtypes = (ctypes.c_char_p, ctypes.c_int)
-_LIBC.umount2.restype = ctypes.c_int
+def _configure_libc(library: ctypes.CDLL) -> None:
+    library.mount.argtypes = (
+        ctypes.c_char_p,
+        ctypes.c_char_p,
+        ctypes.c_char_p,
+        ctypes.c_ulong,
+        ctypes.c_char_p,
+    )
+    library.mount.restype = ctypes.c_int
+    library.unshare.argtypes = (ctypes.c_int,)
+    library.unshare.restype = ctypes.c_int
+    library.chroot.argtypes = (ctypes.c_char_p,)
+    library.chroot.restype = ctypes.c_int
+    library.chdir.argtypes = (ctypes.c_char_p,)
+    library.chdir.restype = ctypes.c_int
+    library.socket.argtypes = (ctypes.c_int, ctypes.c_int, ctypes.c_int)
+    library.socket.restype = ctypes.c_int
+    library.connect.argtypes = (ctypes.c_int, ctypes.c_void_p, ctypes.c_size_t)
+    library.connect.restype = ctypes.c_int
+    library.close.argtypes = (ctypes.c_int,)
+    library.close.restype = ctypes.c_int
+    library.umount2.argtypes = (ctypes.c_char_p, ctypes.c_int)
+    library.umount2.restype = ctypes.c_int
+
+
+#: The C library is loaded on first use, never at import time.
+#:
+#: ``libc.so.6`` does not exist on Windows, and the whole tool plane is imported
+#: by every CLI command, so an eager load turned a missing namespace API into an
+#: import failure that killed the process before it could report anything. The
+#: lazy load keeps ``import kala_agent.tools`` portable and turns "no namespace
+#: sandbox on this host" into a reported unavailability.
+_LIBC: ctypes.CDLL | None = None
+
+
+def _libc() -> ctypes.CDLL:
+    """Return the configured C library, loading it on first use."""
+    global _LIBC
+    if _LIBC is None:
+        if not sys.platform.startswith("linux"):
+            raise SandboxSetupError(
+                "the strict sandbox requires Linux namespaces; "
+                f"namespace isolation is unsupported on {sys.platform}"
+            )
+        library = _load_libc()
+        _configure_libc(library)
+        _LIBC = library
+    return _LIBC
 
 
 class _SockAddrIn(ctypes.Structure):
@@ -314,7 +339,7 @@ def _libc_error(operation: str) -> SandboxSetupError:
 
 
 def _unshare(flag: int, name: str) -> None:
-    if _LIBC.unshare(ctypes.c_int(flag)) != 0:
+    if _libc().unshare(ctypes.c_int(flag)) != 0:
         raise _libc_error(f"unshare({name})")
 
 
@@ -329,7 +354,9 @@ def _mount(
     target_bytes = target.encode()
     type_bytes = b"" if filesystem is None else filesystem.encode()
     data_bytes = None if data is None else data.encode()
-    if _LIBC.mount(source_bytes, target_bytes, type_bytes, ctypes.c_ulong(flags), data_bytes) != 0:
+    if _libc().mount(
+        source_bytes, target_bytes, type_bytes, ctypes.c_ulong(flags), data_bytes
+    ) != 0:
         raise _libc_error(f"mount({target})")
 
 
@@ -404,7 +431,7 @@ def _mount_scratch_set(root: Path, targets: tuple[str, ...], scratch_bytes: int)
         return True
     for target in mounted:
         try:
-            _LIBC.umount2((root / target.lstrip("/")).as_posix().encode(), 0)
+            _libc().umount2((root / target.lstrip("/")).as_posix().encode(), 0)
         except OSError:
             continue
     return False
@@ -472,7 +499,9 @@ def isolate_process(spec: SandboxSpec) -> tuple[str, ...]:
     """Establish the requested controls in the calling process.
 
     Raises :class:`SandboxSetupError` with a short sanitized reason as soon as
-    a control cannot be established; the caller must then fail closed.
+    a control cannot be established; the caller must then fail closed. On a
+    host without Linux namespaces the first control resolution reports that
+    the platform is unsupported instead of failing on a missing symbol.
     """
     established: list[str] = []
     for name in _UNSHARE_ORDER:
@@ -513,18 +542,19 @@ def isolate_process(spec: SandboxSpec) -> tuple[str, ...]:
             pass
         else:
             established.append("procfs")
-    if _LIBC.chroot(spec.root.as_posix().encode()) != 0:
+    if _libc().chroot(spec.root.as_posix().encode()) != 0:
         raise _libc_error("chroot")
-    if _LIBC.chdir(b"/") != 0:
+    if _libc().chdir(b"/") != 0:
         raise _libc_error("chdir to the sandbox root")
-    if _LIBC.chdir(spec.workspace.as_posix().encode()) != 0:
+    if _libc().chdir(spec.workspace.as_posix().encode()) != 0:
         raise _libc_error("chdir into the workspace")
     return tuple(established)
 
 
 def _network_is_isolated() -> bool:
     """Confirm the child has no route to any address outside its namespace."""
-    handle = _LIBC.socket(ctypes.c_int(2), ctypes.c_int(1), ctypes.c_int(0))
+    library = _libc()
+    handle = library.socket(ctypes.c_int(2), ctypes.c_int(1), ctypes.c_int(0))
     if handle < 0:
         return False
     try:
@@ -532,9 +562,9 @@ def _network_is_isolated() -> bool:
         address.sin_family = 2
         address.sin_port = int.from_bytes((53).to_bytes(2, "big"), "big")
         address.sin_addr[:] = bytes((8, 8, 8, 8))
-        return int(_LIBC.connect(handle, ctypes.byref(address), ctypes.c_size_t(16))) != 0
+        return int(library.connect(handle, ctypes.byref(address), ctypes.c_size_t(16))) != 0
     finally:
-        _LIBC.close(handle)
+        library.close(handle)
 
 
 def _device_list_is_minimal() -> bool:

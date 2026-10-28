@@ -606,6 +606,14 @@ pub fn describe_provider_credentials(
 /// Write text through a temporary file in the destination directory and an
 /// atomic replacement, tightening the mode on POSIX.
 ///
+/// On Windows the `0o600` guarantee is an explicit, inheritance-free DACL that
+/// names the owner, `LocalSystem` and `Administrators` only
+/// ([`kala_process::restrict_file_to_current_user`]); it is installed on the
+/// temporary file before the content is written, and the atomic replacement
+/// carries it to the destination. Both platforms treat the restriction as part
+/// of the write: a secret that cannot be restricted is reported rather than
+/// left readable by an inherited entry.
+///
 /// # Errors
 ///
 /// Returns the underlying I/O error and removes the temporary file on
@@ -616,6 +624,13 @@ pub fn atomic_write_text(path: &Path, content: &str, mode: u32) -> io::Result<()
     }
     let mut temporary =
         tempfile::NamedTempFile::new_in(path.parent().unwrap_or_else(|| Path::new(".")))?;
+    #[cfg(windows)]
+    {
+        // Restrict the temporary file *before* the secret is written into it,
+        // so it is never readable through the directory's inherited entries.
+        // The replacement keeps the DACL, so the destination inherits it.
+        kala_process::restrict_file_to_current_user(temporary.path())?;
+    }
     temporary.write_all(content.as_bytes())?;
     temporary.flush()?;
     temporary.as_file().sync_all()?;
@@ -640,11 +655,62 @@ pub fn atomic_write_text(path: &Path, content: &str, mode: u32) -> io::Result<()
     Ok(())
 }
 
-/// Return the effective data directory used by the POST settings route when
-/// the server has no configured directory.
-#[must_use]
-pub fn fallback_settings_dir() -> PathBuf {
-    std::env::temp_dir().join("kala-studio")
+/// The directory name the settings fallback carries under the per-user base.
+const SETTINGS_DIRECTORY_NAME: &str = "kala-studio";
+
+/// Return the per-user directory used by the POST settings route when the
+/// server has no configured directory.
+///
+/// The shared temporary directory is never used: another local principal can
+/// create `<temp>/kala-studio` before first use, so a secret written through
+/// that path would land in a directory this user does not control. The
+/// per-user base is `%LOCALAPPDATA%` (or `%USERPROFILE%\AppData\Local`) on
+/// Windows and `$XDG_STATE_HOME` (or `$HOME/.local/state`) everywhere else.
+///
+/// # Errors
+///
+/// Returns a message naming what is missing when no per-user base directory
+/// can be resolved, so the route reports it instead of writing to a shared
+/// location.
+pub fn fallback_settings_dir() -> Result<PathBuf, String> {
+    Ok(per_user_settings_base()?.join(SETTINGS_DIRECTORY_NAME))
+}
+
+/// Resolve the absolute per-user base directory for the settings fallback.
+fn per_user_settings_base() -> Result<PathBuf, String> {
+    #[cfg(windows)]
+    const CANDIDATES: &[(&str, &str)] = &[("LOCALAPPDATA", ""), ("USERPROFILE", "AppData\\Local")];
+    #[cfg(not(windows))]
+    const CANDIDATES: &[(&str, &str)] = &[("XDG_STATE_HOME", ""), ("HOME", ".local/state")];
+    for (name, suffix) in CANDIDATES {
+        if let Some(base) = per_user_directory(name, suffix) {
+            return Ok(base);
+        }
+    }
+    Err(format!(
+        "no per-user settings directory is configured; set {} or pass --data-dir",
+        CANDIDATES
+            .iter()
+            .map(|(name, _)| *name)
+            .collect::<Vec<_>>()
+            .join(" or ")
+    ))
+}
+
+/// Read one per-user base directory from the process environment.
+///
+/// A value that is not absolute (or is a filesystem root) is not a per-user
+/// location and is refused, like the source's own settings validator.
+fn per_user_directory(name: &str, suffix: &str) -> Option<PathBuf> {
+    let raw = std::env::var_os(name)?;
+    if raw.is_empty() {
+        return None;
+    }
+    let mut base = PathBuf::from(raw);
+    if !suffix.is_empty() {
+        base = base.join(suffix);
+    }
+    (base.is_absolute() && base.parent().is_some()).then_some(base)
 }
 
 #[cfg(test)]
@@ -695,6 +761,20 @@ mod tests {
         assert_eq!(
             fs::read_to_string(&path).unwrap(),
             "{\n  \"api_keys\": {}\n}\n"
+        );
+    }
+
+    #[test]
+    fn the_settings_fallback_is_a_per_user_directory() {
+        // REVIEW-8 probe: the shared temporary directory must never be the
+        // place a stored provider key lands.
+        let fallback = fallback_settings_dir().expect("a per-user base is configured");
+        assert!(fallback.is_absolute(), "{fallback:?}");
+        assert!(fallback.ends_with("kala-studio"), "{fallback:?}");
+        assert_ne!(fallback, std::env::temp_dir().join("kala-studio"));
+        assert!(
+            !fallback.starts_with(std::env::temp_dir()),
+            "{fallback:?} must not live under the shared temporary directory"
         );
     }
 

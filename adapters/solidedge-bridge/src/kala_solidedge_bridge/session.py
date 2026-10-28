@@ -18,8 +18,9 @@ import importlib
 import queue
 import threading
 import time
-from collections.abc import Callable
-from dataclasses import dataclass
+from collections.abc import Callable, Iterable, Sequence
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Final, Protocol, TypeVar, cast
 
 T = TypeVar("T")
@@ -36,6 +37,17 @@ RETRYABLE_HRESULTS: Final[frozenset[int]] = frozenset(
 )
 DEFAULT_RETRY_DEADLINE_SECONDS: Final[float] = 5.0
 _MESSAGE_LIMIT: Final[int] = 400
+#: ``TYPEKIND`` for a type library enum; the probe's enum names live here.
+TKIND_ENUM: Final[int] = 0
+#: Type libraries that carry the "ig*" / "se*" modeling enums. They are found
+#: by name among the libraries shipped beside the running Solid Edge build;
+#: no GUID, version, or enum literal is hard-coded.
+ENUM_TYPELIB_NAMES: Final[tuple[str, ...]] = ("SolidEdgePart", "SolidEdgeConstants")
+_PREFERRED_TYPELIB_FILES: Final[tuple[str, ...]] = (
+    "part.tlb",
+    "constant.tlb",
+    "framewrk.tlb",
+)
 
 
 class ComUnavailable(RuntimeError):
@@ -95,6 +107,215 @@ def bounded_message(exc: BaseException) -> str:
     return (text or exc.__class__.__name__)[:_MESSAGE_LIMIT]
 
 
+def lib_attributes(raw: object) -> dict[str, Any]:
+    """Normalize an ``ITypeLib.GetLibAttr`` result to named fields.
+
+    pywin32's dynamic ``GetLibAttr`` returns the six ``TLIBATTR`` fields as a
+    plain tuple ``(guid, lcid, syskind, major, minor, flags)`` rather than a
+    ``TLIBATTR`` object, so reading ``wMajorVerNum`` off the result raises
+    ``AttributeError``. Some builds do return the object, so both shapes are
+    accepted; the field order here is the installed ``TLIBATTR`` layout, which
+    is what the registered Solid Edge ``TypeLib\\<guid>\\1.0`` keys agree with.
+    """
+    if isinstance(raw, (tuple, list)):
+        values = list(raw)
+        if not values:
+            raise ValueError("the type library returned no attributes")
+        if len(values) < 6:
+            return lib_attributes(values[0])
+        return {
+            "guid": str(values[0]),
+            "lcid": int(values[1]),
+            "major": int(values[3]),
+            "minor": int(values[4]),
+        }
+    return {
+        "guid": str(getattr(raw, "guid", raw)),
+        "lcid": int(getattr(raw, "lcid", 0)),
+        "major": int(getattr(raw, "wMajorVerNum", 0)),
+        "minor": int(getattr(raw, "wMinorVerNum", 0)),
+    }
+
+
+def member_names(type_info: Any, memid: int) -> tuple[str, ...]:  # noqa: ANN401
+    """Return the names of one type-library member.
+
+    ``ITypeInfo.GetNames`` takes only ``memid`` on pywin32 312; the older
+    two-argument form is kept as a fallback so a different pywin32 build does
+    not silently report an empty method table.
+    """
+    try:
+        raw = type_info.GetNames(memid)
+    except TypeError:
+        raw = type_info.GetNames(memid, 64)
+    if isinstance(raw, (str, bytes)):
+        return (str(raw),)
+    return tuple(str(item) for item in raw if not isinstance(item, (list, tuple)))
+
+
+def function_arguments(function: Any) -> tuple[tuple[int, int], ...]:  # noqa: ANN401
+    """Return ``(vt, flags)`` for each parameter of one type-library function.
+
+    pywin32 312 exposes ``FUNCDESC.args`` as a tuple of
+    ``(TYPEDESC, PARAMFLAGS, default)`` tuples where ``TYPEDESC`` is itself
+    ``(vt, detail)``; it does not expose ``cParams`` or ``elemdescFunc``.
+    Object-shaped descriptions (``.tdesc.vt`` / ``.flags``) are accepted too so
+    a different pywin32 build does not make the whole method table unavailable.
+    """
+    described: list[tuple[int, int]] = []
+    for parameter in getattr(function, "args", ()) or ():
+        if isinstance(parameter, (tuple, list)):
+            transport = parameter[0] if parameter else 0
+            flags = parameter[1] if len(parameter) > 1 else 0
+            if isinstance(transport, (tuple, list)):
+                transport = transport[0] if transport else 0
+        else:
+            transport = getattr(getattr(parameter, "tdesc", None), "vt", 0)
+            flags = getattr(parameter, "flags", 0)
+        described.append((int(transport), int(flags)))
+    return tuple(described)
+
+
+def _release_descriptor(owner: Any, method: str, descriptor: Any) -> None:  # noqa: ANN401
+    """Release one COM type-info descriptor that the caller owns.
+
+    ``GetTypeAttr``, ``GetVarDesc`` and ``GetFuncDesc`` allocate memory that
+    must be freed with the matching ``Release*`` call. A test fake (or a
+    different pywin32 build) may not expose that method, so a missing or failing
+    release is ignored: it must never turn a successful read into a failure.
+    """
+    if descriptor is None:
+        return
+    release = getattr(owner, method, None)
+    if release is None:
+        return
+    try:
+        release(descriptor)
+    except Exception:
+        pass
+
+
+def enum_members(type_info: Any) -> dict[str, int]:  # noqa: ANN401
+    """Return ``name -> value`` for one ``TKIND_ENUM`` type description.
+
+    The installed Solid Edge type libraries expose their modeling enums only
+    through the type information: ``ITypeInfo.GetVarDesc(index)`` gives the
+    ``VARDESC`` (with ``memid`` and the constant ``value``) and ``GetNames``
+    gives the member name. Non-enum type descriptions return an empty mapping
+    so a scan cannot mistake an interface constant for an enum member.
+    """
+    attributes: Any = None
+    try:
+        attributes = type_info.GetTypeAttr()
+    except Exception:
+        return {}
+    try:
+        if int(attributes.typekind) != TKIND_ENUM:
+            return {}
+        count = int(attributes.cVars)
+        members: dict[str, int] = {}
+        for index in range(count):
+            variable: Any = None
+            try:
+                variable = type_info.GetVarDesc(index)
+                names = member_names(type_info, int(variable.memid))
+                value = variable.value
+                if not names or isinstance(value, bool) or not isinstance(value, int):
+                    continue
+                members[str(names[0])] = int(value)
+            except Exception:
+                continue
+            finally:
+                _release_descriptor(type_info, "ReleaseVarDesc", variable)
+        return members
+    finally:
+        _release_descriptor(type_info, "ReleaseTypeAttr", attributes)
+
+
+@dataclass(frozen=True)
+class ConstantResolution:
+    """Enum names resolved from installed type libraries.
+
+    ``sources`` records the library and enum type each value came from, so a
+    probe report can show its own evidence instead of claiming a literal.
+    """
+
+    values: dict[str, int] = field(default_factory=dict)
+    missing: list[str] = field(default_factory=list)
+    sources: dict[str, str] = field(default_factory=dict)
+
+
+def resolve_enum_names(typelibs: Iterable[Any], names: Sequence[str]) -> ConstantResolution:
+    """Scan ``TKIND_ENUM`` members of ``typelibs`` for the requested names.
+
+    Libraries are scanned in the given order and the scan stops as soon as
+    every name is found. A name that no installed library declares stays in
+    ``missing``; nothing is substituted.
+    """
+    wanted = list(dict.fromkeys(str(name) for name in names))
+    remaining = set(wanted)
+    values: dict[str, int] = {}
+    sources: dict[str, str] = {}
+    for typelib in typelibs:
+        if not remaining:
+            break
+        try:
+            library_name = str(typelib.GetDocumentation(-1)[0])
+            count = int(typelib.GetTypeInfoCount())
+        except Exception:
+            continue
+        for index in range(count):
+            if not remaining:
+                break
+            try:
+                type_info = typelib.GetTypeInfo(index)
+            except Exception:
+                continue
+            members = enum_members(type_info)
+            if not members:
+                continue
+            try:
+                type_name = str(type_info.GetDocumentation(-1)[0])
+            except Exception:
+                type_name = ""
+            for name in wanted:
+                if name in remaining and name in members:
+                    values[name] = members[name]
+                    sources[name] = f"{library_name}.{type_name}" if type_name else library_name
+                    remaining.discard(name)
+    return ConstantResolution(
+        values=values,
+        missing=[name for name in wanted if name not in values],
+        sources=sources,
+    )
+
+
+def _registry_value(winreg: Any, key_path: str) -> str | None:  # noqa: ANN401
+    """Read one default registry value; a missing key or value is ``None``."""
+    try:
+        with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, key_path) as key:
+            value, _kind = winreg.QueryValueEx(key, "")
+    except OSError:
+        return None
+    return str(value) if value else None
+
+
+def _server_executable(command: str) -> str | None:
+    """Extract the executable from a COM ``LocalServer32`` command line."""
+    text = command.strip()
+    if not text:
+        return None
+    if text.startswith('"'):
+        end = text.find('"', 1)
+        return text[1:end] if end > 1 else None
+    for separator in (" /", " -", " --"):
+        index = text.find(separator)
+        if index > 0:
+            text = text[:index]
+            break
+    return text.strip() or None
+
+
 def call_with_retry(
     operation: Callable[[], T],
     *,
@@ -139,10 +360,13 @@ class BindingProtocol(Protocol):
         self,
         application: Any,  # noqa: ANN401
         names: tuple[str, ...],
-    ) -> tuple[dict[str, int], list[str]]: ...
+    ) -> ConstantResolution: ...
 
     def describe_typelib(self, obj: Any) -> dict[str, Any]: ...  # noqa: ANN401
 
+    # By-reference VARIANT builders. The probe does not use them for ``[out]``
+    # parameters: pywin32 312 returns those as the method result, and a byref
+    # SAFEARRAY is rejected outright. See ``probe._vector``.
     def variant_byref_float(self, value: float) -> Any: ...  # noqa: ANN401
 
     def variant_byref_int(self, value: int) -> Any: ...  # noqa: ANN401
@@ -172,7 +396,6 @@ class ComBinding:
             raise ComUnavailable(
                 "pywin32 is not installed; Solid Edge COM is unavailable on this host"
             ) from exc
-        self._generated_constants_module: str | None = None
 
     def coinitialize(self) -> None:
         try:
@@ -217,110 +440,237 @@ class ComBinding:
         text = str(value).strip()
         return text[:64] or "unknown"
 
-    def _ensure_generated_module(self, application: Any) -> str | None:  # noqa: ANN401
-        if self._generated_constants_module is not None:
-            return self._generated_constants_module
+    def _application_typelib(self, application: Any) -> Any | None:  # noqa: ANN401
         try:
             ole_object = application._oleobj_
             type_info = ole_object.GetTypeInfo()
             typelib, _index = type_info.GetContainingTypeLib()
-            attributes = typelib.GetLibAttr()
-            module = self.win32com.gencache.EnsureModule(
-                str(attributes.guid),
-                int(attributes.lcid),
-                int(attributes.wMajorVerNum),
-                int(attributes.wMinorVerNum),
-            )
-            if module is None:
-                return None
-            importlib.import_module(module.__name__)
         except Exception:
             return None
-        self._generated_constants_module = str(module.__name__)
-        return self._generated_constants_module
+        return typelib
+
+    def _registered_typelib_path(self, attributes: dict[str, Any]) -> str | None:
+        """Return the registered ``Win32`` path for one type library.
+
+        The path locates the installation directory, which is where the other
+        Solid Edge type libraries (``Part.tlb``, ``constant.tlb``) live. No
+        GUID or version is hard-coded: it comes from the live typelib.
+        """
+        try:
+            import winreg
+        except ImportError:  # pragma: no cover - Windows only
+            return None
+        guid = str(attributes.get("guid", "")).strip("{}").upper()
+        if not guid:
+            return None
+        version = f"{int(attributes.get('major', 0))}.{int(attributes.get('minor', 0))}"
+        base = rf"TypeLib\{{{guid}}}\{version}"
+        candidates: list[str] = []
+        lcid = attributes.get("lcid")
+        if isinstance(lcid, int) and not isinstance(lcid, bool):
+            candidates.append(rf"{base}\{lcid}\Win32")
+        candidates.append(rf"{base}\0\Win32")
+        for key_path in candidates:
+            value = _registry_value(winreg, key_path)
+            if value:
+                return value
+        try:
+            with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, base) as version_key:
+                index = 0
+                while True:
+                    try:
+                        name = winreg.EnumKey(version_key, index)
+                    except OSError:
+                        break
+                    index += 1
+                    value = _registry_value(winreg, rf"{base}\{name}\Win32")
+                    if value:
+                        return value
+        except OSError:
+            return None
+        return None
+
+    def _progid_install_directory(self) -> Path | None:
+        """Locate the installation directory from the application ProgID."""
+        try:
+            import winreg
+        except ImportError:  # pragma: no cover - Windows only
+            return None
+        clsid = _registry_value(winreg, r"SolidEdge.Application\CLSID")
+        if not clsid:
+            return None
+        server = _registry_value(winreg, rf"CLSID\{clsid}\LocalServer32")
+        executable = _server_executable(server) if server else None
+        return Path(executable).parent if executable else None
+
+    def _install_typelib_directory(self, application: Any) -> Path | None:  # noqa: ANN401
+        typelib = self._application_typelib(application)
+        if typelib is not None:
+            try:
+                path = self._registered_typelib_path(lib_attributes(typelib.GetLibAttr()))
+            except Exception:
+                path = None
+            if path:
+                return Path(path).parent
+        return self._progid_install_directory()
+
+    def _enum_typelibs(self, application: Any) -> list[Any]:  # noqa: ANN401
+        """Return the installed type libraries worth scanning for enum names.
+
+        The application's own library comes first, then the libraries shipped
+        beside it. ``Part.tlb``/``constant.tlb`` are preferred because they
+        declare the modeling enums; the rest are a fallback for another build
+        that relocates them.
+        """
+        typelibs: list[Any] = []
+        described: set[str] = set()
+        application_typelib = self._application_typelib(application)
+        application_path: str | None = None
+        if application_typelib is not None:
+            typelibs.append(application_typelib)
+            try:
+                application_path = self._registered_typelib_path(
+                    lib_attributes(application_typelib.GetLibAttr())
+                )
+            except Exception:
+                application_path = None
+            if application_path:
+                described.add(application_path.lower())
+        directory = (
+            Path(application_path).parent if application_path else self._progid_install_directory()
+        )
+        if directory is None:
+            return typelibs
+
+        def order(path: Path) -> tuple[int, str]:
+            name = path.name.lower()
+            if name in _PREFERRED_TYPELIB_FILES:
+                return (_PREFERRED_TYPELIB_FILES.index(name), name)
+            return (len(_PREFERRED_TYPELIB_FILES), name)
+
+        for path in sorted(directory.glob("*.tlb"), key=order):
+            key = str(path).lower()
+            if key in described:
+                continue
+            described.add(key)
+            try:
+                typelibs.append(self.pythoncom.LoadTypeLib(str(path)))
+            except Exception:
+                continue
+        return typelibs
 
     def resolve_constants(
         self,
         application: Any,  # noqa: ANN401
         names: tuple[str, ...],
-    ) -> tuple[dict[str, int], list[str]]:
-        """Resolve enum names from the installed type library; never substitute literals."""
-        self._ensure_generated_module(application)
-        found: dict[str, int] = {}
-        missing: list[str] = []
-        constants: Any = None
-        try:
-            constants = self.win32com.constants
-        except Exception:
-            constants = None
-        for name in names:
-            value = getattr(constants, name, None) if constants is not None else None
-            if isinstance(value, bool) or not isinstance(value, int):
-                missing.append(name)
-            else:
-                found[name] = int(value)
-        return found, missing
+    ) -> ConstantResolution:
+        """Resolve enum names by scanning the installed type-library enums.
+
+        ``win32com.client.constants`` only knows the libraries that were
+        generated into the gencache. Generating just ``SolidEdgeFramework``
+        left ``igSymmetric``, ``igProfileClosed`` and ``seModelingModeOrdered``
+        unresolved. Scanning ``TKIND_ENUM`` members of the libraries that
+        actually declare them is version independent and never substitutes a
+        literal.
+        """
+        return resolve_enum_names(self._enum_typelibs(application), names)
 
     def describe_typelib(self, obj: Any) -> dict[str, Any]:  # noqa: ANN401
         """Read installed type-library metadata from a live COM object."""
+        type_info: Any = None
+        type_attributes: Any = None
         try:
             ole_object = obj._oleobj_
             type_info = ole_object.GetTypeInfo()
             type_attributes = type_info.GetTypeAttr()
             typelib, _index = type_info.GetContainingTypeLib()
-            library_attributes = typelib.GetLibAttr()
+            library_attributes = lib_attributes(typelib.GetLibAttr())
+            type_kind = int(type_attributes.typekind)
+            c_funcs = int(type_attributes.cFuncs)
             library_name = ""
             try:
                 library_name = str(typelib.GetDocumentation(-1)[0])
             except Exception:
                 library_name = ""
             methods: dict[str, Any] = {}
-            for index in range(int(type_attributes.cFuncs)):
+            for index in range(c_funcs):
+                function: Any = None
                 try:
                     function = type_info.GetFuncDesc(index)
-                    names = tuple(type_info.GetNames(function.memid, 64))
+                    names = member_names(type_info, function.memid)
+                    if not names:
+                        continue
+                    arguments = function_arguments(function)
+                    declared = getattr(function, "cParams", None)
+                    methods[str(names[0])] = {
+                        "c_params": int(declared) if isinstance(declared, int) else len(arguments),
+                        "invkind": int(function.invkind),
+                        "parameters": [
+                            {"flags": flags, "vt": transport} for transport, flags in arguments
+                        ],
+                    }
                 except Exception:
                     continue
-                if not names:
-                    continue
-                name = str(names[0])
-                parameters: list[dict[str, Any]] = []
-                for parameter in function.args:
-                    flags = int(parameter.flags)
-                    transport = int(parameter.tdesc.vt)
-                    parameters.append({"flags": flags, "vt": transport})
-                methods[name] = {
-                    "c_params": int(function.cParams),
-                    "invkind": int(function.invkind),
-                    "parameters": parameters,
-                }
+                finally:
+                    _release_descriptor(type_info, "ReleaseFuncDesc", function)
             return {
                 "status": "ok",
                 "library": library_name,
-                "library_version": (
-                    f"{int(library_attributes.wMajorVerNum)}.{int(library_attributes.wMinorVerNum)}"
-                ),
-                "type_kind": int(type_attributes.typekind),
-                "c_funcs": int(type_attributes.cFuncs),
+                "library_version": (f"{library_attributes['major']}.{library_attributes['minor']}"),
+                "type_kind": type_kind,
+                "c_funcs": c_funcs,
                 "methods": methods,
             }
         except Exception as exc:
             return {"status": "unavailable", "error": bounded_message(exc), "methods": {}}
+        finally:
+            _release_descriptor(type_info, "ReleaseTypeAttr", type_attributes)
+
+    def _variant(self, variant_type: int, value: Any) -> Any:  # noqa: ANN401
+        """Build a by-reference ``VARIANT``.
+
+        pywin32 312 does not export a ``VARIANT`` constructor from ``pythoncom``
+        (the extension module only has the ``VT_*`` flags and ``VARDESC``); the
+        constructor lives on ``win32com.client``. Trying both keeps a build that
+        still exposes the old location working.
+        """
+        constructor = getattr(self.win32com, "VARIANT", None)
+        if constructor is None:
+            constructor = getattr(self.pythoncom, "VARIANT", None)
+        if constructor is None:
+            raise ComUnavailable(
+                "this pywin32 build exposes no VARIANT constructor; by-reference "
+                "COM out-parameters cannot be built"
+            )
+        return constructor(variant_type, value)
 
     def variant_byref_float(self, value: float) -> Any:  # noqa: ANN401
-        return self.pythoncom.VARIANT(self.pythoncom.VT_BYREF | self.pythoncom.VT_R8, float(value))
+        return self._variant(self.pythoncom.VT_BYREF | self.pythoncom.VT_R8, float(value))
 
     def variant_byref_int(self, value: int) -> Any:  # noqa: ANN401
-        return self.pythoncom.VARIANT(self.pythoncom.VT_BYREF | self.pythoncom.VT_I2, int(value))
+        return self._variant(self.pythoncom.VT_BYREF | self.pythoncom.VT_I2, int(value))
 
     def variant_byref_float_array(self, values: list[float]) -> Any:  # noqa: ANN401
-        return self.pythoncom.VARIANT(
+        """Build a ``VT_BYREF | VT_ARRAY | VT_R8`` VARIANT.
+
+        Not used for COM out-parameters: pywin32 312 rejects such a value with
+        ``TypeError: Objects for SAFEARRAYS must be sequences (of sequences)``.
+        Solid Edge returns ``[out]`` SAFEARRAY parameters as the method result,
+        so callers pass a plain sequence and read the returned tuple. This
+        helper is kept for the narrow by-reference cases that still accept a
+        scalar VARIANT.
+        """
+        return self._variant(
             self.pythoncom.VT_BYREF | self.pythoncom.VT_ARRAY | self.pythoncom.VT_R8,
             [float(value) for value in values],
         )
 
     def variant_byref_variant_array(self, values: list[Any]) -> Any:  # noqa: ANN401
-        return self.pythoncom.VARIANT(
+        """Build a ``VT_BYREF | VT_ARRAY | VT_VARIANT`` VARIANT.
+
+        Same measured limitation as :meth:`variant_byref_float_array`; see there.
+        """
+        return self._variant(
             self.pythoncom.VT_BYREF | self.pythoncom.VT_ARRAY | self.pythoncom.VT_VARIANT,
             list(values),
         )
@@ -430,22 +780,27 @@ __all__ = (
     "COINIT_APARTMENTTHREADED",
     "DEFAULT_RETRY_DEADLINE_SECONDS",
     "DISP_E_TYPEMISMATCH",
+    "ENUM_TYPELIB_NAMES",
     "E_INVALIDARG",
     "MK_E_UNAVAILABLE",
     "RETRYABLE_HRESULTS",
     "RPC_E_CALL_REJECTED",
     "RPC_E_CHANGED_MODE",
     "RPC_E_SERVERCALL_RETRYLATER",
+    "TKIND_ENUM",
     "BindingProtocol",
     "ComBinding",
     "ComCallError",
     "ComUnavailable",
+    "ConstantResolution",
     "Session",
     "SessionTimeout",
     "StaError",
     "bounded_message",
     "call_with_retry",
+    "enum_members",
     "hresult_of",
     "is_retryable",
     "normalize_hresult",
+    "resolve_enum_names",
 )

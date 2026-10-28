@@ -408,16 +408,20 @@ pub fn is_batch_shim(path: &Path) -> bool {
 ///
 /// A batch shim is interpreted by `cmd.exe`, so the MSVC argv quoting that
 /// `Command` applies around the whole string is not enough: cmd re-parses
-/// the line, and its metacharacters (`&`, `|`, `<`, `>`, `^`, `%`, `!`,
-/// parentheses, quotes) would change the command. The escaping follows the
-/// well-tested `cross-spawn` algorithm: backslash runs before a quote are
-/// doubled and the quote is escaped, a trailing backslash run is doubled,
-/// the token is wrapped in quotes, and every cmd metacharacter is prefixed
-/// with `^`.
+/// the line. The quoting follows the `cross-spawn` algorithm: backslash runs
+/// before a quote are doubled and the quote is escaped, a trailing backslash
+/// run is doubled, the token is wrapped in quotes, and the characters cmd
+/// re-reads while it parses one command (`&`, `|`, `<`, `>`, `^`, `"`,
+/// backtick, `(`, `)`, `;`, `,`, space, `*`, `?`) are prefixed with `^`.
+///
+/// A caret does **not** neutralise environment expansion: `cmd.exe` expands
+/// `%NAME%` (and `!NAME!` when delayed expansion is on) *before* it removes
+/// carets, so `^%NAME^%` still expands. [`cmd_shim_argv`] therefore refuses
+/// `%` and `!` outright, and this function never claims to make them safe.
 ///
 /// The prompt never rides on argv (it goes to standard input), so the only
 /// caller-supplied argument is a validated model id; [`cmd_shim_argv`]
-/// nevertheless refuses control characters outright.
+/// nevertheless refuses the characters it cannot escape.
 #[must_use]
 pub fn escape_cmd_argument(value: &str) -> String {
     let mut escaped = String::with_capacity(value.len() + 2);
@@ -443,27 +447,38 @@ pub fn escape_cmd_argument(value: &str) -> String {
     for character in quoted.chars() {
         if matches!(
             character,
-            '(' | ')'
-                | '%'
-                | '!'
-                | '^'
-                | '"'
-                | '`'
-                | '<'
-                | '>'
-                | '&'
-                | '|'
-                | ';'
-                | ','
-                | ' '
-                | '*'
-                | '?'
+            '(' | ')' | '^' | '"' | '`' | '<' | '>' | '&' | '|' | ';' | ',' | ' ' | '*' | '?'
         ) {
             out.push('^');
         }
         out.push(character);
     }
     out
+}
+
+/// Refuse the characters a `cmd.exe` command line cannot carry safely.
+///
+/// `%` starts a variable reference and `!` starts a delayed-expansion
+/// reference; both are substituted before carets are removed, so no quoting
+/// of this shape can keep them literal. A control character would end the
+/// line early.
+fn validate_cmd_token(value: &str) -> Result<(), String> {
+    for character in value.chars() {
+        match character {
+            '\n' | '\r' | '\0' => {
+                return Err("a Windows batch shim argument contains a control character".to_owned());
+            }
+            '%' | '!' => {
+                return Err(
+                    "a Windows batch shim argument contains '%' or '!', which cmd.exe expands \
+                     before carets are removed"
+                        .to_owned(),
+                );
+            }
+            _ => {}
+        }
+    }
+    Ok(())
 }
 
 /// The `cmd.exe` argv that runs a batch shim with an argv array.
@@ -475,21 +490,18 @@ pub fn escape_cmd_argument(value: &str) -> String {
 /// # Errors
 ///
 /// Returns a reason when the program or one argument contains a control
-/// character, which would end the `cmd.exe` line early.
+/// character (which would end the `cmd.exe` line early) or `%`/`!` (which
+/// `cmd.exe` expands before it removes the carets used for quoting).
 pub fn cmd_shim_argv(program: &Path, argv: &[String]) -> Result<Vec<String>, String> {
     let program_text = program.to_string_lossy().into_owned();
+    validate_cmd_token(&program_text)?;
+    for argument in argv {
+        validate_cmd_token(argument)?;
+    }
     let mut tokens: Vec<String> = Vec::with_capacity(argv.len() + 1);
     tokens.push(escape_cmd_argument(&program_text));
     for argument in argv {
         tokens.push(escape_cmd_argument(argument));
-    }
-    for token in &tokens {
-        if token
-            .chars()
-            .any(|character| matches!(character, '\n' | '\r' | '\0'))
-        {
-            return Err("a Windows batch shim argument contains a control character".to_owned());
-        }
     }
     // `/s` strips the first and last quote of the remainder, so the whole
     // line is wrapped once more: `"prog" ^"arg^" ...`.
@@ -1392,8 +1404,32 @@ mod tests {
         assert_eq!(escape_cmd_argument("a&b|c"), "^\"a^&b^|c^\"");
         assert_eq!(escape_cmd_argument("a\"b"), "^\"a\\^\"b^\"");
         assert_eq!(escape_cmd_argument("C:\\dir\\"), "^\"C:\\dir\\\\^\"");
-        assert_eq!(escape_cmd_argument("100%"), "^\"100^%^\"");
+        // `%` and `!` are not caret-escaped: a caret does not stop the
+        // expansion they start, so `cmd_shim_argv` refuses them instead.
+        assert_eq!(escape_cmd_argument("100%"), "^\"100%^\"");
+        assert_eq!(escape_cmd_argument("a!b"), "^\"a!b^\"");
         assert_eq!(escape_cmd_argument("(x);y,z*?"), "^\"^(x^)^;y^,z^*^?^\"");
+    }
+
+    #[test]
+    fn cmd_shim_argv_refuses_environment_expansion() {
+        // REVIEW-9 probe: `^%NAME^%` still expands in cmd.exe, so an argument
+        // carrying `%` (or `!` under delayed expansion) is refused rather than
+        // quoted.
+        for argument in ["100%", "%PATH%", "a^%b", "x!y!"] {
+            let error = cmd_shim_argv(Path::new("C:/npm/codex.cmd"), &[argument.to_owned()])
+                .expect_err("an expandable argument is refused");
+            assert!(error.contains("cmd.exe expands"), "{argument}: {error}");
+        }
+        // The program itself is checked too: a shim path cannot smuggle one.
+        let error = cmd_shim_argv(Path::new("C:/npm/%COMSPEC%/codex.cmd"), &[])
+            .expect_err("an expandable program path is refused");
+        assert!(error.contains("cmd.exe expands"), "{error}");
+        // A model id (the only caller-supplied argument on this path) and an
+        // ordinary path still build the documented vector.
+        assert!(
+            cmd_shim_argv(Path::new("C:/npm/codex.cmd"), &["gpt-5.1-codex".to_owned()]).is_ok()
+        );
     }
 
     #[test]

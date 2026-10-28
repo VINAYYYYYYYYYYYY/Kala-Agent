@@ -72,9 +72,13 @@ mod workspace;
 mod unix;
 #[cfg(windows)]
 mod windows;
+#[cfg(windows)]
+mod windows_acl;
 
 #[cfg(windows)]
 pub use windows::{current_handle_count as windows_handle_count, current_process_in_job};
+#[cfg(windows)]
+pub use windows_acl::restrict_to_current_user as restrict_file_to_current_user;
 
 pub use environment::{
     CHILD_ENVIRONMENT_KEYS, ChildEnvironment, EnvironmentEntry, PROCESS_PROTOCOL_VERSION,

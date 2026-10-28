@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import queue
 import sys
+import threading
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 
@@ -69,6 +73,21 @@ def test_child_backend_reports_a_dead_process_usefully(tmp_path: Path) -> None:
     with pytest.raises(UnavailableError):
         backend.start()
     backend.shutdown()
+
+
+def test_a_restarted_reader_never_delivers_into_the_new_queue(tmp_path: Path) -> None:
+    backend = ChildProcessBackend(tmp_path)
+    stale: queue.Queue[dict[str, object] | None] = queue.Queue()
+    backend._messages = queue.Queue()
+    backend._process = cast(Any, SimpleNamespace(stdout=iter(['{"type": "event"}\n'])))
+
+    reader = threading.Thread(target=backend._read_messages, args=(stale,))
+    reader.start()
+    reader.join(5.0)
+
+    assert stale.get_nowait() == {"type": "event"}
+    assert stale.get_nowait() is None
+    assert backend._messages.empty()
 
 
 def test_child_backend_cancel_is_best_effort(tmp_path: Path) -> None:

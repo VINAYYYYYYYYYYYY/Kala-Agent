@@ -117,6 +117,10 @@ class ArtifactSpec:
 @dataclass(frozen=True)
 class BackendEvent:
     kind: Literal["step", "completed", "failed", "cancelled", "indeterminate", "crashed", "warning"]
+    #: Build this event belongs to. An event that names a build is applied only
+    #: while that build is the active one, so a stale event can never complete a
+    #: later build. ``None`` is accepted for a backend that does not tag events.
+    build_id: str | None = None
     trace: StepTrace | None = None
     result: BuildResult | None = None
     error: ErrorResponse | None = None
@@ -514,23 +518,32 @@ class JobManager:
                 return job.status()
             job.cancel_requested = True
             if job.state is JobState.QUEUED:
-                job.state = JobState.CANCELLED
-                job.message = "cancelled before the worker started"
-                job.result = BuildResult(
-                    build_id=job.build_id,
-                    state=JobState.CANCELLED,
-                    trace=tuple(job.trace),
-                    warnings=tuple(job.warnings),
-                )
-                if self._active == build_id:
-                    self._active = None
-                self._persist(job)
+                self._cancel_queued(job)
             else:
                 job.message = "cancellation requested; the worker checks between operations"
                 self._persist(job)
             status = job.status()
         self._wake.set()
         return status
+
+    def _cancel_queued(self, job: _Job) -> None:
+        """Cancel a build that has not been handed to the backend.
+
+        The caller holds ``self._lock``; the state change and the ``_active``
+        release happen in that one critical section so the supervisor can never
+        start a build a cancel already completed.
+        """
+        job.state = JobState.CANCELLED
+        job.message = "cancelled before the worker started"
+        job.result = BuildResult(
+            build_id=job.build_id,
+            state=JobState.CANCELLED,
+            trace=tuple(job.trace),
+            warnings=tuple(job.warnings),
+        )
+        if self._active == job.build_id:
+            self._active = None
+        self._persist(job)
 
     def reconcile(
         self, build_id: str, note: str = "operator reconciled indeterminate build"
@@ -617,16 +630,35 @@ class JobManager:
             if can_start and self._blocked is None and not self._pending.empty():
                 build_id = self._pending.get_nowait()
                 candidate = self._jobs.get(build_id)
-                if candidate is not None and candidate.state is JobState.QUEUED:
+                if (
+                    candidate is not None
+                    and candidate.state is JobState.QUEUED
+                    and not candidate.cancel_requested
+                ):
+                    # Dequeue, the QUEUED check, the transition to RUNNING, the
+                    # _active assignment, and the durable write are one critical
+                    # section. A cancel therefore either wins (and this build is
+                    # skipped above) or observes RUNNING and stays cooperative;
+                    # it can never complete a build the supervisor then submits.
+                    candidate.state = JobState.RUNNING
+                    candidate.started_monotonic = self._clock()
+                    candidate.deadline = (
+                        candidate.started_monotonic
+                        + candidate.request.timeout_seconds
+                        + self._deadline_grace
+                    )
+                    self._active = candidate.build_id
+                    self._persist(candidate)
                     started = candidate
         if started is not None:
-            started.state = JobState.RUNNING
-            started.started_monotonic = self._clock()
-            started.deadline = (
-                started.started_monotonic + started.request.timeout_seconds + self._deadline_grace
-            )
             with self._lock:
-                self._persist(started)
+                if started.state is JobState.RUNNING and started.cancel_requested:
+                    # Cancelled between the transition and submission: no COM
+                    # work exists yet, so the build is definitely cancelled.
+                    self._cancel_queued(started)
+                    return
+                if started.state is not JobState.RUNNING:
+                    return
             context = JobContext(
                 build_id=started.build_id,
                 request=started.request,
@@ -750,6 +782,10 @@ class JobManager:
             return
         job = self._jobs.get(self._active) if self._active else None
         if job is None or job.state is not JobState.RUNNING:
+            return
+        if event.build_id is not None and event.build_id != job.build_id:
+            # A tagged event that belongs to another build must never be applied
+            # to the active one (its trace, result, or artifacts would be wrong).
             return
         if event.kind == "step":
             if event.trace is not None:
@@ -942,9 +978,16 @@ class ChildProcessBackend:
                 creationflags=creationflags,
                 env=environment,
             )
-            self._messages = queue.Queue()
+            # Each reader thread owns the queue it was started with. A restarted
+            # worker therefore never receives a buffered line from the previous
+            # child, even while the old reader thread is still draining.
+            messages: queue.Queue[dict[str, Any] | None] = queue.Queue()
+            self._messages = messages
             self._reader = threading.Thread(
-                target=self._read_messages, name="kala-se-worker-reader", daemon=True
+                target=self._read_messages,
+                args=(messages,),
+                name="kala-se-worker-reader",
+                daemon=True,
             )
             self._reader.start()
             if self._process.stderr is not None:
@@ -961,7 +1004,7 @@ class ChildProcessBackend:
         except Exception:
             pass
 
-    def _read_messages(self) -> None:
+    def _read_messages(self, messages: queue.Queue[dict[str, Any] | None]) -> None:
         process = self._process
         if process is None or process.stdout is None:
             return
@@ -972,11 +1015,11 @@ class ChildProcessBackend:
                 except json.JSONDecodeError:
                     continue
                 if isinstance(message, dict):
-                    self._messages.put(message)
+                    messages.put(message)
         except Exception:
             pass
         finally:
-            self._messages.put(None)
+            messages.put(None)
 
     def _send(self, payload: dict[str, Any]) -> None:
         process = self._process
@@ -1150,6 +1193,7 @@ def _event_from_wire(payload: object) -> BackendEvent | None:
                 continue
     return BackendEvent(
         kind=cast(Any, kind),
+        build_id=(str(payload["build_id"]) if payload.get("build_id") else None),
         trace=trace,
         result=result,
         error=error,

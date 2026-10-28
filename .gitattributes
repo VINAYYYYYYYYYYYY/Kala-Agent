@@ -1,0 +1,42 @@
+# Keep line endings in the repository independent of the checkout platform.
+# `ruff format --check` is configured with `line-ending = "lf"`, so a Windows
+# checkout that autocrlf'd source files would otherwise fail a check that says
+# nothing about the code. `* text=auto` still lets git detect binaries.
+#
+# This file does not rewrite existing working-tree files. Making the index
+# canonical is a separate, reviewable step:
+#
+#     git add --renormalize .
+#
+# That would re-stage every tracked text file whose index blob currently has
+# CRLF, producing a large whitespace-only diff. It was deliberately not run
+# here; do it once, in its own commit, if the team wants the index canonical.
+* text=auto
+
+*.py text eol=lf
+*.pyi text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.jsonc text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.sh text eol=lf
+*.rs text eol=lf
+*.cfg text eol=lf
+*.ini text eol=lf
+*.txt text eol=lf
+*.svg text eol=lf
+
+# Windows-native scripts stay CRLF so cmd.exe and PowerShell behave predictably.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf

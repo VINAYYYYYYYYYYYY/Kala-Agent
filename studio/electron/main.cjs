@@ -116,23 +116,35 @@ function createBackendLogger({ token, directory, ...options } = {}) {
   });
 }
 
+const LAUNCH_NONCE_ENV = 'KALA_STUDIO_LAUNCH_NONCE';
+const LAUNCH_NONCE_HEADER = 'x-kala-launch-nonce';
+
 // Build the argv and environment for the backend. The backend CLI takes
 // `--host` and `--port` as real flags; it does NOT read the port from
 // `KALA_STUDIO_PORT`. The env var only affects where the token file is
 // read from.
-function buildBackendInvocation({ command, args, cwd, env, port, token }) {
+//
+// `KALA_STUDIO_LAUNCH_NONCE` is a per-launch secret shared with the child
+// through its environment (never argv, never the log). A backend that echoes
+// it on `/api/studio/health` proves the process answering the readiness probe
+// is the child this app spawned and not a stale or hostile listener that won
+// the port race.
+function buildBackendInvocation({ command, args, cwd, env, port, token, nonce }) {
   const fullArgs = [
     ...args,
     '--host', TRUSTED_HOST,
     '--port', String(port),
   ];
+  const childEnvironment = { ...env, KALA_STUDIO_TOKEN: token };
+  if (nonce) childEnvironment[LAUNCH_NONCE_ENV] = nonce;
   return {
     command,
     args: fullArgs,
     cwd,
-    env: { ...env, KALA_STUDIO_TOKEN: token },
+    env: childEnvironment,
     port,
     token,
+    nonce: nonce ?? null,
   };
 }
 
@@ -328,13 +340,20 @@ function resolveBackendCommand(options = {}) {
 }
 
 class BackendProcess {
-  constructor({ command, args, cwd, env, port, token, logger = null }) {
+  constructor({ command, args, cwd, env, port, token, nonce = null, requireLaunchNonce = false, logger = null }) {
     this.command = command;
     this.args = args;
     this.cwd = cwd;
     this.env = env;
     this.port = port;
     this.token = token;
+    this.nonce = nonce;
+    // The Python reference backend echoes `KALA_STUDIO_LAUNCH_NONCE` on
+    // `/health`; the readiness probe then refuses any responder that cannot
+    // prove it inherited this launch's nonce. The staged native backend does
+    // not implement the echo yet, so enforcement is opt-in per backend mode
+    // instead of silently downgrading the check for everyone.
+    this.requireLaunchNonce = requireLaunchNonce && Boolean(nonce);
     this.logger = logger;
     this.child = null;
     this.exited = false;
@@ -414,6 +433,17 @@ class BackendProcess {
         if (response.ok) {
           const payload = await response.json();
           if (payload && payload.status === 'ok') {
+            if (this.requireLaunchNonce) {
+              const echoed = response.headers.get(LAUNCH_NONCE_HEADER);
+              if (echoed !== this.nonce) {
+                // A health response without the launch nonce came from some
+                // other process listening on this port. Keep probing until
+                // the deadline; a hostile responder can delay readiness but
+                // can never complete it.
+                await new Promise((resolve) => setTimeout(resolve, 250));
+                continue;
+              }
+            }
             this.ready = true;
             return;
           }
@@ -443,12 +473,36 @@ class BackendProcess {
   }
 }
 
+/**
+ * Return whether `target` is the exact trusted origin (or a path under it).
+ *
+ * `URL#origin` is used instead of a string prefix: `startsWith` accepted
+ * `http://127.0.0.1:PORT@attacker.example/` and
+ * `http://127.0.0.1:PORT.attacker.example/`, both of which a user-agent
+ * resolves to a different origin than the studio backend.
+ */
+function isTrustedOriginUrl(target, trustedOrigin) {
+  try {
+    return new URL(target).origin === trustedOrigin;
+  } catch {
+    return false;
+  }
+}
+
 function attachSecurityPolicy(win, trustedOrigin) {
-  win.webContents.on('will-navigate', (event, target) => {
-    if (target !== trustedOrigin && !target.startsWith(trustedOrigin + '/')) {
+  const refuseUntrustedNavigation = (event, target) => {
+    if (!isTrustedOriginUrl(target, trustedOrigin)) {
       event.preventDefault();
     }
-  });
+  };
+  win.webContents.on('will-navigate', refuseUntrustedNavigation);
+  // A server-side redirect is a navigation too: the 3xx response is fetched
+  // before `will-navigate` would see the destination, so a compromised or
+  // spoofed backend could otherwise bounce the window off-origin.
+  win.webContents.on('will-redirect', refuseUntrustedNavigation);
+  // The renderer never needs <webview>; refusing attachment removes a second
+  // renderer surface with its own, weaker, navigation policy.
+  win.webContents.on('will-attach-webview', (event) => event.preventDefault());
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
     callback({
@@ -500,6 +554,7 @@ function registerIpc(win, trustedOrigin, baseUrl, token) {
 async function main() {
   const port = await pickFreePort();
   const token = generateToken();
+  const nonce = generateToken();
   const resolved = resolveBackendCommand();
   // The Studio is the only writer of the backend log. It is created before
   // anything can fail so that every failure below has a log to point at.
@@ -529,8 +584,13 @@ async function main() {
     env: resolved.env,
     port,
     token,
+    nonce,
   });
-  const backend = new BackendProcess({ ...invocation, logger });
+  const backend = new BackendProcess({
+    ...invocation,
+    requireLaunchNonce: resolved.mode === 'python-override' || resolved.mode === 'python-reference',
+    logger,
+  });
   backend.start();
 
   try {
@@ -626,6 +686,12 @@ async function main() {
 function bootstrap() {
   return app.whenReady().then(() => {
     session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
+    // `setPermissionRequestHandler` only covers features that ask at use time;
+    // `setPermissionCheckHandler` is the synchronous companion Electron
+    // documents for features that *check* a permission before asking (and some
+    // APIs, such as `navigator.permissions.query`, only use the check). The
+    // renderer needs no device permission, so both answer "no".
+    session.defaultSession.setPermissionCheckHandler(() => false);
     return main().catch((cause) => {
       console.error('[kala-studio] failed to start:', cause);
       app.exit(1);
@@ -649,6 +715,7 @@ module.exports = {
   RotatingLog,
   BackendProcess,
   attachSecurityPolicy,
+  isTrustedOriginUrl,
   registerIpc,
   TRUSTED_HOST,
   PRELOAD_PATH,

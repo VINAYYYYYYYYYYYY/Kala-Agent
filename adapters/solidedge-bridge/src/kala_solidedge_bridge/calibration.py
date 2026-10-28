@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import os
 import secrets
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -20,15 +21,18 @@ from pathlib import Path
 from typing import Any, Final
 
 from .workspace import (
+    atomic_write_bytes,
     atomic_write_json,
     ensure_private_dir,
     read_json,
     restrict_windows_acl,
 )
 
-PROBE_VERSION: Final[str] = "1"
+PROBE_VERSION: Final[str] = "2"
 TEMPLATE_PROGID: Final[str] = "SolidEdge.PartDocument"
-BINDING: Final[str] = "win32com.dynamic+gencache-constants"
+#: The binding reads installed type-library enums directly; it does not rely on
+#: a partially generated ``win32com.client.constants`` module.
+BINDING: Final[str] = "win32com.dynamic+typelib-enums"
 CALIBRATION_SCHEMA: Final[int] = 1
 _KEY_BYTES: Final[int] = 32
 
@@ -83,6 +87,10 @@ class CalibrationRecord:
     step_sha256: str
     signature: str
     raw: Mapping[str, Any]
+    #: ``Profile.End`` code that this host returned for a profile proven valid
+    #: by a successful extrusion and measured geometry (``-103`` on Solid Edge
+    #: 2024). ``None`` for an older record or a host that returned 0.
+    profile_end_code: int | None = None
 
 
 class CalibrationStore:
@@ -93,26 +101,56 @@ class CalibrationStore:
         self.records_dir = data_dir / "calibration"
         self.key_path = data_dir / "calibration.key"
 
-    def _key(self) -> bytes:
-        ensure_private_dir(self.data_dir)
-        if self.key_path.exists():
-            return self.key_path.read_bytes()
-        key = secrets.token_bytes(_KEY_BYTES)
-        try:
-            descriptor = self.key_path.open("xb")
-        except FileExistsError:
-            return self.key_path.read_bytes()
-        try:
-            descriptor.write(key)
-            descriptor.flush()
-            import os
+    def _read_key(self) -> bytes | None:
+        """Return the stored key, or ``None`` when it is missing or incomplete.
 
-            os.fsync(descriptor.fileno())
-        finally:
-            descriptor.close()
-        self.key_path.chmod(0o600)
-        restrict_windows_acl(self.key_path)
+        A crash between creating the file and writing it can leave a short or
+        empty key. Such a key must never sign or verify anything: an empty key
+        would let anyone who can write a record forge its signature.
+        """
+        try:
+            key = self.key_path.read_bytes()
+        except FileNotFoundError:
+            return None
+        if len(key) != _KEY_BYTES:
+            return None
         return key
+
+    def _key(self) -> bytes:
+        """Return the signing key, creating a complete one when needed.
+
+        Creation is exclusive and always writes the full key before it is used,
+        so a crash can leave a short file but never a key that signs a record.
+        A short file is replaced atomically on the next signing operation.
+        """
+        key = self._read_key()
+        if key is not None:
+            return key
+        ensure_private_dir(self.data_dir)
+        candidate = secrets.token_bytes(_KEY_BYTES)
+        # ``O_BINARY`` matters on Windows: without it ``os.write`` translates
+        # 0x0A and the key file would not be exactly ``_KEY_BYTES`` long.
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
+        try:
+            descriptor = os.open(self.key_path, flags, 0o600)
+        except FileExistsError:
+            # Another process won the race; use its key only if it is complete.
+            key = self._read_key()
+            if key is not None:
+                return key
+            atomic_write_bytes(self.key_path, candidate)
+        else:
+            try:
+                os.write(descriptor, candidate)
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
+            try:
+                self.key_path.chmod(0o600)
+            except OSError:
+                pass
+        restrict_windows_acl(self.key_path)
+        return candidate
 
     def _signature(self, payload: Mapping[str, Any]) -> str:
         return hmac.new(self._key(), canonical_json(payload), hashlib.sha256).hexdigest()
@@ -126,6 +164,7 @@ class CalibrationStore:
         range_max_mm: tuple[float, float, float],
         par_sha256: str,
         step_sha256: str,
+        profile_end_code: int | None = None,
         template: str = TEMPLATE_PROGID,
         binding: str = BINDING,
         probe_version: str = PROBE_VERSION,
@@ -152,6 +191,7 @@ class CalibrationStore:
                 "volume_mm3": volume_mm3,
                 "range_min_mm": list(range_min_mm),
                 "range_max_mm": list(range_max_mm),
+                "profile_end_code": profile_end_code,
             },
             "artifacts": {
                 "par_sha256": par_sha256,
@@ -179,14 +219,20 @@ class CalibrationStore:
             step_sha256=step_sha256,
             signature=signature,
             raw=signed,
+            profile_end_code=profile_end_code,
         )
 
     def _verify(self, payload: Mapping[str, Any]) -> bool:
         signature = payload.get("signature")
         if not isinstance(signature, str):
             return False
+        signing_key = self._read_key()
+        if signing_key is None:
+            # Verification never creates a key: without a complete stored key
+            # this data directory has no records it can vouch for.
+            return False
         unsigned = {key: value for key, value in payload.items() if key != "signature"}
-        expected = self._signature(unsigned)
+        expected = hmac.new(signing_key, canonical_json(unsigned), hashlib.sha256).hexdigest()
         if not hmac.compare_digest(expected, signature):
             return False
         if payload.get("schema") != CALIBRATION_SCHEMA:
@@ -198,6 +244,11 @@ class CalibrationStore:
             return False
         volume = geometry.get("volume_mm3")
         if isinstance(volume, bool) or not isinstance(volume, (int, float)) or volume <= 0:
+            return False
+        raw_profile_end = geometry.get("profile_end_code")
+        if raw_profile_end is not None and (
+            isinstance(raw_profile_end, bool) or not isinstance(raw_profile_end, int)
+        ):
             return False
         expected_fingerprint = host_fingerprint(
             se_version=str(payload.get("se_version", "")),
@@ -213,12 +264,27 @@ class CalibrationStore:
             return ()
         records: list[CalibrationRecord] = []
         for path in sorted(self.records_dir.glob("*.json")):
-            payload = read_json(path)
-            if not isinstance(payload, dict) or not self._verify(payload):
+            try:
+                payload = read_json(path)
+            except OSError:
+                # One unreadable record must not hide the rest.
+                continue
+            if not isinstance(payload, dict):
+                continue
+            try:
+                if not self._verify(payload):
+                    continue
+            except (OSError, TypeError, ValueError):
                 continue
             try:
                 geometry = payload["geometry"]
                 artifacts = payload["artifacts"]
+                raw_profile_end = geometry.get("profile_end_code")
+                profile_end_code = (
+                    int(raw_profile_end)
+                    if isinstance(raw_profile_end, int) and not isinstance(raw_profile_end, bool)
+                    else None
+                )
                 records.append(
                     CalibrationRecord(
                         calibration_id=str(payload["calibration_id"]),
@@ -235,6 +301,7 @@ class CalibrationStore:
                         step_sha256=str(artifacts["step_sha256"]),
                         signature=str(payload["signature"]),
                         raw=payload,
+                        profile_end_code=profile_end_code,
                     )
                 )
             except (KeyError, TypeError, ValueError):

@@ -2,7 +2,8 @@
 //! parsing.
 //!
 //! The token is minted per launch and stored atomically with owner-only
-//! permissions where the platform supports POSIX modes. The Host and Origin
+//! permissions: `0o600` on POSIX, an explicit inheritance-free DACL naming the
+//! owner, `LocalSystem` and `Administrators` on Windows. The Host and Origin
 //! parsers mirror the Python source's canonicalization, including bracketed
 //! IPv6, default ports, duplicate headers and userinfo rejection.
 
@@ -539,14 +540,23 @@ pub fn resolve_studio_data_dir(parent: &Path) -> io::Result<PathBuf> {
     Ok(child)
 }
 
-/// Set `0o700` on Unix; POSIX mode bits are not meaningful on Windows.
+/// Set `0o700` on Unix; on Windows install the same owner-only, inheritance-free
+/// DACL the token file uses.
+///
+/// The mode and the ACL are both advisory here: a failure leaves the directory
+/// with its inherited entries, and the files inside it are restricted on their
+/// own when they are written.
 pub fn tighten_directory_mode(path: &Path) {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         let _ = fs::set_permissions(path, fs::Permissions::from_mode(TOKEN_DIR_MODE));
     }
-    #[cfg(not(unix))]
+    #[cfg(windows)]
+    {
+        let _ = kala_process::restrict_file_to_current_user(path);
+    }
+    #[cfg(not(any(unix, windows)))]
     {
         let _ = path;
     }

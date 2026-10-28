@@ -1,9 +1,10 @@
 """Shared fixtures for the Kala Agent Python suite.
 
-Every test runs with ``HOME``, ``XDG_DATA_HOME``, ``KALA_AGENT_DATA_DIR`` and
-``KALA_STUDIO_DATA_DIR`` pointed at per-test temporary directories. The suite
-therefore cannot resolve, create, or open the developer's real data directory
-(``$HOME/.local/share/kala-agent``). That leak existed in
+Every test runs with ``HOME``, ``USERPROFILE`` (on Windows), ``XDG_DATA_HOME``,
+``KALA_AGENT_DATA_DIR`` and ``KALA_STUDIO_DATA_DIR`` pointed at per-test
+temporary directories. The suite therefore cannot resolve, create, or open the
+developer's real data directory (``$HOME/.local/share/kala-agent`` or
+``%USERPROFILE%\\AppData\\Local``). That leak existed in
 ``tests/unit/test_studio_server.py``, whose default-resolved studio app opened
 the real ``studio/studio-journal.sqlite3`` and briefly created its ``-shm`` /
 ``-wal`` siblings.
@@ -17,6 +18,7 @@ hard-coded user path.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -75,6 +77,11 @@ def isolate_user_data_dirs(
     ``create_studio_app(data_dir=None)`` and ``Settings.from_env({})``.
     """
     monkeypatch.setenv("HOME", str(isolated_home))
+    if os.name == "nt":
+        # ``Path.home()`` resolves ``%USERPROFILE%`` on Windows, not ``HOME``.
+        # Setting only HOME leaves the developer's real profile visible, so a
+        # test that resolves the default data directory would leak into it.
+        monkeypatch.setenv("USERPROFILE", str(isolated_home))
     monkeypatch.setenv("XDG_DATA_HOME", str(isolated_xdg_data_home))
     monkeypatch.setenv("KALA_AGENT_DATA_DIR", str(isolated_kala_data_dir))
     monkeypatch.setenv("KALA_STUDIO_DATA_DIR", str(isolated_studio_data_dir))

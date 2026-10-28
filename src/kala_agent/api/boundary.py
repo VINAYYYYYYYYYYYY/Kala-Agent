@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import ipaddress
 import logging
-import os
 import re
 import secrets
 from pathlib import Path
@@ -30,6 +29,7 @@ from kala_agent.api.middleware import (
     header_values,
     send_refusal,
 )
+from kala_agent.private_files import atomic_write_private_text
 
 LOGGER: Final[logging.Logger] = logging.getLogger("kala_agent.api")
 API_TOKEN_FILE_NAME: Final[str] = "api-token"
@@ -168,12 +168,15 @@ def validate_api_token(value: object) -> str:
 
 
 def _store_api_token(data_dir: Path, token: str) -> None:
-    path = data_dir / API_TOKEN_FILE_NAME
-    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
-    descriptor = os.open(path, flags, API_TOKEN_FILE_MODE)
-    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-        os.fchmod(handle.fileno(), API_TOKEN_FILE_MODE)
-        handle.write(f"{token}\n")
+    """Replace the launch token file through the portable private writer.
+
+    The token is written to a sibling temporary file and renamed over the old
+    one, so the path never holds a truncated or half-written token. This is the
+    same pattern the studio token uses: ``os.open(..., O_TRUNC)`` followed by
+    ``os.fchmod`` fails on Windows (there is no ``fchmod``), and by then the
+    destination has already been truncated to zero bytes.
+    """
+    atomic_write_private_text(data_dir / API_TOKEN_FILE_NAME, f"{token}\n", API_TOKEN_FILE_MODE)
 
 
 def issue_api_token(data_dir: Path) -> str:
@@ -187,7 +190,7 @@ def issue_api_token(data_dir: Path) -> str:
     token = secrets.token_urlsafe(API_TOKEN_BYTES)
     try:
         _store_api_token(data_dir, token)
-    except OSError as error:
+    except (OSError, AttributeError) as error:
         LOGGER.warning(
             "the launch token was not stored in the local data directory: %s",
             type(error).__name__,

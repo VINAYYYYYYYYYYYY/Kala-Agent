@@ -6,6 +6,7 @@
 // the contract the backend CLI requires (`--host` and `--port`).
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { EventEmitter } from 'node:events';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -65,6 +66,23 @@ describe('buildBackendInvocation', () => {
     // the process command line.
     expect(invocation.args.join(' ')).not.toContain('unit-test-token');
     expect(invocation.env.KALA_STUDIO_TOKEN).toBe('unit-test-token-aaaaaaaaaaaaaaaaaaaaaaaa');
+  });
+
+  it('passes the launch nonce through the environment, never argv', () => {
+    const invocation = mainModule.buildBackendInvocation({
+      command: 'python',
+      args: ['-m', 'kala_agent.studio'],
+      cwd: '/tmp',
+      env: {},
+      port: 4321,
+      token: 'unit-test-token-aaaaaaaaaaaaaaaaaaaaaaaa',
+      nonce: 'unit-test-nonce-bbbbbbbbbbbbbbbbbbbbbbbb',
+    });
+    expect(invocation.args.join(' ')).not.toContain('unit-test-nonce');
+    expect(invocation.env.KALA_STUDIO_LAUNCH_NONCE).toBe(
+      'unit-test-nonce-bbbbbbbbbbbbbbbbbbbbbbbb',
+    );
+    expect(invocation.nonce).toBe('unit-test-nonce-bbbbbbbbbbbbbbbbbbbbbbbb');
   });
 
   it('preserves any existing args before appending --host and --port', () => {
@@ -563,3 +581,127 @@ function studioRootPath(): string {
   // studio/, so ../.. is the repo root and ../ is studio/.
   return path.resolve(__dirname, '..');
 }
+
+type FakeWebContents = EventEmitter & {
+  session: { webRequest: { onHeadersReceived: (listener: () => void) => void } };
+  setWindowOpenHandler: (handler: () => { action: string }) => void;
+};
+
+function makeFakeWindow(): { webContents: FakeWebContents } {
+  const webContents = new EventEmitter() as FakeWebContents;
+  webContents.session = { webRequest: { onHeadersReceived: () => undefined } };
+  webContents.setWindowOpenHandler = vi.fn();
+  return { webContents };
+}
+
+const TRUSTED_ORIGIN = 'http://127.0.0.1:8765';
+
+describe('attachSecurityPolicy', () => {
+  it('accepts navigation inside the trusted origin', () => {
+    const win = makeFakeWindow();
+    mainModule.attachSecurityPolicy(win as never, TRUSTED_ORIGIN);
+    const event = { preventDefault: vi.fn() };
+
+    win.webContents.emit('will-navigate', event, `${TRUSTED_ORIGIN}/index.html`);
+    win.webContents.emit('will-redirect', event, `${TRUSTED_ORIGIN}/settings?tab=keys`);
+
+    expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'http://127.0.0.1:8765@attacker.example/',
+    'http://127.0.0.1:8765.attacker.example/',
+    'https://attacker.example/',
+    'javascript:alert(1)',
+    'not a url',
+  ])('refuses off-origin navigation to %s', (target) => {
+    const win = makeFakeWindow();
+    mainModule.attachSecurityPolicy(win as never, TRUSTED_ORIGIN);
+    const event = { preventDefault: vi.fn() };
+
+    win.webContents.emit('will-navigate', event, target);
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses an off-origin server redirect before it becomes a navigation', () => {
+    const win = makeFakeWindow();
+    mainModule.attachSecurityPolicy(win as never, TRUSTED_ORIGIN);
+    const event = { preventDefault: vi.fn() };
+
+    win.webContents.emit('will-redirect', event, 'https://attacker.example/landing');
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses <webview> attachment and every window open', () => {
+    const win = makeFakeWindow();
+    mainModule.attachSecurityPolicy(win as never, TRUSTED_ORIGIN);
+    const event = { preventDefault: vi.fn() };
+
+    win.webContents.emit('will-attach-webview', event);
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(win.webContents.setWindowOpenHandler).toHaveBeenCalledTimes(1);
+    const handler = (win.webContents.setWindowOpenHandler as unknown as { mock: { calls: unknown[][] } })
+      .mock.calls[0][0] as () => { action: string };
+    expect(handler()).toEqual({ action: 'deny' });
+  });
+});
+
+describe('waitForHealth launch nonce', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function backendProcess(requireLaunchNonce: boolean): InstanceType<typeof mainModule.BackendProcess> {
+    return new mainModule.BackendProcess({
+      command: process.execPath,
+      args: [],
+      cwd: process.cwd(),
+      env: {},
+      port: 8765,
+      token: 'unit-test-token-aaaaaaaaaaaaaaaaaaaaaaaa',
+      nonce: 'unit-test-nonce-bbbbbbbbbbbbbbbbbbbbbbbb',
+      requireLaunchNonce,
+    });
+  }
+
+  it('accepts a health response that echoes the nonce', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(JSON.stringify({ status: 'ok' }), {
+          status: 200,
+          headers: { 'X-Kala-Launch-Nonce': 'unit-test-nonce-bbbbbbbbbbbbbbbbbbbbbbbb' },
+        }),
+      ),
+    );
+    const proc = backendProcess(true);
+
+    await expect(proc.waitForHealth(1_000)).resolves.toBeUndefined();
+    expect(proc.ready).toBe(true);
+  });
+
+  it('never reports ready for a responder that cannot echo the nonce', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ status: 'ok' }), { status: 200 })),
+    );
+    const proc = backendProcess(true);
+
+    await expect(proc.waitForHealth(50)).rejects.toThrow(/readiness window/);
+    expect(proc.ready).toBe(false);
+  });
+
+  it('does not require the echo from a backend mode that does not send one', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ status: 'ok' }), { status: 200 })),
+    );
+    const proc = backendProcess(false);
+
+    await expect(proc.waitForHealth(1_000)).resolves.toBeUndefined();
+    expect(proc.ready).toBe(true);
+  });
+});

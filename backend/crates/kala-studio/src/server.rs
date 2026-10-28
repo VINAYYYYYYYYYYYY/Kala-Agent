@@ -56,7 +56,9 @@ use crate::errors::{
     FlatError, INTERNAL_ERROR_MESSAGE, METHOD_NOT_ALLOWED_MESSAGE, PAYLOAD_TOO_LARGE_MESSAGE,
     REQUEST_REJECTED_MESSAGE, UNKNOWN_ROUTE_MESSAGE, VALIDATION_MESSAGE,
 };
-use crate::geometry_backend::{BackendError, BackendHealth, GeometryBackend, WorkerResponse};
+use crate::geometry_backend::{
+    BackendError, BackendHealth, FORWARDED_RESPONSE_HEADERS, GeometryBackend, WorkerResponse,
+};
 use crate::integrations::build_registry;
 use crate::json::Json;
 use crate::providers::remote::{HttpTransport, ReqwestTransport};
@@ -776,14 +778,18 @@ fn finish(response: OutResponse, head_request: bool) -> Response<Full<Bytes>> {
             STUDIO_BEARER_REALM.to_owned(),
         ));
     }
-    let present: Vec<String> = headers
-        .iter()
-        .map(|(name, _)| name.to_ascii_lowercase())
-        .collect();
+    // The front door's own header set always wins. A proxied worker answer, a
+    // static file or a route handler may add headers, but none of them may
+    // replace a security header: the worker is a separate, less trusted
+    // component, and the origin that carries the bearer token is this one.
+    headers.retain(|(name, _)| {
+        let lowered = name.to_ascii_lowercase();
+        !SECURITY_HEADERS
+            .iter()
+            .any(|(security, _)| *security == lowered)
+    });
     for (name, value) in SECURITY_HEADERS {
-        if !present.iter().any(|existing| existing == name) {
-            headers.push(((*name).to_owned(), (*value).to_owned()));
-        }
+        headers.push(((*name).to_owned(), (*value).to_owned()));
     }
     for (name, value) in headers {
         builder = builder.header(name, value);
@@ -1301,8 +1307,23 @@ async fn settings_get(state: &State) -> OutResponse {
 
 async fn settings_post(state: Arc<State>, request: UpdateProviderKeyRequest) -> OutResponse {
     let data_dir = if state.data_dir.as_os_str().is_empty() {
-        let fallback = fallback_settings_dir();
-        if let Err(_error) = std::fs::create_dir_all(&fallback) {
+        let fallback = match fallback_settings_dir() {
+            Ok(directory) => directory,
+            Err(message) => {
+                eprintln!("the studio settings route has no writable directory: {message}");
+                return sorted(FlatError::new(
+                    500,
+                    "settings_directory_unavailable",
+                    INTERNAL_ERROR_MESSAGE,
+                    vec![message],
+                ));
+            }
+        };
+        if let Err(error) = std::fs::create_dir_all(&fallback) {
+            eprintln!(
+                "the studio settings route cannot create its directory: {}",
+                error.kind()
+            );
             return internal_error();
         }
         fallback
@@ -1457,11 +1478,21 @@ async fn proxy_route(
 }
 
 /// Build the client response from the worker's answer.
+///
+/// Only the headers in [`FORWARDED_RESPONSE_HEADERS`] survive. The geometry
+/// worker is a separate, less trusted process, so an answer it relays cannot
+/// weaken the front door's security headers, plant a cookie, open a CORS
+/// origin or make the answer cacheable. The content type and the content length
+/// always come from this side.
 fn worker_response(response: WorkerResponse) -> OutResponse {
     let status = StatusCode::from_u16(response.status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
     let mut content_type = "application/json".to_owned();
     let mut headers: Vec<(String, String)> = Vec::new();
     for (name, value) in response.headers {
+        let name = name.to_ascii_lowercase();
+        if !FORWARDED_RESPONSE_HEADERS.contains(&name.as_str()) {
+            continue;
+        }
         if name == "content-type" {
             content_type = value;
             continue;
@@ -1831,5 +1862,111 @@ mod tests {
         assert!(!valid_design_id(&"a".repeat(63)));
         assert!(!valid_design_id(&"A".repeat(64)));
         assert!(!valid_design_id(""));
+    }
+
+    /// The headers a worker answer may contribute to the front door's response.
+    fn forwarded_names(response: &OutResponse) -> Vec<String> {
+        response
+            .headers
+            .iter()
+            .map(|(name, _)| name.clone())
+            .collect()
+    }
+
+    #[test]
+    fn a_worker_answer_cannot_replace_or_add_security_headers() {
+        let response = WorkerResponse {
+            status: 200,
+            headers: vec![
+                ("content-type".to_owned(), "image/svg+xml".to_owned()),
+                ("content-disposition".to_owned(), "inline".to_owned()),
+                ("x-studio-design-id".to_owned(), "abc".to_owned()),
+                // Everything below is dropped: no worker header may weaken
+                // this origin.
+                (
+                    "content-security-policy".to_owned(),
+                    "default-src *".to_owned(),
+                ),
+                ("x-frame-options".to_owned(), "ALLOWALL".to_owned()),
+                ("set-cookie".to_owned(), "studio=attacker".to_owned()),
+                ("access-control-allow-origin".to_owned(), "*".to_owned()),
+                (
+                    "cache-control".to_owned(),
+                    "public, max-age=31536000".to_owned(),
+                ),
+                (
+                    "strict-transport-security".to_owned(),
+                    "max-age=0".to_owned(),
+                ),
+                (
+                    "Content-Security-Policy".to_owned(),
+                    "default-src *".to_owned(),
+                ),
+            ],
+            body: b"<svg/>".to_vec(),
+        };
+
+        let forwarded = worker_response(response);
+        let names = forwarded_names(&forwarded);
+        assert!(names.contains(&"content-type".to_owned()));
+        assert!(names.contains(&"content-disposition".to_owned()));
+        assert!(names.contains(&"x-studio-design-id".to_owned()));
+        for dropped in [
+            "content-security-policy",
+            "x-frame-options",
+            "set-cookie",
+            "access-control-allow-origin",
+            "cache-control",
+            "strict-transport-security",
+        ] {
+            assert!(
+                !names.iter().any(|name| name == dropped),
+                "{dropped} must not be forwarded from the worker"
+            );
+        }
+
+        // The finished response carries the front door's own values.
+        let built = finish(forwarded, false);
+        for (name, value) in SECURITY_HEADERS {
+            assert_eq!(
+                built
+                    .headers()
+                    .get(*name)
+                    .and_then(|value| value.to_str().ok()),
+                Some(*value),
+                "{name} is the front door's value"
+            );
+        }
+        assert!(built.headers().get("set-cookie").is_none());
+    }
+
+    #[test]
+    fn the_front_door_security_headers_always_win() {
+        let mut response = OutResponse::binary(StatusCode::OK, "application/json", b"{}".to_vec());
+        // A route or static handler may try to relax the header set; it must
+        // not succeed.
+        response
+            .headers
+            .push(("x-frame-options".to_owned(), "ALLOWALL".to_owned()));
+        response.headers.push((
+            "content-security-policy".to_owned(),
+            "default-src *".to_owned(),
+        ));
+        let built = finish(response, false);
+        for (name, value) in SECURITY_HEADERS {
+            assert_eq!(
+                built
+                    .headers()
+                    .get(*name)
+                    .and_then(|value| value.to_str().ok()),
+                Some(*value),
+                "{name} is the front door's value"
+            );
+        }
+        assert_eq!(
+            built.headers().get_all("x-frame-options").iter().count(),
+            1,
+            "the relaxed value is replaced, not duplicated"
+        );
     }
 }

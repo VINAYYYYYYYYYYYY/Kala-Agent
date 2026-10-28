@@ -9,6 +9,7 @@ geometry.
 
 from __future__ import annotations
 
+import socket
 import tempfile
 from collections.abc import Iterator
 from pathlib import Path
@@ -26,12 +27,23 @@ AUTH = {"Authorization": f"Bearer {LAUNCH_TOKEN}"}
 
 @pytest.fixture(autouse=True)
 def _forbid_external(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """Permit OCP/test network reads but block all third-party egress."""
+    """Permit OCP/test network reads but block all third-party egress.
 
-    blocked_hosts = {"api.openai.com", "openrouter.ai", "127.0.0.1", "localhost"}
+    Loopback is deliberately *not* blocked: on Windows ``socket.socketpair``
+    (used by the asyncio event-loop self-pipe that ``TestClient`` starts in a
+    background portal thread) is emulated with a loopback TCP connect. Refusing
+    that connect left the portal thread waiting forever, so the whole studio
+    server module hung before its first test ran.
+    """
+
+    blocked_hosts = {"api.openai.com", "openrouter.ai"}
+    loopback_hosts = {"127.0.0.1", "::1", "localhost"}
+    real_connect = socket.socket.connect
 
     def blocked_connect(self: object, address: object, *_args: object, **_kwargs: object) -> int:  # type: ignore[no-untyped-def]
         host = address[0] if isinstance(address, tuple) else address
+        if host in loopback_hosts:
+            return real_connect(self, address, *_args, **_kwargs)  # type: ignore[arg-type]
         if host in blocked_hosts:
             return 0
         raise AssertionError(f"the studio test would have connected to {host}")
@@ -86,6 +98,33 @@ def test_health_reflects_step_capability(client: TestClient) -> None:
     response = client.get("/api/studio/health")
     body = response.json()
     assert body["step_available"] is probe_step_capability().available
+
+
+def test_health_echoes_the_launch_nonce_header(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The readiness probe can prove it reached the child this shell spawned."""
+    monkeypatch.setenv("KALA_STUDIO_LAUNCH_NONCE", "launch-nonce-0123456789abcdef")
+
+    response = client.get("/api/studio/health")
+
+    assert response.status_code == 200
+    assert response.headers["X-Kala-Launch-Nonce"] == "launch-nonce-0123456789abcdef"
+    # The nonce is proof about the process, not a liveness fact: the body
+    # schema must not change.
+    assert "launch-nonce-0123456789abcdef" not in response.text
+
+
+def test_health_never_invents_a_launch_nonce(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Without the environment variable no header is emitted at all."""
+    monkeypatch.delenv("KALA_STUDIO_LAUNCH_NONCE", raising=False)
+
+    response = client.get("/api/studio/health")
+
+    assert response.status_code == 200
+    assert "X-Kala-Launch-Nonce" not in response.headers
 
 
 def test_health_publishes_the_real_design_turn_budget(client: TestClient) -> None:

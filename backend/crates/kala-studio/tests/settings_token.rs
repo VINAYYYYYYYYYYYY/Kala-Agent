@@ -711,13 +711,22 @@ fn malformed_settings_and_unsafe_symlinks_are_handled() {
     assert!(read_stored_keys(Some(directory.path())).is_empty());
 
     let outside = directory.path().join("outside.json");
-    fs::write(&outside, "outside").unwrap();
-    fs::remove_file(&path).unwrap();
-    std::os::unix::fs::symlink(&outside, &path).unwrap();
+    #[cfg(unix)]
+    {
+        // A symlink planted in the data directory must not redirect the write.
+        fs::write(&outside, "outside").unwrap();
+        fs::remove_file(&path).unwrap();
+        std::os::unix::fs::symlink(&outside, &path).unwrap();
+    }
+    #[cfg(not(unix))]
+    let _ = &outside;
     write_stored_key(directory.path(), "openai", Some("sk-safe-key-0001")).unwrap();
-    assert_eq!(fs::read_to_string(&outside).unwrap(), "outside");
-    let metadata = fs::symlink_metadata(&path).unwrap();
-    assert!(metadata.file_type().is_file());
+    #[cfg(unix)]
+    {
+        assert_eq!(fs::read_to_string(&outside).unwrap(), "outside");
+        let metadata = fs::symlink_metadata(&path).unwrap();
+        assert!(metadata.file_type().is_file());
+    }
     assert!(read_stored_keys(Some(directory.path())).contains_key("openai"));
     let leftovers: Vec<PathBuf> = fs::read_dir(directory.path())
         .unwrap()

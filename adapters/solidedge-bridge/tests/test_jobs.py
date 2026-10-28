@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -17,9 +18,11 @@ from kala_solidedge_bridge.jobs import (
     ArtifactSpec,
     BackendEvent,
     BackendHealth,
+    BuildBackend,
     JobContext,
     JobManager,
     Readiness,
+    _Job,
     native_readiness,
 )
 from kala_solidedge_bridge.protocol import (
@@ -120,6 +123,40 @@ def make_manager(
     )
 
 
+class CancelAtStartManager(JobManager):
+    """Cancel a build at the instant the supervisor marks it RUNNING.
+
+    The ``_persist`` call happens inside the same lock section that dequeues
+    the id and assigns ``_active``, which is exactly the boundary where a
+    racing ``cancel()`` used to be lost.
+    """
+
+    def __init__(
+        self,
+        data_dir: Path,
+        backend_factory: Callable[[], BuildBackend],
+        *,
+        readiness_provider: Callable[[BackendHealth], Readiness],
+        clock: Callable[[], float],
+        deadline_grace: float = 0.0,
+    ) -> None:
+        super().__init__(
+            data_dir,
+            backend_factory,
+            readiness_provider=readiness_provider,
+            start_supervisor=False,
+            clock=clock,
+            deadline_grace=deadline_grace,
+        )
+        self.cancel_on_running = False
+
+    def _persist(self, job: _Job) -> None:
+        if self.cancel_on_running and job.state is JobState.RUNNING:
+            self.cancel_on_running = False
+            self.cancel(job.build_id)
+        super()._persist(job)
+
+
 def test_successful_build_publishes_verified_artifact(tmp_path: Path) -> None:
     backend = ScriptedBackend(
         script=[
@@ -200,6 +237,69 @@ def test_cancel_before_the_worker_starts_never_submits(tmp_path: Path) -> None:
     assert status.result is not None
     assert status.result.state is JobState.CANCELLED
     assert backend.submitted == []
+    manager.close()
+
+
+def test_cancel_at_the_queued_to_running_boundary_never_submits(tmp_path: Path) -> None:
+    backend = ScriptedBackend()
+    manager = CancelAtStartManager(
+        tmp_path,
+        lambda: backend,
+        readiness_provider=ready,
+        clock=FakeClock(),
+        deadline_grace=0.0,
+    )
+    accepted = manager.submit(build_request())
+    manager.cancel_on_running = True
+
+    manager.run_once()
+
+    assert backend.submitted == []
+    status = manager.status(accepted.build_id)
+    assert status.state is JobState.CANCELLED
+    assert status.result is not None
+    assert status.result.state is JobState.CANCELLED
+    # No COM work exists, so the worker is free for the next build.
+    manager.submit(build_request("after-boundary-cancel"))
+    manager.close()
+
+
+def test_an_event_tagged_for_another_build_is_ignored(tmp_path: Path) -> None:
+    backend = ScriptedBackend(
+        script=[
+            BackendEvent(
+                kind="completed",
+                build_id="an-older-build",
+                artifacts=(ArtifactSpec(name="plate.par", format=ArtifactFormat.PAR),),
+            )
+        ]
+    )
+    manager = make_manager(tmp_path, backend)
+    accepted = manager.submit(build_request())
+    manager.run_once()
+    manager.run_once()
+
+    status = manager.status(accepted.build_id)
+    assert status.state is JobState.RUNNING
+    assert status.result is None
+    assert not (tmp_path / "jobs" / accepted.build_id / "plate.par").exists()
+    manager.close()
+
+
+def test_an_event_tagged_for_the_active_build_is_applied(tmp_path: Path) -> None:
+    class TaggingBackend(ScriptedBackend):
+        def submit(self, job: JobContext) -> None:
+            self.submitted.append(job)
+            self.events.append(BackendEvent(kind="completed", build_id=job.build_id))
+
+    backend = TaggingBackend()
+    manager = make_manager(tmp_path, backend)
+    accepted = manager.submit(build_request())
+    manager.run_once()
+    manager.run_once()
+
+    status = manager.status(accepted.build_id)
+    assert status.state is JobState.SUCCEEDED
     manager.close()
 
 

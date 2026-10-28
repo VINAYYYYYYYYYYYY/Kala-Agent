@@ -47,6 +47,13 @@ CUBE_HALF_MM: Final[float] = CUBE_MM / 2.0
 CUBE_VOLUME_MM3: Final[float] = CUBE_MM**3
 CUBE_VOLUME_TOLERANCE_MM3: Final[float] = CUBE_VOLUME_MM3 * 0.01
 CUBE_EXTENT_TOLERANCE_MM: Final[float] = 0.01
+#: ``ComputePhysicalProperties`` inputs measured on Solid Edge 2024:
+#: a 10 mm cube at 1000 kg/m3 has a mass of 0.001 kg and a 0.001 m accuracy.
+PROBE_DENSITY_KG_M3: Final[float] = 1000.0
+PROBE_ACCURACY_M: Final[float] = 0.001
+#: ``ComputePhysicalProperties`` status values observed to accompany correct
+#: geometry. Solid Edge 2024 returns 1 for a valid solid, not 0.
+PHYSICAL_PROPERTIES_SUCCESS_CODES: Final[frozenset[int]] = frozenset({0, 1})
 REQUIRED_CONSTANTS: Final[tuple[str, ...]] = ("igSymmetric", "igProfileClosed")
 OPTIONAL_CONSTANTS: Final[tuple[str, ...]] = ("seModelingModeOrdered",)
 REQUIRED_DOC_MEMBERS: Final[tuple[str, ...]] = (
@@ -58,11 +65,7 @@ REQUIRED_DOC_MEMBERS: Final[tuple[str, ...]] = (
     "Close",
 )
 _MISSING_WORK: Final[tuple[str, ...]] = (
-    "confirm Student Edition automation access on the actual Windows host",
-    "derive the RefPlanes index-to-normal mapping from measured GetNormal/GetRootPoint",
-    "confirm the installed out-parameter VARIANT shapes for arrays and ProfileArray",
-    "confirm the STEP translator behaviour behind SaveCopyAs/SaveAs and its ISO-10303-21 header",
-    "record density/accuracy units accepted by ComputePhysicalProperties",
+    "confirm the installed edition/licensing permits production automation use",
     "implement and live-verify a production native build executor (probe geometry is not a build executor)",
 )
 
@@ -125,10 +128,25 @@ def _short(value: Any, limit: int = 300) -> str:  # noqa: ANN401
 
 
 def _vector(value: Any, length: int) -> tuple[float, ...]:  # noqa: ANN401
-    candidate = getattr(value, "value", value)
-    if isinstance(candidate, (list, tuple)) and len(candidate) == length:
-        return tuple(float(item) for item in candidate)
+    """Read a finite vector from a COM result.
+
+    pywin32 312 returns ``[out]`` SAFEARRAY parameters as the method's return
+    value, so ``GetNormal([0, 0, 0])`` is a plain tuple. A by-reference
+    ``VARIANT`` built with ``VT_BYREF | VT_ARRAY`` is rejected outright
+    (``TypeError: Objects for SAFEARRAYS must be sequences of sequences``), so
+    no ``.value`` fallback is assumed here.
+    """
+    if isinstance(value, (list, tuple)) and len(value) == length:
+        return tuple(float(item) for item in value)
     raise ValueError(f"expected a {length}-element array from COM")
+
+
+def _shape(value: Any, limit: int = 120) -> str:  # noqa: ANN401
+    """Describe a COM result shape without dumping an unbounded payload."""
+    kind = type(value).__name__
+    if isinstance(value, (list, tuple)):
+        return f"{kind}[{len(value)}]"
+    return f"{kind}: {_short(value, limit)}"
 
 
 def _cube_measurement_valid(
@@ -219,11 +237,14 @@ def _probe_native(
         report["attach"]["version_error"] = bounded_message(exc)
 
     report["typelib"]["application"] = binding.describe_typelib(application)
-    resolved, missing = binding.resolve_constants(
-        application, REQUIRED_CONSTANTS + OPTIONAL_CONSTANTS
-    )
+    resolution = binding.resolve_constants(application, REQUIRED_CONSTANTS + OPTIONAL_CONSTANTS)
+    resolved = resolution.values
     missing_required = [name for name in REQUIRED_CONSTANTS if name not in resolved]
-    report["constants"] = {"resolved": resolved, "missing": missing}
+    report["constants"] = {
+        "resolved": resolved,
+        "missing": resolution.missing,
+        "sources": resolution.sources,
+    }
     if missing_required:
         report["geometry"] = {
             "attempted": False,
@@ -351,10 +372,10 @@ def _build_and_measure_cube(
     ref_plane = document.RefPlanes.Item(1)
     plane: dict[str, Any] = {"index": 1}
     for label, method_name in (("normal", "GetNormal"), ("root_point", "GetRootPoint")):
-        buffer = binding.variant_byref_float_array([0.0, 0.0, 0.0])
         try:
-            getattr(ref_plane, method_name)(buffer)
-            plane[label] = [float(value) for value in _vector(buffer, 3)]
+            # pywin32 312 returns the by-ref SAFEARRAY as the method result.
+            value = getattr(ref_plane, method_name)([0.0, 0.0, 0.0])
+            plane[label] = [float(item) for item in _vector(value, 3)]
         except Exception as exc:
             plane[f"{label}_error"] = bounded_message(exc)
     geometry["ref_plane"] = plane
@@ -381,11 +402,18 @@ def _build_and_measure_cube(
         profile.Lines2d.AddBy2Points(
             mm_to_m(start[0]), mm_to_m(start[1]), mm_to_m(end[0]), mm_to_m(end[1])
         )
-    validation = int(profile.End(constants["igProfileClosed"]))
-    geometry["profile_end"] = validation
-    if validation != 0:
-        geometry["reason"] = "profile validation did not return 0"
+    # ``Profile.End`` is not a boolean: Solid Edge 2024 returns -103 for a
+    # closed profile that extrudes correctly. Do not gate on 0; record the code
+    # and let the extrusion and measured geometry decide whether it was a
+    # success code. A nonzero code is only accepted after that outcome exists.
+    try:
+        profile_end_code = int(profile.End(constants["igProfileClosed"]))
+    except Exception as exc:
+        geometry["profile_end"] = None
+        geometry["profile_end_error"] = bounded_message(exc)
+        geometry["reason"] = "Profile.End failed, so no closed profile was produced"
         return geometry
+    geometry["profile_end"] = profile_end_code
 
     extrusion_arguments = (1, (profile,), constants["igSymmetric"], mm_to_m(CUBE_MM))
     # One documented form, one call. If the installed binding rejects it, the
@@ -424,58 +452,66 @@ def _build_and_measure_cube(
         geometry["missing_members"] = missing
         return geometry
 
-    minimum = binding.variant_byref_float_array([0.0, 0.0, 0.0])
-    maximum = binding.variant_byref_float_array([0.0, 0.0, 0.0])
     if body is None:
-        raise RuntimeError("the created model exposes no Body")
-    range_result = binding.call(lambda: body.GetRange(minimum, maximum), retry_safe=True)
-    if isinstance(range_result, (tuple, list)) and len(range_result) == 2:
+        geometry["reason"] = "the created model exposes no Body"
+        return geometry
+    # pywin32 312 returns [out] SAFEARRAY parameters as the method result, so
+    # plain sequences in and a ``(minimum, maximum)`` tuple out is the whole
+    # contract. There is no by-reference VARIANT to read afterwards.
+    range_result = binding.call(
+        lambda: body.GetRange([0.0, 0.0, 0.0], [0.0, 0.0, 0.0]), retry_safe=True
+    )
+    if not isinstance(range_result, (tuple, list)) or len(range_result) != 2:
+        geometry["reason"] = "Body.GetRange did not return (minimum, maximum)"
+        geometry["range_shape"] = _shape(range_result)
+        return geometry
+    try:
         minimum_values = _vector(range_result[0], 3)
         maximum_values = _vector(range_result[1], 3)
-    else:
-        minimum_values = _vector(minimum, 3)
-        maximum_values = _vector(maximum, 3)
+    except ValueError as exc:
+        geometry["reason"] = f"Body.GetRange returned an unusable range: {exc}"
+        geometry["range_shape"] = _shape(range_result)
+        return geometry
     minimum_mm = [m_to_mm(value) for value in minimum_values]
     maximum_mm = [m_to_mm(value) for value in maximum_values]
     geometry["range_min_mm"] = minimum_mm
     geometry["range_max_mm"] = maximum_mm
 
-    volume_variant = binding.variant_byref_float(0.0)
-    area_variant = binding.variant_byref_float(0.0)
-    mass_variant = binding.variant_byref_float(0.0)
-    center_of_gravity = binding.variant_byref_float_array([0.0, 0.0, 0.0])
-    center_of_volume = binding.variant_byref_float_array([0.0, 0.0, 0.0])
-    global_moments = binding.variant_byref_float_array([0.0] * 9)
-    principal_moments = binding.variant_byref_float_array([0.0, 0.0, 0.0])
-    principal_axes = binding.variant_byref_float_array([0.0] * 9)
-    radii_of_gyration = binding.variant_byref_float_array([0.0, 0.0, 0.0])
-    relative_accuracy = binding.variant_byref_float(0.0)
-    status = binding.variant_byref_int(0)
-    binding.call(
-        lambda: model.ComputePhysicalProperties(
-            1000.0,
-            0.001,
-            volume_variant,
-            area_variant,
-            mass_variant,
-            center_of_gravity,
-            center_of_volume,
-            global_moments,
-            principal_moments,
-            principal_axes,
-            radii_of_gyration,
-            relative_accuracy,
-            status,
-        ),
+    # Two input arguments; every [out] parameter comes back as one tuple:
+    # (volume, area, mass, cog, cov, moments, principal moments, principal
+    # axes, radii of gyration, relative accuracy, status). Passing placeholder
+    # arrays for the out parameters produced an incoherent shape on this host,
+    # so the probe reads the return value instead.
+    properties = binding.call(
+        lambda: model.ComputePhysicalProperties(PROBE_DENSITY_KG_M3, PROBE_ACCURACY_M),
         retry_safe=True,
     )
-    volume_m3 = float(getattr(volume_variant, "value", volume_variant))
+    if not isinstance(properties, (tuple, list)) or len(properties) < 11:
+        geometry["reason"] = (
+            "Model.ComputePhysicalProperties did not return the documented out-parameter tuple"
+        )
+        geometry["physical_properties_shape"] = _shape(properties)
+        return geometry
+    try:
+        volume_m3 = float(properties[0])
+        area_m2 = float(properties[1])
+        mass_kg = float(properties[2])
+        center_of_gravity_mm = [m_to_mm(value) for value in _vector(properties[3], 3)]
+        relative_accuracy = float(properties[9])
+        physical_status = int(properties[10])
+    except (IndexError, TypeError, ValueError) as exc:
+        geometry["reason"] = f"Model.ComputePhysicalProperties returned unusable values: {exc}"
+        geometry["physical_properties_shape"] = _shape(properties)
+        return geometry
     volume_mm3 = m3_to_mm3(volume_m3)
-    physical_status = int(getattr(status, "value", status))
     geometry["volume_mm3"] = volume_mm3
-    geometry["surface_area_mm2"] = m2_to_mm2(float(getattr(area_variant, "value", area_variant)))
+    geometry["surface_area_mm2"] = m2_to_mm2(area_m2)
+    geometry["mass_kg"] = mass_kg
+    geometry["center_of_gravity_mm"] = center_of_gravity_mm
     geometry["physical_properties_status"] = physical_status
-    geometry["relative_accuracy"] = float(getattr(relative_accuracy, "value", relative_accuracy))
+    geometry["relative_accuracy"] = relative_accuracy
+    geometry["density_kg_m3"] = PROBE_DENSITY_KG_M3
+    geometry["accuracy_m"] = PROBE_ACCURACY_M
 
     par_path = run_dir / "probe.par"
     step_path = run_dir / "probe.stp"
@@ -515,15 +551,26 @@ def _build_and_measure_cube(
     geometry["saved_step"] = "probe.stp" if _step_header_valid(step_path) else None
     report["artifacts"] = artifacts
     geometry["valid"] = (
-        (physical_status in (0, 1))
+        (physical_status in PHYSICAL_PROPERTIES_SUCCESS_CODES)
         and _cube_measurement_valid(volume_mm3, minimum_mm, maximum_mm)
         and _step_header_valid(step_path)
         and par_path.is_file()
     )
+    if geometry["valid"] and profile_end_code != 0:
+        geometry["profile_end_status"] = "accepted"
+        geometry["profile_end_evidence"] = (
+            "the extrusion succeeded and the measured geometry matched a 10 mm cube; "
+            "this nonzero code is recorded as an accepted profile-validation success code"
+        )
+    elif profile_end_code == 0:
+        geometry["profile_end_status"] = "zero"
+    else:
+        geometry["profile_end_status"] = "unconfirmed"
     if not geometry["valid"]:
         geometry["reason"] = (
-            "measured geometry did not match a 10 mm cube within tolerance, or the "
-            "STEP artifact was not produced"
+            "measured geometry did not match a 10 mm cube within tolerance, the "
+            "physical-properties status was not a success code, or the STEP artifact "
+            "was not produced"
         )
     geometry["probe_id"] = probe_id
     return geometry
@@ -652,6 +699,7 @@ def run_probe(
                 minimum = (0.0, 0.0, 0.0)
                 maximum = (0.0, 0.0, 0.0)
             try:
+                raw_profile_end = geometry.get("profile_end")
                 calibration = calibration_store.record_probe(
                     se_version=se_version,
                     volume_mm3=float(geometry["volume_mm3"]),
@@ -659,6 +707,12 @@ def run_probe(
                     range_max_mm=(float(maximum[0]), float(maximum[1]), float(maximum[2])),
                     par_sha256=str(par["sha256"]),
                     step_sha256=str(step["sha256"]),
+                    profile_end_code=(
+                        int(raw_profile_end)
+                        if isinstance(raw_profile_end, int)
+                        and not isinstance(raw_profile_end, bool)
+                        else None
+                    ),
                 )
             except Exception as exc:
                 report["calibration_error"] = bounded_message(exc)

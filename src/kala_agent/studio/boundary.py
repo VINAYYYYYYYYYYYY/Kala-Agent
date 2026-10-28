@@ -4,7 +4,9 @@ The boundary holds the loopback Host guard policy, the per-launch bearer
 token, and the helper that mints it. Token storage is portable: the studio
 creates a directory with owner-only permissions (``0o700``) and writes the
 token through an atomic same-directory replacement pattern that works on
-both POSIX and Windows without relying on ``os.fchmod``.
+both POSIX and Windows without relying on ``os.fchmod``. The file itself is
+restricted to the current user on both hosts: by mode bits on POSIX and by an
+``icacls`` ACL on Windows, where a mode bit is not an access control.
 
 A caller can also pass an explicit token through ``KALA_STUDIO_TOKEN`` for
 the Electron shell, in which case no disk copy is made. The token is read
@@ -33,6 +35,7 @@ from kala_agent.api.boundary import (
     is_loopback_host,
     is_permitted_authority,
 )
+from kala_agent.private_files import atomic_write_private_text, tighten_file_permissions
 
 LOGGER: Final[logging.Logger] = logging.getLogger("kala_agent.studio")
 STUDIO_TOKEN_ENV_VAR: Final[str] = "KALA_STUDIO_TOKEN"
@@ -99,12 +102,13 @@ def _tighten_directory_mode(path: Path) -> None:
 
 
 def _tighten_file_mode(path: Path) -> None:
-    if IS_WINDOWS:
-        return
-    try:
-        os.chmod(path, TOKEN_FILE_MODE)
-    except OSError as error:
-        LOGGER.debug("studio token file mode tighten skipped: %s", type(error).__name__)
+    """Restrict a studio credential file to the current user.
+
+    On Windows this is an ACL change (``icacls``); on POSIX it is the mode
+    bits. ``0o600`` alone is a no-op for Windows access control, which is why
+    the file itself is tightened rather than only its mode.
+    """
+    tighten_file_permissions(path, TOKEN_FILE_MODE)
 
 
 def _atomic_write_text(path: Path, content: str) -> None:
@@ -113,30 +117,11 @@ def _atomic_write_text(path: Path, content: str) -> None:
     The function uses ``tempfile`` + ``os.replace`` (rather than
     ``O_TRUNC`` + ``os.fchmod``) so the approach is portable to Windows.
     The temp file lives in the same directory as the destination so
-    ``os.replace`` is guaranteed to be atomic on the same filesystem.
+    ``os.replace`` is guaranteed to be atomic on the same filesystem, and it
+    is restricted to the current user before the rename (ACL on Windows, mode
+    bits on POSIX).
     """
-    import tempfile
-
-    directory = path.parent
-    directory.mkdir(parents=True, exist_ok=True)
-    fd, temp_name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=str(directory))
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            handle.write(content)
-            handle.flush()
-            try:
-                os.fsync(handle.fileno())
-            except (OSError, AttributeError):
-                pass
-        _tighten_file_mode(Path(temp_name))
-        os.replace(temp_name, path)
-    except Exception:
-        try:
-            os.unlink(temp_name)
-        except OSError:
-            pass
-        raise
-    _tighten_file_mode(path)
+    atomic_write_private_text(path, content, TOKEN_FILE_MODE)
 
 
 def issue_studio_token(data_dir: Path) -> str:

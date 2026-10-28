@@ -42,6 +42,31 @@ def store(tmp_path: Path) -> ContentAddressedArtifactStore:
     return ContentAddressedArtifactStore(tmp_path / "artifacts", max_object_size=64)
 
 
+def test_store_refuses_a_host_without_directory_descriptors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A host without ``dir_fd``/``O_NOFOLLOW`` gets a clear platform refusal.
+
+    Windows cannot open a directory and address its entries through a
+    descriptor, so every store operation is unsupported there. The store says
+    so instead of failing later with a bare ``PermissionError`` from
+    ``os.open``. Construction still succeeds because the studio builds its
+    journal — and therefore a store — while creating the app on every
+    platform; only the first artifact operation refuses.
+    """
+    monkeypatch.setattr(artifacts_module, "_DIRECTORY_DESCRIPTORS_SUPPORTED", False)
+    store = ContentAddressedArtifactStore(tmp_path / "artifacts")
+
+    with pytest.raises(artifacts_module.ArtifactStoreUnsupportedError) as error:
+        store.put_bytes(b"artifact")
+
+    assert "POSIX directory descriptors" in str(error.value)
+    with pytest.raises(artifacts_module.ArtifactStoreUnsupportedError):
+        store.get_bytes("0" * 64)
+    with pytest.raises(artifacts_module.ArtifactStoreUnsupportedError):
+        store.contains("0" * 64)
+
+
 def _objects_root(store: ContentAddressedArtifactStore) -> Path:
     return store.root / "objects"
 
@@ -257,6 +282,10 @@ def test_read_object_reports_unopenable_object_for_directory(
         store.get_bytes(digest)
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="temporary-object writes need dir_fd, which only POSIX os.open provides",
+)
 def test_write_temporary_object_cleans_up_on_failure(
     store: ContentAddressedArtifactStore, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -167,6 +167,10 @@ if TYPE_CHECKING:
 LOGGER: Final[logging.Logger] = logging.getLogger("kala_agent.studio.server")
 STUDIO_PREFIX: Final[str] = "/api/studio"
 STUDIO_VERSION: Final[str] = "0.1.0"
+#: Environment variable carrying the Electron shell's per-launch readiness
+#: nonce. It is echoed on ``/health`` in :data:`LAUNCH_NONCE_HEADER`.
+LAUNCH_NONCE_ENV: Final[str] = "KALA_STUDIO_LAUNCH_NONCE"
+LAUNCH_NONCE_HEADER: Final[str] = "X-Kala-Launch-Nonce"
 DESIGN_UNAVAILABLE_MESSAGE: Final[str] = (
     "Design compilation requires the OCP bindings (the 'cadquery-ocp' package). "
     "The studio never fabricates a design; install 'cadquery-ocp' and restart "
@@ -251,9 +255,18 @@ router = APIRouter()
     response_model=HealthResponse,
     tags=["studio"],
 )
-def health(request: Request = None) -> HealthResponse:  # type: ignore[assignment]
+def health(request: Request = None, response: Response = None) -> HealthResponse:  # type: ignore[assignment]
     """Return liveness facts about the studio without leaking secrets."""
     env = _effective_request_environ(request)
+    # The Electron shell passes a random per-launch nonce in this process's
+    # environment and requires it back on the readiness response. Echoing it
+    # proves the listener that answered is the child the shell spawned, not a
+    # stale or hostile process that had already bound the loopback port. The
+    # body schema is unchanged; the nonce travels in a header because it is
+    # proof *about* the process, not a liveness fact.
+    launch_nonce = env.get(LAUNCH_NONCE_ENV, "")
+    if response is not None and launch_nonce:
+        response.headers[LAUNCH_NONCE_HEADER] = launch_nonce
     step_available = probe_step_capability().available
     # `offline` is an evidence-backed answer, not an API-key check: a
     # signed-in subscription CLI makes a remote turn possible even with no

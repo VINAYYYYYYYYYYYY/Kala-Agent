@@ -5,6 +5,7 @@ import hashlib
 import os
 import secrets
 import stat
+import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -36,6 +37,19 @@ _TEMPORARY_WRITE_FLAGS: Final[int] = (
 _DIRECTORY_SYNC_IGNORED_ERRNOS: Final[frozenset[int]] = frozenset(
     {errno.EINVAL, errno.ENOSYS, errno.EPERM, errno.EACCES, errno.EROFS}
 )
+#: Every store operation resolves names through an open directory descriptor
+#: (``dir_fd``/``O_NOFOLLOW``) and publishes with a same-directory hard link.
+#: Windows has neither, so the store refuses to be used there instead of failing
+#: later with a bare ``PermissionError`` from ``os.open`` on a directory. The
+#: refusal is raised by the first store operation rather than by the constructor:
+#: the studio builds a journal (and therefore a store) at startup on every
+#: platform, and its health route must stay reachable even where artifact
+#: publication is unsupported.
+_DIRECTORY_DESCRIPTORS_SUPPORTED: Final[bool] = os.name == "posix"
+
+
+class ArtifactStoreUnsupportedError(NotImplementedError):
+    """Raised when the host cannot provide POSIX directory-descriptor semantics."""
 
 
 def _entry_is_directory(directory_fd: int, name: str) -> bool:
@@ -243,8 +257,16 @@ class ContentAddressedArtifactStore:
         normalized_digest = _validate_digest(digest)
         return len(self._read_bytes(normalized_digest))
 
+    def _ensure_supported(self) -> None:
+        if not _DIRECTORY_DESCRIPTORS_SUPPORTED:
+            raise ArtifactStoreUnsupportedError(
+                "the content-addressed artifact store requires POSIX directory descriptors "
+                f"(dir_fd, O_NOFOLLOW, hard links) and is unsupported on {sys.platform}"
+            )
+
     @contextmanager
     def _bucket(self, digest: str, *, create: bool) -> Iterator[_Bucket]:
+        self._ensure_supported()
         bucket_name = digest[:_BUCKET_PREFIX_LENGTH]
         objects_fd = _open_object_root(self._objects_root)
         try:

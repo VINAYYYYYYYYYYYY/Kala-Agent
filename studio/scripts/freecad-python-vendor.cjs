@@ -40,6 +40,7 @@ const SITE_PACKAGES_PREFIX = 'site-packages-';
 const DETECT_MARKER = 'KALA_FREECAD_PYTHON=';
 const VERIFY_MARKER = 'KALA_FREECAD_VENDOR_OK=';
 const SUPPORTED_ABI_PATTERN = /^cp3[0-9]{2}t?$/;
+const SHA256_HEX_PATTERN = /^[0-9a-f]{64}$/;
 
 // Top-level entries a vendored wheel may contribute. Anything else (scripts,
 // `*.data` directories, a second interpreter) is refused instead of copied.
@@ -97,6 +98,43 @@ function normalizePythonTargets(python = {}) {
   return targets;
 }
 
+/**
+ * Validate the reviewed SHA-256 digest list for every pinned requirement.
+ *
+ * `pip download --require-hashes` is only as strong as this map: a missing
+ * requirement or an empty list would turn the check into a no-op, so both are
+ * refused here rather than at download time.
+ */
+function validateRequirementHashes(rawHashes, requirements, pinsFile) {
+  if (!rawHashes || typeof rawHashes !== 'object' || Array.isArray(rawHashes)) {
+    throw new Error(
+      `FreeCAD dependency pins at ${pinsFile} must carry a "hashes" object keyed by exact requirement`,
+    );
+  }
+  const hashes = {};
+  for (const requirement of requirements) {
+    const digests = rawHashes[requirement];
+    if (!Array.isArray(digests) || digests.length === 0) {
+      throw new Error(`FreeCAD dependency pins carry no SHA-256 hashes for ${requirement}`);
+    }
+    for (const digest of digests) {
+      if (typeof digest !== 'string' || !SHA256_HEX_PATTERN.test(digest)) {
+        throw new Error(
+          `FreeCAD dependency pins carry an invalid SHA-256 for ${requirement}: ${JSON.stringify(digest)}`,
+        );
+      }
+    }
+    hashes[requirement] = [...digests];
+  }
+  const unknown = Object.keys(rawHashes).filter((key) => !requirements.includes(key));
+  if (unknown.length > 0) {
+    throw new Error(
+      `FreeCAD dependency pins carry hashes for requirements that are not pinned: ${unknown.join(', ')}`,
+    );
+  }
+  return hashes;
+}
+
 function readPins(pinsFile = DEFAULT_PINS_FILE) {
   const resolved = path.resolve(pinsFile);
   let payload;
@@ -116,9 +154,11 @@ function readPins(pinsFile = DEFAULT_PINS_FILE) {
     }
   }
   const targets = normalizePythonTargets(payload.python || {});
+  const requirements = [...payload.requirements];
   return {
     file: resolved,
-    requirements: [...payload.requirements],
+    requirements,
+    hashes: validateRequirementHashes(payload.hashes, requirements, resolved),
     defaultVersion: payload.python?.defaultVersion || targets[targets.length - 1].version,
     defaultAbi: payload.python?.defaultAbi || targets[targets.length - 1].abi,
     targets,
@@ -357,11 +397,36 @@ function defaultPipPython({ env = process.env, platform = process.platform } = {
 }
 
 /**
+ * Write the fully pinned, fully hashed requirements file pip is given.
+ *
+ * Hash-checking mode rejects an index that serves different bytes for a pinned
+ * version, which closes the "`PIP_INDEX_URL` points at an attacker's mirror"
+ * hole: the mirror may still answer, but only the reviewed wheels are accepted.
+ */
+function writeHashedRequirementsFile({ requirements, hashes, destination }) {
+  if (!hashes || typeof hashes !== 'object') {
+    throw new Error('downloading FreeCAD wheels requires the pinned SHA-256 hashes');
+  }
+  const lines = requirements.map((requirement) => {
+    const digests = hashes[requirement];
+    if (!Array.isArray(digests) || digests.length === 0) {
+      throw new Error(`no reviewed SHA-256 hashes for ${requirement}`);
+    }
+    return `${requirement} ${digests.map((digest) => `--hash=sha256:${digest}`).join(' ')}`;
+  });
+  const requirementsFile = path.join(destination, '.kala-hashed-requirements.txt');
+  fs.writeFileSync(requirementsFile, `${lines.join('\n')}\n`);
+  return requirementsFile;
+}
+
+/**
  * Download the pinned wheels for one interpreter identity with
- * `pip download --only-binary=:all:` and return their file names and digests.
+ * `pip download --only-binary=:all: --require-hashes` and return their file
+ * names and digests.
  */
 function downloadWheels({
   requirements,
+  hashes,
   pythonVersion,
   abi,
   wheelTag,
@@ -369,23 +434,26 @@ function downloadWheels({
   pipPython,
   env = process.env,
   timeout = 600_000,
+  runner = run,
 }) {
   fs.mkdirSync(destination, { recursive: true });
+  const requirementsFile = writeHashedRequirementsFile({ requirements, hashes, destination });
   const args = [
     '-m', 'pip',
     '--disable-pip-version-check',
     '--no-input',
     'download',
     '--only-binary=:all:',
+    '--require-hashes',
     '--python-version', pythonVersion,
     '--implementation', 'cp',
     '--abi', abi,
     '--platform', wheelTag,
     '--progress-bar', 'off',
     '--dest', destination,
-    ...requirements,
+    '-r', requirementsFile,
   ];
-  const result = run(pipPython, args, { env: cleanEnvironment(env), timeout });
+  const result = runner(pipPython, args, { env: cleanEnvironment(env), timeout });
   if (result.status !== 0) {
     throw new Error(
       `pip download for Python ${pythonVersion}/${abi}/${wheelTag} failed (exit ${result.status}): ` +
@@ -680,6 +748,7 @@ function vendorFreeCadDependencies({
       try {
         const wheels = downloadWheels({
           requirements: pins.requirements,
+          hashes: pins.hashes,
           pythonVersion: target.version,
           abi: target.abi,
           wheelTag: resolvedWheelTag,
@@ -844,6 +913,7 @@ function buildDependencyMatrix({
       try {
         const wheels = downloadWheels({
           requirements: pins.requirements,
+          hashes: pins.hashes,
           pythonVersion: target.version,
           abi: target.abi,
           wheelTag,
@@ -933,6 +1003,8 @@ module.exports = {
   readPins,
   normalizePythonTargets,
   resolvePythonTargets,
+  validateRequirementHashes,
+  writeHashedRequirementsFile,
   sitePackagesDirName,
   cleanEnvironment,
   findFreeCadExecutable,

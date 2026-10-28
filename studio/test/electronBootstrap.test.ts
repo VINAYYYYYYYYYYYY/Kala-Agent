@@ -79,6 +79,7 @@ interface Harness {
   dialogErrors: Array<{ title: string; message: string }>;
   ipcHandlers: Map<string, unknown>;
   permissionHandlers: unknown[];
+  permissionCheckHandlers: unknown[];
   fakeElectron: unknown;
   fakeChildProcess: unknown;
 }
@@ -91,6 +92,7 @@ function buildHarness(): Harness {
   const dialogErrors: Array<{ title: string; message: string }> = [];
   const ipcHandlers = new Map<string, unknown>();
   const permissionHandlers: unknown[] = [];
+  const permissionCheckHandlers: unknown[] = [];
 
   const fakeApp = {
     isPackaged: true,
@@ -111,6 +113,9 @@ function buildHarness(): Harness {
     defaultSession: {
       setPermissionRequestHandler: (fn: unknown) => {
         permissionHandlers.push(fn);
+      },
+      setPermissionCheckHandler: (fn: unknown) => {
+        permissionCheckHandlers.push(fn);
       },
       webRequest: { onHeadersReceived: () => undefined },
     },
@@ -175,7 +180,18 @@ function buildHarness(): Harness {
     },
   };
 
-  return { spawnCalls, children, windows, app, dialogErrors, ipcHandlers, permissionHandlers, fakeElectron, fakeChildProcess };
+  return {
+    spawnCalls,
+    children,
+    windows,
+    app,
+    dialogErrors,
+    ipcHandlers,
+    permissionHandlers,
+    permissionCheckHandlers,
+    fakeElectron,
+    fakeChildProcess,
+  };
 }
 
 let harness: Harness;
@@ -246,6 +262,10 @@ describe('electron bootstrap entry', () => {
 
     expect(harness.app.whenReadyCalls).toBe(1);
     expect(harness.permissionHandlers).toHaveLength(1);
+    // Both the async request handler and the synchronous check handler deny
+    // by default; a page must never be able to obtain camera/mic/geolocation.
+    expect(harness.permissionCheckHandlers).toHaveLength(1);
+    expect((harness.permissionCheckHandlers[0] as () => boolean)()).toBe(false);
     expect(harness.ipcHandlers.has('kala-studio:get-connection')).toBe(true);
   });
 
