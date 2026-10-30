@@ -128,7 +128,7 @@ def test_tighten_file_permissions_never_raises_for_an_unrestrictable_file(
     destination = tmp_path / "secret"
     destination.write_text("secret\n", encoding="utf-8")
 
-    def refuse(_path) -> None:
+    def refuse(*_args, **_kwargs) -> None:
         raise OSError("icacls failed")
 
     monkeypatch.setattr("kala_agent.private_files.restrict_windows_acl", refuse)

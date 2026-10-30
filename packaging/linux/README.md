@@ -191,9 +191,9 @@ quoting a digest that would go stale.
 | | |
 |---|---|
 | File | `studio/release/kala-studio-0.1.0-x86_64.AppImage` |
-| Size | **163 889 259 bytes** (156.3 MiB) |
-| SHA-256 | `bf4734e18843fceb1d9bc98a305deddb5de771684f27772bd8c50dfa1d23149e` |
-| Built | 2026-10-21, final build of the completeness wave; smoke `--require-geometry --require-freecad` PASS. Unsigned. |
+| Size | **163 682 196 bytes** (156.1 MiB) |
+| SHA-256 | `a35d377a3e9d8a997952ac690ecc0f357779135351c0bd0c398b37b392b2e7f4` |
+| Built | 2026-10-30, Linux build of `a31229a` plus the typecheck/test fixes; smoke `--require-geometry --require-freecad` PASS. Unsigned. |
 
 Verify it with:
 

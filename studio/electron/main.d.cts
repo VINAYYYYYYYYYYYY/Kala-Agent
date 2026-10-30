@@ -13,6 +13,7 @@ export interface BackendInvocation {
   env: NodeJS.ProcessEnv;
   port: number;
   token: string;
+  nonce: string | null;
 }
 
 export interface BackendProcessOptions {
@@ -22,6 +23,8 @@ export interface BackendProcessOptions {
   env: NodeJS.ProcessEnv;
   port: number;
   token: string;
+  nonce?: string | null;
+  requireLaunchNonce?: boolean;
   logger?: RotatingLogInstance | null;
 }
 

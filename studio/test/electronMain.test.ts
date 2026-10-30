@@ -644,7 +644,7 @@ describe('attachSecurityPolicy', () => {
     expect(event.preventDefault).toHaveBeenCalledTimes(1);
     expect(win.webContents.setWindowOpenHandler).toHaveBeenCalledTimes(1);
     const handler = (win.webContents.setWindowOpenHandler as unknown as { mock: { calls: unknown[][] } })
-      .mock.calls[0][0] as () => { action: string };
+      .mock.calls[0]![0] as () => { action: string };
     expect(handler()).toEqual({ action: 'deny' });
   });
 });

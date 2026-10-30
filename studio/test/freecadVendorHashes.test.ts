@@ -70,7 +70,7 @@ describe('freecad-python-deps.json', () => {
     const pins = vendor.readPins();
     expect(pins.requirements.length).toBeGreaterThan(0);
     for (const requirement of pins.requirements) {
-      const digests = pins.hashes[requirement];
+      const digests = pins.hashes[requirement]!;
       expect(digests, `hashes for ${requirement}`).toBeDefined();
       expect(digests.length).toBeGreaterThan(0);
       for (const digest of digests) expect(digest).toMatch(/^[0-9a-f]{64}$/);
@@ -257,7 +257,6 @@ describe('downloadWheels', () => {
     expect(() =>
       vendor.downloadWheels({
         requirements,
-        hashes: undefined,
         pythonVersion: '3.12',
         abi: 'cp312',
         wheelTag: 'win_amd64',
