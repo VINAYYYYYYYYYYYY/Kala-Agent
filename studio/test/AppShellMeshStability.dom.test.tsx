@@ -66,6 +66,9 @@ function lastRender(): { mesh: unknown; meshSource: string } {
 
 function renderShellWithServerMesh(): void {
   dispatch({ type: 'preview/request-success', preview: serverPreview });
+  // The drawing is a secondary surface: it must be open for the viewport
+  // (and its one SceneCanvas) to be mounted at all.
+  dispatch({ type: 'chrome/drawing-open' });
   render(<AppShell />);
   expect(lastRender().meshSource).toBe('server');
 }
@@ -74,15 +77,19 @@ describe('viewport mesh identity', () => {
   it('keeps the same mesh object when a journal row is appended', () => {
     renderShellWithServerMesh();
     const mesh = lastRender().mesh;
-    const rendersBefore = mocks.renders.length;
+    // The ledger lives in Details › Activity now; open it so the row is
+    // really rendered somewhere in the frame.
+    act(() => {
+      dispatch({ type: 'chrome/details-open', tab: 'activity' });
+    });
 
     act(() => {
       appendJournal({ kind: 'system', message: 'unrelated ledger row' });
     });
 
-    // The shell really did re-render ...
-    expect(mocks.renders.length).toBeGreaterThan(rendersBefore);
-    // ... but the viewport still holds the very same mesh object.
+    // The row landed in the ledger ...
+    expect(document.body.textContent).toContain('unrelated ledger row');
+    // ... and the viewport still holds the very same mesh object.
     expect(lastRender().mesh).toBe(mesh);
   });
 
@@ -106,7 +113,7 @@ describe('viewport mesh identity', () => {
     const mesh = lastRender().mesh;
 
     act(() => {
-      dispatch({ type: 'options/open', card: 'inspector' });
+      dispatch({ type: 'options/open', card: 'workspace' });
     });
     expect(lastRender().mesh).toBe(mesh);
 

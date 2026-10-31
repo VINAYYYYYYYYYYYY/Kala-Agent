@@ -1,27 +1,27 @@
-// Bottom drafting ruler bar (center column only, 48px).
+// Status bar — the app's read-only footer (28 px).
 //
-// Everything here is wired to real store state: render mode, grid/axes/dims,
-// the Section A-A flag, camera reset, the nominal geometry readout, and the
-// backend's actual FreeCAD integration row. There is no decorative telemetry.
+// It reports, left to right: the loopback connection (a button that opens
+// Settings › Connection), the measured readout (ENV · VOL · AREA · SCALE ·
+// source) while the drawing is open, the backend's real FreeCAD integration
+// row, and the backend version. There are no view toggles and no
+// Export/Settings buttons here: those live on the top bar and in the sheet's
+// tool rail (D3/D5).
 //
-// The bar is one row at 1440: the view toggles are icon buttons with
-// aria-labels and title tooltips, the readout is one mono line in the fixed
-// order ENV · VOL · AREA · SCALE · source, and the surface-material control
-// is delegated to Options card 01 below 1600px. At 1280 a long value may
-// ellipsize, with the full value in its title tooltip.
+// The readout describes the drawing, so it is shown only while the drawing
+// is open (chat-first direction, 2026-10-31): at boot it used to describe an
+// unasked-for box. The connection, FreeCAD and version facts always show.
 
 import type { ReactElement } from 'react';
 import {
   dispatch,
   useUiState,
   selectActiveDesign,
+  selectConnection,
+  selectDrawingOpen,
   selectPreview,
-  selectRenderMode,
   selectServer,
-  selectShowSection,
-  selectViewport,
 } from '../../state/store';
-import type { OptionsCard } from '../../types/studio';
+import type { ConnectionStatus } from '../../state/store';
 import type { DesignResult } from '../../types/studio';
 import { measurerLabel, providerShortLabel } from '../chat/designCard';
 import {
@@ -29,56 +29,16 @@ import {
   computeGeometryEstimate,
 } from '../../viewer/localPrimitives';
 import { DRAFTING_SCALE } from '../../viewer/draftingGeometry';
-import { SurfaceMaterialControl } from '../panels/SurfaceMaterialControl';
 import '../../styles/bottombar.css';
 
-export interface BottomBarProps {
-  /** Open the Options drawer on a specific drafted card. */
-  onOpenOptions(card: OptionsCard): void;
-}
-
-type BarIconName = 'grid' | 'axes' | 'dims' | 'section' | 'reset';
-
-const BAR_ICONS: Record<BarIconName, ReactElement> = {
-  grid: (
-    <svg viewBox="0 0 16 16" aria-hidden="true">
-      <path d="M2.5 2.5h11v11h-11zM2.5 6h11M2.5 10h11M6 2.5v11M10 2.5v11" />
-    </svg>
-  ),
-  axes: (
-    <svg viewBox="0 0 16 16" aria-hidden="true">
-      <path d="M8 2v12M2 8h12M8 2 6.5 3.7M8 2l1.5 1.7M8 14l-1.5-1.7M8 14l1.5-1.7M2 8l1.7-1.5M2 8l1.7 1.5M14 8l-1.7-1.5M14 8l-1.7 1.5" />
-      <circle cx="8" cy="8" r="1.4" />
-    </svg>
-  ),
-  dims: (
-    <svg viewBox="0 0 16 16" aria-hidden="true">
-      <path d="M3 4v8M13 4v8M3 8h10M3 8l2-1.6M3 8l2 1.6M13 8l-2-1.6M13 8l-2 1.6" />
-    </svg>
-  ),
-  section: (
-    <svg viewBox="0 0 16 16" aria-hidden="true">
-      <path d="M2 8h12" strokeDasharray="3 2" />
-      <path d="M3 3v3l-1-1.5L3 6M13 13v-3l1 1.5L13 10" />
-      <path d="M2.6 3.5 3 6M13.4 12.5 13 10" />
-    </svg>
-  ),
-  reset: (
-    <svg viewBox="0 0 16 16" aria-hidden="true">
-      <path d="M4 5a5 5 0 1 1-1 5.5M4 5V2M4 5h3" />
-    </svg>
-  ),
-};
-
-export function BottomBar(props: BottomBarProps): ReactElement {
-  const renderMode = useUiState(selectRenderMode);
-  const viewport = useUiState(selectViewport);
-  const showSection = useUiState(selectShowSection);
+export function BottomBar(): ReactElement {
   const preview = useUiState(selectPreview);
   const server = useUiState(selectServer);
+  const connection = useUiState(selectConnection);
   const primitive = useUiState((s) => s.primitive);
   const parameters = useUiState((s) => s.parameters);
   const activeDesign = useUiState(selectActiveDesign);
+  const drawingOpen = useUiState(selectDrawingOpen);
 
   const estimate = computeGeometryEstimate(primitive, parameters);
   const hasGeometry = preview.server !== null || preview.local !== null;
@@ -108,102 +68,78 @@ export function BottomBar(props: BottomBarProps): ReactElement {
     (entry) => entry.id.toLowerCase() === 'freecad' || entry.name.toLowerCase().includes('freecad'),
   );
   const freecadStatus = freecad?.status ?? 'none';
+  const connectionView = describeConnectionStatus(connection);
 
   return (
-    <footer className="bottom-bar" aria-label="Drafting controls and readout">
-      <div className="bottom-bar-cluster bottom-bar-left" role="toolbar" aria-label="View controls">
-        <div className="bottom-bar-mode" role="group" aria-label="Render mode">
-          {(['pencil2d', 'clay3d'] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              className={`bottom-bar-button${renderMode === mode ? ' is-active' : ''}`}
-              aria-pressed={renderMode === mode}
-              aria-label={mode === 'pencil2d' ? '2D Pencil' : '3D Clay'}
-              title={mode === 'pencil2d' ? '2D Pencil render mode' : '3D Clay render mode'}
-              data-render-mode={mode}
-              onClick={() => dispatch({ type: 'renderMode/set', mode })}
-            >
-              {mode === 'pencil2d' ? '2D' : '3D'}
-            </button>
-          ))}
-        </div>
-        <IconToggle icon="grid" label="Grid" active={viewport.showGrid} onClick={() => dispatch({ type: 'viewport/set', patch: { showGrid: !viewport.showGrid } })} />
-        <IconToggle icon="axes" label="Axes" active={viewport.showAxes} onClick={() => dispatch({ type: 'viewport/set', patch: { showAxes: !viewport.showAxes } })} />
-        <IconToggle icon="dims" label="Dims" active={viewport.showDimensions} onClick={() => dispatch({ type: 'viewport/set', patch: { showDimensions: !viewport.showDimensions } })} />
-        <IconToggle icon="section" label="Section A-A" active={showSection} onClick={() => dispatch({ type: 'section/toggle' })} />
-        <SurfaceMaterialControl variant="compact" />
+    <footer className="bottom-bar" aria-label="Status bar">
+      <div className="bottom-bar-cluster bottom-bar-left">
         <button
           type="button"
-          className="bottom-bar-icon-button"
-          aria-label="Reset View"
-          title="Re-frame the drafting sheet camera"
-          onClick={() => dispatch({ type: 'view/reset' })}
+          className="bottom-bar-connection"
+          data-state={connectionView.state}
+          aria-haspopup="dialog"
+          aria-label={`Connection: ${connectionView.label} — open Settings`}
+          title={`${connectionView.title} — open Settings › Connection`}
+          onClick={() => dispatch({ type: 'options/open', card: 'connection' })}
         >
-          {BAR_ICONS.reset}
+          <span className="bottom-bar-connection-dot" aria-hidden="true" />
+          <span className="bottom-bar-connection-label">{connectionView.label}</span>
         </button>
       </div>
 
-      <div className="bottom-bar-readout" aria-live="polite">
-        <Readout
-          label="ENV"
-          value={designReadout || hasGeometry ? envelope : '—'}
-          title={designReadout
-            ? designReadout.envelopeTitle
-            : 'Bounding envelope'}
-        />
-        <span className="bottom-bar-separator" aria-hidden="true">·</span>
-        <Readout
-          label="VOL"
-          value={volume}
-          title={designReadout
-            ? designReadout.volumeTitle
-            : 'Closed-form nominal volume'}
-        />
-        <span className="bottom-bar-separator" aria-hidden="true">·</span>
-        <Readout
-          label="AREA"
-          value={area}
-          title={designReadout
-            ? designReadout.areaTitle
-            : 'Closed-form nominal surface area'}
-        />
-        <span className="bottom-bar-separator" aria-hidden="true">·</span>
-        <Readout
-          label="SCALE"
-          value={DRAFTING_SCALE}
-          className="bottom-bar-readout-scale"
-          title="The viewport frames the part to fit the sheet, so the sheet carries no fixed model-to-paper ratio. FIT states that honestly."
-        />
-        <span className="bottom-bar-separator" aria-hidden="true">·</span>
-        <span
-          className="bottom-bar-source"
-          data-source={source}
-          data-source-kind={designReadout ? 'provider' : preview.server ? 'server' : preview.local ? 'local' : 'none'}
-          data-provider={designReadout?.provider ?? 'none'}
-          data-preview-state={preview.inFlight ? 'verifying' : preview.lastError ? 'refused' : 'idle'}
-          title={designReadout
-            ? `These values are ${designReadout.measuredBy}; the viewport shows the OpenCascade import of the provider STEP.`
-            : preview.lastError
-              ? `The server refused the preview: ${preview.lastError}`
-              : preview.inFlight
-                ? 'The server is verifying the mesh.'
-                : 'Envelope follows the server mesh when one exists; volume and area are closed-form nominal values.'}
-        >
-          {source}
-        </span>
-      </div>
+      {drawingOpen ? (
+        <div className="bottom-bar-readout" aria-live="polite">
+          <Readout
+            label="ENV"
+            value={designReadout || hasGeometry ? envelope : '—'}
+            title={designReadout
+              ? designReadout.envelopeTitle
+              : 'Bounding envelope'}
+          />
+          <span className="bottom-bar-separator" aria-hidden="true">·</span>
+          <Readout
+            label="VOL"
+            value={volume}
+            title={designReadout
+              ? designReadout.volumeTitle
+              : 'Closed-form nominal volume'}
+          />
+          <span className="bottom-bar-separator" aria-hidden="true">·</span>
+          <Readout
+            label="AREA"
+            value={area}
+            title={designReadout
+              ? designReadout.areaTitle
+              : 'Closed-form nominal surface area'}
+          />
+          <span className="bottom-bar-separator" aria-hidden="true">·</span>
+          <Readout
+            label="SCALE"
+            value={DRAFTING_SCALE}
+            className="bottom-bar-readout-scale"
+            title="The viewport frames the part to fit the sheet, so the sheet carries no fixed model-to-paper ratio. FIT states that honestly."
+          />
+          <span className="bottom-bar-separator" aria-hidden="true">·</span>
+          <span
+            className="bottom-bar-source"
+            data-source={source}
+            data-source-kind={designReadout ? 'provider' : preview.server ? 'server' : preview.local ? 'local' : 'none'}
+            data-provider={designReadout?.provider ?? 'none'}
+            data-preview-state={preview.inFlight ? 'verifying' : preview.lastError ? 'refused' : 'idle'}
+            title={designReadout
+              ? `These values are ${designReadout.measuredBy}; the viewport shows the OpenCascade import of the provider STEP.`
+              : preview.lastError
+                ? `The server refused the preview: ${preview.lastError}`
+                : preview.inFlight
+                  ? 'The server is verifying the mesh.'
+                  : 'Envelope follows the server mesh when one exists; volume and area are closed-form nominal values.'}
+          >
+            {source}
+          </span>
+        </div>
+      ) : null}
 
       <div className="bottom-bar-cluster bottom-bar-right">
-        <button
-          type="button"
-          className="bottom-bar-button bottom-bar-export"
-          aria-label="Export STEP"
-          onClick={() => props.onOpenOptions('export')}
-          title="Open the export and handoff card"
-        >
-          Export
-        </button>
         <span
           className="bottom-bar-freecad"
           data-status={freecadStatus}
@@ -214,33 +150,39 @@ export function BottomBar(props: BottomBarProps): ReactElement {
           <span className="bottom-bar-freecad-dot" aria-hidden="true" />
           <span className="bottom-bar-freecad-label">FreeCAD</span>
         </span>
-        <button
-          type="button"
-          className="bottom-bar-options"
-          aria-haspopup="dialog"
-          onClick={() => props.onOpenOptions('inspector')}
-        >
-          ⚙ Options
-        </button>
+        <span className="bottom-bar-version" title="Backend version reported by /health">
+          {server.version ? `backend v${server.version}` : 'backend v—'}
+        </span>
       </div>
     </footer>
   );
 }
 
-function IconToggle(props: { icon: BarIconName; label: string; active: boolean; onClick(): void }): ReactElement {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={props.active}
-      aria-label={props.label}
-      title={`${props.label} ${props.active ? 'on' : 'off'}`}
-      className={`bottom-bar-icon-button${props.active ? ' is-active' : ''}`}
-      onClick={props.onClick}
-    >
-      {BAR_ICONS[props.icon]}
-    </button>
-  );
+/**
+ * The real connection state, spelled out for the status bar. A ready
+ * loopback names its mode; every other state is reported plainly instead of
+ * being dressed up as connected.
+ */
+export function describeConnectionStatus(connection: ConnectionStatus): {
+  label: string;
+  state: 'desktop' | 'browser' | 'connecting' | 'error' | 'idle';
+  title: string;
+} {
+  if (connection.kind === 'ready') {
+    const desktop = connection.connection.mode === 'desktop';
+    return {
+      label: `Connected · ${desktop ? 'Desktop' : 'Browser fallback'}`,
+      state: desktop ? 'desktop' : 'browser',
+      title: `Loopback ${connection.connection.baseUrl} (${desktop ? 'desktop bridge' : 'browser fallback'})`,
+    };
+  }
+  if (connection.kind === 'connecting') {
+    return { label: 'Connecting', state: 'connecting', title: 'Waiting for the local backend' };
+  }
+  if (connection.kind === 'error') {
+    return { label: 'Connection failed', state: 'error', title: connection.message };
+  }
+  return { label: 'Not connected', state: 'idle', title: 'No loopback connection yet' };
 }
 
 function Readout(props: { label: string; value: string; title: string; className?: string }): ReactElement {
@@ -268,7 +210,7 @@ function describeBounds(bounds: { min: [number, number, number]; max: [number, n
  * nobody reads these as the closed-form nominal values of the primitive
  * preview or as an OpenCascade measurement of another provider's part.
  *
- * The bar is a single 48 px row, so the numbers are compact:
+ * The bar is a single row, so the numbers are compact:
  * `60×45×40 mm · 35 571 mm³ · 11 889 mm²`. The exact measured values live
  * in the item titles and in the agent card.
  */
@@ -336,9 +278,10 @@ function fullNumber(value: number): string {
 }
 
 /**
- * A compact quantity for the 48 px bar: whole units with thin grouping
- * spaces (`35 571`), or one decimal below 1000 so a small part does not
- * round to a meaningless integer. The exact value stays in the tooltip.
+ * A compact quantity for the single status row: whole units with thin
+ * grouping spaces (`35 571`), or one decimal below 1000 so a small part
+ * does not round to a meaningless integer. The exact value stays in the
+ * tooltip.
  */
 function compactQuantity(value: number): string {
   if (!Number.isFinite(value)) return '—';

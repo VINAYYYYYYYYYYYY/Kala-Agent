@@ -79,10 +79,17 @@ function describeValueError(value: number, min: number, max: number, integer: bo
 export interface InspectorProps {
   /** The Options card supplies its own drafted heading; hide the inner one. */
   showHeading?: boolean;
+  /**
+   * The estimate card and the computed-bounds block. Details › Properties
+   * already prints those numbers in its Active geometry summary, so it turns
+   * them off there; every other caller keeps the default.
+   */
+  showReadouts?: boolean;
 }
 
 export function Inspector(props: InspectorProps = {}): ReactElement {
   const showHeading = props.showHeading ?? true;
+  const showReadouts = props.showReadouts ?? true;
   const primitive = useUiState((s) => s.primitive);
   const parameters = useUiState((s) => s.parameters);
   const preview = useUiState((s) => s.preview);
@@ -128,17 +135,21 @@ export function Inspector(props: InspectorProps = {}): ReactElement {
           {validation.message}
         </p>
       ) : null}
-      <div className="inspector-lower">
-        <GeometryEstimates primitive={primitive} parameters={parameters} showNote={false} />
-        {preview.local ? (
-          <BoundsReadout
-            parameters={parameters}
-            bounds={preview.local.bounds}
-            serverBounds={preview.server ? preview.server.preview.bounds : null}
-          />
-        ) : null}
-      </div>
-      <p className="inspector-estimates-note">{ESTIMATE_NOTE}</p>
+      {showReadouts ? (
+        <>
+          <div className="inspector-lower">
+            <GeometryEstimates primitive={primitive} parameters={parameters} showNote={false} />
+            {preview.local ? (
+              <BoundsReadout
+                parameters={parameters}
+                bounds={preview.local.bounds}
+                serverBounds={preview.server ? preview.server.preview.bounds : null}
+              />
+            ) : null}
+          </div>
+          <p className="inspector-estimates-note">{ESTIMATE_NOTE}</p>
+        </>
+      ) : null}
     </section>
   );
 }
@@ -204,7 +215,7 @@ interface GeometryEstimatesProps {
   showNote?: boolean;
 }
 
-const ESTIMATE_NOTE =
+export const ESTIMATE_NOTE =
   'Closed-form nominal geometry for sizing & handoff. Not a certified FEA solver result. ' +
   'CAD/CAE handoff carries the ideal-solid numbers only. No stress, deflection, or tolerance results.';
 

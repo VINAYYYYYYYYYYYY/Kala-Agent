@@ -1,7 +1,16 @@
-/* Four-zone studio layout.
+/* App frame (app-feel wave, chat-first direction 2026-10-31).
  *
  * Desktop grid (1440x900 reference):
- *   | LEFT 340px | CENTER flex (sheet + 48px bar) | RIGHT 320px |
+ *   | top bar 44px                                                        |
+ *   | chat (centred, primary) | drawing split panel (only when open)      |
+ *   | details 360 (only when open, right)                                 |
+ *   | status bar 28px                                                     |
+ *
+ * The chat is always shown. The drawing is removed from the grid, not
+ * merely hidden, while it is closed; no DraftingSheet or SceneCanvas is
+ * mounted then. The chat content itself is capped at 760px and centred
+ * inside its column (`.chat-panel-frame`), so a wide window still reads as
+ * one centred conversation.
  *
  * The document never scrolls. Every zone owns its own internal scrolling
  * and every track is bounded with minmax(0, 1fr) so a long chat thread or
@@ -9,14 +18,39 @@
  */
 
 .studio-shell {
+  --chat-min: 400px;
+  --details-width: 360px;
   display: grid;
-  grid-template-columns: var(--zone-left-width) minmax(0, 1fr) var(--zone-right-width);
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
   height: 100%;
   min-height: 0;
   min-width: 0;
   overflow: hidden;
   background: var(--margin);
+}
+
+.studio-main {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Drawing closed: the chat alone, filling the content area. */
+.studio-main[data-drawing='open'] {
+  grid-template-columns: minmax(var(--chat-min), 1fr) minmax(0, 1.3fr);
+}
+
+/* Details is a column of its own whenever it fits beside the primary
+   surface. The two-open rule below wins on specificity. */
+.studio-main[data-details='open'] {
+  grid-template-columns: minmax(0, 1fr) var(--details-width);
+}
+
+.studio-main[data-drawing='open'][data-details='open'] {
+  grid-template-columns: minmax(var(--chat-min), 1fr) minmax(0, 1.3fr) var(--details-width);
 }
 
 .studio-zone {
@@ -25,25 +59,35 @@
   overflow: hidden;
 }
 
-.studio-zone-left {
+/* The primary surface: the chat column. Its content is centred inside it
+   (see `.chat-panel-frame` in chat.css). */
+.studio-chat-column {
   display: grid;
   grid-template-rows: minmax(0, 1fr);
-  min-height: 0;
-  background: var(--margin);
-  border-right: 1px solid var(--hairline);
-}
-
-.studio-zone-center {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) var(--bottom-bar-height);
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
   background: var(--sheet);
+}
+
+/* The secondary surface: the drawing split panel. */
+.studio-drawing-column {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--sheet);
+  border-left: 1px solid var(--hairline);
+  /* The sheet adapts to the width of its split panel, not to the window:
+     the same 1440 px window can show a 610 px drawing with Details open. */
+  container-type: inline-size;
+  container-name: drawing;
 }
 
 .studio-zone-right {
   display: grid;
-  grid-template-rows: var(--aux-height) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   background: var(--margin);
   border-left: 1px solid var(--hairline);
@@ -222,100 +266,83 @@
   text-overflow: ellipsis;
 }
 
-/* Bottom ruler bar ------------------------------------------------------ */
+/* Status bar (read-only) ------------------------------------------------ */
 
 .bottom-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-xs);
-  height: var(--bottom-bar-height);
-  min-height: var(--bottom-bar-height);
-  padding: 0 var(--space-xs);
+  gap: var(--space-sm);
+  height: 28px;
+  min-height: 28px;
+  padding: 0 var(--space-sm);
   background: var(--boxwood);
   border-top: 1.5px solid var(--ink);
   overflow: hidden;
   flex-wrap: nowrap;
   font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
   color: var(--ink);
 }
 
 .bottom-bar-cluster {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
   min-width: 0;
   flex: 0 0 auto;
 }
 
-.bottom-bar-mode {
+/* The connection label is the bar's single control: it opens Settings on
+   the Connection section. Everything else on the bar is read-only. */
+.bottom-bar-connection {
   display: inline-flex;
-  border: 1px solid var(--boxwood-border);
-  background: var(--card);
-}
-
-.bottom-bar-button {
-  height: 26px;
-  padding: 0 var(--space-sm);
-  border: 1px solid var(--boxwood-border);
-  background: var(--card);
+  align-items: center;
+  gap: var(--space-xs);
+  height: 20px;
+  min-width: 0;
+  padding: 0 var(--space-xs);
+  border: 1px solid transparent;
+  background: transparent;
   font-family: var(--font-mono);
   font-size: var(--text-label-sm);
-  line-height: 1;
+  letter-spacing: 0.02em;
   color: var(--ink);
   white-space: nowrap;
 }
 
-.bottom-bar-button:hover {
-  border-color: var(--ink);
-}
-
-.bottom-bar-button.is-active {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--sheet);
-}
-
-/* Graphite line-icon toggles keep the 48px ruler bar on one row. */
-.bottom-bar-icon-button {
-  display: inline-grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 1px solid var(--boxwood-border);
+.bottom-bar-connection:hover {
+  border-color: var(--boxwood-border);
   background: var(--card);
-  color: var(--ink);
-  line-height: 1;
 }
 
-.bottom-bar-icon-button svg {
-  width: 13px;
-  height: 13px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.2;
-  stroke-linecap: square;
-  stroke-linejoin: miter;
+.bottom-bar-connection-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 1px solid var(--construction);
+  background: transparent;
 }
 
-.bottom-bar-icon-button:hover {
-  border-color: var(--ink);
+.bottom-bar-connection[data-state='desktop'] .bottom-bar-connection-dot {
+  border-color: var(--stamp);
+  background: var(--stamp);
 }
 
-.bottom-bar-icon-button.is-active {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--sheet);
+.bottom-bar-connection[data-state='browser'] .bottom-bar-connection-dot {
+  border-color: var(--prussian);
+  background: var(--prussian);
 }
 
-.bottom-bar-mode .bottom-bar-button {
-  border: none;
-  border-right: 1px solid var(--boxwood-border);
+.bottom-bar-connection[data-state='connecting'] .bottom-bar-connection-dot {
+  border-color: var(--construction);
+  background: var(--boxwood);
 }
 
-.bottom-bar-mode .bottom-bar-button:last-child {
-  border-right: none;
+.bottom-bar-connection[data-state='error'] .bottom-bar-connection-dot {
+  border-color: var(--redline);
+  background: var(--redline);
 }
 
 .bottom-bar-readout {
@@ -329,7 +356,7 @@
   font-size: var(--text-label-sm);
   white-space: nowrap;
   /* One line, always: long values ellipsize and keep their full text in the
-     item's title tooltip. Never wrap into a second row of the 48px bar. */
+     item's title tooltip. Never wrap into a second row of the status bar. */
   flex-wrap: nowrap;
 }
 
@@ -399,19 +426,13 @@
   justify-content: flex-end;
 }
 
-.bottom-bar-export {
-  border-color: var(--boxwood-border);
-  background: var(--card);
-  font-weight: 600;
-}
-
 .bottom-bar-freecad {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
-  height: 26px;
+  height: 20px;
   min-width: 0;
-  padding: 0 var(--space-sm);
+  padding: 0 var(--space-xs);
   border: 1px solid var(--hairline);
   background: var(--sheet);
   color: var(--construction);
@@ -451,16 +472,8 @@
   background: var(--redline);
 }
 
-.bottom-bar-options {
-  height: 28px;
-  padding: 0 var(--space-sm);
-  background: var(--ink);
-  border: 1px solid var(--ink);
-  color: var(--sheet);
-  font-family: var(--font-ui);
-  font-size: var(--text-label-sm);
-  font-weight: 700;
-  letter-spacing: 0.03em;
+.bottom-bar-version {
+  color: var(--construction);
   white-space: nowrap;
 }
 
@@ -769,19 +782,9 @@
 
 /* Responsive ------------------------------------------------------------- */
 
-@media (max-width: 1599px) {
-  /* Below the wide desktop size the ruler bar has no room for the surface
-     material control: the single-line readout needs the space. Options card
-     01 carries the same control, so the setting stays reachable. */
-  .bottom-bar .surface-material-compact {
-    display: none;
-  }
-}
-
 @media (max-width: 1400px) {
-  :root {
-    --zone-left-width: 280px;
-    --zone-right-width: 260px;
+  .studio-shell {
+    --details-width: 320px;
   }
 
   .bottom-bar {
@@ -792,40 +795,42 @@
   .bottom-bar-freecad {
     max-width: 108px;
   }
+}
 
-  .bottom-bar-export,
-  .bottom-bar-options {
-    padding: 0 var(--space-xs);
+/* Below 1280 the split view keeps the chat at a readable 360px minimum. */
+@media (max-width: 1279px) {
+  .studio-shell {
+    --chat-min: 360px;
   }
 }
 
+/* Below 1100 Details overlays the drawing column instead of adding a
+   fourth track: the chat keeps its 360px minimum and the drawing keeps the
+   rest. The overlay is bounded to the content row. */
 @media (max-width: 1100px) {
-  :root {
-    --zone-left-width: 260px;
-    --zone-right-width: 240px;
+  .studio-shell {
+    --details-width: 300px;
+  }
+
+  .studio-main[data-drawing='open'][data-details='open'] {
+    grid-template-columns: minmax(var(--chat-min), 1fr) minmax(0, 1.3fr);
+  }
+
+  .studio-main[data-drawing='open'][data-details='open'] .details-panel {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    width: var(--details-width);
+    z-index: 20;
   }
 }
 
 @media (max-width: 900px) {
   .studio-shell {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1.2fr) minmax(0, 1fr);
-    overflow-y: auto;
+    --details-width: 260px;
   }
 
-  .studio-zone-left {
-    max-height: 42vh;
-    border-right: none;
-    border-bottom: 1px solid var(--hairline);
-  }
-
-  .studio-zone-right {
-    grid-template-rows: minmax(0, 240px) minmax(0, 1fr);
-    border-left: none;
-    border-top: 1px solid var(--hairline);
-  }
-
-  .studio-zone-center {
-    min-height: 420px;
+  .bottom-bar-readout {
+    justify-content: flex-start;
   }
 }

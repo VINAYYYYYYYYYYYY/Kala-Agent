@@ -95,8 +95,24 @@ describe('App boot under StrictMode', () => {
     });
 
     await waitFor(() => {
-      expect(view.container.textContent).toContain('Kala Studio');
+      // The shell is up: the app frame, the always-on chat, no drawing yet.
+      expect(view.container.querySelector('.top-bar')).toBeTruthy();
+      expect(view.container.querySelector('.top-bar')?.textContent).toContain('STUDIO');
+      expect(view.container.querySelector('.chat-panel')).toBeTruthy();
+      expect(view.container.querySelector('.drafting-sheet')).toBeNull();
     });
+  });
+
+  it('boots with the drawing closed and no readout', async () => {
+    const view = render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    );
+
+    await waitFor(() => expect(view.container.querySelector('.chat-panel')).toBeTruthy());
+    expect(view.container.querySelector('.drafting-sheet')).toBeNull();
+    expect(view.container.querySelector('.bottom-bar-readout')).toBeNull();
   });
 
   it('does not hang on retry when the first attempt fails', async () => {
@@ -132,7 +148,9 @@ describe('App boot under StrictMode', () => {
     retry?.click();
 
     await waitFor(() => {
-      expect(view.container.textContent).toContain('Kala Studio');
+      // The shell is up: the app frame and the always-on chat.
+      expect(view.container.querySelector('.top-bar')).toBeTruthy();
+      expect(view.container.querySelector('.chat-panel')).toBeTruthy();
     });
   });
 });

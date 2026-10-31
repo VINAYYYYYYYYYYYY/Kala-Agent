@@ -197,51 +197,6 @@
   white-space: nowrap;
 }
 
-.drafting-sheet .drafting-mode-pill {
-  position: absolute;
-  top: 18px;
-  left: 50%;
-  z-index: 7;
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px;
-  border: 0.5px solid var(--hairline);
-  background: color-mix(in srgb, var(--card) 92%, transparent);
-  transform: translateX(-50%);
-  pointer-events: auto;
-}
-
-.drafting-sheet .drafting-mode-button {
-  padding: var(--space-xs) var(--space-sm);
-  border: 1px solid transparent;
-  border-radius: 0;
-  background: transparent;
-  color: var(--construction);
-  font-family: var(--font-ui);
-  font-size: var(--text-label-sm);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-
-.drafting-sheet .drafting-mode-button:hover {
-  color: var(--ink);
-  border-color: var(--hairline);
-}
-
-.drafting-sheet .drafting-mode-button.is-active {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--sheet);
-}
-
-.drafting-sheet .drafting-mode-divider {
-  color: var(--construction);
-  font-family: var(--font-mono);
-  font-size: var(--text-label-sm);
-}
-
 /* Tool palette ---------------------------------------------------------- */
 
 .drafting-sheet .drafting-tools-wrap {
@@ -397,7 +352,9 @@
  * and the projection note. The HLR sheet prints the same note in its own
  * heading; this variant is for the clay viewport, which has no HLR heading. */
 .drafting-sheet .drafting-cut-note.is-design {
-  left: 24px;
+  /* Clear the tool rail (28 px wide at left: 24px) so the design cut note
+     starts after it instead of running underneath it. */
+  left: 68px;
   right: auto;
   max-width: 52%;
   overflow: hidden;
@@ -551,9 +508,11 @@
 
 .aux-view .aux-view-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
+  row-gap: 0;
   min-height: 29px;
   padding: 2px var(--space-sm);
   border-bottom: 1px solid var(--hairline);
@@ -562,12 +521,14 @@
 
 .aux-view .aux-view-tabs {
   display: flex;
+  flex: 1 0 100%;
   align-items: center;
   gap: 1px;
   min-width: 0;
 }
 
 .aux-view .aux-view-cut-note {
+  margin-left: auto;
   color: var(--redline-ink);
   font-family: var(--font-mono);
   font-size: var(--text-label-sm);
@@ -883,12 +844,14 @@
   position: absolute;
   right: 24px;
   bottom: 128px;
+  /* The caption block lives to the right of the title block (24 px margin +
+     400 px block + gap), so it can wrap instead of running underneath it. */
+  left: 452px;
   z-index: 6;
   display: grid;
   gap: 1px;
   justify-items: end;
   text-align: right;
-  max-width: min(540px, 62%);
   pointer-events: none;
 }
 
@@ -898,6 +861,8 @@
   font-size: var(--text-label-md);
   font-weight: 700;
   letter-spacing: 0.04em;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .drafting-sheet .hlr-heading-meta {
@@ -905,7 +870,8 @@
   font-family: var(--font-mono);
   font-size: var(--text-label-sm);
   letter-spacing: 0.04em;
-  white-space: nowrap;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .drafting-sheet .hlr-heading-view {
@@ -914,7 +880,8 @@
   font-family: var(--font-mono);
   font-size: var(--text-label-sm);
   letter-spacing: 0.04em;
-  white-space: nowrap;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 /* The shared Section A–A label. It lives in the heading row, never over a
@@ -925,7 +892,8 @@
   font-size: var(--text-label-sm);
   font-weight: 600;
   letter-spacing: 0.04em;
-  white-space: nowrap;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 /* The measured cut drawn where it actually is: red 2H dash over the HLR
@@ -1281,14 +1249,29 @@
   line-height: 1.4;
 }
 
-@media (max-width: 1400px) {
-  .drafting-sheet .drafting-title-block {
-    grid-template-columns: 118px 74px 82px 82px;
+/* The drawing is a split panel now, not the whole window: at 1440 with
+   Details open it is about 610 px wide. The HLR caption keeps its title and
+   redline cut note but drops the secondary view/meta lines and the decorative
+   footnote, which cannot wrap legibly in the space right of the title block. */
+@container drawing (max-width: 760px) {
+  .drafting-sheet .hlr-heading {
+    left: 404px;
+  }
+
+  .drafting-sheet .hlr-heading-title {
     font-size: var(--text-label-sm);
   }
 
-  .drafting-sheet .drafting-mode-button {
-    padding: var(--space-xs) var(--space-sm);
+  .drafting-sheet .hlr-heading-meta,
+  .drafting-sheet .hlr-heading-view,
+  .drafting-sheet .hlr-legend {
+    display: none;
+  }
+}
+
+@media (max-width: 1400px) {
+  .drafting-sheet .drafting-title-block {
+    grid-template-columns: 118px 74px 82px 82px;
     font-size: var(--text-label-sm);
   }
 

@@ -2,9 +2,11 @@
 //
 // The sheet owns the app's single SceneCanvas and the drafted furniture
 // around it: a double frame with A–F / 1–8 coordinate ticks, a pencil grid
-// and paper grain (CSS/SVG only), a floating 2D/3D mode pill, a small tool
-// palette wired to real store actions, the redline A–A flags, and a title
-// block built exclusively from the values the shell supplies.
+// and paper grain (CSS/SVG only), a small tool palette wired to real store
+// actions, the redline A–A flags, and a title block built exclusively from
+// the values the shell supplies. The render mode is chosen in the drawing
+// panel header (chat-first direction); the rail is the single home of reset,
+// dims, measure, section, grid and axes.
 //
 // There are no decorative controls: every palette button dispatches an
 // action that exists in the store (reset view, dimensions, section, grid).
@@ -404,29 +406,6 @@ export function DraftingSheet(props: DraftingSheetProps): ReactElement {
             <span className="drafting-sheet-scale">SCALE {scaleLabel}</span>
           ) : null}
         </div>
-        <div className="drafting-mode-pill" role="group" aria-label="Render mode">
-          <button
-            type="button"
-            className={`drafting-mode-button${props.renderMode === 'pencil2d' ? ' is-active' : ''}`}
-            aria-pressed={props.renderMode === 'pencil2d'}
-            title="2D pencil vector drafting"
-            data-render-mode="pencil2d"
-            onClick={() => dispatch({ type: 'renderMode/set', mode: 'pencil2d' })}
-          >
-            ✎ 2D Pencil Vector
-          </button>
-          <span className="drafting-mode-divider" aria-hidden="true">|</span>
-          <button
-            type="button"
-            className={`drafting-mode-button${props.renderMode === 'clay3d' ? ' is-active' : ''}`}
-            aria-pressed={props.renderMode === 'clay3d'}
-            title="3D warm clay solid"
-            data-render-mode="clay3d"
-            onClick={() => dispatch({ type: 'renderMode/set', mode: 'clay3d' })}
-          >
-            ⬡ 3D Clay
-          </button>
-        </div>
       </div>
 
       <div className="drafting-tools-wrap">
@@ -498,6 +477,19 @@ export function DraftingSheet(props: DraftingSheetProps): ReactElement {
           >
             <svg viewBox="0 0 16 16" aria-hidden="true">
               <path d="M2.5 2.5h11v11h-11zM2.5 6.5h11M2.5 10.5h11M6.5 2.5v11M10.5 2.5v11" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className={`drafting-tool${props.showAxes ? ' is-active' : ''}`}
+            aria-label="Toggle axes"
+            aria-pressed={props.showAxes}
+            title="Toggle the construction axes"
+            onClick={() => dispatch({ type: 'viewport/set', patch: { showAxes: !props.showAxes } })}
+          >
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M8 2v12M2 8h12M8 2 6.5 3.7M8 2l1.5 1.7M8 14l-1.5-1.7M8 14l1.5-1.7M2 8l1.7-1.5M2 8l1.7 1.5M14 8l-1.7-1.5M14 8l-1.7 1.5" />
+              <circle cx="8" cy="8" r="1.4" />
             </svg>
           </button>
         </div>

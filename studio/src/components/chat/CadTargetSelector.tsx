@@ -111,7 +111,7 @@ export function CadTargetSelector(): ReactElement {
       ) : null}
       {selectedRecord?.available === false ? (
         <p className="chat-panel-cad-target-error" role="alert">
-          {providerDisplayName(selectedRecord)} is not available:{' '}
+          {cadProviderDisplayName(selectedRecord)} is not available:{' '}
           {selectedRecord.reason ?? 'no reason reported'}.
         </p>
       ) : null}
@@ -135,7 +135,7 @@ function ProviderOption(props: {
 }): ReactElement {
   const { provider } = props;
   const unavailable = !provider.available;
-  const name = providerDisplayName(provider);
+  const name = cadProviderDisplayName(provider);
   const version = provider.version?.trim();
   const label = version ? `${name} ${version}` : name;
   const tooltip = unavailable
@@ -170,7 +170,7 @@ function ProviderOption(props: {
  * label is enforced here so a front door that omits the suffix cannot make
  * the opt-in provider look automatic.
  */
-function providerDisplayName(provider: CadProviderRecord): string {
+export function cadProviderDisplayName(provider: CadProviderRecord): string {
   if (provider.id === 'opencascade' && !/opt-in/i.test(provider.name)) {
     return `${provider.name} (opt-in)`;
   }

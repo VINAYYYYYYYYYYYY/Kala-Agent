@@ -61,6 +61,12 @@ export interface JournalPanelProps {
    * when the prop is absent.
    */
   firstBadSequence?: number | null;
+  /**
+   * Draw the footer with the origin and the backend version. Details ›
+   * Activity turns it off: the status bar already reports both. Other
+   * callers keep the default.
+   */
+  showFooter?: boolean;
 }
 
 // Distance from the bottom, in pixels, that still counts as "stuck".
@@ -70,6 +76,7 @@ const STICK_THRESHOLD_PX = 24;
 const ANNOUNCE_INTERVAL_MS = 500;
 
 export function JournalPanel(props: JournalPanelProps): ReactElement {
+  const showFooter = props.showFooter ?? true;
   const backendVersion = useUiState((s) => s.server.version);
   const designAvailable = useUiState((s) => s.server.designAvailable);
   const serverEvents = useUiState((s) => s.sessionJournal.events);
@@ -306,14 +313,16 @@ export function JournalPanel(props: JournalPanelProps): ReactElement {
       <p className="journal-live" aria-live="polite" aria-atomic="true" role="status">
         {liveMessage}
       </p>
-      <footer className="journal-panel-footer">
-        <span className="journal-panel-connection" title={origin.title}>
-          {origin.text}
-        </span>
-        <span className="journal-panel-version">
-          {backendVersion ? `backend v${backendVersion}` : 'backend v—'}
-        </span>
-      </footer>
+      {showFooter ? (
+        <footer className="journal-panel-footer">
+          <span className="journal-panel-connection" title={origin.title}>
+            {origin.text}
+          </span>
+          <span className="journal-panel-version">
+            {backendVersion ? `backend v${backendVersion}` : 'backend v—'}
+          </span>
+        </footer>
+      ) : null}
     </section>
   );
 }

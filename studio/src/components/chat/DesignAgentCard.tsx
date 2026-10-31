@@ -1,6 +1,11 @@
 // The agent card of a design turn: what the CAD provider measured.
 //
-// The card is the honest record of one provider-built design. It shows:
+// App-feel wave (2026-10-31): the card is collapsed to one line — the real
+// check count and the provider that measured the part — and its disclosure
+// opens today's full record. A failed check opens the card by itself, so a
+// problem is never hidden behind a click.
+//
+// The full card is the honest record of one provider-built design. It shows:
 //   - the provider identity and version beside every measurement;
 //   - the measured table (volume, area, envelope X/Y/Z, and the mass only
 //     when the provider reported one or the backend DECLARED a density);
@@ -15,7 +20,7 @@
 // Nothing here is invented. A value the provider did not report prints "—",
 // and every stamp is absent unless the data behind it exists.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { activateDesign, appendJournal, dispatch, useUiState } from '../../state/store';
 import { getDesignArtifact, StudioApiError } from '../../api/client';
@@ -38,6 +43,8 @@ export interface DesignAgentCardProps {
 /** How long the "copied" mark stays on a digest chip. */
 const COPY_FEEDBACK_MS = 1500;
 
+type CheckSummary = ReturnType<typeof checkSummary>;
+
 export function DesignAgentCard(props: DesignAgentCardProps): ReactElement {
   // The store owns the design: the chat turn only remembers which design
   // it produced, so a card can never show a stale copy of a measurement.
@@ -48,6 +55,16 @@ export function DesignAgentCard(props: DesignAgentCardProps): ReactElement {
   const [downloading, setDownloading] = useState<DesignArtifactKind | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const summary = design ? checkSummary(design) : null;
+  // A failed check opens the card by itself. The initial state covers the
+  // design already in the store; the effect covers one that lands after the
+  // turn's message.
+  const [expanded, setExpanded] = useState<boolean>(summary !== null && summary.failed > 0);
+  const bodyId = useId();
+
+  useEffect(() => {
+    if (summary !== null && summary.failed > 0) setExpanded(true);
+  }, [summary?.failed]);
 
   useEffect(() => () => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -109,7 +126,7 @@ export function DesignAgentCard(props: DesignAgentCardProps): ReactElement {
     }, COPY_FEEDBACK_MS);
   }, []);
 
-  if (!design) {
+  if (!design || summary === null) {
     return (
       <section
         className="chat-panel-design-card chat-panel-design-card-missing"
@@ -122,133 +139,208 @@ export function DesignAgentCard(props: DesignAgentCardProps): ReactElement {
     );
   }
 
-  const summary = checkSummary(design);
   const chips = digestChips(design);
   const measuredBy = measuredByLabel(design);
   const warnings = [...design.warnings, ...design.view.warnings];
+  const mark = summaryMark(summary);
 
   return (
-    <section className="chat-panel-design-card" aria-label="Compiled design">
-      <header className="chat-panel-design-card-head">
-        <span className="chat-panel-design-card-label">{design.label}</span>
-        <span
-          className="chat-panel-design-card-id"
-          title={`design_id ${design.design_id}`}
+    <section
+      className="chat-panel-design-card"
+      data-expanded={expanded ? 'yes' : 'no'}
+      aria-label="Compiled design"
+    >
+      <div className="chat-panel-design-summary">
+        <button
+          type="button"
+          className="chat-panel-design-disclosure"
+          aria-expanded={expanded}
+          aria-controls={bodyId}
+          onClick={() => setExpanded((open) => !open)}
         >
-          {design.design_id.slice(0, 8)}
-        </span>
-        {design.verified ? (
-          <span className="chat-panel-design-stamp">B-Rep Verified</span>
-        ) : summary.total > 0 ? (
           <span
-            className="chat-panel-design-stamp is-failed"
-            data-stamp={summary.failed > 0 ? 'failed' : 'unverified'}
+            className="chat-panel-design-summary-mark"
+            data-state={mark.state}
+            role="img"
+            aria-label={mark.label}
           >
-            {stampText(summary)}
+            {mark.glyph}
           </span>
-        ) : null}
-      </header>
-
-      <p className="chat-panel-design-provider" data-provider={design.provider}>
-        {measuredBy}
-      </p>
-
-      <table className="chat-panel-design-table">
-        <caption className="chat-panel-design-caption">
-          {measuredBy}
-        </caption>
-        <tbody>
-          {measuredRows(design).map((row) => (
-            <tr key={row.key} data-measure={row.key}>
-              <th scope="row">{row.label}</th>
-              <td title={row.title}>{row.value}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {summary.total > 0 ? (
-        <ul className="chat-panel-design-checks" aria-label="Backend checks">
-          {design.checks.map((check) => (
-            <CheckRow key={check.id} check={check} />
-          ))}
-        </ul>
-      ) : null}
-
-      {chips.length > 0 ? (
-        <div className="chat-panel-design-digests" aria-label="Artefact digests">
-          {chips.map((chip) => (
+          <span className="chat-panel-design-summary-text">
+            {summaryText(summary, measuredBy)}
+          </span>
+          <span className="chat-panel-design-summary-caret" aria-hidden="true">
+            {expanded ? '▾' : '▸'}
+          </span>
+        </button>
+        <button
+          type="button"
+          className="chat-panel-design-show"
+          aria-label={`Show drawing for ${design.label}`}
+          title="Activate this design and open its drawing"
+          onClick={() => {
+            activateDesign(design.design_id);
+            dispatch({ type: 'chrome/drawing-open' });
+          }}
+        >
+          Show drawing
+        </button>
+      </div>
+      {expanded ? (
+        <div className="chat-panel-design-body" id={bodyId}>
+          <header className="chat-panel-design-card-head">
+            <span className="chat-panel-design-card-label">{design.label}</span>
             <span
-              key={chip.kind}
-              className="chat-panel-design-digest"
-              data-digest-kind={chip.kind}
+              className="chat-panel-design-card-id"
+              title={`design_id ${design.design_id}`}
             >
-              <span className="chat-panel-design-digest-label">{chip.label}</span>
-              <code className="chat-panel-design-digest-value" title={chip.digest}>
-                {chip.short}
-              </code>
-              <button
-                type="button"
-                className="chat-panel-design-digest-copy"
-                data-copied={copied === chip.digest ? 'yes' : 'no'}
-                data-copy-failed={copyFailed ? 'yes' : 'no'}
-                aria-label={`Copy ${chip.label} sha256`}
-                title={`Copy the full SHA-256 of this ${chip.label} artefact`}
-                onClick={() => {
-                  void onCopy(chip.digest);
-                }}
-              >
-                {copied === chip.digest ? 'copied' : 'copy'}
-              </button>
-              {chip.downloadKind ? (
-                <button
-                  type="button"
-                  className="chat-panel-design-digest-download"
-                  data-artifact={chip.downloadKind}
-                  aria-label={`Download ${chip.label}`}
-                  title={`Download the stored ${chip.label} artefact`}
-                  disabled={downloading !== null}
-                  onClick={() => {
-                    void onDownload(chip.downloadKind!, chip.digest);
-                  }}
-                >
-                  {downloading === chip.downloadKind ? '…' : 'download'}
-                </button>
-              ) : null}
+              {design.design_id.slice(0, 8)}
             </span>
-          ))}
+            {design.verified ? (
+              <span className="chat-panel-design-stamp">B-Rep Verified</span>
+            ) : summary.total > 0 ? (
+              <span
+                className="chat-panel-design-stamp is-failed"
+                data-stamp={summary.failed > 0 ? 'failed' : 'unverified'}
+              >
+                {stampText(summary)}
+              </span>
+            ) : null}
+          </header>
+
+          <p className="chat-panel-design-provider" data-provider={design.provider}>
+            {measuredBy}
+          </p>
+
+          <table className="chat-panel-design-table">
+            <caption className="chat-panel-design-caption">
+              {measuredBy}
+            </caption>
+            <tbody>
+              {measuredRows(design).map((row) => (
+                <tr key={row.key} data-measure={row.key}>
+                  <th scope="row">{row.label}</th>
+                  <td title={row.title}>{row.value}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {summary.total > 0 ? (
+            <ul className="chat-panel-design-checks" aria-label="Backend checks">
+              {design.checks.map((check) => (
+                <CheckRow key={check.id} check={check} />
+              ))}
+            </ul>
+          ) : null}
+
+          {chips.length > 0 ? (
+            <div className="chat-panel-design-digests" aria-label="Artefact digests">
+              {chips.map((chip) => (
+                <span
+                  key={chip.kind}
+                  className="chat-panel-design-digest"
+                  data-digest-kind={chip.kind}
+                >
+                  <span className="chat-panel-design-digest-label">{chip.label}</span>
+                  <code className="chat-panel-design-digest-value" title={chip.digest}>
+                    {chip.short}
+                  </code>
+                  <button
+                    type="button"
+                    className="chat-panel-design-digest-copy"
+                    data-copied={copied === chip.digest ? 'yes' : 'no'}
+                    data-copy-failed={copyFailed ? 'yes' : 'no'}
+                    aria-label={`Copy ${chip.label} sha256`}
+                    title={`Copy the full SHA-256 of this ${chip.label} artefact`}
+                    onClick={() => {
+                      void onCopy(chip.digest);
+                    }}
+                  >
+                    {copied === chip.digest ? 'copied' : 'copy'}
+                  </button>
+                  {chip.downloadKind ? (
+                    <button
+                      type="button"
+                      className="chat-panel-design-digest-download"
+                      data-artifact={chip.downloadKind}
+                      aria-label={`Download ${chip.label}`}
+                      title={`Download the stored ${chip.label} artefact`}
+                      disabled={downloading !== null}
+                      onClick={() => {
+                        void onDownload(chip.downloadKind!, chip.digest);
+                      }}
+                    >
+                      {downloading === chip.downloadKind ? '…' : 'download'}
+                    </button>
+                  ) : null}
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          {downloadError ? (
+            <p className="chat-panel-design-error" role="alert">
+              {downloadError}
+            </p>
+          ) : null}
+
+          {warnings.length > 0 ? (
+            <ul className="chat-panel-design-warnings" aria-label="Design warnings">
+              {warnings.map((warning, index) => (
+                <li key={`${warning}-${index}`}>{warning}</li>
+              ))}
+            </ul>
+          ) : null}
+
+          <button
+            type="button"
+            className="chat-panel-design-section-pill"
+            title="Open the drawing and its Section A–A view"
+            onClick={() => {
+              activateDesign(design.design_id);
+              dispatch({ type: 'auxView/set', view: 'section' });
+              dispatch({ type: 'chrome/drawing-open' });
+              dispatch({ type: 'chrome/details-open', tab: 'views' });
+            }}
+          >
+            Section A–A ↗
+          </button>
         </div>
       ) : null}
-
-      {downloadError ? (
-        <p className="chat-panel-design-error" role="alert">
-          {downloadError}
-        </p>
-      ) : null}
-
-      {warnings.length > 0 ? (
-        <ul className="chat-panel-design-warnings" aria-label="Design warnings">
-          {warnings.map((warning, index) => (
-            <li key={`${warning}-${index}`}>{warning}</li>
-          ))}
-        </ul>
-      ) : null}
-
-      <button
-        type="button"
-        className="chat-panel-design-section-pill"
-        onClick={() => {
-          activateDesign(design.design_id);
-          dispatch({ type: 'auxView/set', view: 'section' });
-        }}
-      >
-        Section A–A ↗
-      </button>
     </section>
   );
 }
 
-function stampText(summary: ReturnType<typeof checkSummary>): string {
+/** The one-line summary: the real counts and the provider that measured it. */
+export function summaryText(summary: CheckSummary, measuredBy: string): string {
+  if (summary.total === 0) return `no checks reported · ${measuredBy}`;
+  if (summary.failed > 0) {
+    const notReported = summary.notReported > 0
+      ? ` · ${summary.notReported} not reported`
+      : '';
+    return `${summary.failed} failed${notReported} of ${summary.total} checks · ${measuredBy}`;
+  }
+  if (summary.notReported > 0) {
+    return `${summary.notReported} not reported of ${summary.total} checks · ${measuredBy}`;
+  }
+  return `${summary.passed}/${summary.total} checks · ${measuredBy}`;
+}
+
+/** The mark and its colour state for the summary line. */
+function summaryMark(summary: CheckSummary): {
+  glyph: string;
+  state: 'passed' | 'failed' | 'unreported';
+  label: string;
+} {
+  if (summary.failed > 0) return { glyph: '✗', state: 'failed', label: 'checks failed' };
+  if (summary.notReported > 0) {
+    return { glyph: '—', state: 'unreported', label: 'checks not reported' };
+  }
+  return { glyph: '✓', state: 'passed', label: 'checks passed' };
+}
+
+function stampText(summary: CheckSummary): string {
   if (summary.failed > 0 && summary.notReported > 0) {
     return `${summary.failed} failed · ${summary.notReported} not reported`;
   }

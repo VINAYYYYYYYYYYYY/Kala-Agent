@@ -49,7 +49,7 @@ import {
 } from '../../state/store';
 import type { DesignResource } from '../../state/store';
 import type { DesignController } from '../../state/designController';
-import { DEFAULT_DESIGN_SECTION_CUT, sectionCutNote } from '../../state/sectionCut';
+import { sectionCutNote } from '../../state/sectionCut';
 import { measuredByLabel } from '../chat/designCard';
 import '../../styles/drafting.css';
 
@@ -107,13 +107,6 @@ export function AuxView(props: AuxViewProps): ReactElement {
   const sectionResource = useUiState((state) =>
     sectionKey ? selectSection(state, sectionKey) : null,
   );
-
-  // A new design gets the documented default cut (XZ at y = 4 mm). The
-  // shared state is reset here, so the sheet and the redline follow too.
-  useEffect(() => {
-    if (!designId) return;
-    setSectionPlane(DEFAULT_DESIGN_SECTION_CUT.plane);
-  }, [designId]);
 
   useEffect(() => {
     if (!designId || !props.designController) return;
@@ -407,13 +400,15 @@ function DesignSectionSvg(props: { data: SectionResponse; hatchId: string }): Re
         <text x="289" y="164" textAnchor="end" className="aux-area-value">
           {props.data.area_exact ? 'AREA' : '≈ AREA'} {formatAreaValue(props.data.area_mm2)} mm²
         </text>
-        <text x="11" y="177" className="aux-caption-muted">
-          OFFSET {formatMmValue(props.data.offset_mm)} mm · {props.data.outer_loop_count} OUTER ·{' '}
-          {props.data.inner_loop_count} INNER LOOP
+        <text x="11" y="174" className="aux-caption-muted">
+          OFFSET {formatMmValue(props.data.offset_mm)} mm
+        </text>
+        <text x="11" y="185" className="aux-caption-muted">
+          {props.data.outer_loop_count} OUTER · {props.data.inner_loop_count} INNER LOOP
           {props.data.inner_loop_count === 1 ? '' : 'S'}
           {props.data.truncated ? ' · TRUNCATED' : ''}
         </text>
-        <text x="289" y="177" textAnchor="end" className="aux-caption-muted">
+        <text x="289" y="185" textAnchor="end" className="aux-caption-muted">
           {props.data.area_exact ? 'KERNEL AREA' : 'POLYLINE AREA'}
         </text>
       </svg>

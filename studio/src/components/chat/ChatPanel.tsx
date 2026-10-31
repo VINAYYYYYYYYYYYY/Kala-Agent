@@ -1,21 +1,27 @@
 // Mechanical engineering agent chat panel — the bound engineer's calculation
-// pad in the left zone.
+// pad and the app's centred, primary surface (chat-first direction,
+// 2026-10-31).
 //
-// This is the primary workspace, not a side drawer: the operator sizes a
-// part by talking to it, and the OpenCascade workbench in the drafting sheet
-// answers with the geometry that talk produces.
+// The operator sizes a part by talking to it. The drawing is a secondary
+// split panel that appears after a CAD-built design; it never crowds the
+// conversation by default.
 //
 // Honest about three things:
 //   1. The text shown is exactly what the backend returned; we do not
 //      simulate streaming, do not invent partial answers, and do not claim
 //      a model is "thinking" when one isn't. The backend's ChatResponse has
 //      no structured parameter/tool-call field, so no inline result tables
-//      or digest chips are fabricated here. The mono table at the top is the
-//      real active-geometry context the workbench is holding.
+//      or digest chips are fabricated here.
 //   2. Remote providers only run if the operator ticks the explicit consent
 //      stamp. The state machine below refuses to send until consent is on.
 //   3. For the local helper, model is optional (the backend ignores it).
 //      For API routes, model is required.
+//
+// App-feel wave (2026-10-31): the column is only the thread and the
+// composer. The brand wordmark lives in the top bar, the live connection in
+// the status bar, the API keys in Settings › Models & keys, the active
+// geometry in Details › Properties, and the setup pickers behind the two
+// chips under the prompt.
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactElement } from 'react';
@@ -28,35 +34,22 @@ import {
   StudioTimeoutError,
 } from '../../api/client';
 import type { ConnectionStatus } from '../../state/store';
-import { appendJournal, dispatch, selectActiveDesign, useUiState } from '../../state/store';
+import { appendJournal, dispatch, useUiState } from '../../state/store';
 import type { ChatMessage } from '../../state/store';
-import {
-  computeGeometryEstimate,
-  formatEnvelopeEstimate,
-  formatVolumeEstimate,
-} from '../../viewer/localPrimitives';
-import { ProviderPanel } from '../panels/ProviderPanel';
-import { CadTargetSelector } from './CadTargetSelector';
+import { CadTargetSelector, cadProviderDisplayName } from './CadTargetSelector';
+import { ComposerPopover } from './ComposerPopover';
 import { DesignAgentCard } from './DesignAgentCard';
-import { designSupport, measuredByLabel } from './designCard';
+import { designSupport } from './designCard';
 import { ModelPicker } from './ModelPicker';
 import { ProviderPicker } from './ProviderPicker';
 import { readStoredModel } from '../../modelCatalog';
 import {
   defaultModelLabel,
-  isLocalProvider,
   describeProviderStatus,
   requiresModel,
   requiresRemoteConsent,
 } from '../../providerPolicy';
-import type { ChatRequest } from '../../types/studio';
-import type {
-  BoxParameters,
-  CylinderParameters,
-  PrimitiveKind,
-  SphereParameters,
-  StudioParameters,
-} from '../../types/studio';
+import type { CadProviderRecord, ChatRequest } from '../../types/studio';
 import '../../styles/chat.css';
 import '../../styles/models.css';
 
@@ -94,15 +87,11 @@ export function ChatPanel(): ReactElement {
   const connection = useUiState((s) => s.connection);
   const server = useUiState((s) => s.server);
   const chat = useUiState((s) => s.chat);
-  const primitive = useUiState((s) => s.primitive);
-  const parameters = useUiState((s) => s.parameters);
-  const activeDesign = useUiState(selectActiveDesign);
   const cadProvider = useUiState((s) => s.cadProvider);
   const [providerId, setProviderId] = useState<string>('');
   const [model, setModel] = useState<string>('');
   const [prompt, setPrompt] = useState<string>('');
   const [allowRemote, setAllowRemote] = useState<boolean>(false);
-  const [showKeySettings, setShowKeySettings] = useState<boolean>(false);
   // The live elapsed clock of the turn in flight. `turnStartedAt` is the
   // instant the request left the browser; `now` is the tick that keeps the
   // readout honest while the backend works.
@@ -113,46 +102,11 @@ export function ChatPanel(): ReactElement {
   const threadRef = useRef<HTMLDivElement | null>(null);
   const threadPinnedRef = useRef<boolean>(true);
 
-  // The active geometry the OpenCascade workbench is holding right now. The
-  // agent quotes these numbers back to the operator, so chat and workbench
-  // never drift apart.
-  //
-  // When a compiled design is active the sheet shows that design, so the
-  // block quotes the design's PROVIDER-MEASURED values and says which
-  // provider reported them. A property the provider did not report is "—",
-  // never a closed-form substitute.
-  const geometryContext = useMemo(() => {
-    if (activeDesign) {
-      const measured = activeDesign.measured;
-      const bounds = measured.bounds;
-      return {
-        primitive: 'design',
-        dimensions: activeDesign.label,
-        envelope: bounds
-          ? `${(bounds.max[0] - bounds.min[0]).toFixed(2)} × ${(bounds.max[1] - bounds.min[1]).toFixed(2)} × ${(bounds.max[2] - bounds.min[2]).toFixed(2)} mm`
-          : '—',
-        volume: measured.volume_mm3 === null
-          ? '—'
-          : `${measured.volume_mm3.toFixed(2)} mm³ (${(measured.volume_mm3 / 1000).toFixed(3)} cm³)`,
-        source: measuredByLabel(activeDesign),
-      };
-    }
-    const estimate = computeGeometryEstimate(primitive, parameters);
-    return {
-      primitive,
-      dimensions: describeParameters(primitive, parameters),
-      envelope: formatEnvelopeEstimate(estimate),
-      volume: formatVolumeEstimate(estimate),
-      source: 'nominal estimate (closed-form)',
-    };
-  }, [activeDesign, primitive, parameters]);
-
-  const connectionView = useMemo(() => describeConnection(connection), [connection]);
-
   // The honest note for a backend that cannot compile a design. It appears
   // only once the health probe has answered, so the panel never flashes a
   // claim it cannot make yet.
   const support = useMemo(() => designSupport(server), [server]);
+  const connectionState = useMemo(() => describeConnection(connection), [connection]);
 
   useEffect(() => {
     if (!providerId && server.providers[0]) {
@@ -203,7 +157,6 @@ export function ChatPanel(): ReactElement {
 
   const provider = server.providers.find((p) => p.id === providerId);
   const configured = provider?.configured === true;
-  const isLocal = isLocalProvider(providerId);
   // The provider policy decides what a turn means: whether it leaves the
   // machine (and therefore needs the consent stamp) and whether a model id
   // is mandatory. The subscription CLIs need the stamp like any remote
@@ -214,11 +167,33 @@ export function ChatPanel(): ReactElement {
   // The route stamp states the backend's own verdict: a provider it probed
   // and found unavailable is not "configured", it is unavailable.
   const providerState = provider ? describeProviderStatus(provider) : null;
-  const providerStatusText = providerId.length === 0
-    ? 'No provider selected'
-    : `${providerLabel} · ${providerState?.badge.toLowerCase() ?? 'not configured'}${
-        isLocal ? ' · loopback only' : ''
-      }`;
+  // The chip is the whole route in two words: the provider and the model it
+  // will run. An empty model is the provider's own default, never a guess.
+  const modelLabel = model.trim().length > 0 ? model.trim() : 'default';
+  const modelChipLabel = `Model: ${providerLabel} · ${modelLabel}`;
+
+  const cadRecord = cadProvider === null
+    ? null
+    : server.cadProviders.find((record) => record.id === cadProvider) ?? null;
+  const cadLabel = cadProvider === null
+    ? 'choose'
+    : cadRecord
+      ? cadProviderDisplayName(cadRecord)
+      : cadProvider;
+  // The visible chip carries only the short target name; the parenthetical
+  // status (opt-in) and the provider version stay in the popover and in the
+  // chip's title. The accessible name keeps the full identity.
+  const cadChipValue = cadProvider === null
+    ? 'choose'
+    : cadRecord
+      ? cadProviderShortName(cadRecord)
+      : cadProvider;
+  const cadChipTitle = cadProvider === null
+    ? 'CAD target: choose — pick the provider that builds this design'
+    : cadRecord
+      ? `CAD target: ${cadLabel}${cadRecord.version ? ` ${cadRecord.version}` : ''}`
+      : `CAD target: ${cadProvider}`;
+  const cadChipLabel = `CAD target: ${cadLabel}`;
 
   const canSend =
     connection.kind === 'ready' &&
@@ -317,7 +292,7 @@ export function ChatPanel(): ReactElement {
     setModel(readStoredModel(next) ?? '');
   }
 
-  function onClear(): void {
+  function onNewChat(): void {
     if (controllerRef.current) controllerRef.current.abort();
     dispatch({ type: 'chat/clear' });
   }
@@ -330,210 +305,88 @@ export function ChatPanel(): ReactElement {
     if (canSend) void onSend();
   }
 
-  return (
-    <section
-      className="chat-panel"
-      data-connection={connectionView.state}
-      aria-label="Mechanical engineering agent chat"
+  const supportNotice = support.unavailable && support.note ? (
+    <section className="chat-panel-agent-card" aria-label="Design turn support">
+      <p className="chat-panel-agent-card-note" role="note">
+        {support.note}
+      </p>
+    </section>
+  ) : null;
+
+  // The composer is one block in both states: centred in the column while
+  // the thread is empty, docked at the bottom once it has messages.
+  const composer = (
+    <form
+      className="chat-panel-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void onSend();
+      }}
     >
-      <header className="chat-panel-header">
-        <div className="chat-panel-stamp">
-          <h2 className="chat-panel-stamp-title">
-            KALA <span className="chat-panel-stamp-slash" aria-hidden="true">//</span> MECHANICAL DESIGN AGENT
-          </h2>
-          <span className="chat-panel-connection" data-state={connectionView.state} role="status" title={connectionView.title}>
-            <span className="chat-panel-connection-dot" aria-hidden="true" />
-            {connectionView.label}
-          </span>
-        </div>
-        <div className="chat-panel-header-actions">
-          <button
-            type="button"
-            className="chat-panel-settings-toggle"
-            aria-expanded={showKeySettings}
-            onClick={() => setShowKeySettings((open) => !open)}
+      <div className="chat-panel-frame chat-panel-form-frame">
+        <textarea
+          className="chat-panel-prompt"
+          aria-label="Prompt"
+          ref={promptRef}
+          value={prompt}
+          rows={3}
+          onChange={(event) => setPrompt(event.target.value)}
+          onKeyDown={onPromptKeyDown}
+          placeholder="Describe geometry, tolerance, or prompt…"
+        />
+        <div className="chat-panel-chips">
+          <ComposerPopover
+            name="model"
+            label={modelChipLabel}
+            title={modelChipLabel}
+            panel={
+              <>
+                <ProviderPicker
+                  providers={server.providers}
+                  credentials={server.credentials}
+                  value={providerId}
+                  onChange={onProviderChange}
+                />
+                <ModelPicker
+                  providerId={providerId}
+                  providerName={providerLabel}
+                  value={model}
+                  onChange={setModel}
+                  configured={configured}
+                  providerAvailable={provider?.available ?? null}
+                  providerReason={provider?.reason ?? null}
+                  allowRemote={allowRemote}
+                  onGrantConsent={() => setAllowRemote(true)}
+                  onOpenKeySettings={() => dispatch({ type: 'options/open', card: 'providers' })}
+                  optional={!modelRequired}
+                />
+              </>
+            }
           >
-            {showKeySettings ? 'Hide API Keys' : 'API Keys'}
-          </button>
-          <button
-            type="button"
-            className="chat-panel-clear"
-            onClick={onClear}
-            disabled={chat.thread.length === 0}
-          >
-            Clear
-          </button>
-        </div>
-      </header>
-      {showKeySettings ? (
-        <section className="chat-panel-settings" aria-label="API key settings">
-          <header className="chat-panel-settings-header">
-            <h3>Configure Provider API Keys</h3>
-            <p>
-              Keys are stored on your local Studio backend (<code>studio-settings.json</code>, mode{' '}
-              <code>0600</code>) and never echoed back to the browser.
-            </p>
-          </header>
-          <ProviderPanel compact />
-        </section>
-      ) : null}
-      <div className="chat-panel-intro">
-        <div className="chat-panel-starters" role="group" aria-label="Engineering starter prompts">
-          {STARTER_PROMPTS.map((starter) => (
-            <button
-              key={starter.id}
-              type="button"
-              className="chat-panel-starter"
-              data-starter={starter.id}
-              onClick={() => {
-                setPrompt(starter.prompt);
-                promptRef.current?.focus();
-              }}
-            >
-              {starter.label}
-            </button>
-          ))}
-        </div>
-        <section className="chat-panel-context" aria-label="Active OpenCascade geometry context">
-          <div className="chat-panel-context-head">
-            <span className="chat-panel-context-label">Active geometry</span>
-            <code className="chat-panel-context-kind">{geometryContext.primitive}</code>
-          </div>
-          <dl className="chat-panel-context-table">
-            <div className="chat-panel-context-row">
-              <dt>dims</dt>{' '}
-              <dd className="chat-panel-context-dims">{geometryContext.dimensions}</dd>
-            </div>
-            <div className="chat-panel-context-row">
-              <dt>envelope</dt>{' '}
-              <dd className="chat-panel-context-envelope">{geometryContext.envelope}</dd>
-            </div>
-            <div className="chat-panel-context-row">
-              <dt>volume</dt>{' '}
-              <dd className="chat-panel-context-volume">{geometryContext.volume}</dd>
-            </div>
-            <div className="chat-panel-context-row">
-              <dt>source</dt>{' '}
-              <dd className="chat-panel-context-source">{geometryContext.source}</dd>
-            </div>
-          </dl>
-        </section>
-        {support.unavailable && support.note ? (
-          <section className="chat-panel-agent-card" aria-label="Design turn support">
-            <p className="chat-panel-agent-card-note" role="note">
-              {support.note}
-            </p>
-          </section>
-        ) : null}
-      </div>
-      <div
-        className="chat-panel-thread"
-        ref={threadRef}
-        onScroll={onThreadScroll}
-        role="log"
-        aria-live="polite"
-      >
-        {chat.thread.length === 0 ? (
-          <p className="chat-panel-empty">
-            Pick a configured provider, type a prompt, and send. Remote providers require the consent
-            stamp below.
-          </p>
-        ) : null}
-        {chat.thread.map((entry, index) => (
-          <article
-            key={`${entry.role}-${entry.at}-${index}`}
-            className={`chat-panel-message chat-panel-message-${entry.role}`}
-          >
-            <header className="chat-panel-message-meta">
-              <span className="chat-panel-message-role">{entry.role === 'user' ? 'You' : 'Agent'}</span>
-              {entry.role === 'assistant' ? (
-                <span
-                  className="chat-panel-message-badge"
-                  data-offline={entry.offline === true ? 'yes' : 'no'}
-                  title="The provider, model, and reply time the backend reported for this turn"
-                >
-                  {chatBadgeText(entry)}
-                </span>
-              ) : null}
-              {entry.role === 'assistant' && typeof entry.durationMs === 'number' ? (
-                <span className="chat-panel-message-elapsed">({formatElapsed(entry.durationMs)})</span>
-              ) : null}
-              <time className="chat-panel-message-time" dateTime={isoTime(entry.at)}>
-                {formatTime(entry.at)}
-              </time>
-            </header>
-            <p className="chat-panel-message-text">{entry.text}</p>
-            {entry.role === 'assistant' && entry.designId ? (
-              <DesignAgentCard designId={entry.designId} />
-            ) : null}
-          </article>
-        ))}
-        {chat.inFlight ? (
-          <p className="chat-panel-pending" role="status">
-            <span className="chat-panel-pending-dot" aria-hidden="true" />
-            Awaiting response…
-            {turnStartedAt !== null ? (
-              // The clock is hidden from assistive technology: the status
-              // region must announce "Awaiting response…" once, not once a
-              // second. The text itself is the operator's elapsed readout.
-              <span
-                className="chat-panel-elapsed-live"
-                data-elapsed-live="yes"
-                aria-hidden="true"
-              >
-                {formatElapsed(Math.max(0, now - turnStartedAt))}
-              </span>
-            ) : null}
-          </p>
-        ) : null}
-        {chat.lastError && chat.lastErrorKind !== 'cancelled' ? (
-          <p className="chat-panel-error" role="alert">{chat.lastError}</p>
-        ) : null}
-        {chat.lastErrorKind === 'cancelled' ? (
-          <p className="chat-panel-pending" role="status">
-            Cancelled — the backend stopped the turn.
-          </p>
-        ) : null}
-      </div>
-      <form
-        className="chat-panel-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void onSend();
-        }}
-      >
-        <div className="chat-panel-route">
-          <div className="chat-panel-field chat-panel-field-provider">
-            <span>Provider</span>
-            <ProviderPicker
-              providers={server.providers}
-              credentials={server.credentials}
-              value={providerId}
-              onChange={onProviderChange}
+            <span
+              className="composer-chip-dot"
+              data-state={providerState?.state ?? 'not-configured'}
+              aria-hidden="true"
             />
-          </div>
-        </div>
-        <div className="chat-panel-field chat-panel-field-model">
-          <ModelPicker
-            providerId={providerId}
-            providerName={providerLabel}
-            value={model}
-            onChange={setModel}
-            configured={configured}
-            providerAvailable={provider?.available ?? null}
-            providerReason={provider?.reason ?? null}
-            allowRemote={allowRemote}
-            onGrantConsent={() => setAllowRemote(true)}
-            onOpenKeySettings={() => setShowKeySettings(true)}
-            optional={!modelRequired}
-          />
-        </div>
-        <CadTargetSelector />
-        {needsConsent ? (
-          <label
-            className="chat-panel-consent"
-            data-consent={allowRemote ? 'granted' : 'required'}
+            <span className="composer-chip-value">
+              {providerLabel} · {modelLabel}
+            </span>
+            <span className="composer-chip-caret" aria-hidden="true">▾</span>
+          </ComposerPopover>
+          <ComposerPopover
+            name="cad"
+            label={cadChipLabel}
+            title={cadChipTitle}
+            attention={cadProvider === null}
+            panel={<CadTargetSelector />}
           >
+            <span className="composer-chip-prefix">CAD:</span>
+            <span className="composer-chip-value">{cadChipValue}</span>
+            <span className="composer-chip-caret" aria-hidden="true">▾</span>
+          </ComposerPopover>
+        </div>
+        {needsConsent && !allowRemote ? (
+          <label className="chat-panel-consent" data-consent="required">
             <input
               type="checkbox"
               checked={allowRemote}
@@ -549,30 +402,7 @@ export function ChatPanel(): ReactElement {
               </span>
             </span>
           </label>
-        ) : (
-          <p
-            className="chat-panel-provider-status"
-            data-configured={configured ? 'yes' : 'no'}
-            data-route={isLocal ? 'local' : 'loopback'}
-          >
-            <span className="chat-panel-provider-status-label">Route</span>
-            <span className="chat-panel-provider-status-value" title={providerStatusText}>
-              {providerStatusText}
-            </span>
-          </p>
-        )}
-        <label className="chat-panel-field chat-panel-field-grow">
-          <span>Prompt</span>
-          <textarea
-            className="chat-panel-prompt"
-            ref={promptRef}
-            value={prompt}
-            rows={3}
-            onChange={(event) => setPrompt(event.target.value)}
-            onKeyDown={onPromptKeyDown}
-            placeholder="Describe geometry, tolerance, or prompt…"
-          />
-        </label>
+        ) : null}
         <div className="chat-panel-actions">
           <button type="submit" className="chat-panel-send" disabled={!canSend}>
             {chat.inFlight ? 'Drafting…' : '[Draft Part Geometry ↵]'}
@@ -590,33 +420,143 @@ export function ChatPanel(): ReactElement {
             </span>
           ) : null}
         </div>
-      </form>
+      </div>
+    </form>
+  );
+
+  const starters = (
+    <div className="chat-panel-starters" role="group" aria-label="Engineering starter prompts">
+      {STARTER_PROMPTS.map((starter) => (
+        <button
+          key={starter.id}
+          type="button"
+          className="chat-panel-starter"
+          data-starter={starter.id}
+          onClick={() => {
+            setPrompt(starter.prompt);
+            promptRef.current?.focus();
+          }}
+        >
+          {starter.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  return (
+    <section
+      className="chat-panel"
+      data-connection={connectionState}
+      data-empty={chat.thread.length === 0 ? 'yes' : 'no'}
+      aria-label="Mechanical engineering agent chat"
+    >
+      <header className="chat-panel-header">
+        <div className="chat-panel-frame chat-panel-header-frame">
+          <span className="chat-panel-header-label">Agent</span>
+          {chat.thread.length > 0 ? (
+            <button type="button" className="chat-panel-new" onClick={onNewChat}>
+              New chat
+            </button>
+          ) : null}
+        </div>
+      </header>
+      {chat.thread.length === 0 ? (
+        // A new chat: one short mono-caps label, the composer around the
+        // middle of the column, and the starter chips under it.
+        <div className="chat-panel-center">
+          <div className="chat-panel-frame chat-panel-empty">
+            <p className="chat-panel-empty-label">New design</p>
+          </div>
+          {supportNotice ? <div className="chat-panel-frame">{supportNotice}</div> : null}
+          {composer}
+          <div className="chat-panel-frame">{starters}</div>
+        </div>
+      ) : (
+        <>
+          <div
+            className="chat-panel-thread"
+            ref={threadRef}
+            onScroll={onThreadScroll}
+            role="log"
+            aria-live="polite"
+          >
+            <div className="chat-panel-frame chat-panel-thread-frame">
+              {supportNotice}
+              {chat.thread.map((entry, index) => (
+                <article
+                  key={`${entry.role}-${entry.at}-${index}`}
+                  className={`chat-panel-message chat-panel-message-${entry.role}`}
+                >
+                  <header className="chat-panel-message-meta">
+                    <span className="chat-panel-message-role">
+                      {entry.role === 'user' ? 'You' : 'Agent'}
+                    </span>
+                    {entry.role === 'assistant' ? (
+                      <span
+                        className="chat-panel-message-badge"
+                        data-offline={entry.offline === true ? 'yes' : 'no'}
+                        title="The provider, model, and reply time the backend reported for this turn"
+                      >
+                        {chatBadgeText(entry)}
+                      </span>
+                    ) : null}
+                    {entry.role === 'assistant' && typeof entry.durationMs === 'number' ? (
+                      <span className="chat-panel-message-elapsed">
+                        ({formatElapsed(entry.durationMs)})
+                      </span>
+                    ) : null}
+                    <time className="chat-panel-message-time" dateTime={isoTime(entry.at)}>
+                      {formatTime(entry.at)}
+                    </time>
+                  </header>
+                  <p className="chat-panel-message-text">{entry.text}</p>
+                  {entry.role === 'assistant' && entry.designId ? (
+                    <DesignAgentCard designId={entry.designId} />
+                  ) : null}
+                </article>
+              ))}
+              {chat.inFlight ? (
+                <p className="chat-panel-pending" role="status">
+                  <span className="chat-panel-pending-dot" aria-hidden="true" />
+                  Awaiting response…
+                  {turnStartedAt !== null ? (
+                    // The clock is hidden from assistive technology: the status
+                    // region must announce "Awaiting response…" once, not once a
+                    // second. The text itself is the operator's elapsed readout.
+                    <span
+                      className="chat-panel-elapsed-live"
+                      data-elapsed-live="yes"
+                      aria-hidden="true"
+                    >
+                      {formatElapsed(Math.max(0, now - turnStartedAt))}
+                    </span>
+                  ) : null}
+                </p>
+              ) : null}
+              {chat.lastError && chat.lastErrorKind !== 'cancelled' ? (
+                <p className="chat-panel-error" role="alert">{chat.lastError}</p>
+              ) : null}
+              {chat.lastErrorKind === 'cancelled' ? (
+                <p className="chat-panel-pending" role="status">
+                  Cancelled — the backend stopped the turn.
+                </p>
+              ) : null}
+            </div>
+          </div>
+          {composer}
+        </>
+      )}
     </section>
   );
 }
 
-interface ConnectionView {
-  label: string;
-  state: 'desktop' | 'browser' | 'connecting' | 'disconnected' | 'error';
-  title: string;
-}
-
-function describeConnection(status: ConnectionStatus): ConnectionView {
+function describeConnection(status: ConnectionStatus): string {
   if (status.kind === 'ready') {
-    const desktop = status.connection.mode === 'desktop';
-    return {
-      label: desktop ? 'Desktop bridge' : 'Browser fallback',
-      state: desktop ? 'desktop' : 'browser',
-      title: `Connected to ${status.connection.baseUrl}`,
-    };
+    return status.connection.mode === 'desktop' ? 'desktop' : 'browser';
   }
-  if (status.kind === 'connecting') {
-    return { label: 'Connecting', state: 'connecting', title: 'Loopback connection in progress' };
-  }
-  if (status.kind === 'error') {
-    return { label: 'Disconnected', state: 'error', title: status.message };
-  }
-  return { label: 'Disconnected', state: 'disconnected', title: 'No loopback connection' };
+  if (status.kind === 'connecting') return 'connecting';
+  if (status.kind === 'error') return 'error';
+  return 'disconnected';
 }
 
 function formatTime(ts: number): string {
@@ -662,33 +602,20 @@ export function formatElapsed(durationMs: number): string {
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
-// One-line, dimension-first summary of the active primitive. Only the
-// driving dimensions are listed — segment counts are tessellation detail and
-// belong in the inspector, not in a chat banner.
-function describeParameters(
-  primitive: PrimitiveKind,
-  parameters: StudioParameters,
-): string {
-  if (primitive === 'box') {
-    const p = parameters as BoxParameters;
-    return `${mm(p.size_x)} × ${mm(p.size_y)} × ${mm(p.size_z)}`;
-  }
-  if (primitive === 'cylinder') {
-    const p = parameters as CylinderParameters;
-    return `⌀${mm(p.radius * 2)} × ${mm(p.height)}`;
-  }
-  const p = parameters as SphereParameters;
-  return `⌀${mm(p.radius * 2)}`;
-}
-
-function mm(value: number): string {
-  if (!Number.isFinite(value)) return '—';
-  return `${value.toFixed(2)} mm`;
-}
-
 function truncate(text: string, limit: number): string {
   const compact = text.replace(/\s+/g, ' ').trim();
   return compact.length > limit ? `${compact.slice(0, limit - 1)}…` : compact;
+}
+
+/**
+ * The short name of a CAD target for the composer chip. The backend's
+ * display name carries the opt-in status in a parenthetical suffix
+ * ("OpenCascade (opt-in)"); that identity belongs in the popover and the
+ * chip title, not in the 360 px chip row.
+ */
+export function cadProviderShortName(provider: CadProviderRecord): string {
+  const short = provider.name.replace(/\s*\([^)]*\)\s*$/, '').trim();
+  return short.length > 0 ? short : provider.name;
 }
 
 function describeError(cause: unknown): { message: string; kind: 'cancelled' | 'timeout' | 'network' | 'server' } {

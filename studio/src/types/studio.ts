@@ -23,8 +23,15 @@ export type ThemeName = 'vellum' | 'slate';
 /** Units of the parametric dimensions shown on the drafting sheet. */
 export type StudioUnits = 'mm';
 
-/** The four drafted cards in the Options drawer. */
-export type OptionsCard = 'inspector' | 'export' | 'providers' | 'connection';
+/**
+ * The sections of the Settings dialog (opened from the top bar gear). The
+ * primitive inspector lives in Details › Properties and export has its own
+ * dialog, so neither is a settings section.
+ */
+export type OptionsCard = 'workspace' | 'providers' | 'cad' | 'connection';
+
+/** The tabs of the right-hand Details panel (closed by default). */
+export type DetailsTab = 'properties' | 'views' | 'activity';
 
 /** Journal event categories. */
 export type JournalKind = 'preview' | 'chat' | 'tool' | 'export' | 'connection' | 'system';

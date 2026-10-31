@@ -157,6 +157,14 @@ describe('composer keyboard handling', () => {
   it('pins the thread to the newest turn unless the operator scrolled up', () => {
     seedProviders();
     const view = render(<ChatPanel />);
+    // The empty chat shows the centred composer; one reply swaps in the
+    // scrolling thread this test measures.
+    act(() => {
+      dispatch({
+        type: 'chat/response',
+        response: { text: 'Seed answer', provider: 'local', model: null },
+      });
+    });
     const thread = view.container.querySelector<HTMLDivElement>('.chat-panel-thread')!;
     Object.defineProperty(thread, 'scrollHeight', { configurable: true, value: 600 });
     Object.defineProperty(thread, 'clientHeight', { configurable: true, value: 200 });
@@ -185,33 +193,30 @@ describe('composer keyboard handling', () => {
   });
 });
 
-describe('connection stamp', () => {
-  it('reports the real desktop bridge state', async () => {
+describe('connection state', () => {
+  it('keeps the connection state out of the chat header and reflects it in the panel', async () => {
     seedProviders();
     const view = render(<ChatPanel />);
-    const stamp = view.container.querySelector<HTMLElement>('.chat-panel-connection')!;
-    expect(stamp.textContent).toContain('Desktop bridge');
-    expect(stamp.closest('.chat-panel')?.getAttribute('data-connection')).toBe('desktop');
+    // The visible connection label lives in the status bar now.
+    expect(view.container.querySelector('.chat-panel-connection')).toBeNull();
+    expect(view.container.querySelector<HTMLElement>('.chat-panel')?.getAttribute('data-connection'))
+      .toBe('desktop');
   });
 
-  it('reports the real browser fallback and disconnected states', async () => {
+  it('reports the real browser fallback and disconnected states to the shell', async () => {
     dispatch({
       type: 'connection/ready',
       connection: { baseUrl: BASE_URL, token: 'x'.repeat(32), mode: 'browser-manual' },
     });
     const browser = render(<ChatPanel />);
-    expect(browser.container.querySelector('.chat-panel-connection')?.textContent).toContain(
-      'Browser fallback',
-    );
+    expect(browser.container.querySelector<HTMLElement>('.chat-panel')?.getAttribute('data-connection'))
+      .toBe('browser');
     cleanup();
 
     resetStore();
     const disconnected = render(<ChatPanel />);
-    expect(disconnected.container.querySelector('.chat-panel-connection')?.textContent).toContain(
-      'Disconnected',
-    );
     expect(
-      disconnected.container.querySelector('.chat-panel')?.getAttribute('data-connection'),
+      disconnected.container.querySelector<HTMLElement>('.chat-panel')?.getAttribute('data-connection'),
     ).toBe('disconnected');
   });
 });

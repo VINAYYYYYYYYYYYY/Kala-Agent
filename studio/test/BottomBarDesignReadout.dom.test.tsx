@@ -16,6 +16,8 @@ import { bracketDesignResult, notReportedDesignResult } from './designFixtures';
 
 beforeEach(() => {
   resetStore();
+  // The readout belongs to the drawing: open it as the shell does.
+  dispatch({ type: 'chrome/drawing-open' });
 });
 
 afterEach(() => {
@@ -48,7 +50,7 @@ function localPreview(): StudioLocalPreview {
 describe('the bottom bar readout of a compiled design', () => {
   it('quotes the measured envelope, volume, and area', () => {
     dispatch({ type: 'design/received', design: bracketDesignResult });
-    const { container } = render(<BottomBar onOpenOptions={() => {}} />);
+    const { container } = render(<BottomBar />);
 
     const text = readout(container).textContent ?? '';
     expect(text).toContain('60×45×40 mm');
@@ -58,7 +60,7 @@ describe('the bottom bar readout of a compiled design', () => {
 
   it('names the provider that measured the numbers, with its version', () => {
     dispatch({ type: 'design/received', design: bracketDesignResult });
-    const { container } = render(<BottomBar onOpenOptions={() => {}} />);
+    const { container } = render(<BottomBar />);
 
     expect(source(container).textContent).toBe('FreeCAD');
     expect(source(container).getAttribute('data-source')).toBe('FreeCAD');
@@ -69,7 +71,7 @@ describe('the bottom bar readout of a compiled design', () => {
 
   it('keeps the full measured precision in the item title tooltips', () => {
     dispatch({ type: 'design/received', design: bracketDesignResult });
-    const { container } = render(<BottomBar onOpenOptions={() => {}} />);
+    const { container } = render(<BottomBar />);
 
     const titles = Array.from(
       container.querySelectorAll<HTMLElement>('.bottom-bar-readout-item'),
@@ -93,7 +95,7 @@ describe('the bottom bar readout of a compiled design', () => {
 
   it('shows an em dash for values the provider did not report', () => {
     dispatch({ type: 'design/received', design: notReportedDesignResult });
-    const { container } = render(<BottomBar onOpenOptions={() => {}} />);
+    const { container } = render(<BottomBar />);
 
     const text = readout(container).textContent ?? '';
     expect(text).toContain('ENV');
@@ -104,7 +106,7 @@ describe('the bottom bar readout of a compiled design', () => {
 
   it('keeps the fixed readout order and the honest scale', () => {
     dispatch({ type: 'design/received', design: bracketDesignResult });
-    const { container } = render(<BottomBar onOpenOptions={() => {}} />);
+    const { container } = render(<BottomBar />);
 
     const text = readout(container).textContent ?? '';
     const order = ['ENV', 'VOL', 'AREA', 'SCALE'];
@@ -118,7 +120,7 @@ describe('the bottom bar readout of a compiled design', () => {
 
 describe('the bottom bar readout without a design', () => {
   it('keeps saying that there is no geometry', () => {
-    const { container } = render(<BottomBar onOpenOptions={() => {}} />);
+    const { container } = render(<BottomBar />);
 
     expect(source(container).getAttribute('data-source')).toBe('—');
     expect(source(container).getAttribute('data-source-kind')).toBe('none');
@@ -127,7 +129,7 @@ describe('the bottom bar readout without a design', () => {
 
   it('keeps the primitive estimate and its local source', () => {
     dispatch({ type: 'preview/local', preview: localPreview() });
-    const { container } = render(<BottomBar onOpenOptions={() => {}} />);
+    const { container } = render(<BottomBar />);
 
     expect(source(container).getAttribute('data-source')).toBe('local est.');
     expect(source(container).getAttribute('data-source-kind')).toBe('local');

@@ -13,6 +13,7 @@ import {
   appendJournal,
   type UiState,
 } from '../src/state/store';
+import { bracketDesignResult } from './designFixtures';
 import { JOURNAL_CAP } from '../src/types/studio';
 import type { BoxParameters, PreviewResponse } from '../src/types/studio';
 
@@ -156,7 +157,7 @@ describe('vellum shell state', () => {
     expect(state.auxView).toBe('section');
     expect(state.showSection).toBe(true);
     expect(state.optionsOpen).toBe(false);
-    expect(state.optionsCard).toBe('inspector');
+    expect(state.optionsCard).toBe('workspace');
     expect(state.theme).toBe('vellum');
     expect(state.journal).toEqual([]);
     expect(state.viewResetToken).toBe(0);
@@ -181,21 +182,68 @@ describe('vellum shell state', () => {
     expect(state.connectionRetryToken).toBe(1);
   });
 
-  it('opens the Options drawer on the requested card and closes it', () => {
+  it('opens the Settings dialog on the requested section and closes it', () => {
     let state = reducer(baseState, { type: 'options/open' });
     expect(state.optionsOpen).toBe(true);
-    expect(state.optionsCard).toBe('inspector');
+    expect(state.optionsCard).toBe('workspace');
 
-    state = reducer(state, { type: 'options/card', card: 'export' });
+    state = reducer(state, { type: 'options/card', card: 'providers' });
     expect(state.optionsOpen).toBe(true);
-    expect(state.optionsCard).toBe('export');
+    expect(state.optionsCard).toBe('providers');
 
     state = reducer(state, { type: 'options/close' });
     expect(state.optionsOpen).toBe(false);
-    expect(state.optionsCard).toBe('export');
+    expect(state.optionsCard).toBe('providers');
 
     state = reducer(state, { type: 'options/open', card: 'connection' });
     expect(state.optionsCard).toBe('connection');
+  });
+
+  it('starts with the drawing, the Details panel and the Export dialog closed', () => {
+    expect(baseState.drawingOpen).toBe(false);
+    expect(baseState.detailsOpen).toBe(false);
+    expect(baseState.detailsTab).toBe('properties');
+    expect(baseState.exportOpen).toBe(false);
+  });
+
+  it('toggles the drawing and the Details panel, and opens Details on a tab', () => {
+    let state = reducer(baseState, { type: 'chrome/drawing-toggle' });
+    expect(state.drawingOpen).toBe(true);
+    state = reducer(state, { type: 'chrome/drawing-close' });
+    expect(state.drawingOpen).toBe(false);
+    state = reducer(state, { type: 'chrome/drawing-open' });
+    expect(state.drawingOpen).toBe(true);
+
+    state = reducer(state, { type: 'chrome/details-toggle' });
+    expect(state.detailsOpen).toBe(true);
+    expect(state.detailsTab).toBe('properties');
+    state = reducer(state, { type: 'chrome/details-close' });
+    expect(state.detailsOpen).toBe(false);
+
+    state = reducer(state, { type: 'chrome/details-open', tab: 'activity' });
+    expect(state.detailsOpen).toBe(true);
+    expect(state.detailsTab).toBe('activity');
+    state = reducer(state, { type: 'chrome/details-toggle' });
+    expect(state.detailsOpen).toBe(false);
+    state = reducer(state, { type: 'chrome/details-open' });
+    expect(state.detailsTab).toBe('activity');
+  });
+
+  it('opens the drawing when a CAD-built design arrives, and leaves it open after', () => {
+    let state = reducer(baseState, { type: 'design/received', design: bracketDesignResult });
+    expect(state.drawingOpen).toBe(true);
+    expect(state.designs.activeDesignId).toBe(bracketDesignResult.design_id);
+    state = reducer(state, { type: 'chrome/drawing-close' });
+    expect(state.drawingOpen).toBe(false);
+    state = reducer(state, { type: 'design/activate', designId: null });
+    expect(state.drawingOpen).toBe(false);
+  });
+
+  it('opens and closes the Export dialog', () => {
+    let state = reducer(baseState, { type: 'chrome/export-open' });
+    expect(state.exportOpen).toBe(true);
+    state = reducer(state, { type: 'chrome/export-close' });
+    expect(state.exportOpen).toBe(false);
   });
 
   it('switches the theme without touching any secret field', () => {

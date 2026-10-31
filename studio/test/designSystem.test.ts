@@ -128,33 +128,37 @@ describe('bottom bar layout', () => {
     expect(readout).toContain('white-space: nowrap');
   });
 
-  it('uses icon buttons for the view toggles', () => {
-    expect(allCss).toContain('.bottom-bar-icon-button');
-    expect(compactCss(cssBlock(allCss, '.bottom-bar-icon-button'))).toContain('place-items: center');
+  it('uses icon buttons for the sheet tool rail', () => {
+    expect(allCss).toContain('.drafting-tool');
+    expect(compactCss(cssBlock(allCss, '.drafting-tool'))).toContain('place-items: center');
   });
 
-  it('delegates the material control to Options card 01 below 1600px', () => {
-    const quick = compactCss(cssBlock(allCss, '@media (max-width: 1599px)'));
-    expect(quick).toContain('.bottom-bar .surface-material-compact');
-    expect(quick).toContain('display: none');
+  it('keeps the status bar a compact read-only row', () => {
+    // This pins the current truth: 28px, not the old four-zone ruler bar.
+    // There is no second home for the view toggles or the material control.
+    expect(compactCss(cssBlock(allCss, '.bottom-bar'))).toContain('height: 28px');
+    expect(allCss).not.toContain('.bottom-bar-icon-button');
+    expect(allCss).not.toContain('.bottom-bar .surface-material-compact');
   });
 });
 
-describe('Options drawer sheet', () => {
-  it('lays the four cards out as a 2x2 drafted grid', () => {
-    const grid = compactCss(cssBlock(allCss, '.options-drawer-grid'));
-    expect(grid).toContain('grid-template-columns: repeat(2, minmax(0, 1fr))');
-    expect(grid).toContain('grid-template-rows: repeat(2, minmax(0, 1fr))');
+describe('Settings dialog', () => {
+  it('lays the dialog out as a fixed left nav beside one section', () => {
+    const body = compactCss(cssBlock(allCss, '.settings-body'));
+    expect(body).toContain('grid-template-columns: 210px minmax(0, 1fr)');
   });
 
-  it('does not stretch a card to a neighbour', () => {
-    const card = compactCss(cssBlock(allCss, '.options-card'));
-    expect(card).toContain('align-self: start');
+  it('keeps the dialog inside the viewport', () => {
+    const dialog = compactCss(cssBlock(allCss, '.settings-dialog'));
+    expect(dialog).toContain('width: min(860px, 100%)');
+    expect(dialog).toContain('height: min(600px, 100%)');
+    expect(dialog).toContain('max-height: 100%');
   });
 
-  it('anchors a registration tick at each of the four corners', () => {
-    for (const corner of ['tl', 'tr', 'bl', 'br']) {
-      expect(allCss).toContain(`.options-card-tick-${corner}`);
-    }
+  it('marks the active section in the left nav', () => {
+    expect(allCss).toContain('.settings-nav-item.is-active');
+    expect(compactCss(cssBlock(allCss, '.settings-nav-item.is-active'))).toContain(
+      'border-color: var(--prussian)',
+    );
   });
 });

@@ -18,6 +18,9 @@ import './styles/tokens.css';
 import './styles/base.css';
 import './styles/layout.css';
 import './styles/studio.css';
+import './styles/shell.css';
+import './styles/composer.css';
+import './styles/settings.css';
 
 // Apply the persisted theme before the first paint so a Slate session does
 // not flash the vellum sheet. Only the theme name is stored here.

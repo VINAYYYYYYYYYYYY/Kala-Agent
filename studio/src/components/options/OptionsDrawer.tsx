@@ -1,107 +1,94 @@
-// Options & Engineering drawer.
+// Settings dialog.
 //
-// A modal drafting sheet with four cards:
-//   01 Parametric Inspector
-//   02 Export & handoff + integration registry
-//   03 Model gateway & API providers
-//   04 Loopback connection and retry
+// The old "Options & Engineering Drawer" was a four-card dashboard: a
+// parametric inspector, the export panel, the provider keys and the loopback
+// connection, all visible at once. The app-feel wave moves each of those to
+// its one home:
+//   * the primitive inspector lives in Details › Properties,
+//   * export has its own focused dialog,
+//   * this dialog keeps the four secondary sections:
+//       Workspace, Models & keys, CAD, Connection.
 //
 // Accessibility: role="dialog", aria-modal, Escape closes, focus is trapped
 // while open, and focus returns to the trigger on close.
 
-import { useEffect, useMemo, useRef } from 'react';
-import type { ReactElement } from 'react';
+import { useEffect, useRef } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, ReactElement, ReactNode } from 'react';
 import {
   appendJournal,
   dispatch,
+  getState,
   useUiState,
-  selectConnection,
-  selectServer,
+  selectCadProviders,
 } from '../../state/store';
 import type { OptionsCard, ThemeName } from '../../types/studio';
-import { Inspector } from '../inspector/Inspector';
-import { ExportPanel } from '../export/ExportPanel';
+import {
+  getCadProviders,
+  StudioAbortError,
+  StudioApiError,
+  StudioNetworkError,
+} from '../../api/client';
 import { IntegrationsPanel } from '../panels/IntegrationsPanel';
 import { ProviderPanel } from '../panels/ProviderPanel';
 
 export interface OptionsDrawerProps {
   open: boolean;
-  /** Card to reveal when the drawer opens (Export STEP opens card 02). */
+  /** The settings section to reveal when the dialog opens. */
   card: OptionsCard;
   onCardChange(card: OptionsCard): void;
   onClose(): void;
 }
 
-const CARDS: ReadonlyArray<{ id: OptionsCard; index: string; title: string }> = [
-  { id: 'inspector', index: '01', title: 'Parametric Inspector & Primitive Controls' },
-  { id: 'export', index: '02', title: 'Neutral-File Export & CAD/CAE Handoff' },
-  { id: 'providers', index: '03', title: 'Model Gateway & API Providers' },
-  { id: 'connection', index: '04', title: 'Loopback Boot Gate & Recovery' },
+interface SectionEntry {
+  id: OptionsCard;
+  index: string;
+  label: string;
+  note: string;
+}
+
+const SECTIONS: ReadonlyArray<SectionEntry> = [
+  {
+    id: 'workspace',
+    index: '01',
+    label: 'Workspace',
+    note: 'Choose the paper the whole studio is drawn on; the choice is remembered on this machine.',
+  },
+  {
+    id: 'providers',
+    index: '02',
+    label: 'Models & keys',
+    note: 'The model routes this studio can call, and the keys each one uses.',
+  },
+  {
+    id: 'cad',
+    index: '03',
+    label: 'CAD',
+    note: 'The CAD and analysis tools this backend registers, and its live probe of each provider.',
+  },
+  {
+    id: 'connection',
+    index: '04',
+    label: 'Connection',
+    note: 'The loopback bridge between this window and the Studio backend.',
+  },
 ];
 
-/** Graphite line icons for the four card headers (no icon font). */
-const CARD_ICONS: Record<OptionsCard, ReactElement> = {
-  inspector: (
-    <svg viewBox="0 0 16 16" aria-hidden="true">
-      <circle cx="8" cy="8" r="2.2" />
-      <path d="M8 2.2v1.4M8 12.4v1.4M2.2 8h1.4M12.4 8h1.4M3.9 3.9l1 1M11.1 11.1l1 1M12.1 3.9l-1 1M4.9 11.1l-1 1" />
-    </svg>
-  ),
-  export: (
-    <svg viewBox="0 0 16 16" aria-hidden="true">
-      <path d="M3 2.5h7l3 3v8H3zM10 2.5v3h3M5.5 10.5h5M8 6.5v4M6.5 9l1.5 1.5L9.5 9" />
-    </svg>
-  ),
-  providers: (
-    <svg viewBox="0 0 16 16" aria-hidden="true">
-      <circle cx="5" cy="8" r="2.2" />
-      <path d="M7.2 8h6.3M11 5.8 13.5 8 11 10.2M2.8 8H1" />
-    </svg>
-  ),
-  connection: (
-    <svg viewBox="0 0 16 16" aria-hidden="true">
-      <path d="M2 5.5h8.5L8.5 3.5M14 10.5H5.5l2 2M10.5 5.5l2 2M5.5 10.5l-2-2" />
-    </svg>
-  ),
-};
+/** The eleven-pixel registration mark reused from the old drawer header. */
+function SettingsMark(): ReactElement {
+  return <span className="settings-mark" aria-hidden="true" />;
+}
 
 export function OptionsDrawer(props: OptionsDrawerProps): ReactElement | null {
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
+  const tabRefs = useRef(new Map<OptionsCard, HTMLButtonElement>());
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(props.onClose);
   onCloseRef.current = props.onClose;
-  const theme = useUiState((s) => s.theme);
-  // Card notes must not claim a port or a capability the loopback connection
-  // has not reported. Both values come from the live store, with an explicit
-  // empty state before the registries answer.
-  const connection = useUiState(selectConnection);
-  const server = useUiState(selectServer);
-  const preview = useUiState((s) => s.preview);
-  const inspectorNote = preview.server
-    ? 'SERVER VERIFIED'
-    : preview.local
-      ? 'LOCAL PREVIEW'
-      : 'NO MESH';
-  const connectionNote = useMemo(() => {
-    if (connection.kind !== 'ready') return 'NO LOOPBACK';
-    try {
-      const url = new URL(connection.connection.baseUrl);
-      const port = url.port || (url.protocol === 'https:' ? '443' : '80');
-      return `PORT ${port}`;
-    } catch {
-      return 'LOOPBACK';
-    }
-  }, [connection]);
-  const exportNote =
-    server.health === 'unknown'
-      ? 'STEP —'
-      : server.stepAvailable
-        ? 'ISO 10303 READY'
-        : 'STEP UNAVAILABLE';
+  const { open, onCardChange } = props;
 
   useEffect(() => {
-    if (!props.open) return;
+    if (!open) return;
     const previous = document.activeElement;
     returnFocusRef.current = previous instanceof HTMLElement ? previous : null;
     closeRef.current?.focus();
@@ -143,217 +130,267 @@ export function OptionsDrawer(props: OptionsDrawerProps): ReactElement | null {
       returnFocusRef.current?.focus();
       returnFocusRef.current = null;
     };
-  }, [props.open]);
+  }, [open]);
 
-  useEffect(() => {
-    if (!props.open) return;
-    const element = document.getElementById(`options-card-${props.card}`);
-    if (element && typeof element.scrollIntoView === 'function') {
-      // Align the card header with the top of the drawer's scroll viewport.
-      // `block: 'nearest'` is wrong here: the grid rows are as tall as the
-      // tallest card, so a short card in a tall row can be "partly visible"
-      // while its actual content is entirely above the fold.
-      element.scrollIntoView({ block: 'start' });
+  if (!open) return null;
+
+  const active = SECTIONS.find((entry) => entry.id === props.card) ?? SECTIONS[0]!;
+
+  function onNavKeyDown(event: ReactKeyboardEvent<HTMLElement>): void {
+    const ids = SECTIONS.map((entry) => entry.id);
+    const current = ids.indexOf(active.id);
+    let next: number | null = null;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+      next = (current + 1) % ids.length;
+    } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+      next = (current - 1 + ids.length) % ids.length;
+    } else if (event.key === 'Home') {
+      next = 0;
+    } else if (event.key === 'End') {
+      next = ids.length - 1;
     }
-  }, [props.open, props.card]);
-
-  if (!props.open) return null;
+    if (next === null) return;
+    event.preventDefault();
+    const target = ids[next]!;
+    onCardChange(target);
+    tabRefs.current.get(target)?.focus();
+  }
 
   return (
     <div
-      className="options-backdrop"
+      className="app-modal-backdrop"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) props.onClose();
       }}
     >
       <div
-        className="options-drawer"
+        ref={dialogRef}
+        className="settings-dialog"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="options-drawer-title"
-        ref={dialogRef}
+        aria-labelledby="settings-title"
       >
-        <header className="options-drawer-header">
-          <div className="options-drawer-heading">
-            <span className="options-drawer-mark" aria-hidden="true" />
-            <div>
-              <h2 id="options-drawer-title">Kala Studio // Options &amp; Engineering Drawer</h2>
-              <p>Secondary controls, kernel overrides, connection recovery, and handoff protocols.</p>
-            </div>
+        <header className="settings-header">
+          <div className="settings-heading">
+            <SettingsMark />
+            <h2 id="settings-title" className="settings-title">
+              Settings
+            </h2>
           </div>
-          <div className="options-drawer-actions">
-            <ThemeSwitch theme={theme} />
-            <button ref={closeRef} type="button" className="options-drawer-close" onClick={props.onClose}>
-              ✕ Close / Dock to Scale Ruler [Esc]
-            </button>
-          </div>
+          <button
+            ref={closeRef}
+            type="button"
+            className="settings-close"
+            aria-label="Close settings"
+            onClick={props.onClose}
+          >
+            Close [Esc]
+          </button>
         </header>
 
-        <nav className="options-drawer-nav" aria-label="Options cards">
-          {CARDS.map((entry) => (
-            <button
-              key={entry.id}
-              type="button"
-              className={`options-drawer-nav-item${props.card === entry.id ? ' is-active' : ''}`}
-              aria-pressed={props.card === entry.id}
-              onClick={() => props.onCardChange(entry.id)}
-            >
-              {entry.index} // {entry.title}
-            </button>
-          ))}
-        </nav>
-
-        <div className="options-drawer-grid">
-          <article
-            className={`options-card${props.card === 'inspector' ? ' is-focused' : ''}`}
-            id="options-card-inspector"
-            data-card="inspector"
-            aria-labelledby="options-card-inspector-title"
+        <div className="settings-body">
+          <nav
+            className="settings-nav"
+            role="tablist"
+            aria-orientation="vertical"
+            aria-label="Settings sections"
+            onKeyDown={onNavKeyDown}
           >
-            <CardCorners />
-            <CardHeader card="inspector" index="01" title="Parametric Inspector & Primitive Controls" note={inspectorNote} />
-            <div className="options-card-body">
-              <Inspector showHeading={false} />
-            </div>
-          </article>
+            {SECTIONS.map((entry) => {
+              const selected = entry.id === active.id;
+              return (
+                <button
+                  key={entry.id}
+                  ref={(node) => {
+                    if (node) tabRefs.current.set(entry.id, node);
+                    else tabRefs.current.delete(entry.id);
+                  }}
+                  type="button"
+                  role="tab"
+                  id={`settings-tab-${entry.id}`}
+                  className={`settings-nav-item${selected ? ' is-active' : ''}`}
+                  data-section={entry.id}
+                  aria-selected={selected}
+                  aria-controls={selected ? `settings-panel-${entry.id}` : undefined}
+                  tabIndex={selected ? 0 : -1}
+                  onClick={() => onCardChange(entry.id)}
+                >
+                  <span className="settings-nav-index" aria-hidden="true">
+                    {entry.index}
+                  </span>
+                  <span>{entry.label}</span>
+                </button>
+              );
+            })}
+          </nav>
 
-          <article
-            className={`options-card${props.card === 'export' ? ' is-focused' : ''}`}
-            id="options-card-export"
-            data-card="export"
-            aria-labelledby="options-card-export-title"
+          <section
+            key={active.id}
+            className="settings-section"
+            role="tabpanel"
+            id={`settings-panel-${active.id}`}
+            data-section={active.id}
+            aria-labelledby={`settings-tab-${active.id}`}
           >
-            <CardCorners />
-            <CardHeader card="export" index="02" title="Neutral-File Export & CAD/CAE Handoff" note={exportNote} />
-            <div className="options-card-body">
-              <ExportPanel showHeading={false} />
-              <section className="options-card-registry" aria-label="Integration registry">
-                <h3>Integration registry</h3>
-                <IntegrationsPanel compact />
-              </section>
+            <header className="settings-section-header">
+              <h3 className="settings-section-heading">{active.label}</h3>
+              <p className="settings-section-note">{active.note}</p>
+            </header>
+            <div className="settings-section-content">
+              <SectionBody card={active.id} />
             </div>
-          </article>
-
-          <article
-            className={`options-card${props.card === 'providers' ? ' is-focused' : ''}`}
-            id="options-card-providers"
-            data-card="providers"
-            aria-labelledby="options-card-providers-title"
-          >
-            <CardCorners />
-            <CardHeader card="providers" index="03" title="Model Gateway & API Providers" note="[LOCAL VAULT]" />
-            <div className="options-card-body">
-              <p className="options-card-note">
-                Keys are sent once to the local Studio backend and stored server-side only. They are
-                never echoed back to the browser and never enter localStorage.
-              </p>
-              <ProviderPanel compact />
-            </div>
-          </article>
-
-          <article
-            className={`options-card${props.card === 'connection' ? ' is-focused' : ''}`}
-            id="options-card-connection"
-            data-card="connection"
-            aria-labelledby="options-card-connection-title"
-          >
-            <CardCorners />
-            <CardHeader card="connection" index="04" title="Loopback Boot Gate & Recovery" note={connectionNote} />
-            <div className="options-card-body">
-              <ConnectionCard />
-              <p className="options-card-threat">
-                The bearer token is held in memory for this session only. It is never persisted to
-                disk, never logged, and never written to localStorage.
-              </p>
-            </div>
-          </article>
+          </section>
         </div>
-
-        <footer className="options-drawer-title-block" aria-label="Options sheet title block">
-          <div className="options-title-cell">
-            <span>STUDIO</span>
-            <strong>KALA STUDIO CAD/CAE</strong>
-          </div>
-          <div className="options-title-cell">
-            <span>SHEET ID</span>
-            <strong>KALA-UI-OPT-04</strong>
-          </div>
-          <div className="options-title-cell options-title-cell-wide">
-            <span>DRAWING TITLE</span>
-            <strong>Options &amp; Engineering Drawer</strong>
-          </div>
-          <div className="options-title-cell" title="Not to scale — this is an on-screen controls sheet.">
-            <span>SCALE</span>
-            <strong>NTS</strong>
-          </div>
-          <div className="options-title-cell">
-            <span>BACKEND</span>
-            <strong>{server.version ? `v${server.version}` : '—'}</strong>
-          </div>
-          <div className="options-title-cell options-title-cell-wide" title={connection.kind === 'ready' ? connection.connection.baseUrl : 'Not connected'}>
-            <span>CONNECTION ORIGIN</span>
-            <strong>{connection.kind === 'ready' ? connection.connection.baseUrl : '—'}</strong>
-          </div>
-        </footer>
       </div>
     </div>
   );
 }
 
-function CardCorners(): ReactElement {
-  return (
-    <>
-      <span className="options-card-tick options-card-tick-tl" aria-hidden="true">+</span>
-      <span className="options-card-tick options-card-tick-tr" aria-hidden="true">+</span>
-      <span className="options-card-tick options-card-tick-bl" aria-hidden="true">+</span>
-      <span className="options-card-tick options-card-tick-br" aria-hidden="true">+</span>
-    </>
-  );
+function SectionBody(props: { card: OptionsCard }): ReactElement {
+  switch (props.card) {
+    case 'workspace':
+      return <WorkspaceSection />;
+    case 'providers':
+      return <ProvidersSection />;
+    case 'cad':
+      return <CadSection />;
+    case 'connection':
+      return <ConnectionSection />;
+  }
 }
 
-function CardHeader(props: { card: OptionsCard; index: string; title: string; note: string }): ReactElement {
+function WorkspaceSection(): ReactElement {
+  const theme = useUiState((s) => s.theme);
   return (
-    <header className="options-card-header">
-      <div className="options-card-heading">
-        <span className="options-card-icon">{CARD_ICONS[props.card]}</span>
-        <h3 id={`options-card-${props.card}-title`}>
-          {props.index} // {props.title}
-        </h3>
+    <div className="settings-stack">
+      <div className="settings-row">
+        <div className="settings-row-label">
+          <span>Theme</span>
+          <strong>{theme === 'slate' ? 'Slate' : 'Vellum'}</strong>
+        </div>
+        <ThemeSwitch theme={theme} />
       </div>
-      <span className="options-card-note-value">{props.note}</span>
-    </header>
-  );
-}
-
-function ThemeSwitch(props: { theme: ThemeName }): ReactElement {
-  const options: ReadonlyArray<{ id: ThemeName; label: string }> = [
-    { id: 'vellum', label: 'Vellum' },
-    { id: 'slate', label: 'Slate' },
-  ];
-  return (
-    <div className="options-theme-switch" role="group" aria-label="Workspace theme">
-      {options.map((option) => (
-        <button
-          key={option.id}
-          type="button"
-          className={`options-theme-button${props.theme === option.id ? ' is-active' : ''}`}
-          aria-pressed={props.theme === option.id}
-          onClick={() => dispatch({ type: 'theme/set', theme: option.id })}
-        >
-          {option.label}
-        </button>
-      ))}
     </div>
   );
 }
 
-function ConnectionCard(): ReactElement {
+function ProvidersSection(): ReactElement {
+  return (
+    <div className="settings-stack">
+      <p className="settings-honesty">
+        Keys are sent once to the local Studio backend and stored server-side only. They are
+        never echoed back to the browser and never enter localStorage.
+      </p>
+      <ProviderPanel compact />
+    </div>
+  );
+}
+
+function CadSection(): ReactElement {
+  const connection = useUiState((s) => s.connection);
+  const designAvailable = useUiState((s) => s.server.designAvailable);
+  const providers = useUiState(selectCadProviders);
+  const status = useUiState((s) => s.server.cadProvidersStatus);
+  const error = useUiState((s) => s.server.cadProvidersError);
+
+  // The composer owns the CAD pick, but it only mounts its provider selector
+  // when its chip is opened. Settings must not show "not reported yet" on a
+  // live backend just because nobody opened that popover, so the first visit
+  // asks the same read-only probe the composer uses. An existing result —
+  // including an error — is never re-fetched here; the composer owns retry.
+  useEffect(() => {
+    if (connection.kind !== 'ready' || designAvailable !== true) return;
+    if (getState().server.cadProvidersStatus !== 'idle') return;
+    const controller = new AbortController();
+    dispatch({ type: 'server/cad-providers-start' });
+    getCadProviders(connection.connection, controller.signal)
+      .then((response) => {
+        if (controller.signal.aborted) return;
+        dispatch({ type: 'server/cad-providers', providers: response.providers });
+      })
+      .catch((cause: unknown) => {
+        if (controller.signal.aborted || cause instanceof StudioAbortError) return;
+        dispatch({ type: 'server/cad-providers-error', message: describeProbeError(cause) });
+      });
+    return () => controller.abort();
+  }, [connection, designAvailable]);
+
+  const emptyLabel =
+    status === 'loading'
+      ? 'Probing the CAD providers…'
+      : status === 'error'
+        ? `CAD provider probe failed${error ? `: ${error}` : ''}`
+        : 'The backend has not reported its CAD providers yet.';
+  return (
+    <div className="settings-stack">
+      <SettingsBlock title="Integration registry">
+        <IntegrationsPanel compact />
+      </SettingsBlock>
+      <SettingsBlock title="Live CAD providers">
+        {providers.length === 0 ? (
+          <p className="panel-empty">{emptyLabel}</p>
+        ) : (
+          <ul className="panel-list panel-list-compact" aria-label="Live CAD providers">
+            {providers.map((provider) => (
+              <li
+                key={provider.id}
+                className="panel-list-item"
+                data-cad-provider={provider.id}
+                data-cad-available={provider.available ? 'true' : 'false'}
+              >
+                <header>
+                  <span className="panel-list-name">{provider.name}</span>
+                  <span
+                    className={`panel-list-status ${
+                      provider.available ? 'panel-list-status-on' : 'panel-list-status-off'
+                    }`}
+                  >
+                    {provider.available ? 'Available' : 'Unavailable'}
+                  </span>
+                </header>
+                <p className="panel-list-meta">
+                  Version {provider.version ?? '—'}
+                </p>
+                {!provider.available && provider.reason ? (
+                  <p className="panel-list-notes" role="note">
+                    {provider.reason}
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </SettingsBlock>
+    </div>
+  );
+}
+
+function describeProbeError(cause: unknown): string {
+  if (cause instanceof StudioApiError) {
+    const details = cause.details.length > 0 ? ` — ${cause.details.join(' · ')}` : '';
+    return `${cause.code}: ${cause.message}${details}`;
+  }
+  if (cause instanceof StudioNetworkError) return cause.message;
+  if (cause instanceof Error) return cause.message;
+  return 'the CAD provider probe failed';
+}
+
+function SettingsBlock(props: { title: string; children: ReactNode }): ReactElement {
+  return (
+    <section className="settings-block">
+      <h4 className="settings-subheading">{props.title}</h4>
+      {props.children}
+    </section>
+  );
+}
+
+function ConnectionSection(): ReactElement {
   const connection = useUiState((s) => s.connection);
   const server = useUiState((s) => s.server);
   const ready = connection.kind === 'ready';
   return (
-    <div className="options-connection">
-      <dl className="options-connection-facts">
+    <div className="settings-stack">
+      <dl className="settings-connection-facts">
         <div>
           <dt>Status</dt>
           <dd data-status={connection.kind}>
@@ -380,7 +417,9 @@ function ConnectionCard(): ReactElement {
         </div>
         <div>
           <dt>Health</dt>
-          <dd data-health={server.health}>{server.health === 'ok' ? 'OK' : server.health === 'unreachable' ? 'Unreachable' : 'Unknown'}</dd>
+          <dd data-health={server.health}>
+            {server.health === 'ok' ? 'OK' : server.health === 'unreachable' ? 'Unreachable' : 'Unknown'}
+          </dd>
         </div>
         <div>
           <dt>STEP export</dt>
@@ -393,18 +432,44 @@ function ConnectionCard(): ReactElement {
       </dl>
       <button
         type="button"
-        className="options-connection-retry"
+        className="settings-connection-retry"
         onClick={() => {
-          appendJournal({ kind: 'connection', message: 'Reconnect / retry requested from Options' });
+          appendJournal({ kind: 'connection', message: 'Reconnect / retry requested from Settings' });
           dispatch({ type: 'connection/retry' });
         }}
       >
         Reconnect / Retry Bridge
       </button>
-      <p className="options-card-note">
+      <p className="settings-connection-note">
         If the desktop bridge is unavailable, reload the app to reach the in-page loopback form.
         Manual browser connect never persists the token.
       </p>
+      <p className="settings-connection-note settings-connection-note-boxed">
+        The bearer token is held in memory for this session only. It is never persisted to
+        disk, never logged, and never written to localStorage.
+      </p>
+    </div>
+  );
+}
+
+function ThemeSwitch(props: { theme: ThemeName }): ReactElement {
+  const options: ReadonlyArray<{ id: ThemeName; label: string }> = [
+    { id: 'vellum', label: 'Vellum' },
+    { id: 'slate', label: 'Slate' },
+  ];
+  return (
+    <div className="settings-theme-switch" role="group" aria-label="Workspace theme">
+      {options.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          className={`settings-theme-button${props.theme === option.id ? ' is-active' : ''}`}
+          aria-pressed={props.theme === option.id}
+          onClick={() => dispatch({ type: 'theme/set', theme: option.id })}
+        >
+          {option.label}
+        </button>
+      ))}
     </div>
   );
 }

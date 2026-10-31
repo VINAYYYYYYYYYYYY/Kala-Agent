@@ -21,6 +21,7 @@ import {
   JournalEntry,
   JournalKind,
   OptionsCard,
+  DetailsTab,
   PreviewResponse,
   PrimitiveKind,
   ProviderCredentialStatus,
@@ -65,6 +66,7 @@ export type {
   JournalEntry,
   JournalKind,
   OptionsCard,
+  DetailsTab,
   RenderMode,
   ThemeName,
 } from '../types/studio';
@@ -187,6 +189,17 @@ export interface UiState {
   showSection: boolean;
   optionsOpen: boolean;
   optionsCard: OptionsCard;
+  // --- App chrome (app-feel wave) ----------------------------------------------
+  // The chat is the primary, always-shown surface. The drawing (DraftingSheet)
+  // is a secondary split panel: closed by default, opened automatically when a
+  // CAD-built design arrives (`design/received`), and toggled from the top bar.
+  drawingOpen: boolean;
+  // The right-hand Details panel (Properties / Views / Activity) is closed by
+  // default so the sheet is the app; the top bar toggles it.
+  detailsOpen: boolean;
+  detailsTab: DetailsTab;
+  // The Export dialog, opened from the top bar.
+  exportOpen: boolean;
   theme: ThemeName;
   journal: ReadonlyArray<JournalEntry>;
   // The compiled designs of the session (bounded LRU) and their caches.
@@ -242,6 +255,14 @@ export type Action =
   | { type: 'options/open'; card?: OptionsCard }
   | { type: 'options/close' }
   | { type: 'options/card'; card: OptionsCard }
+  | { type: 'chrome/drawing-open' }
+  | { type: 'chrome/drawing-close' }
+  | { type: 'chrome/drawing-toggle' }
+  | { type: 'chrome/details-open'; tab?: DetailsTab }
+  | { type: 'chrome/details-close' }
+  | { type: 'chrome/details-toggle' }
+  | { type: 'chrome/export-open' }
+  | { type: 'chrome/export-close' }
   | { type: 'theme/set'; theme: ThemeName }
   | { type: 'journal/append'; entry: JournalEntry }
   | { type: 'journal/clear' }
@@ -342,7 +363,11 @@ export function createInitialUiState(): UiState {
     auxView: 'section',
     showSection: true,
     optionsOpen: false,
-    optionsCard: 'inspector',
+    optionsCard: 'workspace',
+    drawingOpen: false,
+    detailsOpen: false,
+    detailsTab: 'properties',
+    exportOpen: false,
     theme: readStoredTheme(),
     journal: [],
     designs: createDesignState(),
@@ -468,6 +493,22 @@ export function reducer(state: UiState, action: Action): UiState {
       return { ...state, optionsOpen: false };
     case 'options/card':
       return { ...state, optionsCard: action.card, optionsOpen: true };
+    case 'chrome/drawing-open':
+      return { ...state, drawingOpen: true };
+    case 'chrome/drawing-close':
+      return { ...state, drawingOpen: false };
+    case 'chrome/drawing-toggle':
+      return { ...state, drawingOpen: !state.drawingOpen };
+    case 'chrome/details-open':
+      return { ...state, detailsOpen: true, detailsTab: action.tab ?? state.detailsTab };
+    case 'chrome/details-close':
+      return { ...state, detailsOpen: false };
+    case 'chrome/details-toggle':
+      return { ...state, detailsOpen: !state.detailsOpen };
+    case 'chrome/export-open':
+      return { ...state, exportOpen: true };
+    case 'chrome/export-close':
+      return { ...state, exportOpen: false };
     case 'theme/set':
       return { ...state, theme: action.theme };
     case 'journal/append': {
@@ -626,6 +667,10 @@ export function reducer(state: UiState, action: Action): UiState {
       // The design slice and the session-journal slice own their actions.
       if (isDesignAction(action)) {
         const designs = designReducer(state.designs, action);
+        // A design built by the CAD tool is what the drawing is for: show it.
+        if (action.type === 'design/received' && !state.drawingOpen) {
+          return { ...state, designs, drawingOpen: true };
+        }
         return designs === state.designs ? state : { ...state, designs };
       }
       if (isSessionJournalAction(action)) {
@@ -740,6 +785,10 @@ export const selectAuxView = (state: UiState): AuxViewKind => state.auxView;
 export const selectShowSection = (state: UiState): boolean => state.showSection;
 export const selectOptionsOpen = (state: UiState): boolean => state.optionsOpen;
 export const selectOptionsCard = (state: UiState): OptionsCard => state.optionsCard;
+export const selectDrawingOpen = (state: UiState): boolean => state.drawingOpen;
+export const selectDetailsOpen = (state: UiState): boolean => state.detailsOpen;
+export const selectDetailsTab = (state: UiState): DetailsTab => state.detailsTab;
+export const selectExportOpen = (state: UiState): boolean => state.exportOpen;
 export const selectTheme = (state: UiState): ThemeName => state.theme;
 export const selectJournal = (state: UiState): ReadonlyArray<JournalEntry> => state.journal;
 export const selectServer = (state: UiState): ServerState => state.server;

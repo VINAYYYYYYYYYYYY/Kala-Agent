@@ -283,7 +283,14 @@ export function HlrDrawing(props: HlrDrawingProps): ReactElement {
               </text>
             ) : null}
 
-            <text x={ISO_CELL.x} y={SVG_HEIGHT - 26} className="hlr-legend">
+            {/* The sheet footnote lives at the bottom right, clear of the
+                title block and just above the view controls. */}
+            <text
+              x={SVG_WIDTH - 24}
+              y={SVG_HEIGHT - 60}
+              textAnchor="end"
+              className="hlr-legend"
+            >
               HLR VECTOR · MEASURED ENVELOPE IN MM · NO SCALE CLAIM
             </text>
           </g>

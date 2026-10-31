@@ -60,10 +60,103 @@ function stamp(container: HTMLElement): HTMLElement | null {
   return container.querySelector<HTMLElement>('.chat-panel-design-stamp');
 }
 
+/**
+ * The card is a stopped card now. The measurements, checks and digests live
+ * behind its disclosure; the tests open it the way the operator does unless
+ * they are about the collapsed state itself.
+ */
+function expand(container: HTMLElement): void {
+  const disclosure = container.querySelector<HTMLButtonElement>(
+    '.chat-panel-design-disclosure',
+  );
+  if (disclosure && disclosure.getAttribute('aria-expanded') === 'false') {
+    fireEvent.click(disclosure);
+  }
+}
+
+function renderCard(designId: string) {
+  const view = render(<DesignAgentCard designId={designId} />);
+  expand(view.container);
+  return view;
+}
+
+describe('the collapsed summary', () => {
+  it('shows one line with the real counts and the measuring provider, then opens on request', () => {
+    dispatch({ type: 'design/received', design: bracketDesignResult });
+    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+
+    const card = container.querySelector<HTMLElement>('.chat-panel-design-card')!;
+    expect(card.getAttribute('data-expanded')).toBe('no');
+    const disclosure = container.querySelector<HTMLButtonElement>(
+      '.chat-panel-design-disclosure',
+    )!;
+    expect(disclosure.getAttribute('aria-expanded')).toBe('false');
+    expect(container.querySelector('.chat-panel-design-summary-mark')?.textContent).toBe('✓');
+    expect(container.querySelector('.chat-panel-design-summary-mark')?.getAttribute('data-state'))
+      .toBe('passed');
+    expect(container.querySelector('.chat-panel-design-summary-text')?.textContent).toBe(
+      '3/3 checks · measured by FreeCAD 1.1.4',
+    );
+    // Nothing of the full record leaks out of the stopped card.
+    expect(container.querySelector('.chat-panel-design-table')).toBeNull();
+    expect(container.querySelector('.chat-panel-design-checks')).toBeNull();
+    expect(container.querySelector('[data-digest-kind]')).toBeNull();
+
+    fireEvent.click(disclosure);
+    expect(disclosure.getAttribute('aria-expanded')).toBe('true');
+    expect(card.getAttribute('data-expanded')).toBe('yes');
+    expect(container.querySelector('.chat-panel-design-table')).toBeTruthy();
+    expect(container.querySelector('[data-digest-kind="script"]')).toBeTruthy();
+  });
+
+  it('auto-expands a failed design so the failure is never behind a click', () => {
+    const failed: DesignResult = {
+      ...bracketDesignResult,
+      verified: false,
+      checks: [
+        { ...bracketDesignResult.checks[0]! },
+        {
+          id: 'single_solid',
+          label: 'Single solid',
+          expected: 1,
+          measured: 0,
+          tolerance: 0,
+          unit: 'solid',
+          passed: false,
+          status: 'failed',
+        },
+        { ...bracketDesignResult.checks[2]! },
+      ],
+    };
+    dispatch({ type: 'design/received', design: failed });
+    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+
+    const disclosure = container.querySelector<HTMLButtonElement>(
+      '.chat-panel-design-disclosure',
+    )!;
+    expect(disclosure.getAttribute('aria-expanded')).toBe('true');
+    expect(container.querySelector('.chat-panel-design-summary-mark')?.textContent).toBe('✗');
+    expect(container.querySelector('.chat-panel-design-summary-text')?.textContent).toBe(
+      '1 failed of 3 checks · measured by FreeCAD 1.1.4',
+    );
+    expect(container.querySelector('[data-check="single_solid"]')).toBeTruthy();
+  });
+
+  it('reports a design the provider could not measure without claiming a pass', () => {
+    dispatch({ type: 'design/received', design: notReportedDesignResult });
+    const { container } = render(<DesignAgentCard designId={notReportedDesignResult.design_id} />);
+
+    expect(container.querySelector('.chat-panel-design-summary-mark')?.textContent).toBe('—');
+    expect(container.querySelector('.chat-panel-design-summary-text')?.textContent).toBe(
+      '2 not reported of 2 checks · measured by FreeCAD 1.1.4',
+    );
+  });
+});
+
 describe('the measured table', () => {
   it('prints the volume, area, and envelope the provider measured', () => {
     dispatch({ type: 'design/received', design: bracketDesignResult });
-    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+    const { container } = renderCard(BRACKET_DESIGN_ID);
 
     expect(rowText(container, 'volume')).toContain('35571.416047 mm³');
     expect(rowText(container, 'area')).toContain('11889.101731 mm²');
@@ -74,7 +167,7 @@ describe('the measured table', () => {
 
   it('names the provider that measured the part', () => {
     dispatch({ type: 'design/received', design: bracketDesignResult });
-    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+    const { container } = renderCard(BRACKET_DESIGN_ID);
 
     const provider = container.querySelector<HTMLElement>('.chat-panel-design-provider')!;
     expect(provider.textContent).toBe('measured by FreeCAD 1.1.4');
@@ -86,9 +179,7 @@ describe('the measured table', () => {
 
   it('prints an em dash for every value the provider did not report', () => {
     dispatch({ type: 'design/received', design: notReportedDesignResult });
-    const { container } = render(
-      <DesignAgentCard designId={notReportedDesignResult.design_id} />,
-    );
+    const { container } = renderCard(notReportedDesignResult.design_id);
 
     for (const key of ['volume', 'area', 'envelope_x', 'envelope_y', 'envelope_z']) {
       expect(rowText(container, key)).toContain('—');
@@ -99,7 +190,7 @@ describe('the measured table', () => {
 
   it('omits the mass because the backend declares no density and reports none', () => {
     dispatch({ type: 'design/received', design: bracketDesignResult });
-    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+    const { container } = renderCard(BRACKET_DESIGN_ID);
 
     expect(row(container, 'mass')).toBeNull();
     expect(container.textContent).not.toContain('mass');
@@ -111,7 +202,7 @@ describe('the measured table', () => {
       measured: { ...bracketDesignResult.measured, mass_g: 96.04 },
     };
     dispatch({ type: 'design/received', design: withMass });
-    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+    const { container } = renderCard(BRACKET_DESIGN_ID);
 
     expect(rowText(container, 'mass')).toContain('96.04 g');
   });
@@ -122,7 +213,7 @@ describe('the measured table', () => {
       declared_density_g_cm3: 2.7,
     } as DesignResult;
     dispatch({ type: 'design/received', design: withDensity });
-    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+    const { container } = renderCard(BRACKET_DESIGN_ID);
 
     // 35571.416 mm^3 = 35.571 cm^3; 35.571 cm^3 x 2.7 g/cm^3 = 96.04 g.
     expect(rowText(container, 'mass')).toContain('96.04 g');
@@ -132,7 +223,7 @@ describe('the measured table', () => {
 describe('the checks', () => {
   it('marks every check and prints the expected value beside the measured one', () => {
     dispatch({ type: 'design/received', design: bracketDesignResult });
-    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+    const { container } = renderCard(BRACKET_DESIGN_ID);
 
     const brep = container.querySelector<HTMLElement>('[data-check="brep_valid"]')!;
     expect(brep.getAttribute('data-passed')).toBe('yes');
@@ -164,7 +255,7 @@ describe('the checks', () => {
       verified: true,
     };
     dispatch({ type: 'design/received', design: assembly });
-    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+    const { container } = renderCard(BRACKET_DESIGN_ID);
 
     const solid = container.querySelector<HTMLElement>('[data-check="solid_count"]')!;
     expect(solid.getAttribute('data-status')).toBe('passed');
@@ -192,7 +283,7 @@ describe('the checks', () => {
       ],
     };
     dispatch({ type: 'design/received', design: failed });
-    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+    const { container } = renderCard(BRACKET_DESIGN_ID);
 
     const brep = container.querySelector<HTMLElement>('[data-check="brep_valid"]')!;
     expect(brep.getAttribute('data-passed')).toBe('no');
@@ -202,9 +293,7 @@ describe('the checks', () => {
 
   it('shows a not-reported check as an em dash, neither pass nor fail', () => {
     dispatch({ type: 'design/received', design: notReportedDesignResult });
-    const { container } = render(
-      <DesignAgentCard designId={notReportedDesignResult.design_id} />,
-    );
+    const { container } = renderCard(notReportedDesignResult.design_id);
 
     const brep = container.querySelector<HTMLElement>('[data-check="brep_valid"]')!;
     expect(brep.getAttribute('data-status')).toBe('not_reported');
@@ -220,7 +309,7 @@ describe('the checks', () => {
 describe('the verification stamp', () => {
   it('stamps B-Rep Verified when the design is verified', () => {
     dispatch({ type: 'design/received', design: bracketDesignResult });
-    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+    const { container } = renderCard(BRACKET_DESIGN_ID);
 
     expect(stamp(container)?.textContent).toBe('B-Rep Verified');
   });
@@ -228,7 +317,7 @@ describe('the verification stamp', () => {
   it('never stamps B-Rep Verified when the design is not verified', () => {
     const unverified: DesignResult = { ...bracketDesignResult, verified: false };
     dispatch({ type: 'design/received', design: unverified });
-    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+    const { container } = renderCard(BRACKET_DESIGN_ID);
 
     expect(container.textContent).not.toContain('B-Rep Verified');
     // The honest count replaces the stamp.
@@ -237,9 +326,7 @@ describe('the verification stamp', () => {
 
   it('does not present a not-reported design as verified or failed', () => {
     dispatch({ type: 'design/received', design: notReportedDesignResult });
-    const { container } = render(
-      <DesignAgentCard designId={notReportedDesignResult.design_id} />,
-    );
+    const { container } = renderCard(notReportedDesignResult.design_id);
 
     expect(container.textContent).not.toContain('B-Rep Verified');
     expect(stamp(container)?.textContent).toContain('not reported');
@@ -250,7 +337,7 @@ describe('the verification stamp', () => {
 describe('the digest chips', () => {
   it('shows the script, STEP, and native artefact digests', () => {
     dispatch({ type: 'design/received', design: bracketDesignResult });
-    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+    const { container } = renderCard(BRACKET_DESIGN_ID);
 
     const script = container.querySelector<HTMLElement>('[data-digest-kind="script"]')!;
     expect(script.textContent).toContain('88a7ec13');
@@ -272,7 +359,7 @@ describe('the digest chips', () => {
       },
     };
     dispatch({ type: 'design/received', design: noNative });
-    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+    const { container } = renderCard(BRACKET_DESIGN_ID);
 
     expect(container.querySelector('[data-digest-kind="script"]')).toBeTruthy();
     expect(container.querySelector('[data-digest-kind="step"]')).toBeNull();
@@ -287,7 +374,7 @@ describe('the digest chips', () => {
     });
 
     dispatch({ type: 'design/received', design: bracketDesignResult });
-    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+    const { container } = renderCard(BRACKET_DESIGN_ID);
 
     const copy = container.querySelector<HTMLButtonElement>(
       'button[aria-label="Copy script sha256"]',
@@ -302,15 +389,41 @@ describe('the digest chips', () => {
   });
 });
 
-describe('the section pill', () => {
-  it('activates the design and switches the auxiliary view to Section', () => {
+describe('the drawing links', () => {
+  it('activates the design and opens the drawing from the summary line', () => {
+    dispatch({ type: 'design/received', design: bracketDesignResult });
+    // A second design takes the active slot; the summary button must bring
+    // back the design the operator is reading.
+    dispatch({ type: 'design/received', design: otherDesign() });
+    dispatch({ type: 'chrome/drawing-close' });
+    expect(getState().designs.activeDesignId).toBe(OTHER_DESIGN_ID);
+    expect(getState().drawingOpen).toBe(false);
+
+    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+    // The action lives on the collapsed summary line, not behind the
+    // disclosure.
+    expect(container.querySelector('.chat-panel-design-card')?.getAttribute('data-expanded')).toBe(
+      'no',
+    );
+    const show = container.querySelector<HTMLButtonElement>('.chat-panel-design-show')!;
+    expect(show.textContent).toBe('Show drawing');
+
+    fireEvent.click(show);
+
+    expect(getState().designs.activeDesignId).toBe(BRACKET_DESIGN_ID);
+    expect(getState().drawingOpen).toBe(true);
+  });
+
+  it('opens the drawing and Details › Views from the Section A–A pill', () => {
     dispatch({ type: 'design/received', design: bracketDesignResult });
     // A second design takes the active slot; the pill must bring back the
     // design the operator is reading.
     dispatch({ type: 'design/received', design: otherDesign() });
+    dispatch({ type: 'chrome/drawing-close' });
+    dispatch({ type: 'chrome/details-close' });
     expect(getState().designs.activeDesignId).toBe(OTHER_DESIGN_ID);
 
-    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+    const { container } = renderCard(BRACKET_DESIGN_ID);
     const pill = container.querySelector<HTMLButtonElement>('.chat-panel-design-section-pill')!;
     expect(pill.textContent).toContain('Section A–A');
 
@@ -318,6 +431,9 @@ describe('the section pill', () => {
 
     expect(getState().designs.activeDesignId).toBe(BRACKET_DESIGN_ID);
     expect(getState().auxView).toBe('section');
+    expect(getState().drawingOpen).toBe(true);
+    expect(getState().detailsOpen).toBe(true);
+    expect(getState().detailsTab).toBe('views');
   });
 });
 
@@ -338,7 +454,11 @@ describe('the chat turn', () => {
 
     const { container } = render(<ChatPanel />);
     expect(container.querySelector('.chat-panel-design-card')).toBeTruthy();
-    expect(container.textContent).toContain('35571.42 mm³');
+    // The card starts as one line; the disclosure opens the measured record.
+    expect(container.textContent).toContain('3/3 checks · measured by FreeCAD 1.1.4');
+    expect(container.querySelector('.chat-panel-design-checks')).toBeNull();
+    fireEvent.click(container.querySelector('.chat-panel-design-disclosure')!);
+    expect(container.textContent).toContain('35571.416047 mm³');
     expect(container.textContent).toContain('B-Rep Verified');
   });
 
@@ -358,18 +478,14 @@ describe('the chat turn', () => {
     expect(container.querySelector('.chat-panel-design-card')).toBeNull();
   });
 
-  it('quotes the active design in the geometry context, not the primitive', () => {
+  it('leaves the active-geometry table to Details › Properties', () => {
     dispatch({ type: 'design/received', design: bracketDesignResult });
     const { container } = render(<ChatPanel />);
 
-    const context = container.querySelector<HTMLElement>('.chat-panel-context')!;
-    expect(context.textContent).toContain('design');
-    expect(context.textContent).toContain('60.00 × 45.00 × 40.00 mm');
-    expect(context.textContent).toContain('35571.42 mm³');
-    expect(context.textContent).toContain('measured by FreeCAD 1.1.4');
-    // The primitive's closed-form estimate is not the active geometry any
-    // more, so it is not quoted beside the measured one.
-    expect(context.textContent).not.toContain('40.00 mm × 20.00 mm × 30.00 mm');
+    // The chat column no longer carries the calculation-pad context block;
+    // Details › Properties is its one home.
+    expect(container.querySelector('.chat-panel-context')).toBeNull();
+    expect(container.querySelector('.chat-panel-context-table')).toBeNull();
   });
 });
 
@@ -417,10 +533,10 @@ describe('a backend without design support', () => {
     seedServer(false);
     const { container } = render(<ChatPanel />);
 
-    // The composer, the starters, and the active-geometry context stay.
+    // The composer and the starter tabs stay; the geometry table does not.
     expect(container.querySelector('textarea.chat-panel-prompt')).toBeTruthy();
     expect(container.querySelectorAll('.chat-panel-starter').length).toBeGreaterThan(0);
-    expect(container.querySelector('.chat-panel-context-table')).toBeTruthy();
+    expect(container.querySelector('.chat-panel-context-table')).toBeNull();
   });
 });
 
@@ -444,7 +560,7 @@ describe('artifact downloads next to the digest chips', () => {
 
   it('offers a download button for each downloadable chip only', () => {
     dispatch({ type: 'design/received', design: bracketDesignResult });
-    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+    const { container } = renderCard(BRACKET_DESIGN_ID);
 
     const kinds = [...container.querySelectorAll('[data-artifact]')].map((node) =>
       node.getAttribute('data-artifact'),
@@ -466,7 +582,7 @@ describe('artifact downloads next to the digest chips', () => {
       digest,
     });
     dispatch({ type: 'design/received', design: bracketDesignResult });
-    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+    const { container } = renderCard(BRACKET_DESIGN_ID);
 
     fireEvent.click(container.querySelector('[data-artifact="fcstd"]')!);
 
@@ -500,7 +616,7 @@ describe('artifact downloads next to the digest chips', () => {
       }),
     );
     dispatch({ type: 'design/received', design: bracketDesignResult });
-    const { container } = render(<DesignAgentCard designId={BRACKET_DESIGN_ID} />);
+    const { container } = renderCard(BRACKET_DESIGN_ID);
 
     fireEvent.click(container.querySelector('[data-artifact="step"]')!);
 

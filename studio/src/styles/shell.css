@@ -1,0 +1,395 @@
+/* App-feel wave (2026-10-31): shell cell.
+ *
+ * Top bar, Details panel and the active-geometry summary. Tokens only:
+ * every colour, size and spacing value comes from tokens.css. The shapes
+ * stay rectilinear (radius 0) and the mono-caps labels match the rest of
+ * the drafting frame.
+ */
+
+/* Top bar --------------------------------------------------------------- */
+
+.top-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-md);
+  height: 44px;
+  min-height: 44px;
+  padding: 0 var(--space-md);
+  background: var(--panel);
+  border-bottom: 1.5px solid var(--ink);
+  overflow: hidden;
+}
+
+.top-bar-left,
+.top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.top-bar-right {
+  justify-content: flex-end;
+}
+
+.top-bar-wordmark {
+  font-family: var(--font-mono);
+  font-size: var(--text-label-md);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.top-bar-wordmark-slash {
+  color: var(--redline-ink);
+}
+
+.top-bar-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  color: var(--ink);
+  line-height: 1;
+}
+
+.top-bar-icon-button svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
+.top-bar-icon-button:hover,
+.top-bar-button:hover {
+  border-color: var(--ink);
+}
+
+.top-bar-icon-button.is-active,
+.top-bar-button.is-active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--sheet);
+}
+
+/* The centre column stays empty: the render mode moved into the drawing
+   panel header (chat-first direction), and the wordmark owns the left. */
+.top-bar-center {
+  min-width: 0;
+}
+
+.top-bar-button {
+  height: 26px;
+  padding: 0 var(--space-sm);
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* Drawing panel header -------------------------------------------------- */
+
+.drawing-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  min-width: 0;
+  min-height: 34px;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--panel);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.drawing-panel-ident {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.drawing-panel-label {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--construction);
+}
+
+.drawing-panel-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-ui);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* The one home of the render mode (D3). It keeps the drafted segmented
+   look the top bar used to carry: an inked box, square corners, mono. */
+.drawing-panel-mode {
+  display: inline-flex;
+  flex: 0 0 auto;
+  border: 1px solid var(--ink);
+  background: var(--card);
+}
+
+.drawing-panel-mode-button {
+  height: 24px;
+  padding: 0 var(--space-sm);
+  border: 1px solid transparent;
+  border-right: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.drawing-panel-mode-button:last-child {
+  border-right: none;
+}
+
+.drawing-panel-mode-button:hover {
+  color: var(--ink);
+}
+
+.drawing-panel-mode-button.is-active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--sheet);
+}
+
+.drawing-panel-close {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  line-height: 1;
+}
+
+.drawing-panel-close:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+/* Details panel --------------------------------------------------------- */
+
+.details-panel {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--margin);
+}
+
+.details-panel-frame {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.details-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  min-height: 34px;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--panel);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.details-panel-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.details-panel-tab {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  font-family: var(--font-ui);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--construction);
+  white-space: nowrap;
+}
+
+.details-panel-tab:hover {
+  color: var(--ink);
+  border-color: var(--hairline);
+}
+
+.details-panel-tab.is-active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--sheet);
+}
+
+.details-panel-close {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  color: var(--construction);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  line-height: 1;
+}
+
+.details-panel-close:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.details-panel-body {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-md);
+  display: grid;
+  align-content: start;
+  gap: var(--space-md);
+}
+
+/* Views and Activity own their own scrolling and fill the column. */
+.details-panel-body-views,
+.details-panel-body-activity {
+  overflow: hidden;
+  padding: 0;
+  align-content: stretch;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.details-panel-body-views .aux-view {
+  height: 100%;
+  border-bottom: none;
+}
+
+.details-panel-body-activity .journal-panel {
+  height: 100%;
+}
+
+/* Active-geometry summary ------------------------------------------------ */
+
+.details-geometry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  min-width: 0;
+}
+
+.details-geometry-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-bottom: 0.5px solid var(--hairline);
+  background: color-mix(in srgb, var(--boxwood) 32%, var(--card));
+}
+
+.details-geometry-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--construction);
+}
+
+.details-geometry-kind {
+  font-family: var(--font-mono);
+  font-size: var(--text-label-md);
+  text-transform: uppercase;
+  color: var(--prussian);
+}
+
+.details-geometry-table {
+  display: grid;
+  margin: 0;
+}
+
+.details-geometry-row {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: var(--space-xs);
+  padding: 2px var(--space-sm);
+  border-bottom: 0.5px dotted var(--hairline);
+}
+
+.details-geometry-row:last-child {
+  border-bottom: none;
+}
+
+.details-geometry-row dt {
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--construction);
+}
+
+.details-geometry-row dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-md);
+  text-align: right;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* The one nominal-geometry sentence, under the summary. The inspector no
+   longer repeats it below its own readouts in Details. */
+.details-geometry-note {
+  margin: 0;
+  font-family: var(--font-note);
+  font-style: italic;
+  font-size: var(--text-body-sm);
+  line-height: 1.35;
+  color: var(--construction);
+}
+
+/* Details is 360 px wide: the vernier sliders stack so "WIDTH (size_x)" and
+   "SUBDIVISIONS" are never clipped by a two-column grid. */
+.details-panel .inspector-grid {
+  grid-template-columns: minmax(0, 1fr);
+}

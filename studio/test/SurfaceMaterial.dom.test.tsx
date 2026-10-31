@@ -2,8 +2,8 @@
 // The surface material control.
 //
 // `viewport.material` is a real store field the viewport already honours.
-// The control that writes it exists twice — compact in the bottom ruler
-// bar, spelled out on Options card 01 — and both write the one field.
+// Its one home is Details › Properties, inside the Inspector (D3): the old
+// duplicate in the bottom ruler bar is gone with the bar's controls.
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/react';
@@ -22,8 +22,8 @@ function materialGroup(container: HTMLElement): HTMLElement {
 }
 
 describe('surface material control', () => {
-  it('exposes the three real material kinds in the bottom ruler bar', () => {
-    const { container } = render(<BottomBar onOpenOptions={() => {}} />);
+  it('exposes the three real material kinds in Details › Properties', () => {
+    const { container } = render(<Inspector showHeading={false} />);
     const group = materialGroup(container);
     const buttons = Array.from(group.querySelectorAll<HTMLButtonElement>('button'));
     expect(buttons).toHaveLength(3);
@@ -39,8 +39,8 @@ describe('surface material control', () => {
     ]);
   });
 
-  it('writes the real store field from the ruler bar', () => {
-    const { container } = render(<BottomBar onOpenOptions={() => {}} />);
+  it('writes the real store field from the Properties inspector', () => {
+    const { container } = render(<Inspector showHeading={false} />);
     const wire = container.querySelector<HTMLButtonElement>('button[data-material="wireframe"]')!;
     fireEvent.click(wire);
     expect(getState().viewport.material).toBe('wireframe');
@@ -53,17 +53,13 @@ describe('surface material control', () => {
     expect(wire.getAttribute('aria-checked')).toBe('false');
   });
 
-  it('writes the same field from Options card 01', () => {
-    const { container } = render(<Inspector />);
-    const group = materialGroup(container);
-    const matte = group.querySelector<HTMLButtonElement>('button[data-material="matte"]')!;
-    expect(matte.textContent).toBe('Matte');
-    fireEvent.click(matte);
-    expect(getState().viewport.material).toBe('matte');
+  it('has no second copy in the status bar', () => {
+    const { container } = render(<BottomBar />);
+    expect(container.querySelector('[aria-label="Surface material"]')).toBeNull();
   });
 
   it('documents that the canvas background follows the theme', () => {
-    const { container } = render(<Inspector />);
+    const { container } = render(<Inspector showHeading={false} />);
     const note = container.querySelector('.inspector-material-note')?.textContent ?? '';
     expect(note).toContain('background follows the workspace theme');
   });

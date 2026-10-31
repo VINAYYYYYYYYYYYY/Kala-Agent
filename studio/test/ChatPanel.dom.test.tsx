@@ -4,7 +4,7 @@
 // transitions the conductor asked us to prove.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 
 const mocks = vi.hoisted(() => ({
   postChat: vi.fn(),
@@ -26,9 +26,9 @@ vi.mock('../src/api/client', async (importOriginal) => {
 
 import { ChatPanel } from '../src/components/chat/ChatPanel';
 import { StudioApiError, StudioTimeoutError } from '../src/api/client';
-import { dispatch, resetStore } from '../src/state/store';
+import { dispatch, getState, resetStore } from '../src/state/store';
 import { cadProviders } from './designFixtures';
-import { pickProvider } from './providerFixtures';
+import { modelChip, pickProvider } from './providerFixtures';
 
 const baseProviders = [
   { id: 'local', name: 'Local helper', configured: true, notes: '' },
@@ -348,11 +348,10 @@ describe('the composer route', () => {
     expect(view.container.querySelector('.chat-panel-consent')).toBeNull();
   });
 
-  it('opens the API-key section from the model picker of an unconfigured route', async () => {
+  it('opens Settings › Models & keys from the model picker of an unconfigured route', async () => {
     seed([{ id: 'openrouter', name: 'OpenRouter', configured: false, notes: '' }]);
     const view = render(<ChatPanel />);
 
-    expect(view.container.querySelector('.chat-panel-settings')).toBeNull();
     pickProvider(view.container, 'openrouter');
 
     await waitFor(() =>
@@ -360,7 +359,10 @@ describe('the composer route', () => {
     );
     fireEvent.click(view.container.querySelector<HTMLButtonElement>('.model-picker-action')!);
 
-    expect(view.container.querySelector('.chat-panel-settings')).toBeTruthy();
+    expect(getState().optionsOpen).toBe(true);
+    expect(getState().optionsCard).toBe('providers');
+    // The old inline key drawer is gone from the chat column.
+    expect(view.container.querySelector('.chat-panel-settings')).toBeNull();
   });
 });
 
@@ -610,5 +612,184 @@ describe('the reply badge and the CLI default model', () => {
       return node!;
     });
     expect(badge.textContent).toBe('codex_cli · gpt-5-codex');
+  });
+});
+
+describe('the composer is a clean thread plus prompt', () => {
+  const seededProviders = [
+    ...baseProviders,
+    { id: 'claude_code', name: 'Claude Code CLI', configured: true, notes: '' },
+  ];
+
+  function seed(providers = seededProviders): void {
+    dispatch({
+      type: 'connection/ready',
+      connection: {
+        baseUrl: 'http://127.0.0.1:8765',
+        token: 'unit-test-token-aaaaaaaaaaaaaaaaaaaaaaaa',
+        mode: 'desktop',
+      },
+    });
+    dispatch({
+      type: 'server/providers',
+      providers,
+      health: 'ok',
+      healthMessage: 'ok',
+      version: '0.1.0',
+      stepAvailable: false,
+    });
+  }
+
+  it('shows the starter tabs only while the thread is empty, and brings them back on New chat', () => {
+    seed();
+    const view = render(<ChatPanel />);
+
+    // Empty thread: one header label, no New chat, four tabs under the
+    // centred composer, and the short mono-caps label above it.
+    const header = view.container.querySelector<HTMLElement>('.chat-panel-header')!;
+    expect(header.textContent?.trim()).toBe('Agent');
+    expect(view.container.querySelector('.chat-panel-new')).toBeNull();
+    expect(view.container.querySelectorAll('.chat-panel-starters .chat-panel-starter')).toHaveLength(
+      4,
+    );
+    expect(view.container.querySelector('.chat-panel-empty-label')?.textContent).toBe('New design');
+    expect(view.container.querySelector('.chat-panel-center .chat-panel-form')).toBeTruthy();
+
+    act(() => {
+      dispatch({
+        type: 'chat/response',
+        response: { text: 'Built.', provider: 'local', model: null, offline: true },
+      });
+    });
+
+    // The thread is no longer empty: the tabs are gone, New chat is offered.
+    expect(view.container.querySelector('.chat-panel-starter')).toBeNull();
+    const newChat = view.container.querySelector<HTMLButtonElement>('button.chat-panel-new')!;
+    expect(newChat.textContent).toBe('New chat');
+
+    fireEvent.click(newChat);
+    expect(getState().chat.thread).toHaveLength(0);
+    expect(view.container.querySelectorAll('.chat-panel-starter')).toHaveLength(4);
+    expect(view.container.querySelector('.chat-panel-new')).toBeNull();
+  });
+
+  it('keeps the brand, the connection stamp and the API-key drawer out of the chat', () => {
+    seed();
+    const view = render(<ChatPanel />);
+
+    expect(view.container.querySelector('.chat-panel-stamp')).toBeNull();
+    expect(view.container.querySelector('.chat-panel-connection')).toBeNull();
+    expect(view.container.querySelector('.chat-panel-settings-toggle')).toBeNull();
+    expect(view.container.querySelector('.chat-panel-clear')).toBeNull();
+    expect(view.container.textContent).not.toContain('BROWSER FALLBACK');
+    expect(view.container.textContent).not.toContain('API Keys');
+    // No active-geometry table: it lives in Details › Properties.
+    expect(view.container.querySelector('.chat-panel-context')).toBeNull();
+  });
+
+  it('draws the two chips from the store: provider, model and CAD target', async () => {
+    seed();
+    dispatch({ type: 'server/capabilities', designAvailable: true });
+    dispatch({ type: 'server/cad-providers', providers: cadProviders.providers });
+    mocks.getProviderModels.mockResolvedValue({
+      provider: 'openai',
+      source: 'openai',
+      fetched_at: null,
+      models: [{ id: 'gpt-4o-mini', name: 'GPT-4o mini', free: false }],
+    });
+
+    const view = render(<ChatPanel />);
+    // The first provider of the session is selected by the panel itself.
+    const chip = modelChip(view.container);
+    expect(chip.textContent).toContain('Local helper · default');
+    expect(chip.getAttribute('aria-label')).toBe('Model: Local helper · default');
+    // The full text is always in the title, even when the chip ellipsizes.
+    expect(chip.getAttribute('title')).toBe('Model: Local helper · default');
+
+    pickProvider(view.container, 'openai');
+    await waitFor(() => expect(mocks.getProviderModels).toHaveBeenCalled());
+    fireEvent.change(view.container.querySelector<HTMLInputElement>('#chat-model-input')!, {
+      target: { value: 'gpt-4o-mini' },
+    });
+
+    expect(modelChip(view.container).textContent).toContain('OpenAI · gpt-4o-mini');
+    expect(modelChip(view.container).getAttribute('aria-label')).toBe(
+      'Model: OpenAI · gpt-4o-mini',
+    );
+    expect(modelChip(view.container).getAttribute('title')).toBe('Model: OpenAI · gpt-4o-mini');
+
+    const cadChip = view.container.querySelector<HTMLButtonElement>('[data-chip="cad"]')!;
+    expect(cadChip.getAttribute('data-attention')).toBe('yes');
+    expect(cadChip.textContent).toContain('CAD:');
+    expect(cadChip.textContent).toContain('choose');
+    expect(cadChip.getAttribute('aria-label')).toBe('CAD target: choose');
+
+    fireEvent.click(cadChip);
+    await waitFor(() =>
+      expect(view.container.querySelector('[data-cad-provider="freecad"]')).toBeTruthy(),
+    );
+    fireEvent.click(view.container.querySelector('[data-cad-provider="freecad"]')!);
+
+    expect(getState().cadProvider).toBe('freecad');
+    expect(cadChip.getAttribute('data-attention')).toBe('no');
+    expect(cadChip.textContent).toContain('FreeCAD');
+    expect(cadChip.getAttribute('aria-label')).toBe('CAD target: FreeCAD');
+
+    // The chip shows only the short target name; the opt-in suffix and the
+    // version stay in the title/popover, and the accessible name keeps both.
+    fireEvent.click(cadChip); // close the freecad popover
+    fireEvent.click(cadChip); // reopen on the provider list
+    await waitFor(() =>
+      expect(view.container.querySelector('[data-cad-provider="opencascade"]')).toBeTruthy(),
+    );
+    fireEvent.click(view.container.querySelector('[data-cad-provider="opencascade"]')!);
+    expect(getState().cadProvider).toBe('opencascade');
+    expect(cadChip.textContent).toContain('OpenCascade');
+    expect(cadChip.textContent).not.toContain('opt-in');
+    expect(cadChip.getAttribute('title')).toBe('CAD target: OpenCascade (opt-in) 8.0.1.1');
+    expect(cadChip.getAttribute('aria-label')).toBe('CAD target: OpenCascade (opt-in)');
+  });
+
+  it('opens the model popover and closes it on Escape or an outside click, returning the focus', () => {
+    seed();
+    const view = render(<ChatPanel />);
+    const chip = modelChip(view.container);
+
+    expect(view.container.querySelector('[role="dialog"]')).toBeNull();
+    chip.focus();
+    fireEvent.click(chip);
+    expect(view.container.querySelector('[role="dialog"]')).toBeTruthy();
+    expect(chip.getAttribute('aria-expanded')).toBe('true');
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(view.container.querySelector('[role="dialog"]')).toBeNull();
+    expect(chip.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(chip);
+
+    chip.focus();
+    fireEvent.click(chip);
+    expect(view.container.querySelector('[role="dialog"]')).toBeTruthy();
+    fireEvent.mouseDown(document.body);
+    expect(view.container.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.activeElement).toBe(chip);
+  });
+
+  it('shows the remote-egress consent stamp only while it is required', () => {
+    seed();
+    const view = render(<ChatPanel />);
+
+    // The local helper never leaves the machine: no stamp.
+    expect(view.container.querySelector('.chat-panel-consent')).toBeNull();
+
+    pickProvider(view.container, 'openai');
+    const consent = view.container.querySelector<HTMLInputElement>('.chat-panel-consent input')!;
+    expect(consent.checked).toBe(false);
+
+    fireEvent.click(consent);
+    // Granted: the stamp is no longer required and leaves the composer.
+    expect(view.container.querySelector('.chat-panel-consent')).toBeNull();
+
+    pickProvider(view.container, 'local');
+    expect(view.container.querySelector('.chat-panel-consent')).toBeNull();
   });
 });

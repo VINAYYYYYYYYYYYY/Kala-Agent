@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-// The API-key panel of the composer and of Options card 03.
+// The API-key panel of the composer and of Settings › Models & keys.
 //
 // The rules under test:
 //   * a STORED key can be cleared here, and the panel says so,

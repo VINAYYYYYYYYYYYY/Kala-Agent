@@ -137,8 +137,18 @@ describe('Manual Connect without desktop bridge', () => {
     });
 
     await waitFor(() => {
-      expect(view.container.querySelector('.journal-panel-footer')?.textContent).toContain(ORIGIN);
+      // The app frame renders with the real loopback origin in the status
+      // bar; the journal now lives in Details › Activity, closed by default.
+      const connection = view.container.querySelector('.bottom-bar-connection');
+      expect(connection?.getAttribute('title')).toContain(ORIGIN);
+      expect(connection?.textContent).toContain('Browser fallback');
     });
+
+    // Chat-first: the shell is up with the chat centred and no drawing
+    // mounted. The preview is requested for the primitive, not rendered on
+    // a sheet nobody asked for.
+    expect(view.container.querySelector('.chat-panel')).toBeTruthy();
+    expect(view.container.querySelector('.drafting-sheet')).toBeNull();
 
     // The connection was authenticated with the QA token.
     const call = mocks.getHealth.mock.calls[0]!;
@@ -146,7 +156,7 @@ describe('Manual Connect without desktop bridge', () => {
     expect(connection.token).toBe(QA_TOKEN);
     expect(connection.baseUrl).toBe(ORIGIN);
 
-    // The initial box preview is rendered locally and requested from the
+    // The initial box preview is built locally and requested from the
     // backend after the debounce.
     expect(getState().preview.local?.kind).toBe('box');
     await waitFor(() => {
@@ -188,7 +198,11 @@ describe('Manual Connect without desktop bridge', () => {
     submitCredentials(view.container);
 
     await waitFor(() => {
-      expect(view.container.querySelector('.journal-panel-footer')?.textContent).toContain(ORIGIN);
+      // The app frame renders with the real loopback origin in the status
+      // bar; the journal now lives in Details › Activity, closed by default.
+      const connection = view.container.querySelector('.bottom-bar-connection');
+      expect(connection?.getAttribute('title')).toContain(ORIGIN);
+      expect(connection?.textContent).toContain('Browser fallback');
     });
   });
 

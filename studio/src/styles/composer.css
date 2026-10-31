@@ -1,0 +1,179 @@
+/* App-feel wave (2026-10-31): composer cell. Reuse tokens.css custom
+ * properties only.
+ *
+ * The composer keeps one row of two setup chips under the prompt and hides
+ * the provider, model and CAD pickers in the popovers above them. A chip is
+ * an inked paper label: mono type, a 1 px drafted border, no shadow or
+ * radius. The vermilion attention colour marks the CAD chip while no target
+ * has been chosen.
+ */
+
+.chat-panel .chat-panel-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.composer-chip {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* The model chip takes the row's remaining width; the CAD chip is only as
+   wide as its short target name, so both labels stay readable at 360 px. */
+.composer-chip[data-composer-chip='model'] {
+  flex: 1 1 0;
+}
+
+.composer-chip[data-composer-chip='cad'] {
+  flex: 0 1 auto;
+}
+
+.composer-chip[data-composer-chip='cad'] .composer-chip-button {
+  width: auto;
+  max-width: 100%;
+}
+
+.composer-chip[data-composer-chip='cad'] .composer-chip-value {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-chip-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  width: 100%;
+  min-width: 0;
+  padding: 4px 7px;
+  border: 1px solid var(--hairline);
+  border-radius: 0;
+  background: var(--card);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.04em;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.composer-chip-button:hover,
+.composer-chip-button[aria-expanded='true'] {
+  border-color: var(--ink);
+}
+
+.composer-chip-button[data-attention='yes'] {
+  border-color: var(--redline);
+  background: color-mix(in srgb, var(--redline) 5%, var(--card));
+  color: var(--redline-ink);
+}
+
+.composer-chip-dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: 1px solid var(--construction);
+  background: transparent;
+}
+
+.composer-chip-dot[data-state='configured'] {
+  border-color: var(--stamp);
+  background: var(--stamp);
+}
+
+.composer-chip-dot[data-state='not-configured'] {
+  border-color: var(--redline);
+  background: var(--redline);
+}
+
+.composer-chip-dot[data-state='unavailable'] {
+  border-color: var(--redline);
+  background: transparent;
+}
+
+.composer-chip-prefix {
+  flex: 0 0 auto;
+  color: var(--construction);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.composer-chip-button[data-attention='yes'] .composer-chip-prefix {
+  color: var(--redline-ink);
+}
+
+.composer-chip-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-chip-caret {
+  flex: 0 0 auto;
+  color: var(--construction);
+}
+
+.composer-chip-button[data-attention='yes'] .composer-chip-caret {
+  color: var(--redline-ink);
+}
+
+/* The popover opens upward from its chip, inside the composer's own
+   stacking context. It is the width of a readable picker, not of the chip. */
+.composer-popover {
+  position: absolute;
+  z-index: 60;
+  bottom: calc(100% + var(--space-xs));
+  left: 0;
+  width: 300px;
+  max-width: calc(100vw - var(--space-lg));
+  max-height: 62vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-sm);
+  display: grid;
+  gap: var(--space-sm);
+  background: var(--card);
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+
+.composer-popover:focus {
+  outline: none;
+}
+
+.composer-popover:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* The CAD chip is the right-hand chip: its popover grows to the left so it
+   never leaves the column. */
+.composer-chip[data-composer-chip='cad'] .composer-popover {
+  left: auto;
+  right: 0;
+}
+
+/* The pickers keep their own labels and lists. Their lists normally float
+   over the composer; inside the popover they join the flow so a long
+   registry scrolls the popover instead of being clipped by it. */
+.composer-popover .provider-picker-list,
+.composer-popover .model-picker-list {
+  position: static;
+  max-height: 240px;
+  margin-top: var(--space-xs);
+}

@@ -1,31 +1,38 @@
-// Root layout: the Vellum drafting board 4-zone shell.
+// Root layout: the app frame, chat-first.
 //
-//   | LEFT 340px: agent chat | CENTER flex: drafting sheet + 48px bar | RIGHT 320px |
-//   |                        |                                        | AuxView / Journal |
+//   | top bar 44 px                                                       |
+//   | chat (centred, primary) | drawing split panel (closed by default)    |
+//   | Details 360 (optional, right)                                       |
+//   | status bar 28 px (read-only)                                        |
 //
-// There is no header bar and no app footer. Connection information lives in
-// the journal footer and in Options card 04. Exactly one SceneCanvas is
-// mounted at any time, inside the center drafting sheet.
+// The chat is always shown. The drawing (DraftingSheet) is a secondary
+// split panel: it is closed at boot, opens automatically when a CAD-built
+// design arrives (`design/received`), and toggles from the top bar or
+// Ctrl/Cmd+B. While it is closed no DraftingSheet or SceneCanvas is
+// mounted; while it is open exactly one SceneCanvas is.
 
 import { useEffect, useMemo } from 'react';
 import type { ReactElement } from 'react';
 import { BootGate } from './BootGate';
+import { TopBar } from './TopBar';
+import { DrawingPanel } from './DrawingPanel';
+import { DetailsPanel } from './DetailsPanel';
 import { ChatPanel } from '../chat/ChatPanel';
-import { DraftingSheet } from '../drafting/DraftingSheet';
 import type { TitleBlockData } from '../drafting/DraftingSheet';
-import { AuxView } from '../drafting/AuxView';
 import { useDesignController } from '../drafting/useDesignController';
-import { JournalPanel } from '../journal/JournalPanel';
 import { BottomBar } from '../bottombar/BottomBar';
 import { OptionsDrawer } from '../options/OptionsDrawer';
+import { ExportDialog } from '../export/ExportDialog';
 import {
   dispatch,
   persistTheme,
   useUiState,
+  selectActiveDesign,
   selectAuxView,
-  selectChainStatus,
   selectConnection,
-  selectJournal,
+  selectDetailsOpen,
+  selectDrawingOpen,
+  selectExportOpen,
   selectOptionsCard,
   selectOptionsOpen,
   selectPrimitive,
@@ -34,7 +41,9 @@ import {
   selectTheme,
   selectViewport,
   selectViewResetToken,
+  setSectionPlane,
 } from '../../state/store';
+import { DEFAULT_DESIGN_SECTION_CUT } from '../../state/sectionCut';
 import {
   BoxParameters,
   CylinderParameters,
@@ -52,18 +61,17 @@ export function AppShell(): ReactElement {
   const primitive = useUiState(selectPrimitive);
   const parameters = useUiState((s) => s.parameters);
   const connection = useUiState(selectConnection);
+  const activeDesignId = useUiState((s) => s.designs.activeDesignId);
   const renderMode = useUiState(selectRenderMode);
   const auxView = useUiState(selectAuxView);
   const showSection = useUiState(selectShowSection);
   const optionsOpen = useUiState(selectOptionsOpen);
   const optionsCard = useUiState(selectOptionsCard);
+  const drawingOpen = useUiState(selectDrawingOpen);
+  const detailsOpen = useUiState(selectDetailsOpen);
+  const activeDesign = useUiState(selectActiveDesign);
+  const exportOpen = useUiState(selectExportOpen);
   const theme = useUiState(selectTheme);
-  const journal = useUiState(selectJournal);
-  // The hash-chain verdict of the backend's own session journal, and the
-  // first event whose digest does not verify. Both come from the store:
-  // the ledger may only claim a verified chain when the backend verified it.
-  const chainStatus = useUiState(selectChainStatus);
-  const firstBadSequence = useUiState((s) => s.sessionJournal.firstBadSequence);
   const viewResetToken = useUiState(selectViewResetToken);
   // One shared drawing/section controller: the sheet and the AuxView read
   // the same per-parameter caches, so two controllers would race the same
@@ -120,61 +128,105 @@ export function AppShell(): ReactElement {
     persistTheme(theme);
   }, [theme]);
 
+  // A new design gets the documented default cut (XZ at y = 4 mm). This
+  // lived in the always-mounted AuxView before the app-feel wave; keeping it
+  // in the always-mounted shell means it still runs while Details is closed,
+  // and remounting the Views tab no longer resets a plane the operator chose.
+  useEffect(() => {
+    if (!activeDesignId) return;
+    setSectionPlane(DEFAULT_DESIGN_SECTION_CUT.plane);
+  }, [activeDesignId]);
+
   useEffect(() => {
     document.title = connection.kind === 'ready'
       ? `Kala Studio · ${connection.connection.mode === 'desktop' ? 'Desktop' : 'Browser fallback'}`
       : 'Kala Studio · Connecting';
   }, [connection]);
 
+  // Global app shortcuts. Text entry keeps its own keys: Ctrl/Cmd+B must
+  // never steal a keystroke from a prompt or a numeric field.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent): void {
+      if (event.defaultPrevented) return;
+      if (!event.metaKey && !event.ctrlKey) return;
+      if (event.altKey) return;
+      if (isTextEntry(event.target)) return;
+      if (event.key === ',' || event.code === 'Comma') {
+        event.preventDefault();
+        dispatch({ type: 'options/open' });
+        return;
+      }
+      if (event.key.toLowerCase() === 'b') {
+        event.preventDefault();
+        dispatch({ type: 'chrome/drawing-toggle' });
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   return (
     <BootGate>
       <div className="studio-shell" data-render-mode={renderMode}>
-        <aside className="studio-zone studio-zone-left" aria-label="Agent chat">
-          <ChatPanel />
-        </aside>
-        <main className="studio-zone studio-zone-center" aria-label="Drafting worksheet">
-          <DraftingSheet
-            mesh={displayMesh}
-            meshSource={meshSource}
-            showGrid={viewport.showGrid}
-            showAxes={viewport.showAxes}
-            showDimensions={viewport.showDimensions}
-            material={viewport.material}
-            background={canvasBackground}
-            renderMode={renderMode}
-            showSection={showSection}
-            titleBlock={titleBlock}
-            units="mm"
-            viewResetToken={viewResetToken}
-            designController={designController}
-          />
-          <BottomBar onOpenOptions={(card) => dispatch({ type: 'options/open', card })} />
-        </main>
-        <aside className="studio-zone studio-zone-right" aria-label="Auxiliary view and event journal">
-          <AuxView
-            auxView={auxView}
-            onAuxViewChange={(view) => dispatch({ type: 'auxView/set', view })}
-            primitive={primitive}
-            parameters={parameters}
-            bounds={bounds}
-            designController={designController}
-          />
-          <JournalPanel
-            entries={journal}
-            connectionStatus={connection}
-            hashChainStatus={chainStatus}
-            firstBadSequence={firstBadSequence}
-          />
-        </aside>
+        <TopBar />
+        <div
+          className="studio-main"
+          data-drawing={drawingOpen ? 'open' : 'closed'}
+          data-details={detailsOpen ? 'open' : 'closed'}
+        >
+          <aside className="studio-chat-column" aria-label="Agent chat">
+            <ChatPanel />
+          </aside>
+          {drawingOpen ? (
+            <DrawingPanel
+              name={activeDesign?.label ?? primitive.toUpperCase()}
+              mesh={displayMesh}
+              meshSource={meshSource}
+              showGrid={viewport.showGrid}
+              showAxes={viewport.showAxes}
+              showDimensions={viewport.showDimensions}
+              material={viewport.material}
+              background={canvasBackground}
+              renderMode={renderMode}
+              showSection={showSection}
+              titleBlock={titleBlock}
+              units="mm"
+              viewResetToken={viewResetToken}
+              designController={designController}
+            />
+          ) : null}
+          {detailsOpen ? (
+            <DetailsPanel
+              auxView={auxView}
+              primitive={primitive}
+              parameters={parameters}
+              bounds={bounds}
+              designController={designController}
+            />
+          ) : null}
+        </div>
+        <BottomBar />
         <OptionsDrawer
           open={optionsOpen}
           card={optionsCard}
           onCardChange={(card) => dispatch({ type: 'options/card', card })}
           onClose={() => dispatch({ type: 'options/close' })}
         />
+        <ExportDialog
+          open={exportOpen}
+          onClose={() => dispatch({ type: 'chrome/export-close' })}
+        />
       </div>
     </BootGate>
   );
+}
+
+/** True while the keystroke belongs to a text field rather than the app. */
+function isTextEntry(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  const tag = target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
 }
 
 function describeDrivingDimensions(kind: PrimitiveKind, parameters: StudioParameters): string {

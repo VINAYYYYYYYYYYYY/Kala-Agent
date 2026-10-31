@@ -50,7 +50,7 @@ interface ExportResult {
 }
 
 interface ExportPanelProps {
-  /** The Options card supplies its own drafted heading; hide the inner one. */
+  /** The Export dialog supplies its own heading; hide the inner one. */
   showHeading?: boolean;
 }
 
@@ -249,6 +249,68 @@ export function ExportPanel(props: ExportPanelProps = {}): ReactElement {
     }
   }
 
+  const primitiveBlock = (
+    <div className="export-panel-primitive">
+      <p className="export-panel-help">
+        Renders the active primitive as a neutral artefact (STL, STEP) for the picked target —
+        either to finish the build here or to hand the geometry to an external CAD/CAE package
+        such as SOLIDWORKS, FreeCAD, or Fusion. Handoff never launches a native tool.
+      </p>
+      <label className="export-panel-field">
+        <span>Target</span>
+        <select value={targetId} onChange={(event) => setTargetId(event.target.value)}>
+          <option value="native">Direct export (no handoff)</option>
+          {cadIntegrations.map((integration) => (
+            <option key={integration.id} value={integration.id}>
+              {integration.name} ({statusOptionLabel(integration.status)})
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="export-panel-field">
+        <span>Format</span>
+        <select
+          value={format}
+          onChange={(event) => setFormat(event.target.value as ExportFormat)}
+          disabled={target.capabilities.length === 0}
+        >
+          {SUPPORTED_FORMATS.map((entry) => (
+            <option key={entry} value={entry} disabled={!target.capabilities.includes(entry)}>
+              {entry.toUpperCase()}{!target.capabilities.includes(entry) ? ' (not supported by target)' : ''}
+            </option>
+          ))}
+        </select>
+      </label>
+      {target.notes ? <p className="export-panel-notes">{target.notes}</p> : null}
+      {target.status === 'native_api_unavailable' ? (
+        <p className="export-panel-warning">
+          Native automation is not available for {target.name} from Kala Studio. Exporting
+          writes a neutral {format.toUpperCase()} file for the operator to import in their
+          local {target.name} session; it never launches or drives {target.name}.
+        </p>
+      ) : null}
+      {target.status === 'not_configured' ? (
+        <p className="export-panel-warning">
+          This integration is not configured on the backend, so no artefact is offered for it.
+        </p>
+      ) : null}
+      <button
+        type="button"
+        className="export-panel-button"
+        onClick={() => void onDownload()}
+        disabled={!canDownload}
+      >
+        {busy ? 'Working…' : `Download ${format.toUpperCase()}`}
+      </button>
+      {lastResult ? (
+        <p className="export-panel-result" role="status">
+          Saved <code>{lastResult.filename}</code> · {lastResult.bytes.toLocaleString()} bytes
+        </p>
+      ) : null}
+      {lastError ? <p className="export-panel-error" role="alert">{lastError}</p> : null}
+    </div>
+  );
+
   return (
     <section className="export-panel" aria-label="Export and handoff">
       {showHeading ? (
@@ -410,69 +472,23 @@ export function ExportPanel(props: ExportPanelProps = {}): ReactElement {
             </p>
           ) : null}
         </section>
-      ) : designAvailable === false ? (
-        <p className="export-panel-note">
-          Design export needs the Python geometry backend; this backend reports design_available:
-          false.
-        </p>
       ) : null}
-      <p className="export-panel-help">
-        Renders the active primitive as a neutral artefact (STL, STEP) for the picked target —
-        either to finish the build here or to hand the geometry to an external CAD/CAE package
-        such as SOLIDWORKS, FreeCAD, or Fusion. Handoff never launches a native tool.
-      </p>
-      <label className="export-panel-field">
-        <span>Target</span>
-        <select value={targetId} onChange={(event) => setTargetId(event.target.value)}>
-          <option value="native">Direct export (no handoff)</option>
-          {cadIntegrations.map((integration) => (
-            <option key={integration.id} value={integration.id}>
-              {integration.name} ({statusOptionLabel(integration.status)})
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="export-panel-field">
-        <span>Format</span>
-        <select
-          value={format}
-          onChange={(event) => setFormat(event.target.value as ExportFormat)}
-          disabled={target.capabilities.length === 0}
-        >
-          {SUPPORTED_FORMATS.map((entry) => (
-            <option key={entry} value={entry} disabled={!target.capabilities.includes(entry)}>
-              {entry.toUpperCase()}{!target.capabilities.includes(entry) ? ' (not supported by target)' : ''}
-            </option>
-          ))}
-        </select>
-      </label>
-      {target.notes ? <p className="export-panel-notes">{target.notes}</p> : null}
-      {target.status === 'native_api_unavailable' ? (
-        <p className="export-panel-warning">
-          Native automation is not available for {target.name} from Kala Studio. Exporting
-          writes a neutral {format.toUpperCase()} file for the operator to import in their
-          local {target.name} session; it never launches or drives {target.name}.
-        </p>
-      ) : null}
-      {target.status === 'not_configured' ? (
-        <p className="export-panel-warning">
-          This integration is not configured on the backend, so no artefact is offered for it.
-        </p>
-      ) : null}
-      <button
-        type="button"
-        className="export-panel-button"
-        onClick={() => void onDownload()}
-        disabled={!canDownload}
-      >
-        {busy ? 'Working…' : `Download ${format.toUpperCase()}`}
-      </button>
-      {lastResult ? (
-        <p className="export-panel-result" role="status">
-          Saved <code>{lastResult.filename}</code> · {lastResult.bytes.toLocaleString()} bytes
-        </p>
-      ) : null}
-      {lastError ? <p className="export-panel-error" role="alert">{lastError}</p> : null}
+      {activeDesign ? (
+        <details className="export-panel-disclosure">
+          <summary className="export-panel-disclosure-summary">Export the primitive instead</summary>
+          <div className="export-panel-disclosure-body">{primitiveBlock}</div>
+        </details>
+      ) : (
+        <>
+          {designAvailable === false ? (
+            <p className="export-panel-note">
+              Design export needs the Python geometry backend; this backend reports design_available:
+              false.
+            </p>
+          ) : null}
+          {primitiveBlock}
+        </>
+      )}
     </section>
   );
 }

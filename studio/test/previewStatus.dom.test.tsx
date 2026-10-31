@@ -96,7 +96,11 @@ describe('a refused server preview', () => {
       });
     });
 
-    const view = render(<BottomBar onOpenOptions={() => {}} />);
+    // The readout belongs to the drawing: open it as the shell does.
+    act(() => {
+      dispatch({ type: 'chrome/drawing-open' });
+    });
+    const view = render(<BottomBar />);
     const chip = view.container.querySelector('.bottom-bar-source');
     expect(chip?.textContent).toBe('server refused');
     expect(chip?.getAttribute('data-preview-state')).toBe('refused');
@@ -149,7 +153,10 @@ describe('a preview request in flight', () => {
     expect(note?.getAttribute('role')).toBe('status');
     expect(note?.textContent).toContain('Verifying the mesh on the server');
 
-    const bar = render(<BottomBar onOpenOptions={() => {}} />);
+    act(() => {
+      dispatch({ type: 'chrome/drawing-open' });
+    });
+    const bar = render(<BottomBar />);
     const chip = bar.container.querySelector('.bottom-bar-source');
     expect(chip?.textContent).toBe('verifying…');
     expect(chip?.getAttribute('data-preview-state')).toBe('verifying');

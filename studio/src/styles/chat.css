@@ -1,14 +1,18 @@
-/* Chat panel — the bound engineer's calculation pad (left 340px zone).
+/* Chat panel — the bound engineer's calculation pad and the app's centred,
+ * primary surface (chat-first direction, 2026-10-31).
  *
- * Rules are scoped under `.chat-panel` so they override the earlier shell
- * sketch in studio.css regardless of stylesheet order. The visual language is
- * taped paper tabs, stamped headers, and ruled-paper notes — 1px drafted
- * borders and 0.5px hairlines, no shadows, gradients, or glow.
+ * The panel fills the content area; every band caps its content at a 760px
+ * frame and centres it. An empty thread puts the composer around the middle
+ * with the starter chips under it; a thread with messages scrolls above a
+ * docked composer. The brand, the connection state, the API keys and the
+ * active geometry have their own homes. The visual language stays taped
+ * paper tabs, stamped headers, and ruled-paper notes — 1px drafted borders
+ * and 0.5px hairlines, no shadows, gradients, or glow.
  */
 
-.studio-zone-left .chat-panel {
+.chat-panel {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   grid-template-columns: minmax(0, 1fr);
   height: 100%;
   min-width: 0;
@@ -18,149 +22,121 @@
   border-radius: 0;
 }
 
-/* Header stamp ---------------------------------------------------------- */
+/* The empty thread is a new chat: header, then one centred stage holding
+   the label, the composer and the starter chips. */
+.chat-panel[data-empty='yes'] {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+/* The centred content column. Every band of the panel caps its content at
+   this width and centres it, so the chat stays one readable conversation
+   on a wide window (and inside its split column while the drawing is open). */
+.chat-panel .chat-panel-frame {
+  width: 100%;
+  max-width: 760px;
+  margin-inline: auto;
+  min-width: 0;
+}
+
+/* Header ----------------------------------------------------------------- */
 
 .chat-panel .chat-panel-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-sm);
-  padding: var(--space-md) var(--space-md) var(--space-sm);
+  min-width: 0;
+  padding: var(--space-sm) var(--space-md);
   background: var(--panel);
   border-bottom: 1px solid var(--hairline);
 }
 
-.chat-panel .chat-panel-stamp {
-  position: relative;
-  display: grid;
-  gap: var(--space-xs);
+.chat-panel .chat-panel-header-frame {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
   min-width: 0;
-  padding: var(--space-sm) var(--space-sm) var(--space-sm);
-  border: 1px solid var(--ink);
-  background: var(--card);
 }
 
-.chat-panel .chat-panel-stamp::after {
-  content: '';
-  position: absolute;
-  inset: 2px;
-  border: 0.5px solid var(--hairline);
-  pointer-events: none;
-}
-
-.chat-panel .chat-panel-stamp-title {
-  margin: 0;
+.chat-panel .chat-panel-header-label {
   font-family: var(--font-mono);
   font-size: var(--text-label-sm);
   font-weight: 700;
-  letter-spacing: 0.04em;
-  line-height: 1.4;
-  text-transform: uppercase;
-  overflow-wrap: anywhere;
-}
-
-.chat-panel .chat-panel-stamp-slash {
-  color: var(--redline-ink);
-}
-
-.chat-panel .chat-panel-connection {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-family: var(--font-mono);
-  font-size: var(--text-label-sm);
-  letter-spacing: 0.09em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--construction);
 }
 
-.chat-panel .chat-panel-connection-dot {
-  width: 6px;
-  height: 6px;
+.chat-panel .chat-panel-new {
   flex: 0 0 auto;
-  border-radius: 50%;
-  border: 1px solid var(--construction);
-  background: transparent;
-}
-
-.chat-panel[data-connection='desktop'] .chat-panel-connection-dot {
-  border-color: var(--stamp);
-  background: var(--stamp);
-}
-
-.chat-panel[data-connection='browser'] .chat-panel-connection-dot {
-  border-color: var(--prussian);
-  background: var(--prussian);
-}
-
-.chat-panel[data-connection='connecting'] .chat-panel-connection-dot {
-  border-color: var(--construction);
-  background: var(--boxwood);
-}
-
-.chat-panel[data-connection='error'] .chat-panel-connection-dot {
-  border-color: var(--redline);
-  background: var(--redline);
-}
-
-.chat-panel .chat-panel-header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-}
-
-.chat-panel .chat-panel-settings-toggle,
-.chat-panel .chat-panel-clear {
   padding: var(--space-xs) var(--space-sm);
   border: 1px solid var(--hairline);
+  border-radius: 0;
   background: var(--card);
   font-family: var(--font-mono);
   font-size: var(--text-label-sm);
-  color: var(--ink);
-}
-
-.chat-panel .chat-panel-settings-toggle[aria-expanded='true'] {
-  border-color: var(--prussian);
-  color: var(--prussian);
-}
-
-.chat-panel .chat-panel-settings {
-  padding: var(--space-sm) var(--space-md);
-  border-bottom: 1px solid var(--hairline);
-  background: var(--card);
-  display: grid;
-  gap: var(--space-sm);
-  max-height: 36vh;
-  overflow: auto;
-}
-
-.chat-panel .chat-panel-settings-header h3 {
-  font-size: var(--text-label-lg);
-  text-transform: uppercase;
   letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+  cursor: pointer;
 }
 
-.chat-panel .chat-panel-settings-header p {
-  margin-top: 2px;
-  font-family: var(--font-note);
-  font-style: italic;
-  font-size: var(--text-body-sm);
-  color: var(--construction);
+.chat-panel .chat-panel-new:hover {
+  border-color: var(--ink);
 }
 
-/* Tape-tab starters and calculation pad --------------------------------- */
+/* Thread ----------------------------------------------------------------- */
 
-.chat-panel .chat-panel-intro {
+.chat-panel .chat-panel-thread {
+  padding: var(--space-md) var(--space-md) var(--space-md);
+  overflow-y: auto;
+  overflow-x: hidden;
+  background-color: var(--sheet);
+  background-image: var(--rule-pattern);
+  background-repeat: repeat;
+  background-size: 100% 24px;
+}
+
+.chat-panel .chat-panel-thread-frame {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-sm);
-  padding: var(--space-md) var(--space-md) var(--space-sm);
-  border-bottom: 1px solid var(--hairline);
-  background: var(--panel);
+  align-content: start;
+}
+
+/* A new chat: the stage is centred vertically in the column, with one short
+   mono-caps label above the composer and the four taped starter tabs under
+   it. They leave with the first message. */
+.chat-panel .chat-panel-center {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: safe center;
+  gap: var(--space-md);
+  min-width: 0;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  max-height: 38vh;
+  padding: var(--space-lg) var(--space-md);
+  background-color: var(--sheet);
+  background-image: var(--rule-pattern);
+  background-repeat: repeat;
+  background-size: 100% 24px;
+}
+
+.chat-panel .chat-panel-empty {
+  display: grid;
+  gap: var(--space-sm);
   min-width: 0;
+}
+
+.chat-panel .chat-panel-empty-label {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-md);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--construction);
 }
 
 .chat-panel .chat-panel-starters {
@@ -186,6 +162,7 @@
   text-align: left;
   white-space: normal;
   color: var(--ink);
+  cursor: pointer;
 }
 
 /* A strip of drafting tape holds each paper tab to the board. */
@@ -216,98 +193,7 @@
   background: var(--sheet);
 }
 
-.chat-panel .chat-panel-context {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0;
-  padding: 0;
-  border: 1px solid var(--hairline);
-  background: var(--card);
-  min-width: 0;
-}
-
-.chat-panel .chat-panel-context-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-sm);
-  padding: var(--space-xs) var(--space-sm);
-  border-bottom: 0.5px solid var(--hairline);
-  background: color-mix(in srgb, var(--boxwood) 32%, var(--card));
-}
-
-.chat-panel .chat-panel-context-label {
-  font-family: var(--font-mono);
-  font-size: var(--text-label-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--construction);
-}
-
-.chat-panel .chat-panel-context-kind {
-  font-family: var(--font-mono);
-  font-size: var(--text-label-md);
-  text-transform: uppercase;
-  color: var(--prussian);
-}
-
-.chat-panel .chat-panel-context-table {
-  display: grid;
-  margin: 0;
-}
-
-.chat-panel .chat-panel-context-row {
-  display: grid;
-  grid-template-columns: 62px minmax(0, 1fr);
-  gap: var(--space-xs);
-  padding: 2px var(--space-sm);
-  border-bottom: 0.5px dotted var(--hairline);
-}
-
-.chat-panel .chat-panel-context-row:last-child {
-  border-bottom: none;
-}
-
-.chat-panel .chat-panel-context-row dt {
-  font-family: var(--font-mono);
-  font-size: var(--text-label-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--construction);
-}
-
-.chat-panel .chat-panel-context-row dd {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-label-md);
-  text-align: right;
-  color: var(--ink);
-  overflow-wrap: anywhere;
-}
-
-/* Thread ---------------------------------------------------------------- */
-
-.chat-panel .chat-panel-thread {
-  padding: var(--space-md) var(--space-md) var(--space-md);
-  overflow-y: auto;
-  overflow-x: hidden;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-sm);
-  align-content: start;
-  background-color: var(--sheet);
-  background-image: var(--rule-pattern);
-  background-repeat: repeat;
-  background-size: 100% 24px;
-}
-
-.chat-panel .chat-panel-empty {
-  margin: 0;
-  font-family: var(--font-note);
-  font-style: italic;
-  font-size: var(--text-body-sm);
-  color: var(--construction);
-}
+/* Messages --------------------------------------------------------------- */
 
 .chat-panel .chat-panel-message {
   display: grid;
@@ -433,61 +319,92 @@
   overflow-wrap: anywhere;
 }
 
-/* Composer -------------------------------------------------------------- */
+/* Composer --------------------------------------------------------------- */
 
 .chat-panel .chat-panel-form {
+  width: 100%;
+  max-width: 760px;
+  margin-inline: auto;
   border-top: 1px solid var(--hairline);
   background: var(--panel);
   padding: var(--space-sm) var(--space-md) var(--space-md);
+}
+
+.chat-panel .chat-panel-form-frame {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-sm);
 }
 
-.chat-panel .chat-panel-route {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-sm);
-  min-width: 0;
+/* In the centred empty stage the composer reads as one inked block rather
+   than a full-width band. */
+.chat-panel .chat-panel-center .chat-panel-form {
+  border: 1px solid var(--hairline);
 }
 
-/* The model picker sits on its own full-width row: a provider's model ids
-   are long ("minimax/minimax-m3.1-flash:free") and a list of them needs the
-   whole width of the composer to stay readable. */
-.chat-panel .chat-panel-field-model {
+.chat-panel .chat-panel-prompt {
+  width: 100%;
   min-width: 0;
-}
-
-.chat-panel .chat-panel-field {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-label-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--construction);
-}
-
-.chat-panel .chat-panel-field input,
-.chat-panel .chat-panel-field select,
-.chat-panel .chat-panel-field textarea {
-  min-width: 0;
+  min-height: 64px;
+  padding: var(--space-sm);
+  resize: vertical;
+  line-height: 1.4;
   font-family: var(--font-ui);
   font-size: var(--text-body-sm);
-  text-transform: none;
-  letter-spacing: 0;
   color: var(--ink);
   background: var(--card);
   border: 1px solid var(--hairline);
 }
 
-.chat-panel .chat-panel-field-grow {
-  align-self: stretch;
+.chat-panel .chat-panel-prompt::placeholder {
+  color: var(--construction);
 }
 
-/* CAD target selector (ADR-0011). There is no default option; an
-   unavailable provider is disabled and carries its reason in the tooltip. */
+/* The two setup chips. Their row and their popovers are drawn in
+   composer.css. */
+
+/* Remote-egress consent stamp. It is present only while a remote provider
+   is selected and its consent has not been granted yet. */
+.chat-panel .chat-panel-consent {
+  display: grid;
+  grid-template-columns: 15px minmax(0, 1fr);
+  gap: var(--space-sm);
+  align-items: start;
+  padding: var(--space-sm) var(--space-sm);
+  border: 1px dashed var(--redline);
+  background: color-mix(in srgb, var(--redline) 5%, var(--card));
+  font-size: var(--text-label-sm);
+  line-height: 1.35;
+  color: var(--construction);
+}
+
+.chat-panel .chat-panel-consent input {
+  margin: 1px 0 0;
+  accent-color: var(--redline);
+}
+
+.chat-panel .chat-panel-consent-copy {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.chat-panel .chat-panel-consent-stamp {
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--redline-ink);
+}
+
+.chat-panel .chat-panel-consent-text {
+  color: var(--construction);
+}
+
+/* CAD target selector inside its popover (ADR-0011). There is no default
+   option; an unavailable provider is disabled and carries its reason in the
+   tooltip. */
 .chat-panel .chat-panel-cad-target {
   display: grid;
   gap: 4px;
@@ -496,6 +413,10 @@
   font-size: var(--text-label-sm);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  color: var(--construction);
+}
+
+.chat-panel .chat-panel-cad-target-label {
   color: var(--construction);
 }
 
@@ -580,94 +501,6 @@
   cursor: pointer;
 }
 
-.chat-panel .chat-panel-prompt {
-  min-height: 48px;
-  resize: vertical;
-  line-height: 1.4;
-}
-
-.chat-panel .chat-panel-provider-status {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-sm);
-  margin: 0;
-  min-width: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-label-sm);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--construction);
-}
-
-.chat-panel .chat-panel-provider-status-label {
-  flex: 0 0 auto;
-  color: var(--construction);
-}
-
-.chat-panel .chat-panel-provider-status-value {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--ink);
-}
-
-.chat-panel .chat-panel-provider-status[data-configured='no'] .chat-panel-provider-status-value {
-  color: var(--redline-ink);
-}
-
-/* Remote-egress consent stamp. */
-.chat-panel .chat-panel-consent {
-  display: grid;
-  grid-template-columns: 15px minmax(0, 1fr);
-  gap: var(--space-sm);
-  align-items: start;
-  padding: var(--space-sm) var(--space-sm);
-  border: 1px dashed var(--redline);
-  background: color-mix(in srgb, var(--redline) 5%, var(--card));
-  font-size: var(--text-label-sm);
-  line-height: 1.35;
-  color: var(--construction);
-}
-
-.chat-panel .chat-panel-consent[data-consent='granted'] {
-  border-style: solid;
-  border-color: var(--stamp);
-  background: color-mix(in srgb, var(--stamp) 5%, var(--card));
-}
-
-.chat-panel .chat-panel-consent input {
-  margin: 1px 0 0;
-  accent-color: var(--redline);
-}
-
-.chat-panel .chat-panel-consent[data-consent='granted'] input {
-  accent-color: var(--stamp);
-}
-
-.chat-panel .chat-panel-consent-copy {
-  display: grid;
-  gap: 1px;
-  min-width: 0;
-}
-
-.chat-panel .chat-panel-consent-stamp {
-  font-family: var(--font-mono);
-  font-size: var(--text-label-sm);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--redline-ink);
-}
-
-.chat-panel .chat-panel-consent[data-consent='granted'] .chat-panel-consent-stamp {
-  color: var(--stamp);
-}
-
-.chat-panel .chat-panel-consent-text {
-  color: var(--construction);
-}
-
 .chat-panel .chat-panel-actions {
   display: flex;
   flex-wrap: wrap;
@@ -689,11 +522,17 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
   white-space: nowrap;
+  cursor: pointer;
 }
 
 .chat-panel .chat-panel-send:hover:not(:disabled) {
   background: var(--prussian);
   border-color: var(--prussian);
+}
+
+.chat-panel .chat-panel-send:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .chat-panel .chat-panel-cancel {
@@ -702,6 +541,7 @@
   background: var(--card);
   font-family: var(--font-mono);
   font-size: var(--text-label-sm);
+  cursor: pointer;
 }
 
 .chat-panel .chat-panel-warning {
@@ -711,7 +551,7 @@
   color: var(--redline-ink);
 }
 
-/* Agent card — the compiled design a turn produced ---------------------- */
+/* Agent support notice — a backend that cannot compile a design ---------- */
 
 .chat-panel .chat-panel-agent-card {
   display: grid;
@@ -730,7 +570,10 @@
   overflow-wrap: anywhere;
 }
 
-/* The design card. A drafted sheet of its own, pinned under the reply. */
+/* Agent card — the compiled design a turn produced ---------------------- */
+
+/* The design card. A drafted sheet of its own, pinned under the reply. Its
+   one-line summary is the stopped card; the disclosure opens the record. */
 .chat-panel .chat-panel-design-card {
   display: grid;
   gap: var(--space-sm);
@@ -752,6 +595,93 @@
   font-family: var(--font-mono);
   font-size: var(--text-label-md);
   color: var(--construction);
+}
+
+.chat-panel .chat-panel-design-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.chat-panel .chat-panel-design-disclosure {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: baseline;
+  gap: var(--space-xs);
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: var(--text-label-md);
+  letter-spacing: 0.02em;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.chat-panel .chat-panel-design-disclosure:hover .chat-panel-design-summary-text {
+  text-decoration: underline;
+}
+
+.chat-panel .chat-panel-design-summary-mark {
+  flex: 0 0 auto;
+  font-weight: 700;
+}
+
+.chat-panel .chat-panel-design-summary-mark[data-state='passed'] {
+  color: var(--stamp);
+}
+
+.chat-panel .chat-panel-design-summary-mark[data-state='failed'] {
+  color: var(--redline);
+}
+
+.chat-panel .chat-panel-design-summary-mark[data-state='unreported'] {
+  color: var(--construction);
+}
+
+.chat-panel .chat-panel-design-summary-text {
+  min-width: 0;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.chat-panel .chat-panel-design-summary-caret {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--construction);
+}
+
+/* The summary line's one action: activate this design and show its drawing.
+   A paper label in the same drafted language as New chat. */
+.chat-panel .chat-panel-design-show {
+  flex: 0 0 auto;
+  padding: 2px var(--space-sm);
+  border: 1px solid var(--hairline);
+  border-radius: 0;
+  background: var(--card);
+  font-family: var(--font-mono);
+  font-size: var(--text-label-sm);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.chat-panel .chat-panel-design-show:hover {
+  border-color: var(--ink);
+  background: var(--sheet);
+}
+
+.chat-panel .chat-panel-design-body {
+  display: grid;
+  gap: var(--space-sm);
+  min-width: 0;
 }
 
 .chat-panel .chat-panel-design-card-head {
@@ -1020,18 +950,9 @@
 /* Narrow workbench columns --------------------------------------------- */
 
 @media (max-width: 1400px) {
-  .chat-panel .chat-panel-header {
-    padding: var(--space-sm) var(--space-md) var(--space-sm);
-  }
-
-  .chat-panel .chat-panel-intro,
   .chat-panel .chat-panel-thread,
   .chat-panel .chat-panel-form {
     padding-left: var(--space-md);
     padding-right: var(--space-md);
-  }
-
-  .chat-panel .chat-panel-route {
-    grid-template-columns: minmax(0, 1fr);
   }
 }

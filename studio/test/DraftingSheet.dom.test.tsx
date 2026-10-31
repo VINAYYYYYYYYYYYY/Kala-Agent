@@ -114,36 +114,30 @@ describe('drafted sheet frame', () => {
   });
 });
 
-describe('mode pill and tool palette', () => {
-  it('binds the 2D/3D pill to real render-mode state', () => {
+describe('mode and tool palette', () => {
+  it('has no render-mode pill: the top bar is the one home of 2D/3D', () => {
     const { container } = render(<DraftingSheet {...props()} />);
-    const pencil = container.querySelector<HTMLButtonElement>(
-      '.drafting-mode-pill button[data-render-mode="pencil2d"]',
-    )!;
-    const clay = container.querySelector<HTMLButtonElement>(
-      '.drafting-mode-pill button[data-render-mode="clay3d"]',
-    )!;
-    expect(pencil.textContent).toContain('2D Pencil Vector');
-    expect(clay.textContent).toContain('3D Clay');
-    expect(pencil.getAttribute('aria-pressed')).toBe('true');
-    expect(clay.getAttribute('aria-pressed')).toBe('false');
-
-    fireEvent.click(clay);
-    expect(getState().renderMode).toBe('clay3d');
-    fireEvent.click(pencil);
-    expect(getState().renderMode).toBe('pencil2d');
+    expect(container.querySelector('.drafting-mode-pill')).toBeNull();
+    expect(container.querySelector('[data-render-mode="clay3d"].drafting-mode-button')).toBeNull();
+    // The sheet still reflects the chosen mode.
+    expect(container.querySelector('.drafting-sheet')!.getAttribute('data-render-mode')).toBe(
+      'pencil2d',
+    );
   });
 
   it('offers only tools backed by real store actions', () => {
     const { container } = render(<DraftingSheet {...props()} />);
     const tools = Array.from(container.querySelectorAll<HTMLButtonElement>('.drafting-tool'));
-    expect(tools).toHaveLength(5);
+    expect(tools).toHaveLength(6);
     for (const tool of tools) {
       expect(tool.getAttribute('aria-label')).toBeTruthy();
     }
 
     fireEvent.click(tools.find((tool) => tool.getAttribute('aria-label') === 'Toggle grid')!);
     expect(getState().viewport.showGrid).toBe(false);
+
+    fireEvent.click(tools.find((tool) => tool.getAttribute('aria-label') === 'Toggle axes')!);
+    expect(getState().viewport.showAxes).toBe(false);
 
     fireEvent.click(tools.find((tool) => tool.getAttribute('aria-label') === 'Toggle dimensions')!);
     expect(getState().viewport.showDimensions).toBe(false);

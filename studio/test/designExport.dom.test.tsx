@@ -198,6 +198,26 @@ describe('ExportPanel — active design', () => {
     });
     expect(view.container.querySelector('.export-panel-receipt')).toBeNull();
   });
+
+  it('places the design export before the primitive disclosure', () => {
+    seedDesign();
+    const view = render(<ExportPanel />);
+    const panel = view.container.querySelector('.export-panel')!;
+    const design = panel.querySelector('.export-panel-design');
+    const disclosure = panel.querySelector('.export-panel-disclosure');
+
+    expect(design).toBeTruthy();
+    expect(disclosure).toBeTruthy();
+    expect(
+      design!.compareDocumentPosition(disclosure!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(disclosure!.querySelector('summary')?.textContent).toBe(
+      'Export the primitive instead',
+    );
+    // The primitive controls still exist, behind the closed disclosure.
+    expect(disclosure!.querySelectorAll('select')).toHaveLength(2);
+    expect(disclosure!.hasAttribute('open')).toBe(false);
+  });
 });
 
 describe('ExportPanel — no design', () => {
